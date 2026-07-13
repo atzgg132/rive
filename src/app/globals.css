@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* ─── Brand Color Variables ──────────────────────── */
+:root {
+  /* Rive light theme palette — blue & whitish, soothing */
+  --bg-primary:        #F5F8FC;   /* Very soft ice-blue/white */
+  --bg-secondary:      #FFFFFF;   /* Pure white cards */
+  --text-primary:      #0C1E36;   /* Deep navy for primary readability */
+  --text-secondary:    #4A5E78;   /* Steel blue-slate for subtexts */
+  
+  --color-blue-primary:#1D4ED8;   /* Vibrant Rive blue (accent/period color) */
+  --color-blue-light:  #3B82F6;   /* Medium sky blue */
+  --color-blue-soft:   #EFF6FF;   /* Softest blue tint for backgrounds/hover */
+  --color-blue-border: #E2EAF4;   /* Delicate light-blue border */
+  
+  /* Font families — Outfit loaded via Next.js with Outfit Fallback */
+  --font-display: Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
+  --font-body:    Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
+  --font-hero:    Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
+}
+
+/* ─── Base & Force Lowercase ─────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* Stylize the entire website with lowercase typography */
+  html, body, button, input, select, option, textarea, h1, h2, h3, h4, h5, h6, span, p, a, div {
+    text-transform: lowercase !important;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  line-height: 1.6;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+p {
+  font-family: var(--font-body);
+  line-height: 1.65;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ─── Scrollbar ──────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { background: #EDF2F7; }
+::-webkit-scrollbar-thumb  { background: #CBD5E1; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* ─── Selection ──────────────────────────────────── */
+::selection {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--text-primary);
+}
+
+/* ─── Keyframes ──────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(29, 78, 216, 0.25); }
+  70%  { box-shadow: 0 0 0 12px rgba(29, 78, 216, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(29, 78, 216, 0); }
+}
+
+.animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+.animate-fade-in     { animation: fadeIn 0.4s ease-out forwards; }
+.animate-float       { animation: float 4s ease-in-out infinite; }
+.animate-pulse-ring  { animation: pulse-ring 2.2s infinite; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ─── Utility classes ────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-blue-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(12, 30, 54, 0.03);
+}
