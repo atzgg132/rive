@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Create line items
-      const lineItems = computedItems.map(item => ({
+      const lineItems = computedItems.map((item: any) => ({
         invoiceId: inv.id,
         description: item.description,
         quantity: item.quantity,

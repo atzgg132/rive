@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
         signupsMap.set(dateStr, (signupsMap.get(dateStr) || 0) + 1);
       }
     });
-    const signupsPerDay = Array.from(signupsMap.entries()).map(([day, count]) => ({ day, count }));
+    const signupsPerDay = Array.from(signupsMap.entries()).map(([day, count]: any) => ({ day, count }));
 
     // Group views by day in JS
     const viewsMap = new Map<string, number>();
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
         viewsMap.set(dateStr, (viewsMap.get(dateStr) || 0) + 1);
       }
     });
-    const viewsPerDay = Array.from(viewsMap.entries()).map(([day, count]) => ({ day, count }));
+    const viewsPerDay = Array.from(viewsMap.entries()).map(([day, count]: any) => ({ day, count }));
 
     return NextResponse.json({
       success: true,

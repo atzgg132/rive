@@ -104,30 +104,30 @@ export async function GET(req: NextRequest) {
           total_revenue: total_revenue.toString()
         };
       })
-      .filter(c => Number(c.total_revenue) > 0)
-      .sort((a, b) => Number(b.total_revenue) - Number(a.total_revenue))
+      .filter((c: any) => Number(c.total_revenue) > 0)
+      .sort((a: any, b: any) => Number(b.total_revenue) - Number(a.total_revenue))
       .slice(0, 5);
 
     // Combine and sort recent activity stream in memory
     const activities: { type: string; title: string; created_at: string; rawDate: Date }[] = [];
     
-    recentClients.forEach(c => {
+    recentClients.forEach((c: any) => {
       activities.push({ type: "client_added", title: c.name, created_at: c.createdAt.toISOString(), rawDate: c.createdAt });
     });
-    recentProjects.forEach(p => {
+    recentProjects.forEach((p: any) => {
       activities.push({ type: "project_created", title: p.title, created_at: p.createdAt.toISOString(), rawDate: p.createdAt });
     });
-    recentInvoices.forEach(i => {
+    recentInvoices.forEach((i: any) => {
       activities.push({ type: "invoice_created", title: `invoice #${i.invoiceNumber}`, created_at: i.createdAt.toISOString(), rawDate: i.createdAt });
     });
-    recentExpenses.forEach(e => {
+    recentExpenses.forEach((e: any) => {
       activities.push({ type: "expense_logged", title: e.description, created_at: e.createdAt.toISOString(), rawDate: e.createdAt });
     });
 
     const recentActivity = activities
-      .sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime())
+      .sort((a: any, b: any) => b.rawDate.getTime() - a.rawDate.getTime())
       .slice(0, 10)
-      .map(({ type, title, created_at }) => ({ type, title, created_at }));
+      .map(({ type, title, created_at }: any) => ({ type, title, created_at }));
 
     return NextResponse.json({
       success: true,
