@@ -36,6 +36,11 @@ export async function POST(req: NextRequest) {
     }, { status: 201 });
   } catch (error: any) {
     console.error("Waitlist API error:", error);
-    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message || String(error),
+      stack: error.stack || ""
+    }, { status: 500 });
   }
 }
