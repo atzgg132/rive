@@ -5,14 +5,17 @@ let poolInstance: Pool | null = null;
 export function getDbPool(): Pool {
   if (poolInstance) return poolInstance;
 
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL environment variable is missing.");
   }
 
+  // Strip pg-unsupported query parameters like channel_binding to prevent connection crashes
+  connectionString = connectionString.replace(/([?&])channel_binding=[^&]*/g, "$1");
+  connectionString = connectionString.replace(/[?&]$/, ""); // Clean up trailing ? or &
+
   poolInstance = new Pool({
     connectionString,
-    // Enable SSL for Neon
     ssl: {
       rejectUnauthorized: false
     }
