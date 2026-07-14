@@ -56,13 +56,13 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Format type breakdown to match legacy structure
-    const typeBreakdown = rawTypeBreakdown.map(item => ({
+    const typeBreakdown = rawTypeBreakdown.map((item: any) => ({
       type: item.type,
       count: item._count.id
     }));
 
     // Format top paths to match legacy structure
-    const topPaths = rawTopPaths.map(item => ({
+    const topPaths = rawTopPaths.map((item: any) => ({
       path: item.path,
       views: item._count.id
     }));
