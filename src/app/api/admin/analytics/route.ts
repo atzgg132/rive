@@ -73,8 +73,13 @@ export async function GET(req: NextRequest) {
         typeBreakdown: typeBreakdown.rows,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Analytics fetch error:", error);
-    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message || String(error),
+      stack: error.stack || ""
+    }, { status: 500 });
   }
 }
