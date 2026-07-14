@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
       const key = d.toISOString().split("T")[0];
       signupsMap.set(key, 0);
     }
-    rawSignups.forEach((row) => {
+    rawSignups.forEach((row: any) => {
       const dateStr = new Date(row.createdAt).toISOString().split("T")[0];
       if (signupsMap.has(dateStr)) {
         signupsMap.set(dateStr, (signupsMap.get(dateStr) || 0) + 1);
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
       const key = d.toISOString().split("T")[0];
       viewsMap.set(key, 0);
     }
-    rawViews.forEach((row) => {
+    rawViews.forEach((row: any) => {
       const dateStr = new Date(row.visitedAt).toISOString().split("T")[0];
       if (viewsMap.has(dateStr)) {
         viewsMap.set(dateStr, (viewsMap.get(dateStr) || 0) + 1);
