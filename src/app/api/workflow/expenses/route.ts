@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
 // GET /api/workflow/expenses
@@ -10,51 +10,58 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
-
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category") || "all";
     const projectId = searchParams.get("projectId") || "";
 
-    const conditions = ["e.user_id = $1"];
-    const params: any[] = [session.userId];
+    const where: any = {
+      userId: session.userId
+    };
 
-    let paramIdx = 2;
     if (search) {
-      conditions.push(`e.description ILIKE $${paramIdx}`);
-      params.push(`%${search}%`);
-      paramIdx++;
+      where.description = { contains: search, mode: "insensitive" };
     }
 
     if (category !== "all") {
-      conditions.push(`e.category = $${paramIdx}`);
-      params.push(category);
-      paramIdx++;
+      where.category = category;
     }
 
     if (projectId) {
-      conditions.push(`e.project_id = $${paramIdx}`);
-      params.push(projectId);
-      paramIdx++;
+      where.projectId = projectId;
     }
 
-    const whereClause = conditions.join(" AND ");
+    const expenses = await prisma.expense.findMany({
+      where,
+      include: {
+        project: { select: { title: true } }
+      },
+      orderBy: [
+        { date: "desc" },
+        { createdAt: "desc" }
+      ]
+    });
 
-    const query = `
-      SELECT e.*, p.title AS project_title
-      FROM expenses e
-      LEFT JOIN projects p ON e.project_id = p.id
-      WHERE ${whereClause}
-      ORDER BY e.date DESC, e.created_at DESC;
-    `;
-
-    const result = await pool.query(query, params);
+    const formattedExpenses = expenses.map(e => ({
+      id: e.id,
+      project_id: e.projectId,
+      user_id: e.userId,
+      category: e.category,
+      description: e.description,
+      amount: e.amount.toString(),
+      currency: e.currency,
+      date: e.date,
+      receipt_url: e.receiptUrl,
+      is_billable: e.isBillable,
+      is_reimbursed: e.isReimbursed,
+      created_at: e.createdAt,
+      updated_at: e.updatedAt,
+      project_title: e.project?.title || null
+    }));
 
     return NextResponse.json({
       success: true,
-      expenses: result.rows
+      expenses: formattedExpenses
     });
   } catch (error: any) {
     console.error("Expenses fetch error:", error);
@@ -75,31 +82,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Description and amount are required." }, { status: 400 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
-
-    const result = await pool.query(
-      `INSERT INTO expenses (user_id, project_id, category, description, amount, currency, date, receipt_url, is_billable, is_reimbursed)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING *;`,
-      [
-        session.userId,
-        project_id || null,
-        category || "other",
+    const expense = await prisma.expense.create({
+      data: {
+        userId: session.userId,
+        projectId: project_id || null,
+        category: category || "other",
         description,
-        parseFloat(amount),
-        currency || "USD",
-        date || new Date().toISOString().split("T")[0],
-        receipt_url || null,
-        is_billable || false,
-        is_reimbursed || false
-      ]
-    );
+        amount: Number(amount),
+        currency: currency || "USD",
+        date: date ? new Date(date) : new Date(),
+        receiptUrl: receipt_url || null,
+        isBillable: is_billable || false,
+        isReimbursed: is_reimbursed || false
+      }
+    });
+
+    const formattedExpense = {
+      ...expense,
+      project_id: expense.projectId,
+      user_id: expense.userId,
+      amount: expense.amount.toString(),
+      receipt_url: expense.receiptUrl,
+      is_billable: expense.isBillable,
+      is_reimbursed: expense.isReimbursed,
+      created_at: expense.createdAt,
+      updated_at: expense.updatedAt
+    };
 
     return NextResponse.json({
       success: true,
       message: "Expense logged successfully.",
-      expense: result.rows[0]
+      expense: formattedExpense
     }, { status: 201 });
   } catch (error: any) {
     console.error("Expense log error:", error);

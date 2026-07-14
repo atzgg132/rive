@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 
 export async function POST(req: NextRequest) {
   try {
     const { path, referrer } = await req.json();
     const userAgent = req.headers.get("user-agent") || "";
     
-    const pool = getDbPool();
-    await initDbSchema(pool); // Lazy initialize tables if first request
-
-    await pool.query(
-      "INSERT INTO page_views (path, referrer, user_agent) VALUES ($1, $2, $3);",
-      [path || "/", referrer || "", userAgent]
-    );
+    await prisma.pageView.create({
+      data: {
+        path: path || "/",
+        referrer: referrer || null,
+        userAgent: userAgent || null
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

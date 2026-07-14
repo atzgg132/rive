@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { verifyToken } from "@/utils/auth";
 
 export async function GET(req: NextRequest) {
@@ -9,22 +9,63 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const pool = getDbPool();
-    await initDbSchema(pool);
+    const now = new Date();
+    const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const ago14d = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-    const [totalSignups, last24h, last7d, remitInterest, approvedCount, totalViews, topPaths, rawSignups, rawViews, typeBreakdown] =
-      await Promise.all([
-        pool.query("SELECT COUNT(*)::int AS count FROM waitlist;"),
-        pool.query("SELECT COUNT(*)::int AS count FROM waitlist WHERE created_at >= NOW() - INTERVAL '24 hours';"),
-        pool.query("SELECT COUNT(*)::int AS count FROM waitlist WHERE created_at >= NOW() - INTERVAL '7 days';"),
-        pool.query("SELECT COUNT(*)::int AS count FROM waitlist WHERE type = 'remit';"),
-        pool.query("SELECT COUNT(*)::int AS count FROM waitlist WHERE status = 'approved';"),
-        pool.query("SELECT COUNT(*)::int AS count FROM page_views;"),
-        pool.query("SELECT path, COUNT(*)::int AS views FROM page_views GROUP BY path ORDER BY views DESC LIMIT 10;"),
-        pool.query("SELECT created_at FROM waitlist WHERE created_at >= NOW() - INTERVAL '14 days' ORDER BY created_at ASC;"),
-        pool.query("SELECT visited_at FROM page_views WHERE visited_at >= NOW() - INTERVAL '14 days' ORDER BY visited_at ASC;"),
-        pool.query("SELECT type, COUNT(*)::int AS count FROM waitlist GROUP BY type ORDER BY count DESC;"),
-      ]);
+    const [
+      totalSignups,
+      last24h,
+      last7d,
+      remitInterest,
+      approvedCount,
+      totalViews,
+      rawTypeBreakdown,
+      rawTopPaths,
+      rawSignups,
+      rawViews
+    ] = await Promise.all([
+      prisma.waitlist.count(),
+      prisma.waitlist.count({ where: { createdAt: { gte: ago24h } } }),
+      prisma.waitlist.count({ where: { createdAt: { gte: ago7d } } }),
+      prisma.waitlist.count({ where: { type: "remit" } }),
+      prisma.waitlist.count({ where: { status: "approved" } }),
+      prisma.pageView.count(),
+      prisma.waitlist.groupBy({
+        by: ["type"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } }
+      }),
+      prisma.pageView.groupBy({
+        by: ["path"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 10
+      }),
+      prisma.waitlist.findMany({
+        where: { createdAt: { gte: ago14d } },
+        select: { createdAt: true },
+        orderBy: { createdAt: "asc" }
+      }),
+      prisma.pageView.findMany({
+        where: { visitedAt: { gte: ago14d } },
+        select: { visitedAt: true },
+        orderBy: { visitedAt: "asc" }
+      })
+    ]);
+
+    // Format type breakdown to match legacy structure
+    const typeBreakdown = rawTypeBreakdown.map(item => ({
+      type: item.type,
+      count: item._count.id
+    }));
+
+    // Format top paths to match legacy structure
+    const topPaths = rawTopPaths.map(item => ({
+      path: item.path,
+      views: item._count.id
+    }));
 
     // Group signups by day in JS (database-agnostic)
     const signupsMap = new Map<string, number>();
@@ -34,8 +75,8 @@ export async function GET(req: NextRequest) {
       const key = d.toISOString().split("T")[0];
       signupsMap.set(key, 0);
     }
-    rawSignups.rows.forEach((row: any) => {
-      const dateStr = new Date(row.created_at).toISOString().split("T")[0];
+    rawSignups.forEach((row) => {
+      const dateStr = new Date(row.createdAt).toISOString().split("T")[0];
       if (signupsMap.has(dateStr)) {
         signupsMap.set(dateStr, (signupsMap.get(dateStr) || 0) + 1);
       }
@@ -50,8 +91,8 @@ export async function GET(req: NextRequest) {
       const key = d.toISOString().split("T")[0];
       viewsMap.set(key, 0);
     }
-    rawViews.rows.forEach((row: any) => {
-      const dateStr = new Date(row.visited_at).toISOString().split("T")[0];
+    rawViews.forEach((row) => {
+      const dateStr = new Date(row.visitedAt).toISOString().split("T")[0];
       if (viewsMap.has(dateStr)) {
         viewsMap.set(dateStr, (viewsMap.get(dateStr) || 0) + 1);
       }
@@ -61,17 +102,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        totalSignups:  totalSignups.rows[0].count,
-        last24h:       last24h.rows[0].count,
-        last7d:        last7d.rows[0].count,
-        remitInterest: remitInterest.rows[0].count,
-        approvedCount: approvedCount.rows[0].count,
-        totalViews:    totalViews.rows[0].count,
-        topPaths:      topPaths.rows,
+        totalSignups,
+        last24h,
+        last7d,
+        remitInterest,
+        approvedCount,
+        totalViews,
+        topPaths,
         signupsPerDay,
         viewsPerDay,
-        typeBreakdown: typeBreakdown.rows,
-      },
+        typeBreakdown
+      }
     });
   } catch (error: any) {
     console.error("Analytics fetch error:", error);

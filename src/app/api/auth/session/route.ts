@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
 export async function GET(req: NextRequest) {
@@ -9,21 +9,35 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "No active session found." }, { status: 401 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        plan: true,
+        avatarUrl: true,
+        createdAt: true
+      }
+    });
 
-    const result = await pool.query(
-      "SELECT id, email, name, plan, avatar_url, created_at FROM users WHERE id = $1;",
-      [session.userId]
-    );
-
-    if (result.rows.length === 0) {
+    if (!user) {
       return NextResponse.json({ success: false, message: "User not found." }, { status: 404 });
     }
 
+    // Format fields for frontend compatibility
+    const formattedUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      plan: user.plan,
+      avatar_url: user.avatarUrl,
+      created_at: user.createdAt
+    };
+
     return NextResponse.json({
       success: true,
-      user: result.rows[0]
+      user: formattedUser
     });
   } catch (error: any) {
     console.error("Session fetch error:", error);

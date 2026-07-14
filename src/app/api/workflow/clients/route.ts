@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
 // GET /api/workflow/clients
@@ -10,49 +10,71 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
-
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
 
-    const conditions = ["user_id = $1"];
-    const params: any[] = [session.userId];
+    // Build Prisma query filters
+    const where: any = {
+      userId: session.userId,
+    };
 
-    let paramIdx = 2;
     if (search) {
-      conditions.push(`(name ILIKE $${paramIdx} OR email ILIKE $${paramIdx} OR company ILIKE $${paramIdx})`);
-      params.push(`%${search}%`);
-      paramIdx++;
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { company: { contains: search, mode: "insensitive" } }
+      ];
     }
 
     if (status !== "all") {
-      conditions.push(`status = $${paramIdx}`);
-      params.push(status);
-      paramIdx++;
+      where.status = status;
     }
 
-    const whereClause = conditions.join(" AND ");
-    
-    // Select clients and calculate their total projects and invoice revenues
-    const query = `
-      SELECT c.*, 
-        COUNT(DISTINCT p.id)::int AS project_count,
-        COALESCE(SUM(DISTINCT i.total), 0)::numeric AS total_revenue
-      FROM clients c
-      LEFT JOIN projects p ON p.client_id = c.id AND p.status != 'archived'
-      LEFT JOIN invoices i ON i.client_id = c.id AND i.status = 'paid'
-      WHERE ${whereClause}
-      GROUP BY c.id
-      ORDER BY c.created_at DESC;
-    `;
+    // Load clients including aggregations
+    const clients = await prisma.client.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        projects: {
+          where: { status: { not: "archived" } },
+          select: { id: true }
+        },
+        invoices: {
+          where: { status: "paid" },
+          select: { total: true }
+        }
+      }
+    });
 
-    const result = await pool.query(query, params);
+    // Format output to match client requirements (including counts and sums)
+    const formattedClients = clients.map(c => {
+      const project_count = c.projects.length;
+      const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+      
+      return {
+        id: c.id,
+        user_id: c.userId,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        company: c.company,
+        website: c.website,
+        address: c.address,
+        avatar_color: c.avatarColor,
+        notes: c.notes,
+        tags: c.tags,
+        status: c.status,
+        created_at: c.createdAt,
+        updated_at: c.updatedAt,
+        project_count,
+        total_revenue
+      };
+    });
 
     return NextResponse.json({
       success: true,
-      clients: result.rows
+      clients: formattedClients
     });
   } catch (error: any) {
     console.error("Clients fetch error:", error);
@@ -73,24 +95,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Client name is required." }, { status: 400 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
-
-    // Pick a random soft colors for avatar
+    // Pick random colors for avatar
     const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4"];
     const avatarColor = colors[Math.floor(Math.random() * colors.length)];
 
-    const result = await pool.query(
-      `INSERT INTO clients (user_id, name, email, phone, company, website, address, avatar_color, notes, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING *;`,
-      [session.userId, name, email || null, phone || null, company || null, website || null, address || null, avatarColor, notes || null, tags || []]
-    );
+    const client = await prisma.client.create({
+      data: {
+        userId: session.userId,
+        name,
+        email: email || null,
+        phone: phone || null,
+        company: company || null,
+        website: website || null,
+        address: address || null,
+        avatarColor,
+        notes: notes || null,
+        tags: tags || [],
+        status: "active"
+      }
+    });
+
+    // Formatting for frontend compatibility
+    const formattedClient = {
+      ...client,
+      user_id: client.userId,
+      avatar_color: client.avatarColor,
+      created_at: client.createdAt,
+      updated_at: client.updatedAt
+    };
 
     return NextResponse.json({
       success: true,
       message: "Client created successfully.",
-      client: result.rows[0]
+      client: formattedClient
     }, { status: 201 });
   } catch (error: any) {
     console.error("Client create error:", error);

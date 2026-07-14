@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { verifyPassword, generateUserToken, TOKEN_COOKIE_NAME, SESSION_TTL_MS } from "@/utils/userAuth";
 
 export async function POST(req: NextRequest) {
@@ -9,20 +9,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing email or password." }, { status: 400 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
 
-    const result = await pool.query(
-      "SELECT id, email, password_hash, name, plan FROM users WHERE email = $1;",
-      [email.toLowerCase()]
-    );
-
-    if (result.rows.length === 0) {
+    if (!user) {
       return NextResponse.json({ success: false, message: "Invalid email or password." }, { status: 401 });
     }
 
-    const user = result.rows[0];
-    const isPasswordCorrect = verifyPassword(password, user.password_hash);
+    const isPasswordCorrect = verifyPassword(password, user.passwordHash);
 
     if (!isPasswordCorrect) {
       return NextResponse.json({ success: false, message: "Invalid email or password." }, { status: 401 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
 export async function GET(req: NextRequest) {
@@ -9,74 +9,137 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
+    const userId = session.userId;
 
     // Run aggregations in parallel
-    const [revenueRes, projectsRes, expensesRes, topClientsRes, recentActivitiesRes] = await Promise.all([
-      // Paid & Pending Revenue
-      pool.query(
-        `SELECT 
-           COALESCE(SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END), 0)::numeric AS total_paid,
-           COALESCE(SUM(CASE WHEN status IN ('sent', 'viewed') THEN total ELSE 0 END), 0)::numeric AS total_pending
-         FROM invoices 
-         WHERE user_id = $1;`,
-        [session.userId]
-      ),
+    const [
+      invoicesAggregate,
+      activeProjectsCount,
+      expensesAggregate,
+      clientsWithPaidInvoices,
+      recentClients,
+      recentProjects,
+      recentInvoices,
+      recentExpenses
+    ] = await Promise.all([
+      // Revenue aggregations
+      prisma.invoice.groupBy({
+        by: ["status"],
+        where: { userId },
+        _sum: { total: true }
+      }),
       // Active Projects Count
-      pool.query(
-        `SELECT COUNT(*)::int AS active_count FROM projects WHERE user_id = $1 AND status = 'active';`,
-        [session.userId]
-      ),
+      prisma.project.count({
+        where: { userId, status: "active" }
+      }),
       // Total Expenses
-      pool.query(
-        `SELECT COALESCE(SUM(amount), 0)::numeric AS total_expenses FROM expenses WHERE user_id = $1;`,
-        [session.userId]
-      ),
-      // Top Clients by Revenue
-      pool.query(
-        `SELECT c.id, c.name, c.company, c.avatar_color,
-           COALESCE(SUM(i.total), 0)::numeric AS total_revenue
-         FROM clients c
-         INNER JOIN invoices i ON i.client_id = c.id AND i.status = 'paid'
-         WHERE c.user_id = $1
-         GROUP BY c.id
-         ORDER BY total_revenue DESC
-         LIMIT 5;`,
-        [session.userId]
-      ),
-      // Recent activities (combine recent client additions, project creation, invoice changes, logged expenses)
-      pool.query(
-        `(SELECT 'client_added' AS type, name AS title, created_at FROM clients WHERE user_id = $1)
-         UNION ALL
-         (SELECT 'project_created' AS type, title, created_at FROM projects WHERE user_id = $1)
-         UNION ALL
-         (SELECT 'invoice_created' AS type, 'invoice #' || invoice_number AS title, created_at FROM invoices WHERE user_id = $1)
-         UNION ALL
-         (SELECT 'expense_logged' AS type, description AS title, created_at FROM expenses WHERE user_id = $1)
-         ORDER BY created_at DESC
-         LIMIT 10;`,
-        [session.userId]
-      )
+      prisma.expense.aggregate({
+        where: { userId },
+        _sum: { amount: true }
+      }),
+      // Top clients by revenue
+      prisma.client.findMany({
+        where: { userId },
+        include: {
+          invoices: {
+            where: { status: "paid" },
+            select: { total: true }
+          }
+        }
+      }),
+      // Recent clients
+      prisma.client.findMany({
+        where: { userId },
+        select: { name: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      }),
+      // Recent projects
+      prisma.project.findMany({
+        where: { userId },
+        select: { title: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      }),
+      // Recent invoices
+      prisma.invoice.findMany({
+        where: { userId },
+        select: { invoiceNumber: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      }),
+      // Recent expenses
+      prisma.expense.findMany({
+        where: { userId },
+        select: { description: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      })
     ]);
 
-    const totalPaid = parseFloat(revenueRes.rows[0].total_paid);
-    const totalPending = parseFloat(revenueRes.rows[0].total_pending);
-    const activeProjects = projectsRes.rows[0].active_count;
-    const totalExpenses = parseFloat(expensesRes.rows[0].total_expenses);
+    // Compute revenue stats
+    let totalPaid = 0;
+    let totalPending = 0;
+    invoicesAggregate.forEach(grp => {
+      const sum = Number(grp._sum.total || 0);
+      if (grp.status === "paid") {
+        totalPaid += sum;
+      } else if (grp.status === "sent" || grp.status === "viewed") {
+        totalPending += sum;
+      }
+    });
+
+    const totalExpenses = Number(expensesAggregate._sum.amount || 0);
     const netEarnings = totalPaid - totalExpenses;
+
+    // Format top clients and sort by revenue
+    const topClients = clientsWithPaidInvoices
+      .map(c => {
+        const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+        return {
+          id: c.id,
+          name: c.name,
+          company: c.company,
+          avatar_color: c.avatarColor,
+          total_revenue: total_revenue.toString()
+        };
+      })
+      .filter(c => Number(c.total_revenue) > 0)
+      .sort((a, b) => Number(b.total_revenue) - Number(a.total_revenue))
+      .slice(0, 5);
+
+    // Combine and sort recent activity stream in memory
+    const activities: { type: string; title: string; created_at: string; rawDate: Date }[] = [];
+    
+    recentClients.forEach(c => {
+      activities.push({ type: "client_added", title: c.name, created_at: c.createdAt.toISOString(), rawDate: c.createdAt });
+    });
+    recentProjects.forEach(p => {
+      activities.push({ type: "project_created", title: p.title, created_at: p.createdAt.toISOString(), rawDate: p.createdAt });
+    });
+    recentInvoices.forEach(i => {
+      activities.push({ type: "invoice_created", title: `invoice #${i.invoiceNumber}`, created_at: i.createdAt.toISOString(), rawDate: i.createdAt });
+    });
+    recentExpenses.forEach(e => {
+      activities.push({ type: "expense_logged", title: e.description, created_at: e.createdAt.toISOString(), rawDate: e.createdAt });
+    });
+
+    const recentActivity = activities
+      .sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime())
+      .slice(0, 10)
+      .map(({ type, title, created_at }) => ({ type, title, created_at }));
 
     return NextResponse.json({
       success: true,
       stats: {
         totalPaid,
         totalPending,
-        activeProjects,
+        activeProjects: activeProjectsCount,
         totalExpenses,
         netEarnings
       },
-      topClients: topClientsRes.rows,
-      recentActivity: recentActivitiesRes.rows
+      topClients,
+      recentActivity
     });
   } catch (error: any) {
     console.error("Dashboard analytics error:", error);

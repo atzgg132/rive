@@ -1,0 +1,164 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Waitlist {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  type      String
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("waitlist")
+}
+
+model PageView {
+  id        Int      @id @default(autoincrement())
+  path      String
+  referrer  String?
+  userAgent String?  @map("user_agent")
+  visitedAt DateTime @default(now()) @map("visited_at")
+
+  @@map("page_views")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  avatarUrl    String?   @map("avatar_url")
+  passwordHash String    @map("password_hash")
+  plan         String    @default("free")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  clients      Client[]
+  projects     Project[]
+  invoices     Invoice[]
+  expenses     Expense[]
+
+  @@map("users")
+}
+
+model Client {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  website     String?
+  address     String?
+  avatarColor String?   @map("avatar_color")
+  notes       String?
+  tags        String[]
+  status      String    @default("active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  projects    Project[]
+  invoices    Invoice[]
+
+  @@map("clients")
+}
+
+model Project {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String?     @map("client_id")
+  client      Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  status      String      @default("active")
+  priority    String      @default("medium")
+  startDate   DateTime?   @map("start_date")
+  dueDate     DateTime?   @map("due_date")
+  budget      Decimal?    @db.Decimal(12, 2)
+  currency    String      @default("USD")
+  tags        String[]
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  milestones  Milestone[]
+  invoices    Invoice[]
+  expenses    Expense[]
+
+  @@map("projects")
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  dueDate     DateTime? @map("due_date")
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("milestones")
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId      String?       @map("client_id")
+  client        Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId     String?       @map("project_id")
+  project       Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  invoiceNumber String        @map("invoice_number")
+  status        String        @default("draft")
+  currency      String        @default("USD")
+  subtotal      Decimal       @default(0) @db.Decimal(12, 2)
+  taxRate       Decimal       @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount     Decimal       @default(0) @map("tax_amount") @db.Decimal(12, 2)
+  total         Decimal       @default(0) @db.Decimal(12, 2)
+  issueDate     DateTime      @default(now()) @map("issue_date")
+  dueDate       DateTime?     @map("due_date")
+  paidDate      DateTime?     @map("paid_date")
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  items         InvoiceItem[]
+
+  @@unique([userId, invoiceNumber], name: "unique_user_invoice_number")
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String   @map("invoice_id")
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal  @default(1) @db.Decimal(10, 2)
+  unitPrice   Decimal  @default(0) @map("unit_price") @db.Decimal(12, 2)
+  amount      Decimal  @default(0) @db.Decimal(12, 2)
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  @@map("invoice_items")
+}
+
+model Expense {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId    String?   @map("project_id")
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  category     String    @default("other")
+  description  String
+  amount       Decimal   @db.Decimal(12, 2)
+  currency     String    @default("USD")
+  date         DateTime  @default(now())
+  receiptUrl   String?   @map("receipt_url")
+  isBillable   Boolean   @default(false) @map("is_billable")
+  isReimbursed Boolean   @default(false) @map("is_reimbursed")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("expenses")
+}

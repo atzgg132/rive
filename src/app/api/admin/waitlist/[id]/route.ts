@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { verifyToken } from "@/utils/auth";
 
 export async function PATCH(
@@ -12,9 +12,6 @@ export async function PATCH(
   }
 
   try {
-    const pool = getDbPool();
-    await initDbSchema(pool);
-
     const resolvedParams = await params;
     const id = parseInt(resolvedParams.id, 10);
     if (isNaN(id)) {
@@ -29,18 +26,17 @@ export async function PATCH(
       );
     }
 
-    const result = await pool.query(
-      "UPDATE waitlist SET status = $1 WHERE id = $2 RETURNING id, email, type, status, created_at;",
-      [status, id]
-    );
+    const updated = await prisma.waitlist.update({
+      where: { id },
+      data: { status }
+    });
 
-    if (!result.rows.length) {
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error: any) {
+    console.error("Waitlist update error:", error);
+    if (error.code === "P2025") {
       return NextResponse.json({ success: false, message: "entry not found." }, { status: 404 });
     }
-
-    return NextResponse.json({ success: true, data: result.rows[0] });
-  } catch (error) {
-    console.error("Waitlist update error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
 }

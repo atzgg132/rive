@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { verifyToken } from "@/utils/auth";
-
-const ALLOWED_SORT  = ["email", "type", "status", "created_at", "id"] as const;
-const ALLOWED_ORDER = ["ASC", "DESC"] as const;
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get("x-admin-token");
@@ -12,9 +9,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const pool = getDbPool();
-    await initDbSchema(pool);
-
     const { searchParams } = new URL(req.url);
     const page   = Math.max(1, parseInt(searchParams.get("page")  || "1", 10));
     const limit  = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
@@ -22,48 +16,43 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
     const type   = searchParams.get("type")   || "all";
-    const rawSort  = searchParams.get("sort")  || "created_at";
-    const rawOrder = (searchParams.get("order") || "DESC").toUpperCase();
+    const sort   = searchParams.get("sort")   || "createdAt";
+    const order  = (searchParams.get("order") || "DESC").toLowerCase() as "asc" | "desc";
 
-    // Whitelist sort options to prevent SQL injection
-    const sortCol  = ALLOWED_SORT.includes(rawSort  as any) ? rawSort  : "created_at";
-    const sortDir  = ALLOWED_ORDER.includes(rawOrder as any) ? rawOrder : "DESC";
-
-    const conditions: string[] = [];
-    const params: any[] = [];
-    let p = 1;
-
+    // Build filter query object
+    const where: any = {};
     if (search) {
-      conditions.push(`email ILIKE $${p++}`);
-      params.push(`%${search}%`);
+      where.email = { contains: search, mode: "insensitive" };
     }
     if (status !== "all") {
-      conditions.push(`status = $${p++}`);
-      params.push(status);
+      where.status = status;
     }
     if (type !== "all") {
-      conditions.push(`type = $${p++}`);
-      params.push(type);
+      where.type = type;
     }
 
-    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    // Map legacy column names if requested
+    let orderByField = sort;
+    if (sort === "created_at") orderByField = "createdAt";
 
-    const [countRes, dataRes] = await Promise.all([
-      pool.query(`SELECT COUNT(*)::int AS count FROM waitlist ${where};`, params),
-      pool.query(
-        `SELECT id, email, type, status, created_at FROM waitlist ${where}
-         ORDER BY ${sortCol} ${sortDir}
-         LIMIT $${p++} OFFSET $${p++};`,
-        [...params, limit, offset]
-      ),
+    const [total, data] = await Promise.all([
+      prisma.waitlist.count({ where }),
+      prisma.waitlist.findMany({
+        where,
+        orderBy: {
+          [orderByField]: order
+        },
+        skip: offset,
+        take: limit
+      })
     ]);
 
     return NextResponse.json({
       success: true,
-      data:    dataRes.rows,
-      total:   countRes.rows[0].count,
+      data,
+      total,
       page,
-      limit,
+      limit
     });
   } catch (error: any) {
     console.error("Waitlist fetch error:", error);

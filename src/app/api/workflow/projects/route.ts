@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool, initDbSchema } from "@/utils/db";
+import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
 // GET /api/workflow/projects
@@ -10,53 +10,82 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
-
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
     const clientId = searchParams.get("clientId") || "";
 
-    const conditions = ["p.user_id = $1", "p.status != 'archived'"];
-    const params: any[] = [session.userId];
+    const where: any = {
+      userId: session.userId,
+      status: { not: "archived" }
+    };
 
-    let paramIdx = 2;
     if (search) {
-      conditions.push(`(p.title ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx})`);
-      params.push(`%${search}%`);
-      paramIdx++;
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } }
+      ];
     }
 
     if (status !== "all") {
-      conditions.push(`p.status = $${paramIdx}`);
-      params.push(status);
-      paramIdx++;
+      where.status = status;
     }
 
     if (clientId) {
-      conditions.push(`p.client_id = $${paramIdx}`);
-      params.push(clientId);
-      paramIdx++;
+      where.clientId = clientId;
     }
 
-    const whereClause = conditions.join(" AND ");
+    const projects = await prisma.project.findMany({
+      where,
+      include: {
+        client: {
+          select: {
+            name: true,
+            company: true
+          }
+        },
+        milestones: {
+          select: {
+            id: true,
+            completed: true
+          }
+        }
+      },
+      orderBy: [
+        { dueDate: "asc" },
+        { createdAt: "desc" }
+      ]
+    });
 
-    const query = `
-      SELECT p.*, c.name AS client_name, c.company AS client_company,
-        (SELECT COUNT(*)::int FROM milestones m WHERE m.project_id = p.id) AS milestone_count,
-        (SELECT COUNT(*)::int FROM milestones m WHERE m.project_id = p.id AND m.completed = true) AS completed_milestones
-      FROM projects p
-      LEFT JOIN clients c ON p.client_id = c.id
-      WHERE ${whereClause}
-      ORDER BY p.due_date ASC NULLS LAST, p.created_at DESC;
-    `;
+    const formattedProjects = projects.map(p => {
+      const milestone_count = p.milestones.length;
+      const completed_milestones = p.milestones.filter(m => m.completed).length;
 
-    const result = await pool.query(query, params);
+      return {
+        id: p.id,
+        client_id: p.clientId,
+        user_id: p.userId,
+        title: p.title,
+        description: p.description,
+        status: p.status,
+        priority: p.priority,
+        start_date: p.startDate,
+        due_date: p.dueDate,
+        budget: p.budget ? p.budget.toString() : null,
+        currency: p.currency,
+        tags: p.tags,
+        created_at: p.createdAt,
+        updated_at: p.updatedAt,
+        client_name: p.client?.name || null,
+        client_company: p.client?.company || null,
+        milestone_count,
+        completed_milestones
+      };
+    });
 
     return NextResponse.json({
       success: true,
-      projects: result.rows
+      projects: formattedProjects
     });
   } catch (error: any) {
     console.error("Projects fetch error:", error);
@@ -72,65 +101,78 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const { title, description, client_id, status, priority, start_date, due_date, budget, currency, tags, milestones } = await req.json();
+    const { 
+      title, 
+      description, 
+      client_id, 
+      status, 
+      priority, 
+      start_date, 
+      due_date, 
+      budget, 
+      currency, 
+      tags, 
+      milestones 
+    } = await req.json();
+
     if (!title) {
       return NextResponse.json({ success: false, message: "Project title is required." }, { status: 400 });
     }
 
-    const pool = getDbPool();
-    await initDbSchema(pool);
+    // Insert project and milestones in a transaction
+    const project = await prisma.$transaction(async (tx) => {
+      const proj = await tx.project.create({
+        data: {
+          userId: session.userId,
+          clientId: client_id || null,
+          title,
+          description: description || null,
+          status: status || "active",
+          priority: priority || "medium",
+          startDate: start_date ? new Date(start_date) : null,
+          dueDate: due_date ? new Date(due_date) : null,
+          budget: budget ? Number(budget) : null,
+          currency: currency || "USD",
+          tags: tags || []
+        }
+      });
 
-    // Start transaction to insert project and default milestones
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      
-      const projectResult = await client.query(
-        `INSERT INTO projects (user_id, client_id, title, description, status, priority, start_date, due_date, budget, currency, tags)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING *;`,
-        [
-          session.userId, 
-          client_id || null, 
-          title, 
-          description || null, 
-          status || "active", 
-          priority || "medium", 
-          start_date || null, 
-          due_date || null, 
-          budget || null, 
-          currency || "USD", 
-          tags || []
-        ]
-      );
-      const project = projectResult.rows[0];
-
-      // If milestones are provided, insert them
       if (milestones && Array.isArray(milestones) && milestones.length > 0) {
-        for (const m of milestones) {
-          if (m.title) {
-            await client.query(
-              `INSERT INTO milestones (project_id, title, due_date, completed) 
-               VALUES ($1, $2, $3, $4);`,
-              [project.id, m.title, m.due_date || null, m.completed || false]
-            );
-          }
+        const milestonesData = milestones
+          .filter((m: any) => m.title)
+          .map((m: any) => ({
+            projectId: proj.id,
+            title: m.title,
+            dueDate: m.due_date ? new Date(m.due_date) : null,
+            completed: m.completed || false
+          }));
+
+        if (milestonesData.length > 0) {
+          await tx.milestone.createMany({
+            data: milestonesData
+          });
         }
       }
 
-      await client.query("COMMIT");
+      return proj;
+    });
 
-      return NextResponse.json({
-        success: true,
-        message: "Project created successfully.",
-        project
-      }, { status: 201 });
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw err;
-    } finally {
-      client.release();
-    }
+    const formattedProject = {
+      ...project,
+      client_id: project.clientId,
+      user_id: project.userId,
+      start_date: project.startDate,
+      due_date: project.dueDate,
+      budget: project.budget ? project.budget.toString() : null,
+      created_at: project.createdAt,
+      updated_at: project.updatedAt
+    };
+
+    return NextResponse.json({
+      success: true,
+      message: "Project created successfully.",
+      project: formattedProject
+    }, { status: 201 });
   } catch (error: any) {
     console.error("Project create error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
