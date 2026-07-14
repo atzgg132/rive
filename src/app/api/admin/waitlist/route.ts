@@ -47,9 +47,14 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
+    const formattedData = data.map(item => ({
+      ...item,
+      created_at: item.createdAt
+    }));
+
     return NextResponse.json({
       success: true,
-      data,
+      data: formattedData,
       total,
       page,
       limit
