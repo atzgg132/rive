@@ -33,7 +33,7 @@ const CURRENCIES = [
 
 const FEE_RATE    = 0.005; // 0.5%
 const COOLDOWN_S  = 15;    // seconds between refreshes
-const FRANKFURTER = "https://api.frankfurter.app/latest";
+const FRANKFURTER = "/api/rates";
 
 // Format numbers nicely
 function fmt(n: number, code: string): string {
@@ -63,13 +63,15 @@ export default function RemitSection() {
   const cooldownRef  = useRef<NodeJS.Timeout | null>(null);
   const intervalRef  = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch live rates from Frankfurter (ECB) — free, no API key
+  // Fetch live rates from local API proxy
   const fetchRates = useCallback(async () => {
     setRatesState("loading");
     try {
-      const res  = await fetch(`${FRANKFURTER}?from=USD`);
+      const res  = await fetch(FRANKFURTER);
       if (!res.ok) throw new Error("bad response");
-      const json = await res.json();
+      const result = await res.json();
+      if (!result.success) throw new Error("Proxy error");
+      const json = result.data;
       // Frankfurter returns rates relative to the `from` currency
       // Add the base itself as rate = 1
       const allRates: Record<string, number> = { [json.base]: 1, ...json.rates };

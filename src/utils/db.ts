@@ -21,8 +21,11 @@ export function getDbPool(): Pool {
   return poolInstance;
 }
 
+let isSchemaInitialized = false;
+
 // Helper to initialize tables if they don't exist yet
 export async function initDbSchema(pool: Pool) {
+  if (isSchemaInitialized) return;
   const waitlistTable = `
     CREATE TABLE IF NOT EXISTS waitlist (
       id         SERIAL PRIMARY KEY,
@@ -51,6 +54,7 @@ export async function initDbSchema(pool: Pool) {
         ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'pending';
     `);
     await client.query(pageViewsTable);
+    isSchemaInitialized = true;
   } finally {
     client.release();
   }
