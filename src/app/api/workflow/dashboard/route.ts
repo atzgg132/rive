@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     // Compute revenue stats
     let totalPaid = 0;
     let totalPending = 0;
-    invoicesAggregate.forEach(grp => {
+    invoicesAggregate.forEach((grp: any) => {
       const sum = Number(grp._sum.total || 0);
       if (grp.status === "paid") {
         totalPaid += sum;
@@ -94,8 +94,8 @@ export async function GET(req: NextRequest) {
 
     // Format top clients and sort by revenue
     const topClients = clientsWithPaidInvoices
-      .map(c => {
-        const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+      .map((c: any) => {
+        const total_revenue = c.invoices.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
         return {
           id: c.id,
           name: c.name,

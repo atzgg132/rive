@@ -48,9 +48,9 @@ export async function GET(req: NextRequest) {
     });
 
     // Format output to match client requirements (including counts and sums)
-    const formattedClients = clients.map(c => {
+    const formattedClients = clients.map((c: any) => {
       const project_count = c.projects.length;
-      const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+      const total_revenue = c.invoices.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
       
       return {
         id: c.id,

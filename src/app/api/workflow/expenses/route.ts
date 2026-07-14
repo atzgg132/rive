@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       ]
     });
 
-    const formattedExpenses = expenses.map(e => ({
+    const formattedExpenses = expenses.map((e: any) => ({
       id: e.id,
       project_id: e.projectId,
       user_id: e.userId,

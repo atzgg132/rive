@@ -57,9 +57,9 @@ export async function GET(req: NextRequest) {
       ]
     });
 
-    const formattedProjects = projects.map(p => {
+    const formattedProjects = projects.map((p: any) => {
       const milestone_count = p.milestones.length;
-      const completed_milestones = p.milestones.filter(m => m.completed).length;
+      const completed_milestones = p.milestones.filter((m: any) => m.completed).length;
 
       return {
         id: p.id,

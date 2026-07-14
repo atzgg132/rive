@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       ]
     });
 
-    const formattedInvoices = invoices.map(i => ({
+    const formattedInvoices = invoices.map((i: any) => ({
       id: i.id,
       client_id: i.clientId,
       project_id: i.projectId,
