@@ -26,36 +26,29 @@ let isSchemaInitialized = false;
 // Helper to initialize tables if they don't exist yet
 export async function initDbSchema(pool: Pool) {
   if (isSchemaInitialized) return;
-  const waitlistTable = `
-    CREATE TABLE IF NOT EXISTS waitlist (
-      id         SERIAL PRIMARY KEY,
-      email      VARCHAR(255) UNIQUE NOT NULL,
-      type       VARCHAR(50)  NOT NULL,
-      status     VARCHAR(20)  NOT NULL DEFAULT 'pending',
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  const pageViewsTable = `
-    CREATE TABLE IF NOT EXISTS page_views (
-      id         SERIAL PRIMARY KEY,
-      path       VARCHAR(255) NOT NULL,
-      referrer   VARCHAR(500),
-      user_agent VARCHAR(500),
-      visited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-
-  const client = await pool.connect();
   try {
-    await client.query(waitlistTable);
-    // Safe migration to add status if missing
-    await client.query(`
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS waitlist (
+        id         SERIAL PRIMARY KEY,
+        email      VARCHAR(255) UNIQUE NOT NULL,
+        type       VARCHAR(50)  NOT NULL,
+        status     VARCHAR(20)  NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
       ALTER TABLE waitlist
         ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'pending';
+      CREATE TABLE IF NOT EXISTS page_views (
+        id         SERIAL PRIMARY KEY,
+        path       VARCHAR(255) NOT NULL,
+        referrer   VARCHAR(500),
+        user_agent VARCHAR(500),
+        visited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
     `);
-    await client.query(pageViewsTable);
     isSchemaInitialized = true;
-  } finally {
-    client.release();
+  } catch (error) {
+    console.error("Failed to initialize database schema:", error);
+    // Throw to let the caller handle it
+    throw error;
   }
 }
