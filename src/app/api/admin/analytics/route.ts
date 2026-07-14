@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool } from "@/utils/db";
+import { getDbPool, initDbSchema } from "@/utils/db";
 import { verifyToken } from "@/utils/auth";
 
 export async function GET(req: NextRequest) {
@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const pool = getDbPool();
+    await initDbSchema(pool);
 
     const [totalSignups, last24h, last7d, remitInterest, approvedCount, totalViews, topPaths, rawSignups, rawViews, typeBreakdown] =
       await Promise.all([

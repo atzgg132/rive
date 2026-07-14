@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool } from "@/utils/db";
+import { getDbPool, initDbSchema } from "@/utils/db";
 import { verifyToken } from "@/utils/auth";
 
 const ALLOWED_SORT  = ["email", "type", "status", "created_at", "id"] as const;
@@ -12,6 +12,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const pool = getDbPool();
+    await initDbSchema(pool);
+
     const { searchParams } = new URL(req.url);
     const page   = Math.max(1, parseInt(searchParams.get("page")  || "1", 10));
     const limit  = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
@@ -44,7 +47,6 @@ export async function GET(req: NextRequest) {
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const pool = getDbPool();
 
     const [countRes, dataRes] = await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS count FROM waitlist ${where};`, params),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDbPool } from "@/utils/db";
+import { getDbPool, initDbSchema } from "@/utils/db";
 import { verifyToken } from "@/utils/auth";
 
 export async function PATCH(
@@ -12,6 +12,9 @@ export async function PATCH(
   }
 
   try {
+    const pool = getDbPool();
+    await initDbSchema(pool);
+
     const resolvedParams = await params;
     const id = parseInt(resolvedParams.id, 10);
     if (isNaN(id)) {
@@ -26,7 +29,6 @@ export async function PATCH(
       );
     }
 
-    const pool = getDbPool();
     const result = await pool.query(
       "UPDATE waitlist SET status = $1 WHERE id = $2 RETURNING id, email, type, status, created_at;",
       [status, id]
