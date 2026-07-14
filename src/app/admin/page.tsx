@@ -27,7 +27,7 @@ type WaitlistEntry = {
 type SortField = "email" | "type" | "status" | "created_at";
 type SortOrder = "ASC" | "DESC";
 
-const API = "http://localhost:5000";
+const API = "";
 
 // ── Helpers ───────────────────────────────────────────────
 function fmt(n: number) { return n >= 1000 ? (n/1000).toFixed(1)+"k" : String(n); }

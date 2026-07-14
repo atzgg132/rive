@@ -14,7 +14,7 @@ export default function PageViewTracker() {
     // Don't track admin visits
     if (pathname?.startsWith("/admin")) return;
 
-    fetch("http://localhost:5000/api/track", {
+    fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
