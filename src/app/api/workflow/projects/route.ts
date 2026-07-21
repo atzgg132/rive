@@ -178,3 +178,118 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
 }
+
+// PUT /api/workflow/projects
+export async function PUT(req: NextRequest) {
+  try {
+    const session = getSessionUser(req);
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { 
+      id,
+      title, 
+      description, 
+      client_id, 
+      status, 
+      priority, 
+      start_date, 
+      due_date, 
+      budget, 
+      currency, 
+      tags, 
+      milestones 
+    } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: "Project ID is required." }, { status: 400 });
+    }
+
+    const existing = await prisma.project.findUnique({ where: { id } });
+    if (!existing || existing.userId !== session.userId) {
+      return NextResponse.json({ success: false, message: "Not found or unauthorized." }, { status: 404 });
+    }
+
+    const project = await prisma.$transaction(async (tx) => {
+      const proj = await tx.project.update({
+        where: { id },
+        data: {
+          clientId: client_id !== undefined ? client_id : existing.clientId,
+          title: title !== undefined ? title : existing.title,
+          description: description !== undefined ? description : existing.description,
+          status: status || existing.status,
+          priority: priority || existing.priority,
+          startDate: start_date ? new Date(start_date) : start_date === null ? null : existing.startDate,
+          dueDate: due_date ? new Date(due_date) : due_date === null ? null : existing.dueDate,
+          budget: budget !== undefined ? (budget ? Number(budget) : null) : existing.budget,
+          currency: currency || existing.currency,
+          tags: tags || existing.tags
+        }
+      });
+
+      if (milestones && Array.isArray(milestones)) {
+        await tx.milestone.deleteMany({ where: { projectId: id } });
+        
+        const milestonesData = milestones
+          .filter((m: any) => m.title)
+          .map((m: any) => ({
+            projectId: proj.id,
+            title: m.title,
+            dueDate: m.due_date ? new Date(m.due_date) : null,
+            completed: m.completed || false
+          }));
+
+        if (milestonesData.length > 0) {
+          await tx.milestone.createMany({
+            data: milestonesData
+          });
+        }
+      }
+
+      return proj;
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Project updated successfully.",
+      project
+    }, { status: 200 });
+  } catch (error: any) {
+    console.error("Project update error:", error);
+    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+  }
+}
+
+// DELETE /api/workflow/projects
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = getSessionUser(req);
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: "Project ID is required." }, { status: 400 });
+    }
+
+    const existing = await prisma.project.findUnique({ where: { id } });
+    if (!existing || existing.userId !== session.userId) {
+      return NextResponse.json({ success: false, message: "Not found or unauthorized." }, { status: 404 });
+    }
+
+    await prisma.project.delete({ where: { id } });
+
+    return NextResponse.json({
+      success: true,
+      message: "Project deleted successfully."
+    }, { status: 200 });
+  } catch (error: any) {
+    console.error("Project delete error:", error);
+    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+  }
+}

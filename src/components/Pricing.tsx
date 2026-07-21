@@ -64,7 +64,7 @@ const plans = [
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="relative bg-[#F5F8FC] py-28 overflow-hidden">
+    <section id="pricing" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-blue-100/10 rounded-full blur-[110px]" />
       </div>
@@ -77,7 +77,7 @@ export default function Pricing() {
             <span style={{ fontFamily: "var(--font-body)" }}>Simple, honest pricing</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight mb-4"
+            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight mb-4"
             style={{ fontFamily: "var(--font-display)" }}
           >
             plans for when{" "}
@@ -86,7 +86,7 @@ export default function Pricing() {
             </span>
           </h2>
           <p
-            className="text-slate-600 text-lg max-w-md mx-auto leading-relaxed"
+            className="text-slate-600 dark:text-slate-300 text-lg max-w-md mx-auto leading-relaxed"
             style={{ fontFamily: "var(--font-body)" }}
           >
             we&apos;re still building. join the waitlist to lock in early-adopter pricing when we go live.

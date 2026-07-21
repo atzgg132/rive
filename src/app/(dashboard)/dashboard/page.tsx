@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Activity
 } from "lucide-react";
+import AnalyticsCharts from "@/components/dashboard/AnalyticsCharts";
 
 interface Stats {
   totalPaid: number;
@@ -48,6 +49,7 @@ export default function DashboardOverview() {
   });
   const [topClients, setTopClients] = useState<TopClient[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function DashboardOverview() {
             setStats(data.stats);
             setTopClients(data.topClients);
             setActivities(data.recentActivity);
+            setChartData(data.chartData || []);
           }
         }
       } catch (err) {
@@ -134,6 +137,9 @@ export default function DashboardOverview() {
           );
         })}
       </div>
+
+      {/* Analytics Chart */}
+      <AnalyticsCharts data={chartData} />
 
       {/* Detail grids */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

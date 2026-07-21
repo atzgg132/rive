@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import PageViewTracker from "@/components/PageViewTracker";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -42,8 +43,14 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${outfit.variable}`}
+      suppressHydrationWarning
     >
-      <body className="antialiased"><PageViewTracker />{children}</body>
+      <body className="antialiased dark:bg-[#0B1120] dark:text-slate-100">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <PageViewTracker />
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

@@ -8,6 +8,8 @@ import {
   AlertCircle, CheckCircle2, XCircle, ChevronUp, ChevronDown,
   Filter, CheckCheck,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { RiveLogo } from "@/components/RiveLogo";
 
 // ── Types ────────────────────────────────────────────────
 type Analytics = {
@@ -65,10 +67,10 @@ function MiniBarChart({ data, label }: { data:{day:string;count:number}[]; label
       <div className="flex items-end gap-1.5 h-20">
         {data.map((d,i) => (
           <div key={i} className="flex-1 flex flex-col items-center group relative">
-            <div className="w-full bg-blue-100 hover:bg-blue-400 transition-colors rounded-t-sm cursor-default"
+            <div className="w-full bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-400 dark:hover:bg-blue-500 transition-colors rounded-t-sm cursor-default"
               style={{height:`${(d.count/max)*100}%`,minHeight:d.count>0?"4px":"0"}}
               title={`${d.day}: ${d.count}`}/>
-            <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{fontFamily:"Outfit,sans-serif"}}>{d.count}</div>
+            <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" style={{fontFamily:"Outfit,sans-serif"}}>{d.count}</div>
           </div>
         ))}
       </div>
@@ -99,29 +101,32 @@ function LoginScreen({ onLogin }: { onLogin: (t:string)=>void }) {
 
   const F = {fontFamily:"Outfit,sans-serif"};
   return (
-    <div className="min-h-screen bg-[#F5F8FC] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F5F8FC] dark:bg-[#0B1120] flex items-center justify-center p-4 transition-colors relative">
+      <div className="absolute top-6 right-6 z-50">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <Image src="/brand-assets/logo.png" alt="rive." width={100} height={44} style={{objectFit:"contain"}} priority/>
+          <RiveLogo height={36} className="text-[#0C1E36] dark:text-white" />
         </div>
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 p-8">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none p-8 transition-colors">
           <div className="text-center mb-7">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-6 h-6 text-blue-600"/>
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400"/>
             </div>
-            <h1 className="text-2xl font-bold text-[#0C1E36]" style={F}>admin portal</h1>
+            <h1 className="text-2xl font-bold text-[#0C1E36] dark:text-white" style={F}>admin portal</h1>
             <p className="text-slate-400 text-sm mt-1" style={F}>rive. internal dashboard</p>
           </div>
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wide" style={F}>username</label>
               <input value={username} onChange={e=>setUsername(e.target.value)} required autoFocus placeholder="Admin1"
-                className="px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" style={F}/>
+                className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wide" style={F}>password</label>
               <input value={password} onChange={e=>setPassword(e.target.value)} required type="password" placeholder="••••••••••"
-                className="px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" style={F}/>
+                className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
             </div>
             {state==="error" && (
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm" style={F}>
@@ -147,17 +152,17 @@ function StatCard({icon:Icon,label,value,sub,sparkData,color,bgColor,borderColor
 }) {
   const F = {fontFamily:"Outfit,sans-serif"};
   return (
-    <div className={`bg-white rounded-2xl border ${borderColor} shadow-sm p-6 flex flex-col gap-4`}>
+    <div className={`bg-white dark:bg-slate-900 rounded-2xl border ${borderColor} dark:border-slate-800 shadow-sm p-6 flex flex-col gap-4 transition-colors`}>
       <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-xl ${bgColor} flex items-center justify-center shrink-0`}>
+        <div className={`w-10 h-10 rounded-xl ${bgColor} dark:bg-opacity-20 flex items-center justify-center shrink-0`}>
           <Icon className={`w-5 h-5 ${color}`}/>
         </div>
         {sparkData && <Sparkline data={sparkData} color={sparkColor}/>}
       </div>
       <div>
-        <p className="text-3xl font-bold text-[#0C1E36]" style={F}>{value}</p>
-        <p className="text-sm font-semibold text-slate-500 mt-0.5" style={F}>{label}</p>
-        <p className="text-xs text-slate-400 mt-1" style={F}>{sub}</p>
+        <p className="text-3xl font-bold text-[#0C1E36] dark:text-white" style={F}>{value}</p>
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5" style={F}>{label}</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1" style={F}>{sub}</p>
       </div>
     </div>
   );
@@ -185,8 +190,8 @@ function SortTh({field,label,sortField,sortOrder,onSort}:{
 // ── Status badge ──────────────────────────────────────────
 function StatusBadge({status}:{status:"pending"|"approved"}) {
   return status==="approved"
-    ? <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><CheckCircle2 className="w-3 h-3"/>approved</span>
-    : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><Clock className="w-3 h-3"/>pending</span>;
+    ? <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><CheckCircle2 className="w-3 h-3"/>approved</span>
+    : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><Clock className="w-3 h-3"/>pending</span>;
 }
 
 // ── Dashboard ─────────────────────────────────────────────
@@ -283,23 +288,24 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC]">
+    <div className="min-h-screen bg-[#F5F8FC] dark:bg-[#0B1120] transition-colors">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-[#F5F8FC]/90 backdrop-blur-xl border-b border-black/[0.06]">
+      <header className="sticky top-0 z-40 bg-[#F5F8FC]/90 dark:bg-[#0B1120]/90 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/brand-assets/logo.png" alt="rive." width={72} height={32} style={{objectFit:"contain"}} priority/>
-            <div className="h-4 w-px bg-slate-200"/>
+            <Image src="/brand-assets/logo.png" alt="rive." width={72} height={32} style={{objectFit:"contain"}} className="dark:brightness-200 dark:contrast-100" priority/>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"/>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>admin</span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <button onClick={refresh} disabled={refreshing}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-700 transition-colors font-medium disabled:opacity-50" style={F}>
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium disabled:opacity-50" style={F}>
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing?"animate-spin":""}`}/>
               {refreshing?"refreshing...":"refresh"}
             </button>
             <button onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-all" style={F}>
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-red-200 dark:hover:border-red-900/50 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" style={F}>
               <LogOut className="w-3.5 h-3.5"/>sign out
             </button>
           </div>
@@ -310,7 +316,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
 
         {/* Title */}
         <div>
-          <h1 className="text-3xl font-bold text-[#0C1E36]" style={F}>dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#0C1E36] dark:text-white" style={F}>dashboard</h1>
           <p className="text-slate-400 text-sm mt-0.5 flex items-center gap-2" style={F}>
             live data · auto-refreshes every 30s
             <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"/>live</span>
@@ -328,13 +334,13 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
 
         {/* Charts */}
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6"><MiniBarChart data={analytics?.signupsPerDay??[]} label="signups — last 14 days"/></div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6"><MiniBarChart data={analytics?.viewsPerDay??[]}   label="page views — last 14 days"/></div>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors"><MiniBarChart data={analytics?.signupsPerDay??[]} label="signups — last 14 days"/></div>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors"><MiniBarChart data={analytics?.viewsPerDay??[]}   label="page views — last 14 days"/></div>
         </div>
 
         {/* Top pages + type breakdown */}
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>top pages by views</p>
             {analytics?.topPaths.length ? analytics.topPaths.map((p,i)=>{
               const max = analytics.topPaths[0].views;
@@ -353,7 +359,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
             }) : <div className="text-slate-400 text-sm py-8 text-center" style={F}>no page views yet</div>}
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>signup source breakdown</p>
             {analytics?.typeBreakdown.length ? analytics.typeBreakdown.map(t=>{
               const ttl = analytics.typeBreakdown.reduce((s,x)=>s+x.count,0);
@@ -376,13 +382,13 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
         </div>
 
         {/* ── Waitlist table ─────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
 
           {/* Table controls */}
-          <div className="px-6 py-4 border-b border-slate-100 space-y-3">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h2 className="font-bold text-[#0C1E36] text-lg" style={F}>waitlist</h2>
+                <h2 className="font-bold text-[#0C1E36] dark:text-white text-lg" style={F}>waitlist</h2>
                 <p className="text-slate-400 text-xs mt-0.5" style={F}>
                   {total} entries · page {page} of {Math.max(totalPages,1)}
                 </p>
@@ -392,7 +398,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
                   <input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="search emails..."
-                    className="pl-8 pr-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all w-52" style={F}/>
+                    className="pl-8 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all w-52" style={F}/>
                 </div>
                 <button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors" style={F}>search</button>
                 {search && <button type="button" onClick={handleClear} className="px-3 py-2 rounded-xl border border-slate-200 text-slate-500 text-sm hover:border-slate-300 transition-colors" style={F}>clear</button>}
@@ -434,7 +440,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-50">
+                <tr className="border-b border-slate-50 dark:border-slate-800/50">
                   <th className="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest" style={F}>#</th>
                   <SortTh field="email"      label="email"     sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
                   <SortTh field="type"       label="source"    sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
@@ -451,14 +457,14 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                 ) : waitlist.map((entry,i)=>{
                   const isApproving = approving.has(entry.id);
                   return (
-                    <tr key={entry.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                    <tr key={entry.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-3.5 text-xs text-slate-300 font-bold" style={F}>{(page-1)*limit+i+1}</td>
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                            <Mail className="w-3.5 h-3.5 text-blue-500"/>
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center shrink-0">
+                            <Mail className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400"/>
                           </div>
-                          <span className="text-sm font-medium text-slate-700" style={F}>{entry.email}</span>
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200" style={F}>{entry.email}</span>
                         </div>
                       </td>
                       <td className="px-6 py-3.5">
@@ -502,7 +508,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
           </div>
 
           {/* Pagination + per-page selector */}
-          <div className="px-6 py-4 border-t border-slate-50 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-6 py-4 border-t border-slate-50 dark:border-slate-800/50 flex flex-wrap items-center justify-between gap-3">
             {/* Left: entry range + per-page picker */}
             <div className="flex items-center gap-3">
               <span className="text-xs text-slate-400" style={F}>

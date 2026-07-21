@@ -29,7 +29,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="bg-[#F5F8FC] min-h-screen">
+    <main className="bg-[#F5F8FC] dark:bg-[#0B1120] min-h-screen">
       <Navbar />
       <Hero />
       <Features />

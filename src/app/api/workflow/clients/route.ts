@@ -134,3 +134,71 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
 }
+
+// PUT /api/workflow/clients
+export async function PUT(req: NextRequest) {
+  try {
+    const session = getSessionUser(req);
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const { id, name, email, phone, company, website, address, notes, tags } = await req.json();
+    if (!id || !name) {
+      return NextResponse.json({ success: false, message: "Client ID and name are required." }, { status: 400 });
+    }
+
+    const existing = await prisma.client.findFirst({ where: { id, userId: session.userId } });
+    if (!existing) {
+      return NextResponse.json({ success: false, message: "Client not found." }, { status: 404 });
+    }
+
+    const client = await prisma.client.update({
+      where: { id },
+      data: {
+        name,
+        email: email || null,
+        phone: phone || null,
+        company: company || null,
+        website: website || null,
+        address: address || null,
+        notes: notes || null,
+        tags: tags || []
+      }
+    });
+
+    return NextResponse.json({ success: true, message: "Client updated successfully.", client });
+  } catch (error: any) {
+    console.error("Client update error:", error);
+    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+  }
+}
+
+// DELETE /api/workflow/clients
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = getSessionUser(req);
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    
+    if (!id) {
+      return NextResponse.json({ success: false, message: "Client ID is required." }, { status: 400 });
+    }
+
+    const existing = await prisma.client.findFirst({ where: { id, userId: session.userId } });
+    if (!existing) {
+      return NextResponse.json({ success: false, message: "Client not found." }, { status: 404 });
+    }
+
+    await prisma.client.delete({ where: { id } });
+
+    return NextResponse.json({ success: true, message: "Client deleted successfully." });
+  } catch (error: any) {
+    console.error("Client delete error:", error);
+    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+  }
+}

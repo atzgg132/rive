@@ -27,7 +27,7 @@ const aiCapabilities = [
 
 export default function AISection() {
   return (
-    <section className="relative bg-[#F5F8FC] py-28 overflow-hidden">
+    <section className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
       {/* Background blobs */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-0 w-[480px] h-[480px] bg-blue-500/[0.04] rounded-full blur-[130px] -translate-y-1/2" />
@@ -101,7 +101,7 @@ export default function AISection() {
             </div>
 
             <h2
-              className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight leading-[1.08]"
+              className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.08]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               AI that works{" "}
@@ -111,7 +111,7 @@ export default function AISection() {
             </h2>
 
             <p
-              className="text-slate-600 text-[1.05rem] leading-relaxed"
+              className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed"
               style={{ fontFamily: "var(--font-body)" }}
             >
               rive.&apos;s AI co-pilot is embedded across every suite — not bolted on as an afterthought.

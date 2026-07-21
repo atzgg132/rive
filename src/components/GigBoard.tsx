@@ -57,7 +57,7 @@ const urgencyStyles: Record<string, string> = {
 
 export default function GigBoard() {
   return (
-    <section id="gig-board" className="relative bg-[#F5F8FC] py-28 overflow-hidden">
+    <section id="gig-board" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-28 bg-gradient-to-b from-transparent via-blue-500/15 to-transparent" />
@@ -74,13 +74,13 @@ export default function GigBoard() {
               <span style={{ fontFamily: "var(--font-body)" }}>Beta — Live Now</span>
             </div>
             <h2
-              className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight mb-3"
+              className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight mb-3"
               style={{ fontFamily: "var(--font-display)" }}
             >
               The Gig Board
             </h2>
             <p
-              className="text-slate-600 text-[1.05rem] max-w-lg leading-relaxed"
+              className="text-slate-600 dark:text-slate-300 text-[1.05rem] max-w-lg leading-relaxed"
               style={{ fontFamily: "var(--font-body)" }}
             >
               Find and post gigs — for freelancers and businesses alike. AI surfaces the

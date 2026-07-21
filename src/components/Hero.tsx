@@ -31,7 +31,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#F5F8FC] pt-28 pb-20">
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#F5F8FC] dark:bg-[#0B1120] pt-28 pb-20">
 
       {/* ── Background orbs ─────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none select-none">
@@ -67,7 +67,7 @@ export default function Hero() {
 
       {/* ── Headline ────────────────────────────────── */}
       <h1
-        className="relative text-center leading-none tracking-wide max-w-5xl px-8 mb-7 text-slate-900"
+        className="relative text-center leading-none tracking-wide max-w-5xl px-8 mb-7 text-slate-900 dark:text-white"
         style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(3.5rem, 10vw, 8rem)" }}
       >
         <span>Your entire </span>
@@ -109,7 +109,7 @@ export default function Hero() {
 
       {/* ── Subheadline ─────────────────────────────── */}
       <p
-        className="relative text-center text-slate-600 max-w-xl px-8 mb-10 leading-relaxed"
+        className="relative text-center text-slate-600 dark:text-slate-300 max-w-xl px-8 mb-10 leading-relaxed"
         style={{ fontFamily: "var(--font-body)", fontSize: "clamp(1rem, 2vw, 1.2rem)" }}
       >
         Manage projects, clients, revenue, and gigs — all in one place. Let

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { RiveLogo } from "@/components/RiveLogo";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -25,7 +27,7 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled
-          ? "bg-[#F5F8FC]/90 backdrop-blur-2xl border-b border-black/[0.06] py-3"
+          ? "bg-[#F5F8FC] dark:bg-[#0B1120]/90 dark:bg-[#0B1120]/90 backdrop-blur-2xl border-b border-black/[0.06] dark:border-white/[0.06] py-3"
           : "bg-transparent py-5"
       }`}
     >
@@ -33,15 +35,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center group">
-          <Image
-            src="/brand-assets/logo.png"
-            alt="rive."
-            width={90}
-            height={40}
-            className="opacity-90 group-hover:opacity-100 transition-opacity duration-200"
-            priority
-            style={{ objectFit: "contain" }}
-          />
+          <RiveLogo height={28} className="text-[#0C1E36] dark:text-white" />
         </Link>
 
         {/* Desktop nav */}
@@ -50,7 +44,7 @@ export default function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className="text-[13px] text-slate-600 hover:text-slate-900 transition-colors duration-200 font-medium tracking-wide"
+              className="text-[13px] text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 font-medium tracking-wide"
               style={{ fontFamily: "var(--font-body)" }}
             >
               {link.label}
@@ -60,13 +54,14 @@ export default function Navbar() {
 
         {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "login" }))}
-            className="text-[13px] text-slate-600 hover:text-slate-900 transition-colors duration-200 font-medium px-4 py-2 rounded-lg hover:bg-black/5"
+          <ThemeToggle />
+          <Link
+            href="/login"
+            className="text-[13px] text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 font-medium px-4 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
             style={{ fontFamily: "var(--font-body)" }}
           >
             Log In
-          </button>
+          </Link>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
             className="text-[13px] font-semibold px-5 py-2.5 rounded-xl text-white transition-all duration-200 hover:-translate-y-px"
@@ -81,27 +76,30 @@ export default function Navbar() {
         </div>
 
         {/* Mobile toggle */}
-        <button
-          className="md:hidden text-slate-800 p-2 rounded-lg hover:bg-black/5 transition-colors"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
-        >
-          <div className="w-5 h-4 flex flex-col justify-between">
-            <span className={`block h-px bg-slate-800 transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-[7.5px]" : ""}`} />
-            <span className={`block h-px bg-slate-800 transition-all duration-300 ${menuOpen ? "opacity-0 scale-x-0" : ""}`} />
-            <span className={`block h-px bg-slate-800 transition-all duration-300 origin-center ${menuOpen ? "-rotate-45 -translate-y-[7.5px]" : ""}`} />
-          </div>
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <button
+            className="text-slate-800 dark:text-slate-200 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+          >
+            <div className="w-5 h-4 flex flex-col justify-between">
+              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-[7.5px]" : ""}`} />
+              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "opacity-0 scale-x-0" : ""}`} />
+              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-all duration-300 origin-center ${menuOpen ? "-rotate-45 -translate-y-[7.5px]" : ""}`} />
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[#F5F8FC]/95 backdrop-blur-2xl border-t border-black/[0.06] px-8 py-6 flex flex-col gap-5">
+        <div className="md:hidden bg-[#F5F8FC] dark:bg-[#0B1120]/95 dark:bg-[#0B1120]/95 backdrop-blur-2xl border-t border-black/[0.06] dark:border-white/[0.06] px-8 py-6 flex flex-col gap-5">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="text-slate-600 hover:text-slate-955 transition-colors font-medium text-sm"
+              className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors font-medium text-sm"
               onClick={() => setMenuOpen(false)}
             >
               {link.label}

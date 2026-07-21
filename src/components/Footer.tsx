@@ -41,7 +41,7 @@ const socials = [
 
 export default function Footer() {
   return (
-    <footer className="relative bg-[#F5F8FC] border-t border-slate-100 pt-16 pb-10">
+    <footer className="relative bg-[#F5F8FC] dark:bg-[#0B1120] border-t border-slate-100 pt-16 pb-10">
       <div className="max-w-7xl mx-auto px-8">
 
         {/* ── Top grid ──────────────────────────────── */}
@@ -60,7 +60,7 @@ export default function Footer() {
             </Link>
 
             <p
-              className="text-slate-500 text-sm leading-relaxed max-w-[220px] font-medium"
+              className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-[220px] font-medium"
               style={{ fontFamily: "var(--font-body)" }}
             >
               The all-in-one operating system for freelancers and businesses. Built for the future of work.
@@ -85,7 +85,7 @@ export default function Footer() {
           {Object.entries(footerLinks).map(([category, links]) => (
             <div key={category} className="flex flex-col gap-4">
               <h4
-                className="text-slate-800 font-bold text-sm"
+                className="text-slate-800 dark:text-white font-bold text-sm"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {category}
@@ -95,7 +95,7 @@ export default function Footer() {
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-slate-500 hover:text-blue-600 text-sm transition-colors duration-200 font-medium"
+                      className="text-slate-500 dark:text-slate-400 hover:text-blue-600 text-sm transition-colors duration-200 font-medium"
                       style={{ fontFamily: "var(--font-body)" }}
                     >
                       {label}

@@ -23,7 +23,7 @@ const faqs = [
 
 export default function Faq() {
   return (
-    <section id="faq" className="relative bg-[#F5F8FC] py-28 overflow-hidden">
+    <section id="faq" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-100/10 blur-[110px] rounded-full" />
       </div>
@@ -37,7 +37,7 @@ export default function Faq() {
             <span style={{ fontFamily: "var(--font-body)" }}>frequently asked questions</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight"
+            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
             clear answers.{" "}

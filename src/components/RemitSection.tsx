@@ -150,7 +150,7 @@ export default function RemitSection() {
   };
 
   return (
-    <section id="remit" className="relative bg-[#F5F8FC] py-28 overflow-hidden">
+    <section id="remit" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-50/20 to-transparent" />
@@ -171,14 +171,14 @@ export default function RemitSection() {
               <span style={{ fontFamily: "var(--font-body)" }}>coming soon — join the waitlist</span>
             </div>
 
-            <h2 className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight leading-[1.08]" style={{ fontFamily: "var(--font-display)" }}>
+            <h2 className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.08]" style={{ fontFamily: "var(--font-display)" }}>
               Remit{" "}
               <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Payments</span>
               <br />
               <span className="text-3xl text-slate-500 font-medium">by rive.</span>
             </h2>
 
-            <p className="text-slate-600 text-[1.05rem] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
+            <p className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
               Get paid internationally — fast, cheap, and without the headache. Remit is
               rive.&apos;s global payment layer, built specifically for freelancers crossing borders.
             </p>

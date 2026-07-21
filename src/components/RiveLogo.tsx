@@ -10,9 +10,9 @@ interface RiveLogoProps {
   height?: number;
 }
 
-export default function RiveLogo({
+export function RiveLogo({
   className = "",
-  color = "#0C1E36",
+  color = "currentColor",
   accentColor = "#1D4ED8",
   height = 32,
 }: RiveLogoProps) {
@@ -32,3 +32,5 @@ export default function RiveLogo({
     </div>
   );
 }
+
+export default RiveLogo;

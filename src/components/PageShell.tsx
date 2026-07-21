@@ -13,9 +13,9 @@ const navLinks = [
 
 export default function PageShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F8FC]">
+    <div className="min-h-screen flex flex-col bg-[#F5F8FC] dark:bg-[#0B1120]">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-[#F5F8FC]/90 backdrop-blur-2xl border-b border-black/[0.06] py-3">
+      <nav className="sticky top-0 z-50 bg-[#F5F8FC] dark:bg-[#0B1120]/90 backdrop-blur-2xl border-b border-black/[0.06] py-3">
         <div className="max-w-7xl mx-auto px-8 flex items-center justify-between">
           <Link href="/" className="flex items-center group">
             <Image
@@ -57,7 +57,7 @@ export default function PageShell({ children }: { children: ReactNode }) {
       <main className="flex-1">{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-100 bg-[#F5F8FC] py-10">
+      <footer className="border-t border-slate-100 bg-[#F5F8FC] dark:bg-[#0B1120] py-10">
         <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <Link href="/" className="flex items-center">
             <Image src="/brand-assets/logo.png" alt="rive." width={72} height={32} style={{ objectFit: "contain" }} />

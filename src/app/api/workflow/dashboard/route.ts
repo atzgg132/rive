@@ -129,6 +129,46 @@ export async function GET(req: NextRequest) {
       .slice(0, 10)
       .map(({ type, title, created_at }: any) => ({ type, title, created_at }));
 
+    // Compute time-series data for charts (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    
+    // Fetch recent 6 months data for charts
+    const [recent6mInvoices, recent6mExpenses] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { userId, issueDate: { gte: sixMonthsAgo }, status: "paid" },
+        select: { total: true, issueDate: true }
+      }),
+      prisma.expense.findMany({
+        where: { userId, date: { gte: sixMonthsAgo } },
+        select: { amount: true, date: true }
+      })
+    ]);
+
+    const monthlyChartData: Record<string, { month: string, revenue: number, expenses: number }> = {};
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    // Initialize last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      monthlyChartData[key] = { month: `${monthNames[d.getMonth()]}`, revenue: 0, expenses: 0 };
+    }
+
+    recent6mInvoices.forEach((inv: any) => {
+      const d = new Date(inv.issueDate);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (monthlyChartData[key]) monthlyChartData[key].revenue += Number(inv.total);
+    });
+
+    recent6mExpenses.forEach((exp: any) => {
+      const d = new Date(exp.date);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (monthlyChartData[key]) monthlyChartData[key].expenses += Number(exp.amount);
+    });
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -139,7 +179,8 @@ export async function GET(req: NextRequest) {
         netEarnings
       },
       topClients,
-      recentActivity
+      recentActivity,
+      chartData: Object.values(monthlyChartData)
     });
   } catch (error: any) {
     console.error("Dashboard analytics error:", error);

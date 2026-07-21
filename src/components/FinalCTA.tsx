@@ -23,7 +23,7 @@ export default function FinalCTA() {
   };
 
   return (
-    <section className="relative bg-[#F5F8FC] py-32 overflow-hidden">
+    <section className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-32 overflow-hidden">
       {/* Backgrounds */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 via-transparent to-sky-50/15" />
@@ -50,7 +50,7 @@ export default function FinalCTA() {
 
         {/* Headline */}
         <h2
-          className="text-slate-900 leading-none tracking-wide"
+          className="text-slate-900 dark:text-white leading-none tracking-wide"
           style={{
             fontFamily: "var(--font-hero)",
             fontSize: "clamp(3rem, 9vw, 7rem)",
@@ -64,7 +64,7 @@ export default function FinalCTA() {
 
         {/* Sub */}
         <p
-          className="text-slate-600 text-lg max-w-xl leading-relaxed font-medium"
+          className="text-slate-600 dark:text-slate-300 text-lg max-w-xl leading-relaxed font-medium"
           style={{ fontFamily: "var(--font-body)" }}
         >
           rive. gives freelancers and businesses one unified platform to manage everything

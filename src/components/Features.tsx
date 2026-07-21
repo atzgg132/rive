@@ -83,7 +83,7 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; badge
 
 export default function Features() {
   return (
-    <section id="features" className="relative bg-[#F5F8FC] py-28 overflow-hidden">
+    <section id="features" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-blue-100/10 rounded-full blur-[120px]" />
@@ -97,7 +97,7 @@ export default function Features() {
             <span style={{ fontFamily: "var(--font-body)" }}>Everything you need</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 mb-5 tracking-tight"
+            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-5 tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
             One platform.{" "}
@@ -106,7 +106,7 @@ export default function Features() {
             </span>
           </h2>
           <p
-            className="text-slate-600 text-lg max-w-lg mx-auto leading-relaxed"
+            className="text-slate-600 dark:text-slate-300 text-lg max-w-lg mx-auto leading-relaxed"
             style={{ fontFamily: "var(--font-body)" }}
           >
             Every tool a freelancer or business needs — deeply integrated and supercharged by AI.

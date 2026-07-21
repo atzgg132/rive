@@ -119,3 +119,73 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
 }
+
+// PUT /api/workflow/expenses
+export async function PUT(req: NextRequest) {
+  try {
+    const session = getSessionUser(req);
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const { id, project_id, category, description, amount, currency, date, receipt_url, is_billable, is_reimbursed } = await req.json();
+    if (!id || !description || amount === undefined) {
+      return NextResponse.json({ success: false, message: "ID, description and amount are required." }, { status: 400 });
+    }
+
+    const existing = await prisma.expense.findUnique({ where: { id } });
+    if (!existing || existing.userId !== session.userId) {
+      return NextResponse.json({ success: false, message: "Expense not found or unauthorized." }, { status: 404 });
+    }
+
+    const expense = await prisma.expense.update({
+      where: { id },
+      data: {
+        projectId: project_id || null,
+        category: category || "other",
+        description,
+        amount: Number(amount),
+        currency: currency || "USD",
+        date: date ? new Date(date) : new Date(),
+        receiptUrl: receipt_url || null,
+        isBillable: is_billable || false,
+        isReimbursed: is_reimbursed || false
+      }
+    });
+
+    return NextResponse.json({ success: true, message: "Expense updated successfully.", expense });
+  } catch (error: any) {
+    console.error("Expense update error:", error);
+    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+  }
+}
+
+// DELETE /api/workflow/expenses?id=xxx
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = getSessionUser(req);
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: "Expense ID required." }, { status: 400 });
+    }
+
+    const existing = await prisma.expense.findUnique({ where: { id } });
+    if (!existing || existing.userId !== session.userId) {
+      return NextResponse.json({ success: false, message: "Expense not found or unauthorized." }, { status: 404 });
+    }
+
+    await prisma.expense.delete({ where: { id } });
+
+    return NextResponse.json({ success: true, message: "Expense deleted successfully." });
+  } catch (error: any) {
+    console.error("Expense delete error:", error);
+    return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
+  }
+}
+
