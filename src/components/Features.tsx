@@ -121,7 +121,7 @@ export default function Features() {
         {/* Bento grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map((feature) => {
-            const { icon: Icon, title, description, color, wide, highlight } = feature;
+            const { icon: Icon, title, description, color, highlight } = feature;
             const c = colorMap[color];
             return (
               <div

@@ -33,8 +33,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Calculate LTV
     const ltv = client.invoices
-      .filter((inv: any) => inv.status === "paid")
-      .reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
+      .filter((inv) => inv.status === "paid")
+      .reduce((sum, inv) => sum + Number(inv.total), 0);
 
     return NextResponse.json({
       success: true,
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         ltv
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Client fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

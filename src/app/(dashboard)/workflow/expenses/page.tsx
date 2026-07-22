@@ -90,10 +90,13 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadExpenses();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, category]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
   }, []);
 
@@ -141,7 +144,7 @@ export default function ExpensesPage() {
       } else {
         toast.error(data.message || "Failed to delete expense", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     }
   };
@@ -177,7 +180,7 @@ export default function ExpensesPage() {
       } else {
         toast.error(data.message || "Failed to save expense.", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     } finally {
       setSaving(false);

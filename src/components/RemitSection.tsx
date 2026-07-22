@@ -56,7 +56,6 @@ export default function RemitSection() {
 
   // Rates: { [currencyCode]: rate relative to base }
   const [rates,       setRates]       = useState<Record<string, number>>({});
-  const [rateBase,    setRateBase]    = useState<string>("");
   const [ratesState,  setRatesState]  = useState<"idle"|"loading"|"error">("idle");
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [cooldown,    setCooldown]    = useState(0);
@@ -76,7 +75,6 @@ export default function RemitSection() {
       // Add the base itself as rate = 1
       const allRates: Record<string, number> = { [json.base]: 1, ...json.rates };
       setRates(allRates);
-      setRateBase(json.base);
       setLastFetched(new Date());
       setRatesState("idle");
     } catch {
@@ -86,6 +84,7 @@ export default function RemitSection() {
 
   // Initial fetch on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRates();
     // Auto-refresh every 60 seconds silently
     intervalRef.current = setInterval(fetchRates, 60_000);
@@ -124,7 +123,6 @@ export default function RemitSection() {
   const received   = rate !== null ? netAmount * rate : null;
 
   const fromCurrency = CURRENCIES.find(c => c.code === fromCode)!;
-  const toCurrency   = CURRENCIES.find(c => c.code === toCode)!;
 
   // Seconds since last fetch
   const [ageSeconds, setAgeSeconds] = useState(0);

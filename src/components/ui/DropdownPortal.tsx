@@ -14,6 +14,7 @@ export default function DropdownPortal({ children, triggerRect, onClose }: Dropd
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     
     const handleScroll = () => onClose();

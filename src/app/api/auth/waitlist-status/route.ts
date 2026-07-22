@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       message: `Your waitlist status is ${waitlistEntry.status}.` 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Waitlist status fetch error:", error);
     return NextResponse.json({
       success: false,

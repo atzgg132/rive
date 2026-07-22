@@ -6,16 +6,14 @@ import {
   DollarSign, 
   Briefcase, 
   Receipt, 
-  ArrowUpRight, 
   Plus, 
-  PlusCircle,
   FileText,
-  UserPlus,
   ChevronRight,
   TrendingUp,
   Activity
 } from "lucide-react";
 import AnalyticsCharts from "@/components/dashboard/AnalyticsCharts";
+import type { ChartData } from "@/components/dashboard/AnalyticsCharts";
 
 interface Stats {
   totalPaid: number;
@@ -49,7 +47,7 @@ export default function DashboardOverview() {
   });
   const [topClients, setTopClients] = useState<TopClient[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

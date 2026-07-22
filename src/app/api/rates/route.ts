@@ -9,8 +9,8 @@ export async function GET() {
     
     const data = await res.json();
     return NextResponse.json({ success: true, data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to proxy currency rates:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 502 });
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Could not load rates." }, { status: 502 });
   }
 }

@@ -11,13 +11,16 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
 
+type ProjectInvoice = { id: string; number: string; issueDate: string; total: number | string; status: string };
+type ProjectClient = { id: string; name: string; company: string | null; avatarColor: string };
+type ProjectDetails = { id: string; name: string; status: string; createdAt: string; budget: string | null; dueDate: string | null; tags: string[]; description: string | null; client: ProjectClient | null; invoices: ProjectInvoice[] };
+
 export default function ProjectProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +35,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
             toast.error(data.message);
           }
         }
-      } catch (err) {
+      } catch {
         toast.error("Failed to load project profile");
       } finally {
         setLoading(false);
@@ -198,7 +201,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {project.invoices && project.invoices.map((inv: any) => (
+                {project.invoices && project.invoices.map((inv) => (
                   <div key={inv.id} className="flex items-center justify-between p-4 rounded-xl border border-[#E2EAF4] dark:border-slate-700 hover:border-blue-300 transition-all bg-white dark:bg-slate-800">
                     <div className="flex flex-col">
                       <span className="font-bold text-sm text-[#0C1E36] dark:text-slate-200">{inv.number}</span>

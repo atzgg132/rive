@@ -51,7 +51,7 @@ export default function RegisterPage() {
       } else {
         setError(data.message || "Failed to create account. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("Connection error. Check your network and try again.");
     } finally {
       setLoading(false);
@@ -73,7 +73,7 @@ export default function RegisterPage() {
       } else {
         setStatusResult({ status: "error", message: data.message || "An error occurred." });
       }
-    } catch (err) {
+    } catch {
       setStatusResult({ status: "error", message: "Connection error." });
     } finally {
       setStatusLoading(false);

@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest) {
       message: "Project status updated successfully.",
       project
     }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Project status update error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

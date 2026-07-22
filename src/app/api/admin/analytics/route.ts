@@ -56,13 +56,13 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Format type breakdown to match legacy structure
-    const typeBreakdown = rawTypeBreakdown.map((item: any) => ({
+    const typeBreakdown = rawTypeBreakdown.map((item) => ({
       type: item.type,
       count: item._count.id
     }));
 
     // Format top paths to match legacy structure
-    const topPaths = rawTopPaths.map((item: any) => ({
+    const topPaths = rawTopPaths.map((item) => ({
       path: item.path,
       views: item._count.id
     }));
@@ -75,13 +75,13 @@ export async function GET(req: NextRequest) {
       const key = d.toISOString().split("T")[0];
       signupsMap.set(key, 0);
     }
-    rawSignups.forEach((row: any) => {
+    rawSignups.forEach((row) => {
       const dateStr = new Date(row.createdAt).toISOString().split("T")[0];
       if (signupsMap.has(dateStr)) {
         signupsMap.set(dateStr, (signupsMap.get(dateStr) || 0) + 1);
       }
     });
-    const signupsPerDay = Array.from(signupsMap.entries()).map(([day, count]: any) => ({ day, count }));
+    const signupsPerDay = Array.from(signupsMap.entries()).map(([day, count]) => ({ day, count }));
 
     // Group views by day in JS
     const viewsMap = new Map<string, number>();
@@ -91,13 +91,13 @@ export async function GET(req: NextRequest) {
       const key = d.toISOString().split("T")[0];
       viewsMap.set(key, 0);
     }
-    rawViews.forEach((row: any) => {
+    rawViews.forEach((row) => {
       const dateStr = new Date(row.visitedAt).toISOString().split("T")[0];
       if (viewsMap.has(dateStr)) {
         viewsMap.set(dateStr, (viewsMap.get(dateStr) || 0) + 1);
       }
     });
-    const viewsPerDay = Array.from(viewsMap.entries()).map(([day, count]: any) => ({ day, count }));
+    const viewsPerDay = Array.from(viewsMap.entries()).map(([day, count]) => ({ day, count }));
 
     return NextResponse.json({
       success: true,
@@ -114,13 +114,13 @@ export async function GET(req: NextRequest) {
         typeBreakdown
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Analytics fetch error:", error);
     return NextResponse.json({
       success: false,
       message: "Internal server error.",
-      error: error.message || String(error),
-      stack: error.stack || ""
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack || "" : ""
     }, { status: 500 });
   }
 }

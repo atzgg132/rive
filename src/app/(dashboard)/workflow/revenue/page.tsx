@@ -5,16 +5,10 @@ import {
   FileText, 
   Plus, 
   Search, 
-  Calendar, 
-  User, 
-  DollarSign, 
   X, 
   Loader2, 
   Trash2, 
-  Eye, 
   CheckCircle, 
-  Clock, 
-  Tag,
   MoreVertical,
   Edit2
 } from "lucide-react";
@@ -125,10 +119,13 @@ export default function RevenuePage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadInvoices();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSelectionData();
   }, []);
 
@@ -220,7 +217,7 @@ export default function RevenuePage() {
       } else {
         toast.error(data.message || "Failed to delete invoice.", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     }
   };
@@ -243,7 +240,7 @@ export default function RevenuePage() {
       } else {
         toast.error(data.message || "Failed to update invoice.", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     }
   };
@@ -292,7 +289,7 @@ export default function RevenuePage() {
       } else {
         toast.error(data.message || "Failed to save invoice.", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     } finally {
       setSaving(false);

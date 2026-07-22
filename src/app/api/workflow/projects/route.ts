@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status") || "all";
     const clientId = searchParams.get("clientId") || "";
 
-    const where: any = {
+    const where: Prisma.ProjectWhereInput = {
       userId: session.userId,
       status: { not: "archived" }
     };
@@ -57,9 +58,9 @@ export async function GET(req: NextRequest) {
       ]
     });
 
-    const formattedProjects = projects.map((p: any) => {
+    const formattedProjects = projects.map((p) => {
       const milestone_count = p.milestones.length;
-      const completed_milestones = p.milestones.filter((m: any) => m.completed).length;
+      const completed_milestones = p.milestones.filter((m) => m.completed).length;
 
       return {
         id: p.id,
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest) {
       success: true,
       projects: formattedProjects
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Projects fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -139,8 +140,8 @@ export async function POST(req: NextRequest) {
 
       if (milestones && Array.isArray(milestones) && milestones.length > 0) {
         const milestonesData = milestones
-          .filter((m: any) => m.title)
-          .map((m: any) => ({
+          .filter((m) => m.title)
+          .map((m) => ({
             projectId: proj.id,
             title: m.title,
             dueDate: m.due_date ? new Date(m.due_date) : null,
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
       message: "Project created successfully.",
       project: formattedProject
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Project create error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -233,8 +234,8 @@ export async function PUT(req: NextRequest) {
         await tx.milestone.deleteMany({ where: { projectId: id } });
         
         const milestonesData = milestones
-          .filter((m: any) => m.title)
-          .map((m: any) => ({
+          .filter((m) => m.title)
+          .map((m) => ({
             projectId: proj.id,
             title: m.title,
             dueDate: m.due_date ? new Date(m.due_date) : null,
@@ -256,7 +257,7 @@ export async function PUT(req: NextRequest) {
       message: "Project updated successfully.",
       project
     }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Project update error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -288,7 +289,7 @@ export async function DELETE(req: NextRequest) {
       success: true,
       message: "Project deleted successfully."
     }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Project delete error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

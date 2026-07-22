@@ -40,9 +40,9 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, data: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Waitlist update error:", error);
-    if (error.code === "P2025") {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
       return NextResponse.json({ success: false, message: "entry not found." }, { status: 404 });
     }
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });

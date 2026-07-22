@@ -81,7 +81,9 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadClients();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status]);
 
   const openCreate = () => {
@@ -131,7 +133,7 @@ export default function ClientsPage() {
       } else {
         toast.error(data.message || "Failed to delete client", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     }
   };
@@ -174,7 +176,7 @@ export default function ClientsPage() {
       } else {
         toast.error(data.message || "Failed to save client.", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     } finally {
       setSaving(false);

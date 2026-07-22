@@ -3,7 +3,7 @@
 import React from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-interface ChartData {
+export interface ChartData {
   month: string;
   revenue: number;
   expenses: number;

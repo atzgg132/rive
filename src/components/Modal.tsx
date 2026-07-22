@@ -183,6 +183,7 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
       // Small delay so mount → animate-in
       requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(false);
       setDemoPlayed(false);
     }

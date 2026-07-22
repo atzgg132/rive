@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Registration error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Internal server error." }, { status: 500 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Internal server error." }, { status: 500 });
   }
 }

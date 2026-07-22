@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       success: true,
       project
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Project fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

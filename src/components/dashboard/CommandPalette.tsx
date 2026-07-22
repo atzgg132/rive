@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, LayoutDashboard } from "lucide-react";
+import { Search, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, LayoutDashboard } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 
@@ -13,6 +13,7 @@ export default function CommandPalette({ open, setOpen }: { open: boolean, setOp
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {

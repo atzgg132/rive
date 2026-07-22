@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { 
   Briefcase, 
@@ -9,13 +9,8 @@ import {
   Calendar, 
   User, 
   DollarSign, 
-  AlertCircle, 
   X, 
   Loader2, 
-  CheckCircle,
-  Clock,
-  ArrowRight,
-  TrendingUp,
   MoreVertical,
   Edit2,
   Trash2,
@@ -106,10 +101,13 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadClients();
   }, []);
 
@@ -163,7 +161,7 @@ export default function ProjectsPage() {
       } else {
         toast.error(data.message || "Failed to delete project", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     }
   };
@@ -212,7 +210,7 @@ export default function ProjectsPage() {
       } else {
         toast.error(data.message || "Failed to save project.", { id: loadingToast });
       }
-    } catch (err) {
+    } catch {
       toast.error("Network error. Try again.", { id: loadingToast });
     } finally {
       setSaving(false);
@@ -265,8 +263,8 @@ export default function ProjectsPage() {
       if (!data.success) {
         throw new Error(data.message || "Failed to update status");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Error updating status. Reverting...");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error updating status. Reverting...");
       setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: oldStatus } : p));
     }
   };
@@ -520,7 +518,7 @@ export default function ProjectsPage() {
   );
 }
 
-function DroppableColumn({ id, title, color, count, children }: any) {
+function DroppableColumn({ id, title, color, count, children }: { id: string; title: string; color: string; count: number; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef} className={`flex flex-col gap-4 p-4 rounded-2xl border min-h-[450px] transition-colors ${isOver ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/50' : 'bg-slate-50/50 dark:bg-slate-800/30 border-[#E2EAF4] dark:border-slate-800'}`}>
@@ -548,7 +546,7 @@ function DraggableProjectCard({
   handleDelete, 
   getPriorityColor, 
   getProgressPercent 
-}: any) {
+}: { project: Project; openDropdownId: string | null; setOpenDropdownId: (id: string | null) => void; openEdit: (project: Project) => void; handleDelete: (id: string, name: string) => void; getPriorityColor: (priority: string) => string; getProgressPercent: (project: Project) => number }) {
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ 

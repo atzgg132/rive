@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     // Compute revenue stats
     let totalPaid = 0;
     let totalPending = 0;
-    invoicesAggregate.forEach((grp: any) => {
+    invoicesAggregate.forEach((grp) => {
       const sum = Number(grp._sum.total || 0);
       if (grp.status === "paid") {
         totalPaid += sum;
@@ -94,8 +94,8 @@ export async function GET(req: NextRequest) {
 
     // Format top clients and sort by revenue
     const topClients = clientsWithPaidInvoices
-      .map((c: any) => {
-        const total_revenue = c.invoices.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
+      .map((c) => {
+        const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
         return {
           id: c.id,
           name: c.name,
@@ -104,30 +104,30 @@ export async function GET(req: NextRequest) {
           total_revenue: total_revenue.toString()
         };
       })
-      .filter((c: any) => Number(c.total_revenue) > 0)
-      .sort((a: any, b: any) => Number(b.total_revenue) - Number(a.total_revenue))
+      .filter((c) => Number(c.total_revenue) > 0)
+      .sort((a, b) => Number(b.total_revenue) - Number(a.total_revenue))
       .slice(0, 5);
 
     // Combine and sort recent activity stream in memory
     const activities: { type: string; title: string; created_at: string; rawDate: Date }[] = [];
     
-    recentClients.forEach((c: any) => {
+    recentClients.forEach((c) => {
       activities.push({ type: "client_added", title: c.name, created_at: c.createdAt.toISOString(), rawDate: c.createdAt });
     });
-    recentProjects.forEach((p: any) => {
+    recentProjects.forEach((p) => {
       activities.push({ type: "project_created", title: p.title, created_at: p.createdAt.toISOString(), rawDate: p.createdAt });
     });
-    recentInvoices.forEach((i: any) => {
+    recentInvoices.forEach((i) => {
       activities.push({ type: "invoice_created", title: `invoice #${i.invoiceNumber}`, created_at: i.createdAt.toISOString(), rawDate: i.createdAt });
     });
-    recentExpenses.forEach((e: any) => {
+    recentExpenses.forEach((e) => {
       activities.push({ type: "expense_logged", title: e.description, created_at: e.createdAt.toISOString(), rawDate: e.createdAt });
     });
 
     const recentActivity = activities
-      .sort((a: any, b: any) => b.rawDate.getTime() - a.rawDate.getTime())
+      .sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime())
       .slice(0, 10)
-      .map(({ type, title, created_at }: any) => ({ type, title, created_at }));
+      .map(({ type, title, created_at }) => ({ type, title, created_at }));
 
     // Compute time-series data for charts (last 6 months)
     const sixMonthsAgo = new Date();
@@ -157,13 +157,13 @@ export async function GET(req: NextRequest) {
       monthlyChartData[key] = { month: `${monthNames[d.getMonth()]}`, revenue: 0, expenses: 0 };
     }
 
-    recent6mInvoices.forEach((inv: any) => {
+    recent6mInvoices.forEach((inv) => {
       const d = new Date(inv.issueDate);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (monthlyChartData[key]) monthlyChartData[key].revenue += Number(inv.total);
     });
 
-    recent6mExpenses.forEach((exp: any) => {
+    recent6mExpenses.forEach((exp) => {
       const d = new Date(exp.date);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (monthlyChartData[key]) monthlyChartData[key].expenses += Number(exp.amount);
@@ -182,7 +182,7 @@ export async function GET(req: NextRequest) {
       recentActivity,
       chartData: Object.values(monthlyChartData)
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Dashboard analytics error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

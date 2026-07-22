@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { verifyToken } from "@/utils/auth";
 
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
     const order  = (searchParams.get("order") || "DESC").toLowerCase() as "asc" | "desc";
 
     // Build filter query object
-    const where: any = {};
+  const where: Prisma.WaitlistWhereInput = {};
     if (search) {
       where.email = { contains: search, mode: "insensitive" };
     }
@@ -59,13 +60,13 @@ export async function GET(req: NextRequest) {
       page,
       limit
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Waitlist fetch error:", error);
     return NextResponse.json({
       success: false,
       message: "Internal server error.",
-      error: error.message || String(error),
-      stack: error.stack || ""
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack || "" : ""
     }, { status: 500 });
   }
 }

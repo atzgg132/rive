@@ -34,7 +34,7 @@ export default function LoginPage() {
       } else {
         setError(data.message || "invalid credentials. please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("connection error. check your network and try again.");
     } finally {
       setLoading(false);

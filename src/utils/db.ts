@@ -36,9 +36,9 @@ if (globalForPrisma.prisma) {
 export const prisma = prismaInstance;
 
 // Mock functions for legacy raw SQL compatibility
-export function getDbPool(): any {
+export function getDbPool(): Record<string, never> {
   return {};
 }
-export async function initDbSchema(pool: any) {
+export async function initDbSchema(): Promise<void> {
   return;
 }

@@ -219,6 +219,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
       const d = await r.json();
       if(d.success) setAnalytics(d.data);
     } catch{}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[token]);
 
   const fetchWaitlist = useCallback(async()=>{
@@ -232,6 +233,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
       const d = await r.json();
       if(d.success){ setWaitlist(d.data); setTotal(d.total); }
     } catch{}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[token,page,limit,search,filterStatus,filterType,sortField,sortOrder]);
 
   const refresh = async()=>{
@@ -240,8 +242,13 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
     setRefreshing(false);
   };
 
-  useEffect(()=>{ setLoading(true); Promise.all([fetchAnalytics(),fetchWaitlist()]).finally(()=>setLoading(false)); },[fetchAnalytics,fetchWaitlist]);
-  useEffect(()=>{ const i=setInterval(refresh,30000); return()=>clearInterval(i); },[token,page,search,filterStatus,filterType,sortField,sortOrder]);
+  useEffect(()=>{
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true); Promise.all([fetchAnalytics(),fetchWaitlist()]).finally(()=>setLoading(false));
+  },[fetchAnalytics,fetchWaitlist]);
+  useEffect(()=>{ const i=setInterval(refresh,30000); return()=>clearInterval(i);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[token,page,search,filterStatus,filterType,sortField,sortOrder]);
 
   const handleSearch = (e:React.FormEvent)=>{ e.preventDefault(); setSearch(searchInput); setPage(1); };
   const handleClear  = ()=>{ setSearch(""); setSearchInput(""); setPage(1); };
@@ -256,7 +263,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
     const newStatus = entry.status==="approved"?"pending":"approved";
     setApproving(s=>new Set(s).add(entry.id));
     // Optimistic update
-    setWaitlist(prev=>prev.map(e=>e.id===entry.id?{...e,status:newStatus as any}:e));
+    setWaitlist(prev=>prev.map(e=>e.id===entry.id?{...e,status:newStatus}:e));
     try {
       const r = await fetch(`${API}/api/admin/waitlist/${entry.id}`,{method:"PATCH",headers,body:JSON.stringify({status:newStatus})});
       const d = await r.json();
@@ -564,7 +571,9 @@ export default function AdminPage() {
   // Load token from sessionStorage on mount (if page is reloaded)
   useEffect(() => {
     const saved = sessionStorage.getItem("rive_admin_token");
-    if (saved) setToken(saved);
+    if (saved) { // eslint-disable-next-line react-hooks/set-state-in-effect
+      setToken(saved);
+    }
   }, []);
 
   const handleLogin = (newToken: string) => {

@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       success: true,
       user: formattedUser
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Session fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

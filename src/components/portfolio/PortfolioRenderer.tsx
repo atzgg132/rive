@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import type { PortfolioContent, PortfolioProject, PortfolioService, PortfolioTheme } from "@/utils/portfolio";
 
+/* External URLs and inline uploads cannot use Next's static image allowlist. */
+/* eslint-disable @next/next/no-img-element */
+
 type Props = {
   content: PortfolioContent;
   theme: PortfolioTheme;

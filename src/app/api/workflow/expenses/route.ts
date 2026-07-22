@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category") || "all";
     const projectId = searchParams.get("projectId") || "";
 
-    const where: any = {
+    const where: Prisma.ExpenseWhereInput = {
       userId: session.userId
     };
 
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
       ]
     });
 
-    const formattedExpenses = expenses.map((e: any) => ({
+    const formattedExpenses = expenses.map((e) => ({
       id: e.id,
       project_id: e.projectId,
       user_id: e.userId,
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
       success: true,
       expenses: formattedExpenses
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Expenses fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
       message: "Expense logged successfully.",
       expense: formattedExpense
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Expense log error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -154,7 +155,7 @@ export async function PUT(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, message: "Expense updated successfully.", expense });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Expense update error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -183,9 +184,8 @@ export async function DELETE(req: NextRequest) {
     await prisma.expense.delete({ where: { id } });
 
     return NextResponse.json({ success: true, message: "Expense deleted successfully." });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Expense delete error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
 }
-

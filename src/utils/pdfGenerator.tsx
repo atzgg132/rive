@@ -1,5 +1,8 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, pdf, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+
+type InvoiceLineItem = { description: string; quantity: string | number; unit_price: string | number; amount?: string | number };
+type InvoicePdfData = { invoice_number: string; issue_date: string; due_date?: string | null; client_name?: string | null; project_title?: string | null; items?: InvoiceLineItem[]; subtotal: string | number; tax_rate: string | number; tax_amount: string | number; total: string | number; notes?: string | null };
 
 // Define styles
 const styles = StyleSheet.create({
@@ -19,7 +22,7 @@ const styles = StyleSheet.create({
   muted: { color: "#666", fontSize: 10 }
 });
 
-const InvoiceDocument = ({ invoice }: { invoice: any }) => (
+const InvoiceDocument = ({ invoice }: { invoice: InvoicePdfData }) => (
   <Document>
     <Page size="A4" style={styles.page}>
       <View style={styles.header}>
@@ -55,12 +58,12 @@ const InvoiceDocument = ({ invoice }: { invoice: any }) => (
           <Text style={styles.col3}>Price</Text>
           <Text style={styles.col4}>Amount</Text>
         </View>
-        {invoice.items && invoice.items.map((item: any, i: number) => (
+        {invoice.items && invoice.items.map((item, i) => (
           <View key={i} style={styles.row}>
             <Text style={styles.col1}>{item.description}</Text>
             <Text style={styles.col2}>{item.quantity}</Text>
             <Text style={styles.col3}>${Number(item.unit_price).toFixed(2)}</Text>
-            <Text style={styles.col4}>${Number(item.amount).toFixed(2)}</Text>
+            <Text style={styles.col4}>${Number(item.amount ?? Number(item.quantity) * Number(item.unit_price)).toFixed(2)}</Text>
           </View>
         ))}
       </View>
@@ -92,7 +95,7 @@ const InvoiceDocument = ({ invoice }: { invoice: any }) => (
   </Document>
 );
 
-export const downloadInvoicePDF = async (invoice: any) => {
+export const downloadInvoicePDF = async (invoice: InvoicePdfData) => {
   const blob = await pdf(<InvoiceDocument invoice={invoice} />).toBlob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

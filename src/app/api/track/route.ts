@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     // Return success to client so tracking never blocks page load
     return NextResponse.json({ success: false }, { status: 200 });
   }

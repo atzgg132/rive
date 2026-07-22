@@ -1,7 +1,6 @@
 "use client";
 import PageShell from "@/components/PageShell";
 import { useState } from "react";
-import { submitToWaitlist } from "@/utils/api";
 import { Loader2 } from "lucide-react";
 
 const font = { fontFamily: "var(--font-body)" };

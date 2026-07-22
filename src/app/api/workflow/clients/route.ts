@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status") || "all";
 
     // Build Prisma query filters
-    const where: any = {
+    const where: Prisma.ClientWhereInput = {
       userId: session.userId,
     };
 
@@ -48,9 +49,9 @@ export async function GET(req: NextRequest) {
     });
 
     // Format output to match client requirements (including counts and sums)
-    const formattedClients = clients.map((c: any) => {
+    const formattedClients = clients.map((c) => {
       const project_count = c.projects.length;
-      const total_revenue = c.invoices.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
+      const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
       
       return {
         id: c.id,
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest) {
       success: true,
       clients: formattedClients
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Clients fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest) {
       message: "Client created successfully.",
       client: formattedClient
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Client create error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -168,7 +169,7 @@ export async function PUT(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, message: "Client updated successfully.", client });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Client update error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -197,7 +198,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.client.delete({ where: { id } });
 
     return NextResponse.json({ success: true, message: "Client deleted successfully." });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Client delete error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

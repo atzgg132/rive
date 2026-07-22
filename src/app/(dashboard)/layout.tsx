@@ -12,11 +12,8 @@ import {
   LogOut, 
   Menu, 
   X, 
-  User,
-  ChevronRight,
   Search,
   Bell,
-  Sparkles,
   Command,
   Loader2,
   Globe2,
@@ -53,6 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (typeof window !== "undefined") {
       const mac = /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent);
+// eslint-disable-next-line react-hooks/set-state-in-effect
       setIsMac(mac);
       setNotifications(prev => 
         prev.map(n => n.id === 2 ? { ...n, text: `Pro Tip: Press ${mac ? "⌘K" : "Ctrl+K"} to open the Command Palette.` } : n)
@@ -83,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         } else {
           router.replace("/login");
         }
-      } catch (err) {
+      } catch {
         router.replace("/login");
       } finally {
         setLoading(false);
@@ -99,8 +97,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (res.ok) {
         router.replace("/login");
       }
-    } catch (err) {
-      console.error("Logout failed:", err);
+    } catch {
+      console.error("Logout failed");
     }
   };
 

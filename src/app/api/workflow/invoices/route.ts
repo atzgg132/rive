@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
 
-    const where: any = {
+    const where: Prisma.InvoiceWhereInput = {
       userId: session.userId
     };
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
       ]
     });
 
-    const formattedInvoices = invoices.map((i: any) => ({
+    const formattedInvoices = invoices.map((i) => ({
       id: i.id,
       client_id: i.clientId,
       project_id: i.projectId,
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
       updated_at: i.updatedAt,
       client_name: i.client?.name || null,
       project_title: i.project?.title || null,
-      items: (i.items || []).map((item: any) => ({
+      items: (i.items || []).map((item) => ({
         id: item.id,
         description: item.description,
         quantity: item.quantity.toString(),
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
       success: true,
       invoices: formattedInvoices
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invoices fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     // Calculate subtotal and total
     let subtotal = 0;
-    const computedItems = items.map((item: any, idx: number) => {
+    const computedItems = items.map((item, idx: number) => {
       const quantity = parseFloat(item.quantity) || 1;
       const unitPrice = parseFloat(item.unit_price) || 0;
       const amount = quantity * unitPrice;
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Create line items
-      const lineItems = computedItems.map((item: any) => ({
+      const lineItems = computedItems.map((item) => ({
         invoiceId: inv.id,
         description: item.description,
         quantity: item.quantity,
@@ -185,9 +186,9 @@ export async function POST(req: NextRequest) {
       message: "Invoice created successfully.",
       invoice
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invoice create error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Internal server error." }, { status: 500 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Internal server error." }, { status: 500 });
   }
 }
 
@@ -225,7 +226,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invoice not found or unauthorized." }, { status: 404 });
     }
 
-    const dataToUpdate: any = {
+    const dataToUpdate: Prisma.InvoiceUncheckedUpdateInput = {
       clientId: client_id !== undefined ? (client_id || null) : existingInvoice.clientId,
       projectId: project_id !== undefined ? (project_id || null) : existingInvoice.projectId,
       invoiceNumber: invoice_number !== undefined ? invoice_number : existingInvoice.invoiceNumber,
@@ -244,12 +245,13 @@ export async function PUT(req: NextRequest) {
     }
 
     await prisma.$transaction(async (tx) => {
-      if (dataToUpdate.invoiceNumber && dataToUpdate.invoiceNumber !== existingInvoice.invoiceNumber) {
+      const updatedInvoiceNumber = typeof dataToUpdate.invoiceNumber === "string" ? dataToUpdate.invoiceNumber : existingInvoice.invoiceNumber;
+      if (updatedInvoiceNumber !== existingInvoice.invoiceNumber) {
         const existing = await tx.invoice.findUnique({
           where: {
             unique_user_invoice_number: {
               userId: session.userId,
-              invoiceNumber: dataToUpdate.invoiceNumber
+              invoiceNumber: updatedInvoiceNumber
             }
           }
         });
@@ -261,7 +263,7 @@ export async function PUT(req: NextRequest) {
 
       if (items && Array.isArray(items) && items.length > 0) {
         let subtotal = 0;
-        const computedItems = items.map((item: any, idx: number) => {
+        const computedItems = items.map((item, idx: number) => {
           const quantity = parseFloat(item.quantity) || 1;
           const unitPrice = parseFloat(item.unit_price) || 0;
           const amount = quantity * unitPrice;
@@ -274,7 +276,7 @@ export async function PUT(req: NextRequest) {
             sortOrder: idx
           };
         });
-        const taxRateToUse = dataToUpdate.taxRate || 0;
+        const taxRateToUse = Number(dataToUpdate.taxRate || 0);
         const taxAmount = subtotal * (taxRateToUse / 100);
         const total = subtotal + taxAmount;
         
@@ -289,7 +291,7 @@ export async function PUT(req: NextRequest) {
           data: dataToUpdate
         });
         
-        const lineItems = computedItems.map((item: any) => ({
+        const lineItems = computedItems.map((item) => ({
           invoiceId: id,
           description: item.description,
           quantity: item.quantity,
@@ -313,9 +315,9 @@ export async function PUT(req: NextRequest) {
       success: true,
       message: "Invoice updated successfully."
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invoice update error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Internal server error." }, { status: 500 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Internal server error." }, { status: 500 });
   }
 }
 
@@ -351,7 +353,7 @@ export async function DELETE(req: NextRequest) {
       success: true,
       message: "Invoice deleted successfully."
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invoice delete error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

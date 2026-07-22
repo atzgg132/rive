@@ -16,9 +16,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+type ClientProject = { id: string; name: string; dueDate: string | null; status: string };
+type ClientInvoice = { id: string; number: string; issueDate: string; total: number | string; status: string };
+type ClientDetails = { id: string; name: string; company: string | null; avatarColor: string; createdAt: string; status: string; email: string | null; phone: string | null; website: string | null; tags: string[]; ltv: number; notes: string | null; projects: ClientProject[]; invoices: ClientInvoice[] };
+
 export default function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [client, setClient] = useState<any>(null);
+  const [client, setClient] = useState<ClientDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +37,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             toast.error(data.message);
           }
         }
-      } catch (err) {
+      } catch {
         toast.error("Failed to load client profile");
       } finally {
         setLoading(false);
@@ -196,7 +200,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {client.projects.map((proj: any) => (
+                {client.projects.map((proj) => (
                   <Link key={proj.id} href={`/workflow/projects`} className="flex items-center justify-between p-4 rounded-xl border border-[#E2EAF4] dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all group bg-white dark:bg-slate-800">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 bg-slate-50 dark:bg-slate-700 border border-[#E2EAF4] dark:border-slate-600 rounded-lg flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-blue-600 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 transition-colors">
@@ -206,7 +210,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                         <h4 className="font-bold text-sm text-[#0C1E36] dark:text-white">{proj.name}</h4>
                         <div className="flex items-center gap-2 text-xs text-[#4A5E78] dark:text-slate-500">
                           <Calendar className="h-3 w-3" />
-                          <span>Due {formatDate(proj.dueDate)}</span>
+                          <span>Due {proj.dueDate ? formatDate(proj.dueDate) : "No due date"}</span>
                         </div>
                       </div>
                     </div>
@@ -250,7 +254,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                     </tr>
                   </thead>
                   <tbody>
-                    {client.invoices.map((inv: any) => (
+                    {client.invoices.map((inv) => (
                       <tr key={inv.id} className="border-b border-[#E2EAF4] hover:bg-[#F5F8FC] transition-colors">
                         <td className="py-3 pr-4 text-sm font-semibold text-[#0C1E36] dark:text-slate-200">{inv.number}</td>
                         <td className="py-3 pr-4 text-xs text-[#4A5E78]">{formatDate(inv.issueDate)}</td>
