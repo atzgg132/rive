@@ -26,20 +26,20 @@ export default function DocsPage() {
       <div className="max-w-7xl mx-auto px-8 py-16 flex gap-10 min-h-[80vh]">
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col gap-1 w-52 shrink-0">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-3" style={font}>contents</p>
+          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-3" style={font}>contents</p>
           {sidebarItems.map(item => (
             <div key={item} className="flex items-center justify-between px-3 py-2 rounded-lg">
-              <span className="text-sm text-slate-400 font-medium" style={font}>{item}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-400 font-bold" style={font}>soon</span>
+              <span className="text-sm text-slate-400 dark:text-slate-500 font-medium" style={font}>{item}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold" style={font}>soon</span>
             </div>
           ))}
         </aside>
 
         {/* Main */}
         <main className="flex-1 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-6" style={font}>docs</div>
-          <h1 className="text-5xl font-bold text-[#0C1E36] tracking-tight mb-4" style={fontD}>documentation</h1>
-          <p className="text-slate-500 text-lg mb-8 leading-relaxed" style={font}>documentation is coming soon. we are writing it in parallel with building the product.</p>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-6" style={font}>docs</div>
+          <h1 className="text-5xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>documentation</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-8 leading-relaxed" style={font}>documentation is coming soon. we are writing it in parallel with building the product.</p>
 
           {/* Code block */}
           <div className="bg-[#0C1E36] rounded-2xl overflow-hidden mb-10">

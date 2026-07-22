@@ -76,12 +76,12 @@ function WaitlistForm({
       >
         <div className="text-center">
           <h3
-            className="text-2xl font-bold text-slate-800 mb-2"
+            className="text-2xl font-bold text-slate-800 dark:text-white mb-2"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {heading}
           </h3>
-          <p className="text-slate-500 text-sm leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
             {subtext}
           </p>
         </div>
@@ -94,7 +94,7 @@ function WaitlistForm({
             placeholder="your@email.com"
             required
             disabled={state === "loading"}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 disabled:opacity-60"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-all duration-200 disabled:opacity-60"
           />
           <button
             type="submit"
@@ -125,17 +125,17 @@ function WaitlistForm({
       >
         {/* Animated ring */}
         <div className="relative flex items-center justify-center">
-          <span className="absolute w-24 h-24 rounded-full bg-emerald-100 animate-ping opacity-30" />
-          <CheckCircle2 className="w-16 h-16 text-emerald-500 relative z-10" />
+          <span className="absolute w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-950/40 animate-ping opacity-30" />
+          <CheckCircle2 className="w-16 h-16 text-emerald-500 dark:text-emerald-400 relative z-10" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-slate-800 mb-1" style={{ fontFamily: "var(--font-display)" }}>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-1" style={{ fontFamily: "var(--font-display)" }}>
             you&apos;re on the list!
           </h3>
-          <p className="text-slate-500 text-sm" style={{ fontFamily: "var(--font-body)" }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontFamily: "var(--font-body)" }}>
             we&apos;ll reach out as soon as your spot is ready.
           </p>
-          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-semibold">
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
             confirmation sent to {email}
           </div>
@@ -152,19 +152,19 @@ function WaitlistForm({
         }}
       >
         <div className="relative flex items-center justify-center">
-          <span className="absolute w-24 h-24 rounded-full bg-blue-100 animate-ping opacity-20" />
-          <Clock className="w-16 h-16 text-blue-500 relative z-10" />
+          <span className="absolute w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-950/40 animate-ping opacity-20" />
+          <Clock className="w-16 h-16 text-blue-500 dark:text-blue-400 relative z-10" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-slate-800 mb-1" style={{ fontFamily: "var(--font-display)" }}>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-1" style={{ fontFamily: "var(--font-display)" }}>
             already on the list
           </h3>
-          <p className="text-slate-500 text-sm" style={{ fontFamily: "var(--font-body)" }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontFamily: "var(--font-body)" }}>
             you&apos;re already registered with this email.
             <br />
             sit tight — we&apos;ll notify you when your batch opens.
           </p>
-          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold">
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block" />
             {email}
           </div>
@@ -197,14 +197,14 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-[#0C1E36]/30 backdrop-blur-md"
+        className="absolute inset-0 bg-[#0C1E36]/30 dark:bg-slate-950/80 backdrop-blur-md"
         onClick={onClose}
         style={{ transition: "opacity 300ms" }}
       />
 
       {/* Card */}
       <div
-        className="relative w-full max-w-md bg-white border border-slate-100 rounded-3xl p-8 shadow-2xl shadow-slate-200/80 z-10"
+        className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-2xl shadow-slate-200/80 dark:shadow-none z-10 transition-colors"
         style={{
           transition: "transform 350ms cubic-bezier(.16,1,.3,1), opacity 300ms",
           transform: visible ? "translateY(0) scale(1)" : "translateY(20px) scale(0.97)",
@@ -214,7 +214,7 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -253,7 +253,7 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
               >
                 rive. product preview
               </h3>
-              <p className="text-slate-500 text-sm" style={{ fontFamily: "var(--font-body)" }}>
+              <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontFamily: "var(--font-body)" }}>
                 watch how our native ai handles invoicing and client management.
               </p>
             </div>
@@ -268,7 +268,7 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
               </button>
 
               <div
-                className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/95 px-6"
+                className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/95 dark:bg-slate-900/95 px-6"
                 style={{
                   opacity: demoPlayed ? 1 : 0,
                   transform: demoPlayed ? "scale(1)" : "scale(0.96)",

@@ -6,12 +6,12 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const guides = [
-  { icon: FolderOpen, title: "setting up your first project",           color: "text-blue-600",   bg: "bg-blue-50" },
-  { icon: Globe,      title: "sending your first payment with remit",   color: "text-emerald-600", bg: "bg-emerald-50" },
-  { icon: Zap,        title: "using the ai co-pilot",                   color: "text-amber-600",  bg: "bg-amber-50" },
-  { icon: Users,      title: "managing clients and contracts",           color: "text-purple-600", bg: "bg-purple-50" },
-  { icon: Briefcase,  title: "listing on the gig board",                color: "text-sky-600",    bg: "bg-sky-50" },
-  { icon: BarChart3,  title: "invoice and revenue tracking",            color: "text-rose-600",   bg: "bg-rose-50" },
+  { icon: FolderOpen, title: "setting up your first project",           color: "text-blue-600",   bg: "bg-blue-50",    darkBg: "dark:bg-blue-950/40" },
+  { icon: Globe,      title: "sending your first payment with remit",   color: "text-emerald-600", bg: "bg-emerald-50", darkBg: "dark:bg-emerald-950/40" },
+  { icon: Zap,        title: "using the ai co-pilot",                   color: "text-amber-600",  bg: "bg-amber-50",  darkBg: "dark:bg-amber-950/40" },
+  { icon: Users,      title: "managing clients and contracts",           color: "text-purple-600", bg: "bg-purple-50", darkBg: "dark:bg-purple-950/40" },
+  { icon: Briefcase,  title: "listing on the gig board",                color: "text-sky-600",    bg: "bg-sky-50",    darkBg: "dark:bg-sky-950/40" },
+  { icon: BarChart3,  title: "invoice and revenue tracking",            color: "text-rose-600",   bg: "bg-rose-50",   darkBg: "dark:bg-rose-950/40" },
 ];
 
 export default function GuidesPage() {
@@ -22,27 +22,27 @@ export default function GuidesPage() {
         <div className="relative max-w-5xl mx-auto px-8">
 
           {/* Header */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-5" style={font}>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>
             guides
           </div>
-          <h1 className="text-6xl font-bold text-[#0C1E36] tracking-tight mb-4" style={fontD}>
+          <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>
             learn rive.
           </h1>
-          <p className="text-slate-500 text-lg mb-14 max-w-lg leading-relaxed" style={font}>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-14 max-w-lg leading-relaxed" style={font}>
             step-by-step guides to get the most out of every feature. launching alongside the platform.
           </p>
 
           {/* Grid */}
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5 mb-16">
-            {guides.map(({ icon: Icon, title, color, bg }) => (
-              <div key={title} className="group bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col gap-4 hover:shadow-md hover:border-slate-200 transition-all duration-200">
-                <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center`}>
+            {guides.map(({ icon: Icon, title, color, bg, darkBg }) => (
+              <div key={title} className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-6 flex flex-col gap-4 hover:shadow-md dark:hover:shadow-blue-900/20 hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200">
+                <div className={`w-11 h-11 rounded-xl ${bg} ${darkBg} flex items-center justify-center`}>
                   <Icon className={`w-5 h-5 ${color}`} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#0C1E36] text-sm leading-snug mb-3" style={fontD}>{title}</h3>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 text-[11px] font-bold" style={font}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                  <h3 className="font-bold text-[#0C1E36] dark:text-white text-sm leading-snug mb-3" style={fontD}>{title}</h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-[11px] font-bold" style={font}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
                     coming soon
                   </span>
                 </div>
@@ -51,9 +51,9 @@ export default function GuidesPage() {
           </div>
 
           {/* CTA */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center max-w-md mx-auto">
-            <h3 className="text-xl font-bold text-[#0C1E36] mb-2" style={fontD}>be first to learn</h3>
-            <p className="text-slate-500 text-sm mb-5" style={font}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 text-center max-w-md mx-auto transition-colors">
+            <h3 className="text-xl font-bold text-[#0C1E36] dark:text-white mb-2" style={fontD}>be first to learn</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-5" style={font}>
               join the waitlist and we&apos;ll send you guides as soon as they&apos;re published.
             </p>
             <button

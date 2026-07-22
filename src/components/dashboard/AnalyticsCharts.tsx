@@ -60,21 +60,21 @@ export default function AnalyticsCharts({ data }: { data: ChartData[] }) {
               dataKey="month" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: "#4A5E78" }}
+              tick={{ fontSize: 12, fill: "var(--text-secondary)" }}
               dy={10}
             />
             <YAxis 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: "#4A5E78" }}
+              tick={{ fontSize: 12, fill: "var(--text-secondary)" }}
               tickFormatter={formatCurrency}
               dx={-10}
             />
             <Tooltip 
-              contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)", background: "rgba(255, 255, 255, 0.95)" }}
+              contentStyle={{ borderRadius: "12px", border: "1px solid var(--color-blue-border)", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)", background: "var(--bg-secondary)", color: "var(--text-primary)" }}
               itemStyle={{ fontSize: "14px", fontWeight: "bold" }}
-              labelStyle={{ color: "#4A5E78", marginBottom: "4px", fontSize: "12px", fontWeight: "bold", textTransform: "uppercase" }}
-              formatter={(value: number) => [`$${value.toLocaleString()}`, undefined]}
+              labelStyle={{ color: "var(--text-secondary)", marginBottom: "4px", fontSize: "12px", fontWeight: "bold", textTransform: "uppercase" }}
+              formatter={(value) => [`$${Number(value ?? 0).toLocaleString()}`, ""]}
             />
             <Area type="monotone" dataKey="revenue" stroke="#1D4ED8" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
             <Area type="monotone" dataKey="expenses" stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExp)" />

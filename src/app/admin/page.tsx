@@ -119,12 +119,12 @@ function LoginScreen({ onLogin }: { onLogin: (t:string)=>void }) {
           </div>
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide" style={F}>username</label>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>username</label>
               <input value={username} onChange={e=>setUsername(e.target.value)} required autoFocus placeholder="Admin1"
                 className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide" style={F}>password</label>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>password</label>
               <input value={password} onChange={e=>setPassword(e.target.value)} required type="password" placeholder="••••••••••"
                 className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
             </div>
@@ -350,7 +350,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-slate-600 truncate" style={F}>{p.path||"/"}</span>
-                      <span className="text-xs font-bold text-slate-500 ml-2 shrink-0" style={F}>{p.views}</span>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-2 shrink-0" style={F}>{p.views}</span>
                     </div>
                     <div className="h-1.5 bg-slate-100 rounded-full"><div className="h-full bg-blue-400 rounded-full" style={{width:`${(p.views/max)*100}%`}}/></div>
                   </div>
@@ -367,7 +367,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
               const colors:Record<string,string>={waitlist:"bg-blue-500",login:"bg-purple-500",demo:"bg-amber-500",remit:"bg-emerald-500"};
               return (
                 <div key={t.type} className="flex items-center gap-3 mb-3">
-                  <span className="text-xs font-bold text-slate-500 w-16 shrink-0" style={F}>{t.type}</span>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-16 shrink-0" style={F}>{t.type}</span>
                   <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${colors[t.type]??"bg-slate-400"} transition-all duration-500`} style={{width:`${pct}%`}}/>
                   </div>
@@ -401,7 +401,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                     className="pl-8 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all w-52" style={F}/>
                 </div>
                 <button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors" style={F}>search</button>
-                {search && <button type="button" onClick={handleClear} className="px-3 py-2 rounded-xl border border-slate-200 text-slate-500 text-sm hover:border-slate-300 transition-colors" style={F}>clear</button>}
+                {search && <button type="button" onClick={handleClear} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors" style={F}>clear</button>}
               </form>
             </div>
 
@@ -414,7 +414,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
               <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
                 {(["all","pending","approved"] as const).map(s=>(
                   <button key={s} onClick={()=>{setFilterStatus(s);setPage(1);}}
-                    className={`px-3 py-1.5 transition-colors ${filterStatus===s?"bg-blue-600 text-white":"text-slate-500 hover:bg-slate-50"}`} style={F}>
+                    className={`px-3 py-1.5 transition-colors ${filterStatus===s?"bg-blue-600 text-white":"text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`} style={F}>
                     {s}
                   </button>
                 ))}
@@ -422,7 +422,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
 
               {/* Type filter */}
               <select value={filterType} onChange={e=>{setFilterType(e.target.value);setPage(1);}}
-                className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 bg-white focus:outline-none focus:border-blue-400 transition-all" style={F}>
+                className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 focus:outline-none focus:border-blue-400 transition-all" style={F}>
                 {knownTypes.map(t=><option key={t} value={t}>{t==="all"?"all sources":t}</option>)}
               </select>
 
@@ -520,7 +520,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                 <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
                   {[10,20,50,100].map(n=>(
                     <button key={n} onClick={()=>{ setLimit(n); setPage(1); }}
-                      className={`px-3 py-1.5 transition-colors ${limit===n?"bg-blue-600 text-white":"text-slate-500 hover:bg-slate-50"}`} style={F}>
+                      className={`px-3 py-1.5 transition-colors ${limit===n?"bg-blue-600 text-white":"text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`} style={F}>
                       {n}
                     </button>
                   ))}
@@ -531,20 +531,20 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
             {totalPages>1 && (
               <div className="flex items-center gap-2">
                 <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}
-                  className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                   <ChevronLeft className="w-4 h-4"/>
                 </button>
                 {Array.from({length:Math.min(5,totalPages)},(_,i)=>{
                   const pg=Math.max(1,Math.min(page-2,totalPages-4))+i;
                   return (
                     <button key={pg} onClick={()=>setPage(pg)}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${pg===page?"bg-blue-600 text-white":"border border-slate-200 text-slate-500 hover:border-blue-200 hover:text-blue-600"}`} style={F}>
+                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${pg===page?"bg-blue-600 text-white":"border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600"}`} style={F}>
                       {pg}
                     </button>
                   );
                 })}
                 <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages}
-                  className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                   <ChevronRight className="w-4 h-4"/>
                 </button>
               </div>

@@ -64,7 +64,7 @@ export default function AboutPage() {
           </span>
 
           <h1
-            className="text-6xl md:text-7xl lg:text-8xl font-black text-[#0C1E36] leading-[1.05] mb-7"
+            className="text-6xl md:text-7xl lg:text-8xl font-black text-[#0C1E36] dark:text-white leading-[1.05] mb-7"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}
           >
             about{' '}
@@ -72,7 +72,7 @@ export default function AboutPage() {
           </h1>
 
           <p
-            className="text-xl md:text-2xl text-slate-500 max-w-2xl mx-auto leading-relaxed"
+            className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             we are building the operating system for the future of freelance work.
@@ -130,7 +130,7 @@ export default function AboutPage() {
               what we stand for
             </span>
             <h2
-              className="mt-3 text-4xl md:text-5xl font-black text-[#0C1E36]"
+              className="mt-3 text-4xl md:text-5xl font-black text-[#0C1E36] dark:text-white"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
             >
               our values
@@ -141,7 +141,7 @@ export default function AboutPage() {
             {values.map(({ icon: Icon, title, desc }) => (
               <div
                 key={title}
-                className="group relative bg-white border border-slate-100 rounded-2xl shadow-sm p-8 flex flex-col gap-5 hover:-translate-y-1 transition-transform duration-300 overflow-hidden"
+                className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-none p-8 flex flex-col gap-5 hover:-translate-y-1 transition-transform duration-300 overflow-hidden"
               >
                 {/* Hover glow */}
                 <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -151,17 +151,17 @@ export default function AboutPage() {
                   className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
                   style={{ background: 'linear-gradient(135deg, rgba(29,78,216,0.10) 0%, rgba(59,130,246,0.12) 100%)' }}
                 >
-                  <Icon size={22} className="text-blue-600" strokeWidth={1.8} />
+                  <Icon size={22} className="text-blue-600 dark:text-blue-400" strokeWidth={1.8} />
                 </div>
 
                 <div>
                   <h3
-                    className="text-lg font-black text-[#0C1E36] mb-2"
+                    className="text-lg font-black text-[#0C1E36] dark:text-white mb-2"
                     style={{ fontFamily: 'var(--font-display)' }}
                   >
                     {title}
                   </h3>
-                  <p className="text-sm text-slate-500 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
                     {desc}
                   </p>
                 </div>
@@ -182,7 +182,7 @@ export default function AboutPage() {
               the people
             </span>
             <h2
-              className="mt-3 text-4xl md:text-5xl font-black text-[#0C1E36]"
+              className="mt-3 text-4xl md:text-5xl font-black text-[#0C1E36] dark:text-white"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
             >
               meet the team
@@ -193,7 +193,7 @@ export default function AboutPage() {
             {team.map(({ initials, name, role }, idx) => (
               <div
                 key={name}
-                className="group bg-white border border-slate-100 rounded-2xl shadow-sm p-8 flex flex-col items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
+                className="group bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-none p-8 flex flex-col items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
               >
                 {/* Avatar */}
                 <div
@@ -204,13 +204,13 @@ export default function AboutPage() {
                 </div>
                 <div className="text-center">
                   <p
-                    className="font-black text-[#0C1E36] text-base"
+                    className="font-black text-[#0C1E36] dark:text-white text-base"
                     style={{ fontFamily: 'var(--font-display)' }}
                   >
                     {name}
                   </p>
                   <p
-                    className="text-xs text-slate-500 mt-1 font-medium"
+                    className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
                     {role}
@@ -226,12 +226,12 @@ export default function AboutPage() {
       <section className="py-16 md:py-24">
         <div className="max-w-3xl mx-auto px-6 md:px-8 text-center">
           <h2
-            className="text-4xl md:text-5xl font-black text-[#0C1E36] mb-5"
+            className="text-4xl md:text-5xl font-black text-[#0C1E36] dark:text-white mb-5"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
           >
             ready to shape the future?
           </h2>
-          <p className="text-slate-500 mb-10 text-lg" style={{ fontFamily: 'var(--font-body)' }}>
+          <p className="text-slate-500 dark:text-slate-400 mb-10 text-lg" style={{ fontFamily: 'var(--font-body)' }}>
             be among the first to experience a platform truly built for freelancers.
           </p>
           <button

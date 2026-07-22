@@ -18,27 +18,27 @@ export default function ChangelogPage() {
         <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-blue-100/15 rounded-full blur-[100px] pointer-events-none" />
         <div className="relative max-w-3xl mx-auto px-8">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-5" style={font}>product history</div>
-          <h1 className="text-6xl font-bold text-[#0C1E36] tracking-tight mb-4" style={fontD}>changelog</h1>
-          <p className="text-slate-500 text-lg mb-16 leading-relaxed" style={font}>a transparent log of what we've shipped, in reverse chronological order.</p>
+          <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>changelog</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 leading-relaxed" style={font}>a transparent log of what we&apos;ve shipped, in reverse chronological order.</p>
 
           {/* Timeline */}
           <div className="relative">
-            <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gradient-to-b from-blue-200 via-slate-200 to-transparent" />
+            <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gradient-to-b from-blue-200 dark:from-blue-800 via-slate-200 dark:via-slate-800 to-transparent" />
             <div className="flex flex-col gap-10">
               {timeline.map((item, i) => (
                 <div key={i} className="flex gap-6">
                   <div className="relative flex-shrink-0 mt-1">
-                    <div className={`w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center ${i === 0 ? "border-blue-500 bg-blue-500" : "border-slate-300 bg-white"}`}>
-                      {i === 0 && <span className="w-2 h-2 rounded-full bg-white" />}
+                    <div className={`w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center ${i === 0 ? "border-blue-500 bg-blue-500" : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"}`}>
+                      {i === 0 && <span className="w-2 h-2 rounded-full bg-white dark:bg-slate-900" />}
                     </div>
                   </div>
-                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex-1">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-6 flex-1 transition-colors">
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={font}>{item.date}</span>
+                      <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" style={font}>{item.date}</span>
                       {item.badge && <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold uppercase">{item.badge}</span>}
                     </div>
-                    <h3 className="text-lg font-bold text-[#0C1E36] mb-2" style={fontD}>{item.title}</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed" style={font}>{item.desc}</p>
+                    <h3 className="text-lg font-bold text-[#0C1E36] dark:text-white mb-2" style={fontD}>{item.title}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed" style={font}>{item.desc}</p>
                   </div>
                 </div>
               ))}

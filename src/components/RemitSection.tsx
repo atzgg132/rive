@@ -175,7 +175,7 @@ export default function RemitSection() {
               Remit{" "}
               <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Payments</span>
               <br />
-              <span className="text-3xl text-slate-500 font-medium">by rive.</span>
+              <span className="text-3xl text-slate-500 dark:text-slate-400 font-medium">by rive.</span>
             </h2>
 
             <p className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
@@ -190,10 +190,10 @@ export default function RemitSection() {
                 { icon: Lock,        label: "Bank-Grade Security",  sub: "256-bit encryption"     },
                 { icon: TrendingUp,  label: "0.5% flat fee",        sub: "Best rate, always"      },
               ].map(({ icon: Icon, label, sub }) => (
-                <div key={label} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white border border-slate-100 text-center shadow-sm shadow-blue-100/10">
-                  <Icon className="w-5 h-5 text-blue-600" />
-                  <p className="text-slate-800 text-xs font-bold leading-tight" style={{ fontFamily: "var(--font-display)" }}>{label}</p>
-                  <p className="text-slate-400 text-[10px]" style={{ fontFamily: "var(--font-body)" }}>{sub}</p>
+                <div key={label} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-center shadow-sm dark:shadow-none transition-colors">
+                  <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <p className="text-slate-800 dark:text-slate-200 text-xs font-bold leading-tight" style={{ fontFamily: "var(--font-display)" }}>{label}</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-[10px]" style={{ fontFamily: "var(--font-body)" }}>{sub}</p>
                 </div>
               ))}
             </div>
@@ -204,7 +204,7 @@ export default function RemitSection() {
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com" required disabled={formState === "loading"}
-                  className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 transition-all duration-200 disabled:opacity-60"
+                  className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 transition-all duration-200 disabled:opacity-60"
                   style={{ fontFamily: "var(--font-body)" }}
                 />
                 <button type="submit" disabled={formState === "loading"}
@@ -217,13 +217,13 @@ export default function RemitSection() {
                 </button>
               </form>
             ) : formState === "success" ? (
-              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-medium text-sm mt-2">
+              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-medium text-sm mt-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 <span style={{ fontFamily: "var(--font-body)" }}>you&apos;re on the Remit waitlist! check your inbox — we&apos;ve sent you a welcome email.</span>
               </div>
             ) : (
-              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 font-medium text-sm mt-2">
-                <Clock className="w-4 h-4 shrink-0 text-blue-500" />
+              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium text-sm mt-2">
+                <Clock className="w-4 h-4 shrink-0 text-blue-500 dark:text-blue-400" />
                 <span style={{ fontFamily: "var(--font-body)" }}>already on the list — you&apos;ll be first to know when Remit launches.</span>
               </div>
             )}
@@ -231,13 +231,13 @@ export default function RemitSection() {
 
           {/* ── Right: Live currency widget ────────────── */}
           <div className="relative">
-            <div className="relative p-7 rounded-3xl bg-white border border-slate-100 shadow-xl shadow-slate-200/40">
+            <div className="relative p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl dark:shadow-none transition-colors">
 
               {/* Widget header */}
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="text-xs font-bold text-slate-800" style={{ fontFamily: "var(--font-display)" }}>remit calculator</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200" style={{ fontFamily: "var(--font-display)" }}>remit calculator</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
                     {ratesState === "loading" ? (
                       <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> fetching rates...</span>
                     ) : ratesState === "error" ? (
@@ -252,7 +252,7 @@ export default function RemitSection() {
                   onClick={handleRefresh}
                   disabled={cooldown > 0 || ratesState === "loading"}
                   title={cooldown > 0 ? `refresh available in ${cooldown}s` : "refresh rates"}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${ratesState === "loading" ? "animate-spin" : ""}`} />
@@ -261,24 +261,24 @@ export default function RemitSection() {
               </div>
 
               {/* You send */}
-              <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4 mb-2">
-                <p className="text-[10px] text-slate-400 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>you send</p>
+              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 p-4 mb-2 transition-colors">
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>you send</p>
                 <div className="flex items-center gap-3">
                   <select
                     value={fromCode}
                     onChange={e => setFromCode(e.target.value)}
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     {CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+                      <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
                     ))}
                   </select>
                   <input
                     type="number" min="1" step="any"
                     value={amount}
                     onChange={e => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="flex-1 bg-transparent text-right text-3xl font-bold text-slate-800 outline-none border-none w-0"
+                    className="flex-1 bg-transparent text-right text-3xl font-bold text-slate-800 dark:text-slate-100 outline-none border-none w-0"
                     style={{ fontFamily: "var(--font-display)" }}
                   />
                 </div>
@@ -287,39 +287,39 @@ export default function RemitSection() {
               {/* Fee row */}
               <div className="flex items-center justify-between px-4 py-2 mb-2">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-px h-4 bg-blue-200" />
-                  <span className="text-[11px] text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-                    rive. fee (0.5%) — <span className="text-slate-600 font-semibold">{fromCurrency.flag} {fmt(feeAmount, fromCode)} {fromCode}</span>
+                  <div className="w-px h-4 bg-blue-200 dark:bg-blue-800" />
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500" style={{ fontFamily: "var(--font-body)" }}>
+                    rive. fee (0.5%) — <span className="text-slate-600 dark:text-slate-300 font-semibold">{fromCurrency.flag} {fmt(feeAmount, fromCode)} {fromCode}</span>
                   </span>
                 </div>
-                <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full" style={{ fontFamily: "var(--font-body)" }}>
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full" style={{ fontFamily: "var(--font-body)" }}>
                   best rate ✓
                 </span>
               </div>
 
               {/* Rate arrow */}
               <div className="flex items-center justify-center my-1">
-                <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-100/60 flex items-center justify-center">
-                  <ArrowRight className="w-4 h-4 text-blue-600 rotate-90" />
+                <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100/60 dark:border-blue-900/50 flex items-center justify-center">
+                  <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400 rotate-90" />
                 </div>
               </div>
 
               {/* They receive */}
-              <div className="bg-blue-50/60 rounded-2xl border border-blue-100/50 p-4 mb-4">
-                <p className="text-[10px] text-slate-400 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>they receive</p>
+              <div className="bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-100/50 dark:border-blue-900/40 p-4 mb-4 transition-colors">
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>they receive</p>
                 <div className="flex items-center gap-3">
                   <select
                     value={toCode}
                     onChange={e => setToCode(e.target.value)}
-                    className="bg-white border border-blue-100 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
+                    className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/50 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     {CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+                      <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
                     ))}
                   </select>
                   <span
-                    className={`flex-1 text-right text-3xl font-bold text-blue-600 transition-all duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
+                    className={`flex-1 text-right text-3xl font-bold text-blue-600 dark:text-blue-400 transition-all duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     {received !== null ? fmt(received, toCode) : "—"}

@@ -170,7 +170,7 @@ export default function Hero() {
         )}
         <button 
           onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "demo" }))}
-          className="inline-flex items-center gap-2.5 text-sm text-slate-500 hover:text-slate-800 transition-colors group shrink-0"
+          className="inline-flex items-center gap-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors group shrink-0"
         >
           <div className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 group-hover:border-[rgba(29,78,216,0.2)]"
             style={{ border: "1px solid rgba(12, 30, 54, 0.1)", background: "#ffffff" }}>
@@ -204,7 +204,7 @@ export default function Hero() {
               <div className="text-xl font-bold text-slate-800" style={{ fontFamily: "var(--font-display)" }}>
                 {value}
               </div>
-              <div className="text-[11px] text-slate-500 text-center leading-tight" style={{ fontFamily: "var(--font-body)" }}>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-tight" style={{ fontFamily: "var(--font-body)" }}>
                 {label}
               </div>
             </div>
@@ -236,17 +236,16 @@ export default function Hero() {
           </div>
 
           {/* Dashboard body */}
-          <div className="flex gap-0 min-h-[340px]" style={{ background: "#F8FAFC" }}>
+          <div className="flex gap-0 min-h-[340px] bg-slate-50 dark:bg-slate-950 transition-colors">
 
             {/* Sidebar */}
-            <div className="hidden md:flex flex-col gap-0.5 w-48 shrink-0 p-4 bg-white"
-              style={{ borderRight: "1px solid rgba(12,30,54,0.06)" }}>
+            <div className="hidden md:flex flex-col gap-0.5 w-48 shrink-0 p-4 bg-white dark:bg-slate-900 border-r border-[#0C1E36]/[0.06] dark:border-slate-800 transition-colors">
               <div className="flex items-center gap-2 mb-5 px-2">
                 <div className="w-6 h-6 rounded-md flex items-center justify-center"
                   style={{ background: "linear-gradient(135deg, #1D4ED8, #3B82F6)" }}>
                   <span className="text-white font-bold text-[10px]" style={{ fontFamily: "var(--font-hero)" }}>R</span>
                 </div>
-                <span className="text-slate-800 text-xs font-semibold" style={{ fontFamily: "var(--font-display)" }}>rive.</span>
+                <span className="text-slate-800 dark:text-slate-200 text-xs font-semibold" style={{ fontFamily: "var(--font-display)" }}>rive.</span>
               </div>
               {["Dashboard", "Projects", "Clients", "Revenue", "Gig Board", "AI Assistant"].map((item, i) => (
                 <div
@@ -275,10 +274,10 @@ export default function Hero() {
                   { label: "Active Projects",  value: "7",       change: "+2 this week", accent: "#1D4ED8" },
                   { label: "Pending Invoices", value: "$3,200",  change: "2 due soon",   accent: "#f59e0b" },
                 ].map(({ label, value, change, accent }) => (
-                  <div key={label} className="p-3 rounded-xl bg-white border border-slate-100"
+                  <div key={label} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 transition-colors"
                     style={{ boxShadow: "0 2px 8px rgba(12,30,54,0.01)" }}>
-                    <p className="text-[10px] text-slate-400 mb-1" style={{ fontFamily: "var(--font-body)" }}>{label}</p>
-                    <p className="text-base font-bold text-slate-800" style={{ fontFamily: "var(--font-display)" }}>{value}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1" style={{ fontFamily: "var(--font-body)" }}>{label}</p>
+                    <p className="text-base font-bold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-display)" }}>{value}</p>
                     <p className="text-[10px] mt-0.5 font-medium" style={{ fontFamily: "var(--font-body)", color: accent }}>{change}</p>
                   </div>
                 ))}
@@ -286,9 +285,9 @@ export default function Hero() {
 
               {/* Charts row */}
               <div className="grid grid-cols-5 gap-3 flex-1">
-                <div className="col-span-3 p-3 rounded-xl bg-white border border-slate-100 flex flex-col"
+                <div className="col-span-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex flex-col transition-colors"
                   style={{ boxShadow: "0 2px 8px rgba(12,30,54,0.01)" }}>
-                  <p className="text-[10px] text-slate-400 mb-3" style={{ fontFamily: "var(--font-body)" }}>Revenue — Last 6 months</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-3" style={{ fontFamily: "var(--font-body)" }}>Revenue — Last 6 months</p>
                   <div className="flex items-end gap-1.5 flex-1">
                     {[40, 65, 45, 80, 60, 95].map((h, i) => (
                       <div
@@ -303,21 +302,21 @@ export default function Hero() {
                     ))}
                   </div>
                 </div>
-                <div className="col-span-2 p-3 rounded-xl flex flex-col gap-2.5 bg-blue-50/50 border border-blue-100/50">
+                <div className="col-span-2 p-3 rounded-xl flex flex-col gap-2.5 bg-blue-50/50 dark:bg-blue-950/40 border border-blue-100/50 dark:border-blue-900/50 transition-colors">
                   <div className="flex items-center gap-1.5">
                     <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
                       style={{ background: "rgba(29,78,216,0.1)" }}>
-                      <Zap className="w-2.5 h-2.5 text-blue-600" />
+                      <Zap className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <p className="text-[10px] font-bold text-blue-600" style={{ fontFamily: "var(--font-display)" }}>AI Insight</p>
+                    <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400" style={{ fontFamily: "var(--font-display)" }}>AI Insight</p>
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-relaxed font-medium" style={{ fontFamily: "var(--font-body)" }}>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium" style={{ fontFamily: "var(--font-body)" }}>
                     3 gigs matching your skills worth{" "}
-                    <span className="font-semibold text-emerald-600">$2,400</span> are live on the Gig Board.
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">$2,400</span> are live on the Gig Board.
                   </p>
                   <button 
                     onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
-                    className="text-[10px] font-bold mt-auto text-left text-blue-600 hover:text-blue-800 transition-colors" 
+                    className="text-[10px] font-bold mt-auto text-left text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     View Gigs →

@@ -90,7 +90,7 @@ export default function FinalCTA() {
               placeholder="your@email.com"
               required
               disabled={formState === "loading"}
-              className="flex-1 min-w-0 px-5 py-3.5 rounded-xl bg-white border border-slate-200 text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-100 transition-all duration-200 disabled:opacity-60"
+              className="flex-1 min-w-0 px-5 py-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-all duration-200 disabled:opacity-60"
               style={{ fontFamily: "var(--font-body)" }}
             />
             <button

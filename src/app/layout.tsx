@@ -45,7 +45,7 @@ export default function RootLayout({
       className={`${outfit.variable}`}
       suppressHydrationWarning
     >
-      <body className="antialiased dark:bg-[#0B1120] dark:text-slate-100">
+      <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <PageViewTracker />
           {children}

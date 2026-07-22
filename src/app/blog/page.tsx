@@ -41,52 +41,52 @@ export default function BlogPage() {
       <section className="relative py-24 overflow-hidden">
         <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-blue-100/15 rounded-full blur-[100px] pointer-events-none" />
         <div className="relative max-w-6xl mx-auto px-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-5" style={font}>rive. blog</div>
-          <h1 className="text-6xl font-bold text-[#0C1E36] tracking-tight mb-4" style={fontD}>thoughts &amp; updates.</h1>
-          <p className="text-slate-500 text-lg mb-14 max-w-md leading-relaxed" style={font}>from our team: product insights, engineering deep-dives, and research.</p>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>rive. blog</div>
+          <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>thoughts &amp; updates.</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-14 max-w-md leading-relaxed" style={font}>from our team: product insights, engineering deep-dives, and research.</p>
 
           {/* Featured post */}
-          <a href="#" className="group block bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg hover:shadow-blue-100/30 transition-all duration-300 p-8 md:p-10 mb-8 hover:-translate-y-0.5">
+          <a href="#" className="group block bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none hover:shadow-lg dark:hover:shadow-blue-900/20 transition-all duration-300 p-8 md:p-10 mb-8 hover:-translate-y-0.5">
             <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold mb-4 ${tagColors[featured.tag]}`} style={font}>{featured.tag}</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-[#0C1E36] mb-3 group-hover:text-blue-700 transition-colors" style={fontD}>{featured.title}</h2>
-            <p className="text-slate-500 leading-relaxed mb-4" style={font}>{featured.excerpt}</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#0C1E36] dark:text-white mb-3 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors" style={fontD}>{featured.title}</h2>
+            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-4" style={font}>{featured.excerpt}</p>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-medium" style={font}>{featured.date}</span>
-              <span className="text-blue-600 text-sm font-semibold group-hover:translate-x-1 transition-transform inline-block" style={fontD}>read more →</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-medium" style={font}>{featured.date}</span>
+              <span className="text-blue-600 dark:text-blue-400 text-sm font-semibold group-hover:translate-x-1 transition-transform inline-block" style={fontD}>read more →</span>
             </div>
           </a>
 
           {/* Rest */}
           <div className="grid md:grid-cols-3 gap-6 mb-16">
             {rest.map(post => (
-              <a key={post.title} href="#" className="group block bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:shadow-blue-100/30 transition-all duration-300 p-6 hover:-translate-y-0.5">
+              <a key={post.title} href="#" className="group block bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none hover:shadow-lg dark:hover:shadow-blue-900/20 transition-all duration-300 p-6 hover:-translate-y-0.5">
                 <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold mb-3 ${tagColors[post.tag]}`} style={font}>{post.tag}</span>
-                <h3 className="text-lg font-bold text-[#0C1E36] mb-2 group-hover:text-blue-700 transition-colors leading-snug" style={fontD}>{post.title}</h3>
-                <p className="text-slate-400 text-xs mb-4 leading-relaxed" style={font}>{post.excerpt}</p>
+                <h3 className="text-lg font-bold text-[#0C1E36] dark:text-white mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors leading-snug" style={fontD}>{post.title}</h3>
+                <p className="text-slate-400 dark:text-slate-400 text-xs mb-4 leading-relaxed" style={font}>{post.excerpt}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400" style={font}>{post.date}</span>
-                  <span className="text-blue-600 text-xs font-semibold group-hover:translate-x-0.5 transition-transform inline-block" style={fontD}>read →</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500" style={font}>{post.date}</span>
+                  <span className="text-blue-600 dark:text-blue-400 text-xs font-semibold group-hover:translate-x-0.5 transition-transform inline-block" style={fontD}>read →</span>
                 </div>
               </a>
             ))}
           </div>
 
           {/* Subscribe */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center max-w-md mx-auto">
-            <h3 className="text-xl font-bold text-[#0C1E36] mb-1" style={fontD}>stay updated</h3>
-            <p className="text-slate-500 text-sm mb-5" style={font}>get new posts in your inbox. no spam, ever.</p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 text-center max-w-md mx-auto transition-colors">
+            <h3 className="text-xl font-bold text-[#0C1E36] dark:text-white mb-1" style={fontD}>stay updated</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-5" style={font}>get new posts in your inbox. no spam, ever.</p>
             {subState === "success" ? (
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-semibold" style={font}>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-sm font-semibold" style={font}>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> subscribed! we&apos;ll email you when we publish.
               </div>
             ) : subState === "already-joined" ? (
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-sm font-semibold" style={font}>
-                <Clock className="w-4 h-4" /> you&apos;re already on our list.
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 text-sm font-semibold" style={font}>
+                <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" /> you&apos;re already on our list.
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="flex gap-2">
                 <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" disabled={subState === "loading"}
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-blue-400 transition-all disabled:opacity-60" style={font} />
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 transition-all disabled:opacity-60" style={font} />
                 <button type="submit" disabled={subState === "loading"}
                   className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15 disabled:opacity-75 inline-flex items-center gap-2" style={fontD}>
                   {subState === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : "subscribe"}

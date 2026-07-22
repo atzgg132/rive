@@ -52,16 +52,16 @@ export default function Faq() {
           {faqs.map((faq) => (
             <div
               key={faq.question}
-              className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm shadow-blue-100/10"
+              className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"
             >
               <h3
-                className="text-slate-800 font-bold text-base mb-3"
+                className="text-slate-800 dark:text-white font-bold text-base mb-3"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {faq.question}
               </h3>
               <p
-                className="text-slate-500 text-sm leading-relaxed"
+                className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed"
                 style={{ fontFamily: "var(--font-body)" }}
               >
                 {faq.answer}

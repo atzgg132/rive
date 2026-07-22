@@ -19,8 +19,8 @@ const toc = [
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <div id={id} className="scroll-mt-24 mb-10">
-      <h2 className="text-xl font-bold text-[#0C1E36] mb-3 pb-2 border-b border-slate-100" style={fontD}>{title}</h2>
-      <div className="text-slate-600 text-sm leading-relaxed space-y-3" style={font}>{children}</div>
+      <h2 className="text-xl font-bold text-[#0C1E36] dark:text-white mb-3 pb-2 border-b border-slate-100 dark:border-slate-800" style={fontD}>{title}</h2>
+      <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed space-y-3" style={font}>{children}</div>
     </div>
   );
 }
@@ -30,20 +30,20 @@ export default function TermsPage() {
     <PageShell>
       <div className="max-w-6xl mx-auto px-8 py-16">
         <div className="mb-12">
-          <span className="text-xs font-bold text-blue-600 uppercase tracking-widest" style={font}>legal</span>
-          <h1 className="text-5xl font-bold text-[#0C1E36] tracking-tight mt-2 mb-3" style={fontD}>terms of service</h1>
-          <p className="text-slate-400 text-sm" style={font}>last updated: July 13, 2026</p>
+          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest" style={font}>legal</span>
+          <h1 className="text-5xl font-bold text-[#0C1E36] dark:text-white tracking-tight mt-2 mb-3" style={fontD}>terms of service</h1>
+          <p className="text-slate-400 dark:text-slate-500 text-sm" style={font}>last updated: July 13, 2026</p>
         </div>
 
         <div className="flex gap-12">
           {/* Sticky TOC */}
           <aside className="hidden md:block w-56 shrink-0">
-            <div className="sticky top-24 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={font}>on this page</p>
+            <div className="sticky top-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-5 transition-colors">
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4" style={font}>on this page</p>
               <nav className="flex flex-col gap-2">
                 {toc.map(item => (
                   <a key={item.id} href={`#${item.id}`}
-                    className="text-sm text-slate-500 hover:text-blue-600 transition-colors font-medium py-0.5"
+                    className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium py-0.5"
                     style={font}>{item.label}</a>
                 ))}
               </nav>
@@ -52,7 +52,7 @@ export default function TermsPage() {
 
           {/* Content */}
           <main className="flex-1 max-w-2xl">
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 md:p-10">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 md:p-10 transition-colors">
 
               <Section id="acceptance" title="1. acceptance of terms">
                 <p>By accessing the rive. website, joining the waitlist, or using any part of the rive. platform (collectively, the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, please do not use the Service.</p>
@@ -104,8 +104,8 @@ export default function TermsPage() {
 
               <Section id="contact" title="10. contact">
                 <p>For questions about these Terms:</p>
-                <div className="bg-slate-50 rounded-xl p-4 mt-2">
-                  <p><strong>email:</strong> <a href="mailto:legal@rive.app" className="text-blue-600 hover:underline">legal@rive.app</a></p>
+                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 mt-2 transition-colors">
+                  <p><strong>email:</strong> <a href="mailto:legal@rive.app" className="text-blue-600 dark:text-blue-400 hover:underline">legal@rive.app</a></p>
                   <p className="mt-1"><strong>response time:</strong> within 72 hours</p>
                 </div>
               </Section>

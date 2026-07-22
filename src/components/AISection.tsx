@@ -66,23 +66,23 @@ export default function AISection() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative w-72 h-72">
                 {/* Top-right */}
-                <div className="absolute -top-1 right-0 px-3 py-1.5 rounded-xl bg-white border border-slate-100 backdrop-blur-sm shadow-md shadow-slate-100/10 flex items-center gap-1.5 whitespace-nowrap">
+                <div className="absolute -top-1 right-0 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-md dark:shadow-none flex items-center gap-1.5 whitespace-nowrap transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-[11px] text-slate-500 font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-300 font-bold" style={{ fontFamily: "var(--font-display)" }}>
                     smart gig matching active
                   </p>
                 </div>
                 {/* Bottom-left */}
-                <div className="absolute bottom-4 -left-4 px-3 py-1.5 rounded-xl bg-white border border-slate-100 backdrop-blur-sm shadow-md shadow-slate-100/10 flex items-center gap-1.5 whitespace-nowrap">
+                <div className="absolute bottom-4 -left-4 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-md dark:shadow-none flex items-center gap-1.5 whitespace-nowrap transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                  <p className="text-[11px] text-slate-500 font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-300 font-bold" style={{ fontFamily: "var(--font-display)" }}>
                     co-pilot engine: operational
                   </p>
                 </div>
                 {/* Right-center */}
-                <div className="absolute top-1/2 -right-28 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-white border border-slate-100 backdrop-blur-sm shadow-md shadow-slate-100/10 flex items-center gap-1.5 whitespace-nowrap">
+                <div className="absolute top-1/2 -right-28 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-md dark:shadow-none flex items-center gap-1.5 whitespace-nowrap transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <p className="text-[11px] text-slate-500 font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-300 font-bold" style={{ fontFamily: "var(--font-display)" }}>
                     verifying billing safety
                   </p>
                 </div>
@@ -132,7 +132,7 @@ export default function AISection() {
                       {title}
                     </h3>
                     <p
-                      className="text-slate-500 text-sm leading-relaxed"
+                      className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed"
                       style={{ fontFamily: "var(--font-body)" }}
                     >
                       {description}

@@ -121,12 +121,12 @@ export default function GigBoard() {
             <div
               key={gig.title}
               onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
-              className="group relative p-6 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/30 transition-all duration-300 cursor-pointer"
+              className="group relative p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 hover:shadow-lg dark:hover:shadow-blue-900/20 transition-all duration-300 cursor-pointer"
             >
               {/* Header row */}
               <div className="flex items-start justify-between gap-4 mb-4">
                 <h3
-                  className="text-slate-800 font-bold text-[15px] leading-snug group-hover:text-blue-700 transition-colors flex-1"
+                  className="text-slate-800 dark:text-white font-bold text-[15px] leading-snug group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors flex-1"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   {gig.title}
@@ -141,7 +141,7 @@ export default function GigBoard() {
                     </span>
                   )}
                   <span
-                    className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100/60"
+                    className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-100/60 dark:border-blue-900/40"
                     style={{ fontFamily: "var(--font-body)" }}
                   >
                     {gig.aiMatch}
@@ -154,7 +154,7 @@ export default function GigBoard() {
                 {gig.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="text-[11px] px-2.5 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-slate-500"
+                    className="text-[11px] px-2.5 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-300"
                     style={{ fontFamily: "var(--font-body)" }}
                   >
                     {skill}
@@ -163,7 +163,7 @@ export default function GigBoard() {
               </div>
 
               {/* Meta row */}
-              <div className="flex items-center gap-4 text-xs text-slate-500">
+              <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                 <span className="flex items-center gap-1 font-bold text-emerald-600">
                   <DollarSign className="w-3 h-3 shrink-0" />
                   <span style={{ fontFamily: "var(--font-display)" }}>{gig.budget}</span>
