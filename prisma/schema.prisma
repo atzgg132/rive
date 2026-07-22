@@ -39,6 +39,7 @@ model User {
   projects     Project[]
   invoices     Invoice[]
   expenses     Expense[]
+  portfolio    Portfolio?
 
   @@map("users")
 }
@@ -160,4 +161,37 @@ model Expense {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@map("expenses")
+}
+
+model Portfolio {
+  id          String          @id @default(uuid())
+  userId      String          @unique @map("user_id")
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug        String          @unique
+  status      String          @default("draft")
+  templateKey String          @default("minimal-pro") @map("template_key")
+  content     Json
+  theme       Json
+  seo         Json?
+  revision    Int             @default(1)
+  publishedAt DateTime?       @map("published_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  views       PortfolioView[]
+
+  @@map("portfolios")
+}
+
+model PortfolioView {
+  id          String    @id @default(uuid())
+  portfolioId String    @map("portfolio_id")
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  visitorHash String?   @map("visitor_hash")
+  referrer    String?
+  deviceType  String?   @map("device_type")
+  viewedAt    DateTime  @default(now()) @map("viewed_at")
+
+  @@index([portfolioId, viewedAt])
+  @@index([portfolioId, visitorHash, viewedAt])
+  @@map("portfolio_views")
 }

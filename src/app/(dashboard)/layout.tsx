@@ -18,7 +18,8 @@ import {
   Bell,
   Sparkles,
   Command,
-  Loader2
+  Loader2,
+  Globe2,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
@@ -109,6 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/workflow/clients", label: "clients", icon: Users },
     { href: "/workflow/revenue", label: "revenue & invoices", icon: DollarSign },
     { href: "/workflow/expenses", label: "expenses", icon: Receipt },
+    { href: "/portfolio", label: "portfolio", icon: Globe2 },
   ];
 
   if (loading) {

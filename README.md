@@ -1,5 +1,28 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Local development
+
+Copy `.env.example` to `.env.local` and set `DATABASE_URL` to your PostgreSQL/Neon connection string. Then run:
+
+```bash
+npm install
+npm run db:generate
+npm run db:push
+npm run dev
+```
+
+## Production deployment
+
+Configure `DATABASE_URL` in the deployment provider and use:
+
+```bash
+npm install
+npm run build
+npm run start
+```
+
+The production build validates TypeScript. Apply database schema changes with `npm run db:push` before starting the application. Optional SMTP variables are documented in `.env.example`; email features remain disabled safely when they are not configured.
+
 ## Getting Started
 
 First, run the development server:
