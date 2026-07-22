@@ -121,7 +121,7 @@ export default function AISection() {
             <div className="flex flex-col gap-5 mt-2">
               {aiCapabilities.map(({ icon: Icon, title, description }) => (
                 <div key={title} className="flex gap-4 group">
-                  <div className="shrink-0 w-10 h-10 rounded-xl bg-blue-50 border border-blue-100/50 flex items-center justify-center group-hover:bg-blue-100/50 transition-colors duration-200 mt-0.5">
+                  <div className="shrink-0 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100/50 dark:border-blue-900/60 flex items-center justify-center group-hover:bg-blue-100/50 dark:group-hover:bg-blue-900/60 transition-colors duration-200 mt-0.5">
                     <Icon className="w-[18px] h-[18px] text-blue-600" />
                   </div>
                   <div>

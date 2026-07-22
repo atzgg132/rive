@@ -91,10 +91,10 @@ export default function DashboardOverview() {
   }
 
   const statCards = [
-    { title: "revenue collected", value: formatCurrency(stats.totalPaid), sub: `pending: ${formatCurrency(stats.totalPending)}`, icon: DollarSign, color: "text-[#10B981] bg-[#ECFDF5]" },
-    { title: "active projects", value: stats.activeProjects, sub: "on track & ongoing", icon: Briefcase, color: "text-[#1D4ED8] bg-[#EFF6FF]" },
-    { title: "expenses logged", value: formatCurrency(stats.totalExpenses), sub: "all categorized costs", icon: Receipt, color: "text-[#EF4444] bg-[#FEF2F2]" },
-    { title: "net earnings", value: formatCurrency(stats.netEarnings), sub: "revenue minus expenses", icon: TrendingUp, color: "text-[#8B5CF6] bg-[#F5F3FF]" },
+    { title: "revenue collected", value: formatCurrency(stats.totalPaid), sub: `pending: ${formatCurrency(stats.totalPending)}`, icon: DollarSign, color: "text-[#059669] dark:text-emerald-300 bg-[#ECFDF5] dark:bg-emerald-950/60 ring-1 ring-emerald-100 dark:ring-emerald-800/60" },
+    { title: "active projects", value: stats.activeProjects, sub: "on track & ongoing", icon: Briefcase, color: "text-[#1D4ED8] dark:text-blue-300 bg-[#EFF6FF] dark:bg-blue-950/60 ring-1 ring-blue-100 dark:ring-blue-800/60" },
+    { title: "expenses logged", value: formatCurrency(stats.totalExpenses), sub: "all categorized costs", icon: Receipt, color: "text-[#DC2626] dark:text-red-300 bg-[#FEF2F2] dark:bg-red-950/60 ring-1 ring-red-100 dark:ring-red-800/60" },
+    { title: "net earnings", value: formatCurrency(stats.netEarnings), sub: "revenue minus expenses", icon: TrendingUp, color: "text-[#7C3AED] dark:text-violet-300 bg-[#F5F3FF] dark:bg-violet-950/60 ring-1 ring-violet-100 dark:ring-violet-800/60" },
   ];
 
   return (

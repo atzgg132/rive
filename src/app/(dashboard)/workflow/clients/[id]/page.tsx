@@ -110,19 +110,19 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             <div className="flex flex-col gap-3 text-sm text-[#4A5E78] dark:text-slate-400">
               {client.email && (
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Mail className="h-4 w-4" /></div>
+            <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800/60"><Mail className="h-4 w-4" /></div>
                   <a href={`mailto:${client.email}`} className="hover:text-blue-600 truncate">{client.email}</a>
                 </div>
               )}
               {client.phone && (
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Phone className="h-4 w-4" /></div>
+            <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800/60"><Phone className="h-4 w-4" /></div>
                   <span>{client.phone}</span>
                 </div>
               )}
               {client.website && (
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Globe className="h-4 w-4" /></div>
+            <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800/60"><Globe className="h-4 w-4" /></div>
                   <a href={client.website.startsWith("http") ? client.website : `https://${client.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 truncate">
                     {client.website}
                   </a>
