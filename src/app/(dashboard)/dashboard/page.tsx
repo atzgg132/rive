@@ -162,10 +162,10 @@ export default function DashboardOverview() {
               </div>
             ) : (
               activities.map((a, idx) => {
-                let badgeColor = "bg-blue-50 text-[#1D4ED8] border-blue-100";
-                if (a.type === "client_added") badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
-                if (a.type === "invoice_created") badgeColor = "bg-amber-50 text-amber-700 border-amber-100";
-                if (a.type === "expense_logged") badgeColor = "bg-red-50 text-red-700 border-red-100";
+                let badgeColor = "bg-blue-50 dark:bg-blue-950/50 text-[#1D4ED8] dark:text-blue-300 border-blue-100 dark:border-blue-900/60";
+                if (a.type === "client_added") badgeColor = "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60";
+                if (a.type === "invoice_created") badgeColor = "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60";
+                if (a.type === "expense_logged") badgeColor = "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60";
 
                 return (
                   <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border border-[#E2EAF4] dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 transition-all bg-white dark:bg-slate-800">

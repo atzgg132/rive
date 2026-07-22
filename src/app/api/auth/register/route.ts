@@ -5,13 +5,15 @@ import { hashPassword, generateUserToken, TOKEN_COOKIE_NAME, SESSION_TTL_MS } fr
 export async function POST(req: NextRequest) {
   try {
     const { email, password, name } = await req.json();
-    if (!email || !password || !name) {
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || typeof password !== "string" || password.length < 8 || !normalizedName) {
       return NextResponse.json({ success: false, message: "Missing required fields." }, { status: 400 });
     }
 
     // Check if user already exists
     const existing = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: normalizedEmail },
       select: { id: true }
     });
 
@@ -24,9 +26,9 @@ export async function POST(req: NextRequest) {
     // Insert user
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         passwordHash,
-        name,
+        name: normalizedName,
         plan: "free"
       },
       select: {

@@ -275,15 +275,15 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
                   transition: "opacity 400ms, transform 400ms cubic-bezier(.16,1,.3,1)",
                 }}
               >
-                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                 <p
                   className="text-slate-700 text-sm font-bold"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  interactive walkthrough coming soon
+                  your workspace is ready to organize
                 </p>
                 <p className="text-slate-400 text-xs" style={{ fontFamily: "var(--font-body)" }}>
-                  join the waitlist to be first to experience the demo.
+                  manage clients, projects, invoices, and expenses from one calm dashboard.
                 </p>
                 <button
                   onClick={() => {

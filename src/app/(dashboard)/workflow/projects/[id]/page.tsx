@@ -207,9 +207,9 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
                     <div className="flex items-center gap-4">
                       <span className="font-extrabold text-sm text-[#0C1E36] dark:text-slate-200">{formatCurrency(Number(inv.total))}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
-                        inv.status === "paid" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                        inv.status === "overdue" ? "bg-red-50 text-red-700 border-red-100" :
-                        "bg-amber-50 text-amber-700 border-amber-100"
+                         inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
+                         inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :
+                         "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"
                       }`}>
                         {inv.status}
                       </span>

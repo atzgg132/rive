@@ -4,14 +4,23 @@ import { sendWelcomeEmail } from "@/utils/email";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, type } = await req.json();
-    if (!email || !type) {
+    let payload: { email?: unknown; type?: unknown };
+    try {
+      payload = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, message: "Request body must be valid JSON." }, { status: 400 });
+    }
+    const { email, type } = payload;
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const allowedTypes = new Set(["waitlist", "login", "demo", "remit"]);
+    const normalizedType = typeof type === "string" && allowedTypes.has(type) ? type : null;
+    if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !normalizedType) {
       return NextResponse.json({ success: false, message: "Missing required fields." }, { status: 400 });
     }
 
     // Duplicate check
     const existing = await prisma.waitlist.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: normalizedEmail }
     });
 
     if (existing) {
@@ -23,26 +32,24 @@ export async function POST(req: NextRequest) {
 
     const waitlistEntry = await prisma.waitlist.create({
       data: {
-        email: email.toLowerCase(),
-        type
+        email: normalizedEmail,
+        type: normalizedType
       }
     });
 
     // Welcome email (fire-and-forget, async)
-    sendWelcomeEmail(email);
+    void sendWelcomeEmail(normalizedEmail);
 
     return NextResponse.json({
       success: true,
       message: "successfully joined the waitlist.",
       data: waitlistEntry
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Waitlist API error:", error);
     return NextResponse.json({
       success: false,
-      message: "Internal server error.",
-      error: error.message || String(error),
-      stack: error.stack || ""
+      message: "Internal server error."
     }, { status: 500 });
   }
 }

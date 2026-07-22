@@ -5,12 +5,12 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const endpoints = [
-  { method: "GET",  path: "/v1/projects",       desc: "list all projects for authenticated user" },
-  { method: "POST", path: "/v1/invoices",        desc: "create a new invoice for a client" },
-  { method: "GET",  path: "/v1/gigs",            desc: "browse the public gig board" },
-  { method: "POST", path: "/v1/remit/transfer",  desc: "initiate an international payment transfer" },
-  { method: "GET",  path: "/v1/clients",         desc: "list all clients" },
-  { method: "POST", path: "/v1/ai/suggest",      desc: "get ai co-pilot suggestions for a task" },
+  { method: "GET",  path: "/api/workflow/projects", desc: "list projects for the authenticated user" },
+  { method: "POST", path: "/api/workflow/invoices", desc: "create an invoice with line items" },
+  { method: "GET",  path: "/api/workflow/clients", desc: "list clients for the authenticated user" },
+  { method: "POST", path: "/api/workflow/expenses", desc: "record a project or business expense" },
+  { method: "GET",  path: "/api/workflow/dashboard", desc: "retrieve dashboard totals and activity" },
+  { method: "GET",  path: "/api/rates", desc: "retrieve current USD exchange rates" },
 ];
 
 const methodColor: Record<string, string> = {
@@ -26,7 +26,7 @@ export default function APIRefPage() {
         <div className="relative max-w-3xl mx-auto px-8">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>api reference</div>
           <h1 className="text-5xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-3" style={fontD}>api reference</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-4 leading-relaxed" style={font}>rive. provides a RESTful api for all platform features. full documentation coming soon.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-4 leading-relaxed" style={font}>the current application API is organized under <code>/api</code> and powers the workspace, waitlist, analytics, and rates features.</p>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 text-amber-700 dark:text-amber-300 text-xs font-bold mb-12" style={font}>
             🔒 api access requires an invitation
           </div>

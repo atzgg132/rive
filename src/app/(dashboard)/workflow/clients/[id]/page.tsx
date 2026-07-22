@@ -211,9 +211,9 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                       </div>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
-                      proj.status === "completed" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                      proj.status === "in_progress" ? "bg-blue-50 text-blue-700 border-blue-100" :
-                      "bg-amber-50 text-amber-700 border-amber-100"
+                      proj.status === "completed" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
+                      proj.status === "in_progress" ? "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-900/60" :
+                      "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"
                     }`}>
                       {proj.status.replace("_", " ")}
                     </span>
@@ -257,9 +257,9 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                         <td className="py-3 pr-4 text-sm font-bold text-[#0C1E36] dark:text-slate-200">{formatCurrency(Number(inv.total))}</td>
                         <td className="py-3">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
-                            inv.status === "paid" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                            inv.status === "overdue" ? "bg-red-50 text-red-700 border-red-100" :
-                            "bg-amber-50 text-amber-700 border-amber-100"
+                            inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
+                            inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :
+                            "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"
                           }`}>
                             {inv.status}
                           </span>

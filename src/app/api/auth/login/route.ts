@@ -5,12 +5,13 @@ import { verifyPassword, generateUserToken, TOKEN_COOKIE_NAME, SESSION_TTL_MS } 
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
-    if (!email || !password) {
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!normalizedEmail || typeof password !== "string" || !password) {
       return NextResponse.json({ success: false, message: "Missing email or password." }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: normalizedEmail }
     });
 
     if (!user) {

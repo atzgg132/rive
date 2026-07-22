@@ -6,12 +6,12 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const guides = [
-  { icon: FolderOpen, title: "setting up your first project",           color: "text-blue-600",   bg: "bg-blue-50",    darkBg: "dark:bg-blue-950/40" },
-  { icon: Globe,      title: "sending your first payment with remit",   color: "text-emerald-600", bg: "bg-emerald-50", darkBg: "dark:bg-emerald-950/40" },
-  { icon: Zap,        title: "using the ai co-pilot",                   color: "text-amber-600",  bg: "bg-amber-50",  darkBg: "dark:bg-amber-950/40" },
-  { icon: Users,      title: "managing clients and contracts",           color: "text-purple-600", bg: "bg-purple-50", darkBg: "dark:bg-purple-950/40" },
-  { icon: Briefcase,  title: "listing on the gig board",                color: "text-sky-600",    bg: "bg-sky-50",    darkBg: "dark:bg-sky-950/40" },
-  { icon: BarChart3,  title: "invoice and revenue tracking",            color: "text-rose-600",   bg: "bg-rose-50",   darkBg: "dark:bg-rose-950/40" },
+  { icon: FolderOpen, title: "setting up your first project", color: "text-blue-600", bg: "bg-blue-50", darkBg: "dark:bg-blue-950/40", detail: "Create a client first, then add a project with a budget, dates, milestones, and priority." },
+  { icon: Globe, title: "sending your first payment with remit", color: "text-emerald-600", bg: "bg-emerald-50", darkBg: "dark:bg-emerald-950/40", detail: "Use the Remit section to preview exchange rates and request access to cross-border transfers." },
+  { icon: Zap, title: "using the ai co-pilot", color: "text-amber-600", bg: "bg-amber-50", darkBg: "dark:bg-amber-950/40", detail: "Use the assistant surfaces to organize repetitive workflow tasks while keeping final control." },
+  { icon: Users, title: "managing clients and contracts", color: "text-purple-600", bg: "bg-purple-50", darkBg: "dark:bg-purple-950/40", detail: "Keep contact details, notes, tags, projects, and invoices together on each client profile." },
+  { icon: Briefcase, title: "listing on the gig board", color: "text-sky-600", bg: "bg-sky-50", darkBg: "dark:bg-sky-950/40", detail: "Browse the board to understand the matching workflow and keep your profile ready for launch." },
+  { icon: BarChart3, title: "invoice and revenue tracking", color: "text-rose-600", bg: "bg-rose-50", darkBg: "dark:bg-rose-950/40", detail: "Issue invoices, track payment status, record expenses, and review net earnings in the dashboard." },
 ];
 
 export default function GuidesPage() {
@@ -34,17 +34,14 @@ export default function GuidesPage() {
 
           {/* Grid */}
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5 mb-16">
-            {guides.map(({ icon: Icon, title, color, bg, darkBg }) => (
+            {guides.map(({ icon: Icon, title, color, bg, darkBg, detail }) => (
               <div key={title} className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-6 flex flex-col gap-4 hover:shadow-md dark:hover:shadow-blue-900/20 hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200">
                 <div className={`w-11 h-11 rounded-xl ${bg} ${darkBg} flex items-center justify-center`}>
                   <Icon className={`w-5 h-5 ${color}`} />
                 </div>
                 <div>
                   <h3 className="font-bold text-[#0C1E36] dark:text-white text-sm leading-snug mb-3" style={fontD}>{title}</h3>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-[11px] font-bold" style={font}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
-                    coming soon
-                  </span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed" style={font}>{detail}</p>
                 </div>
               </div>
             ))}

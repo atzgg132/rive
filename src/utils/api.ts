@@ -37,9 +37,9 @@ export async function submitToWaitlist(
   } catch {
     // Backend unreachable — treat as fresh success so the UI stays functional
     return {
-      success: true,
+      success: false,
       alreadyJoined: false,
-      message: "successfully joined the waitlist.",
+      message: "we couldn't reach the server. please try again.",
     };
   }
 }

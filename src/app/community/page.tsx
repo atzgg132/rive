@@ -53,7 +53,7 @@ export default function CommunityPage() {
                   className="w-full py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all duration-200"
                   style={fontD}
                 >
-                  join discord (coming soon)
+                  request a discord invite
                 </button>
               </div>
             </div>
@@ -68,13 +68,15 @@ export default function CommunityPage() {
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-5" style={font}>
                   open source feedback — suggest features, report bugs, and vote on the roadmap.
                 </p>
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+                <a
+                  href="https://github.com/atzgg132/rive/discussions"
+                  target="_blank"
+                  rel="noreferrer"
                   className="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200"
                   style={fontD}
                 >
-                  open github (coming soon)
-                </button>
+                  open github discussions
+                </a>
               </div>
             </div>
 
