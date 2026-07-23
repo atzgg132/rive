@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, ArrowRight, ShieldCheck, Mail, Lock } from "lucide-react";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -91,8 +92,7 @@ export default function LoginPage() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A5E78] dark:text-slate-400" />
-                <input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RiveLogo } from "@/components/RiveLogo";
+import PasswordInput from "@/components/PasswordInput";
 
 // ── Types ────────────────────────────────────────────────
 type Analytics = {
@@ -125,7 +126,7 @@ function LoginScreen({ onLogin }: { onLogin: (t:string)=>void }) {
             </div>
             <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>password</label>
-              <input value={password} onChange={e=>setPassword(e.target.value)} required type="password" placeholder="••••••••••"
+              <PasswordInput value={password} onChange={e=>setPassword(e.target.value)} required placeholder="••••••••••"
                 className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
             </div>
             {state==="error" && (

@@ -6,6 +6,15 @@ export type PortfolioProject = {
   year: string;
   url: string;
   imageUrl: string;
+  client?: string;
+  timeline?: string;
+  deliverables?: string[];
+  gallery?: {
+    id: string;
+    url: string;
+    alt: string;
+    caption: string;
+  }[];
   visibility?: "public" | "private";
   challenge?: string;
   solution?: string;
@@ -64,7 +73,7 @@ export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
   contactEmail: "",
   social: [],
   projects: [
-    { id: "project-1", title: "your first project", description: "Add a concise project story, your role, and the result you created.", role: "your role", year: "2026", url: "", imageUrl: "", visibility: "public", challenge: "", solution: "", outcome: "", tools: [] },
+    { id: "project-1", title: "your first project", description: "Add a concise project story, your role, and the result you created.", role: "your role", year: "2026", url: "", imageUrl: "", client: "", timeline: "", deliverables: [], gallery: [], visibility: "public", challenge: "", solution: "", outcome: "", tools: [] },
   ],
   services: [
     { id: "service-1", title: "your first service", description: "Describe the outcome clients can expect when they work with you." },
@@ -146,7 +155,13 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
     ...DEFAULT_PORTFOLIO_CONTENT,
     ...input,
     social: Array.isArray(input.social) ? input.social : DEFAULT_PORTFOLIO_CONTENT.social,
-    projects: Array.isArray(input.projects) ? input.projects : DEFAULT_PORTFOLIO_CONTENT.projects,
+    projects: Array.isArray(input.projects)
+      ? input.projects.map((project) => ({
+          ...project,
+          deliverables: Array.isArray(project.deliverables) ? project.deliverables : [],
+          gallery: Array.isArray(project.gallery) ? project.gallery : [],
+        }))
+      : DEFAULT_PORTFOLIO_CONTENT.projects,
     services: Array.isArray(input.services) ? input.services : DEFAULT_PORTFOLIO_CONTENT.services,
     testimonials: Array.isArray(input.testimonials) ? input.testimonials : DEFAULT_PORTFOLIO_CONTENT.testimonials,
     sections: Array.isArray(input.sections) ? input.sections : DEFAULT_PORTFOLIO_CONTENT.sections,
@@ -154,6 +169,7 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
 }
 
 const MAX_INLINE_IMAGE_LENGTH = 7_000_000;
+const MAX_TEXT_LENGTH = 5_000;
 const HTTP_URL = /^https?:\/\/[^\s<>]+$/i;
 const INLINE_IMAGE = /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 
@@ -170,12 +186,26 @@ export function validatePortfolioContent(value: unknown): string | null {
     for (const project of input.projects) {
       if (!project || typeof project !== "object") return "Each project must be valid.";
       const item = project as Partial<PortfolioProject>;
+      if (typeof item.id !== "string" || !item.id.trim() || item.id.length > 120) return "Each project needs a valid identifier.";
+      for (const field of ["title", "description", "role", "year", "client", "timeline", "challenge", "solution", "outcome"] as const) {
+        const fieldValue = item[field];
+        if (fieldValue !== undefined && (typeof fieldValue !== "string" || fieldValue.length > MAX_TEXT_LENGTH)) return `Project ${field} is too long.`;
+      }
       if (item.imageUrl) {
         if (typeof item.imageUrl !== "string" || item.imageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Project images are too large.";
         if (!INLINE_IMAGE.test(item.imageUrl) && !isSafePortfolioUrl(item.imageUrl)) return "Project images must be HTTPS URLs or supported image uploads.";
       }
       if (item.url && !isSafePortfolioUrl(item.url)) return "Project links must use HTTPS URLs.";
       if (item.tools && (!Array.isArray(item.tools) || item.tools.length > 30 || item.tools.some((tool) => typeof tool !== "string" || tool.length > 80))) return "Project tools are invalid.";
+      if (item.deliverables && (!Array.isArray(item.deliverables) || item.deliverables.length > 30 || item.deliverables.some((deliverable) => typeof deliverable !== "string" || deliverable.length > 120))) return "Project deliverables are invalid.";
+      if (item.gallery) {
+        if (!Array.isArray(item.gallery) || item.gallery.length > 12) return "Add up to 12 gallery images per project.";
+        for (const image of item.gallery) {
+          if (!image || typeof image !== "object" || typeof image.id !== "string" || image.id.length > 120) return "Gallery images are invalid.";
+          if (typeof image.url !== "string" || image.url.length > MAX_INLINE_IMAGE_LENGTH || (!INLINE_IMAGE.test(image.url) && !isSafePortfolioUrl(image.url))) return "Gallery images must be HTTPS URLs or supported image uploads.";
+          if (typeof image.alt !== "string" || image.alt.length > 300 || typeof image.caption !== "string" || image.caption.length > 500) return "Gallery image details are too long.";
+        }
+      }
     }
   }
   if (input.social !== undefined) {

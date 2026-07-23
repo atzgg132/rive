@@ -1,7 +1,8 @@
 import crypto from "crypto";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-const SECRET_KEY = process.env.DATABASE_URL || "rive-user-secret-salt-9876";
+// Keep the existing DATABASE_URL fallback so currently issued sessions remain valid.
+const SECRET_KEY = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-user-secret-salt-9876";
 const TOKEN_COOKIE_NAME = "rive_session";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -61,7 +62,9 @@ export function verifyUserToken(token: string | null): UserSession | null {
       .update(payloadStr)
       .digest("hex");
       
-    if (signature !== expectedSignature) return null;
+    const providedSignature = Buffer.from(signature, "hex");
+    const expectedSignatureBuffer = Buffer.from(expectedSignature, "hex");
+    if (providedSignature.length !== expectedSignatureBuffer.length || !crypto.timingSafeEqual(providedSignature, expectedSignatureBuffer)) return null;
     
     const session: UserSession = JSON.parse(payloadStr);
     if (Date.now() > session.expiry) {
@@ -87,6 +90,18 @@ export function getSessionUser(req: NextRequest): UserSession | null {
   // 2. Try directly from cookie
   const cookie = req.cookies.get(TOKEN_COOKIE_NAME)?.value;
   return verifyUserToken(cookie || null);
+}
+
+export function setSessionCookie(response: NextResponse, token: string): void {
+  response.cookies.set({
+    name: TOKEN_COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: SESSION_TTL_MS / 1000,
+    path: "/",
+  });
 }
 
 export { TOKEN_COOKIE_NAME, SESSION_TTL_MS };

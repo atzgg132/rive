@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, User, Mail, Lock, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -41,12 +42,6 @@ export default function RegisterPage() {
 
       const data = await res.json();
       if (data.success) {
-        // Log them in immediately after register
-        await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
         router.push("/dashboard");
       } else {
         setError(data.message || "Failed to create account. Please try again.");
@@ -169,8 +164,7 @@ export default function RegisterPage() {
                 <label className="text-xs font-bold text-[#0C1E36] dark:text-slate-300 tracking-wide">password</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A5E78] dark:text-slate-400" />
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"

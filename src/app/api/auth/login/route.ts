@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { verifyPassword, generateUserToken, TOKEN_COOKIE_NAME, SESSION_TTL_MS } from "@/utils/userAuth";
+import { verifyPassword, generateUserToken, setSessionCookie } from "@/utils/userAuth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,15 +37,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    response.cookies.set({
-      name: TOKEN_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: SESSION_TTL_MS / 1000,
-      path: "/"
-    });
+    setSessionCookie(response, token);
 
     return response;
   } catch (error: unknown) {

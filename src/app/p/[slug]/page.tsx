@@ -47,5 +47,5 @@ export default async function PublicPortfolioPage({ params }: Props) {
   });
 
   const theme = (portfolio.theme && typeof portfolio.theme === "object" ? portfolio.theme : DEFAULT_PORTFOLIO_THEME) as PortfolioTheme;
-  return <PortfolioRenderer content={mergePortfolioContent(portfolio.content)} theme={theme} templateKey={portfolio.templateKey} />;
+  return <PortfolioRenderer content={mergePortfolioContent(portfolio.content)} theme={theme} templateKey={portfolio.templateKey} portfolioSlug={slug} />;
 }
