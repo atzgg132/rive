@@ -4,11 +4,11 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const timeline = [
-  { date: "July 2026",  title: "alpha waitlist launched", desc: "500+ early signups in the first 48 hours. the waitlist is open — join to secure your spot.", badge: "latest" },
-  { date: "June 2026",  title: "remit payments engine prototype", desc: "our global payment layer prototype is complete, supporting 47 countries with near-instant settlement.", badge: null },
-  { date: "May 2026",   title: "gig board v1 shipped internally", desc: "ai-powered job matching prototype delivered. internal team tests show a 3× improvement in match quality.", badge: null },
-  { date: "April 2026", title: "design system finalized", desc: "outfit typeface, ice-blue palette, and full component library locked in. the rive. look is born.", badge: null },
-  { date: "March 2026", title: "rive. incorporated", desc: "team of three begins building. mission: one platform for every freelancer's operating needs.", badge: null },
+  { date: "July 2026", title: "portfolio studio shipped", desc: "create one polished, public portfolio from the work already in your workspace. choose from six starting templates, edit your identity and case studies, customize the visual system, and publish a shareable link.", badge: "latest" },
+  { date: "July 2026", title: "portfolio analytics shipped", desc: "understand how your public work is performing with total views, unique visitors, daily reach, peak days, referral sources, and device breakdowns.", badge: null },
+  { date: "June 2026", title: "case studies and media uploads", desc: "portfolio projects now support challenge, approach, outcome, tools, deliverables, galleries, direct image uploads, and HTTPS image URLs — with dedicated public case-study pages.", badge: null },
+  { date: "June 2026", title: "connected freelance workflows", desc: "the core workspace now brings together dashboard reporting, clients, projects, milestones, revenue, invoices, and expenses so the business behind the work stays connected.", badge: null },
+  { date: "May 2026", title: "production-ready portfolio foundation", desc: "added one-portfolio-per-user enforcement, server-side content and URL validation, safe media limits, draft and published states, SEO controls, responsive previews, and light or dark presentation modes.", badge: null },
 ];
 
 export default function ChangelogPage() {
@@ -21,7 +21,6 @@ export default function ChangelogPage() {
           <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>changelog</h1>
           <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 leading-relaxed" style={font}>a transparent log of what we&apos;ve shipped, in reverse chronological order.</p>
 
-          {/* Timeline */}
           <div className="relative">
             <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gradient-to-b from-blue-200 dark:from-blue-800 via-slate-200 dark:via-slate-800 to-transparent" />
             <div className="flex flex-col gap-10">

@@ -35,7 +35,7 @@ export async function PATCH(
       // Mock Email Sender
       console.log(`\n\n=== ✉️ MOCK EMAIL SENT TO ${updated.email} ===`);
       console.log(`Subject: Welcome to Rive! Your Waitlist is Approved.`);
-      console.log(`Body:\nHey there!\nWe're thrilled to inform you that you have been approved from the waitlist.\nYou can now set up your account by visiting the Register page and entering this email address to verify your status.\n\nNext Steps:\n1. Go to https://rive.app/register\n2. Create your secure password.\n3. Enter your dashboard.\n\nWelcome to the Freelance OS,\nThe Rive Team`);
+      console.log(`Body:\nHey there!\nWe're thrilled to inform you that you have been approved from the waitlist.\nYou can now set up your account by visiting the Register page and entering this email address to verify your status.\n\nNext Steps:\n1. Go to https://www.rive.work/register\n2. Create your secure password.\n3. Enter your dashboard.\n\nWelcome to the Freelance OS,\nThe Rive Team`);
       console.log(`=========================================\n\n`);
     }
 

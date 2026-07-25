@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     description:
       "your entire freelance operating system, powered by ai. manage everything in one place.",
     type: "website",
-    url: "https://rive.app",
+    url: "https://www.rive.work",
   },
 };
 

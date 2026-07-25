@@ -22,9 +22,24 @@ const values = [
 ];
 
 const team = [
-  { initials: 'AK', name: 'aryan k.', role: 'founder & ceo' },
-  { initials: 'MS', name: 'meera s.', role: 'lead engineer' },
-  { initials: 'DR', name: 'dev r.', role: 'design lead' },
+  {
+    initials: 'AB',
+    name: 'Arnav Bhattacharya',
+    role: 'founder · product & engineering',
+    bio: 'Software engineer and builder based in Bengaluru, creating rive. — a freelance OS for managing projects, clients, revenue, and gigs in one place. Arnav works across full-stack product development, payments, APIs, databases, and systems operations, with a focus on building practical, reliable tools that help freelancers and solo builders work smarter.',
+  },
+  {
+    initials: 'AC',
+    name: 'Agnik Chakravorty',
+    role: 'cofounder · markets, ops & community',
+    bio: 'Agnik brings a people-first lens to markets, operations, and community. He has analyzed markets, researched cloud adoption, managed vendors across hospitality businesses, and reduced travel transport costs by 18% through smarter routing. Bloomberg certified, he balances the team’s numbers side with a deep understanding of how people and businesses actually operate.',
+  },
+  {
+    initials: 'DB',
+    name: 'Druhin Basu',
+    role: 'cofounder · strategy & growth',
+    bio: 'Druhin is a business strategist, case writer, and storyteller who looks at companies from the inside out. He built an investor CRM and led cold outreach, tiering, and market mapping for a fintech fundraising process. With competition wins against leading business-school teams and experience speaking to trust-driven categories, he brings structure and clarity to rive.’s growth.',
+  },
 ];
 
 const avatarGradients = [
@@ -189,8 +204,8 @@ export default function AboutPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-            {team.map(({ initials, name, role }, idx) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {team.map(({ initials, name, role, bio }, idx) => (
               <div
                 key={name}
                 className="group bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-none p-8 flex flex-col items-center gap-4 hover:-translate-y-1 transition-transform duration-300"
@@ -216,6 +231,12 @@ export default function AboutPage() {
                     {role}
                   </p>
                 </div>
+                <p
+                  className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed text-left"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  {bio}
+                </p>
               </div>
             ))}
           </div>

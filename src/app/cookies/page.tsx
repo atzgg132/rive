@@ -99,7 +99,7 @@ export default function CookiesPage() {
               <Section id="contact" title="6. contact us">
                 <p>If you have questions about our use of cookies:</p>
                 <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 mt-2">
-                  <p><strong>email:</strong> <a href="mailto:privacy@rive.app" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@rive.app</a></p>
+                  <p><strong>email:</strong> <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a></p>
                   <p className="mt-1"><strong>response time:</strong> within 72 hours</p>
                 </div>
               </Section>

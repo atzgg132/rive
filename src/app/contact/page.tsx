@@ -7,9 +7,9 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const contactMethods = [
-  { label: "general",  email: "hello@rive.app",   desc: "questions, feedback, anything" },
-  { label: "press",    email: "press@rive.app",    desc: "media kits, interviews, coverage" },
-  { label: "support",  email: "support@rive.app",  desc: "technical issues & alpha bugs" },
+  { label: "general",  email: "hello@rive.work",   desc: "questions, feedback, anything" },
+  { label: "press",    email: "hello@rive.work",    desc: "media kits, interviews, coverage" },
+  { label: "support",  email: "hello@rive.work",  desc: "technical issues & alpha bugs" },
 ];
 
 export default function ContactPage() {

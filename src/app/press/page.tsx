@@ -13,7 +13,7 @@ export default function PressPage() {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>media</div>
           <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>press &amp; media.</h1>
           <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 leading-relaxed" style={font}>
-            for press inquiries, contact <a href="mailto:press@rive.app" className="text-blue-600 dark:text-blue-400 hover:underline">press@rive.app</a>
+            for press inquiries, contact <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>
           </p>
 
           {/* Brand assets */}
@@ -55,7 +55,7 @@ export default function PressPage() {
               <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-lg">📨</div>
               <div>
                 <p className="font-bold text-[#0C1E36] dark:text-white text-sm" style={fontD}>press team</p>
-                <a href="mailto:press@rive.app" className="text-blue-600 dark:text-blue-400 text-sm hover:underline" style={font}>press@rive.app</a>
+                <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 text-sm hover:underline" style={font}>hello@rive.work</a>
               </div>
             </div>
           </div>

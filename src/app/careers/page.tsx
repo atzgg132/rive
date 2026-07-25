@@ -67,7 +67,7 @@ export default function CareersPage() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 text-center transition-colors">
             <h3 className="text-xl font-bold text-[#0C1E36] dark:text-white mb-2" style={fontD}>don&apos;t see your role?</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-1" style={font}>we&apos;re always open to exceptional people. reach out directly.</p>
-            <a href="mailto:careers@rive.app" className="text-blue-600 dark:text-blue-400 font-semibold text-sm hover:text-blue-700 dark:hover:text-blue-300 transition-colors" style={fontD}>careers@rive.app →</a>
+            <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 font-semibold text-sm hover:text-blue-700 dark:hover:text-blue-300 transition-colors" style={fontD}>hello@rive.work →</a>
           </div>
         </div>
       </section>

@@ -229,7 +229,7 @@ export default function Hero() {
               <div className="w-44 h-5 rounded-md mx-auto flex items-center justify-center"
                 style={{ background: "#ffffff", border: "1px solid rgba(12,30,54,0.06)" }}>
                 <span className="text-[10px] text-slate-400 font-medium" style={{ fontFamily: "var(--font-body)" }}>
-                  app.rive.app
+                  app.rive.work
                 </span>
               </div>
             </div>

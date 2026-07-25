@@ -82,7 +82,7 @@ export default function PrivacyPage() {
               </Section>
 
               <Section id="retention" title="4. data retention">
-                <p>We retain your email address for as long as you remain on the waitlist or use the Service. You can request removal at any time by emailing <a href="mailto:privacy@rive.app" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@rive.app</a>.</p>
+                <p>We retain your email address for as long as you remain on the waitlist or use the Service. You can request removal at any time by emailing <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>.</p>
               </Section>
 
               <Section id="third" title="5. third-party services">
@@ -90,11 +90,11 @@ export default function PrivacyPage() {
               </Section>
 
               <Section id="rights" title="6. your rights">
-                <p>Depending on your jurisdiction, you may have the right to access, correct, or delete your personal data. To exercise any of these rights, email us at <a href="mailto:privacy@rive.app" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@rive.app</a>.</p>
+                <p>Depending on your jurisdiction, you may have the right to access, correct, or delete your personal data. To exercise these rights, email us at <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>.</p>
               </Section>
 
               <Section id="children" title="7. children's privacy">
-                <p>rive. is not directed at children under the age of 16. We do not knowingly collect personal information from anyone under 16. If you believe we have inadvertently collected data from a minor, please contact us immediately at <a href="mailto:privacy@rive.app" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@rive.app</a>.</p>
+                <p>rive. is not directed at children under the age of 16. We do not knowingly collect personal information from anyone under 16. If you believe we have inadvertently collected data from a minor, please contact us immediately at <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>.</p>
               </Section>
 
               <Section id="changes" title="8. changes to this policy">
@@ -105,7 +105,7 @@ export default function PrivacyPage() {
               <Section id="contact" title="9. contact us">
                 <p>For any privacy-related questions, requests, or concerns:</p>
                 <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 mt-2 transition-colors">
-                  <p><strong>email:</strong> <a href="mailto:privacy@rive.app" className="text-blue-600 dark:text-blue-400 hover:underline">privacy@rive.app</a></p>
+                  <p><strong>email:</strong> <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a></p>
                   <p className="mt-1"><strong>response time:</strong> within 72 hours</p>
                 </div>
               </Section>
