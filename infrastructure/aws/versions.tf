@@ -1,0 +1,37 @@
+terraform {
+  required_version = ">= 1.10.0"
+
+  backend "s3" {
+    key          = "platform/terraform.tfstate"
+    region       = "ap-south-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
+    }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.7"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Project   = "rive"
+      ManagedBy = "terraform"
+      Region    = var.aws_region
+    }
+  }
+}

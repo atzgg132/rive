@@ -16,14 +16,26 @@ const contactMethods = [
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "General Inquiry", message: "" });
-  const [state, setState] = useState<"idle" | "loading" | "done">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setState("loading");
-    // small simulated delay for polish
-    await new Promise(r => setTimeout(r, 900));
-    setState("done");
+    setError("");
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Your message could not be sent.");
+      setState("done");
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Your message could not be sent.");
+      setState("error");
+    }
   };
 
   return (
@@ -90,6 +102,7 @@ export default function ContactPage() {
                     className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15 disabled:opacity-75" style={fontD}>
                     {state === "loading" ? <><Loader2 className="w-4 h-4 animate-spin" />Sending...</> : "send message →"}
                   </Button>
+                  {state === "error" && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
                 </form>
               )}
             </div>

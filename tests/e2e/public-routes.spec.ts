@@ -62,7 +62,7 @@ test("login password visibility control works", async ({ page }) => {
   await expect(showPassword).toHaveCount(1);
   await password.fill("temporary-password");
   await showPassword.click();
-  await expect(page.locator('input[type="text"][value="temporary-password"]')).toHaveCount(1);
+  await expect(page.locator('input[type="text"]')).toHaveValue("temporary-password");
 
   const hidePassword = page.getByRole("button", { name: "hide password" });
   await expect(hidePassword).toHaveCount(1);
