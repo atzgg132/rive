@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Select } from "@/components/ui";
+
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
@@ -60,7 +62,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 }
 
 function MiniBarChart({ data, label }: { data:{day:string;count:number}[]; label:string }) {
-  if (!data.length) return <div className="text-slate-400 text-sm py-8 text-center" style={{fontFamily:"Outfit,sans-serif"}}>no data yet</div>;
+  if (!data.length) return <div className="text-slate-400 text-sm py-8 text-center" style={{fontFamily:"Outfit,sans-serif"}}>No data yet</div>;
   const max = Math.max(...data.map(d=>d.count), 1);
   return (
     <div>
@@ -102,30 +104,30 @@ function LoginScreen({ onLogin }: { onLogin: (t:string)=>void }) {
 
   const F = {fontFamily:"Outfit,sans-serif"};
   return (
-    <div className="min-h-screen bg-[#F5F8FC] dark:bg-[#0B1120] flex items-center justify-center p-4 transition-colors relative">
+    <div className="min-h-screen bg-background dark:bg-background flex items-center justify-center p-4 transition-colors relative">
       <div className="absolute top-6 right-6 z-50">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <RiveLogo height={36} className="text-[#0C1E36] dark:text-white" />
+          <RiveLogo height={36} className="text-foreground dark:text-white" />
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none p-8 transition-colors">
           <div className="text-center mb-7">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center mx-auto mb-4">
               <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400"/>
             </div>
-            <h1 className="text-2xl font-bold text-[#0C1E36] dark:text-white" style={F}>admin portal</h1>
+            <h1 className="text-2xl font-bold text-foreground dark:text-white" style={F}>Admin portal</h1>
             <p className="text-slate-400 text-sm mt-1" style={F}>rive. internal dashboard</p>
           </div>
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>username</label>
-              <input value={username} onChange={e=>setUsername(e.target.value)} required autoFocus placeholder="Admin1"
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>Username</label>
+              <Input value={username} onChange={e=>setUsername(e.target.value)} required autoFocus placeholder="Admin1"
                 className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
             </div>
             <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>password</label>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>Password</label>
               <PasswordInput value={password} onChange={e=>setPassword(e.target.value)} required placeholder="••••••••••"
                 className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
             </div>
@@ -134,12 +136,12 @@ function LoginScreen({ onLogin }: { onLogin: (t:string)=>void }) {
                 <AlertCircle className="w-4 h-4 shrink-0"/>{err}
               </div>
             )}
-            <button type="submit" disabled={state==="loading"}
+            <Button type="submit" disabled={state==="loading"}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15 disabled:opacity-75 flex items-center justify-center gap-2 mt-1" style={F}>
-              {state==="loading"?<><Loader2 className="w-4 h-4 animate-spin"/>authenticating...</>:"sign in →"}
-            </button>
+              {state==="loading"?<><Loader2 className="w-4 h-4 animate-spin"/>Authenticating...</>:"sign in →"}
+            </Button>
           </form>
-          <p className="text-center text-slate-300 text-xs mt-5" style={F}>session not persisted — log in each visit.</p>
+          <p className="text-center text-slate-300 text-xs mt-5" style={F}>Session not persisted — log in each visit.</p>
         </div>
       </div>
     </div>
@@ -161,7 +163,7 @@ function StatCard({icon:Icon,label,value,sub,sparkData,color,bgColor,borderColor
         {sparkData && <Sparkline data={sparkData} color={sparkColor}/>}
       </div>
       <div>
-        <p className="text-3xl font-bold text-[#0C1E36] dark:text-white" style={F}>{value}</p>
+        <p className="text-3xl font-bold text-foreground dark:text-white" style={F}>{value}</p>
         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5" style={F}>{label}</p>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1" style={F}>{sub}</p>
       </div>
@@ -191,8 +193,8 @@ function SortTh({field,label,sortField,sortOrder,onSort}:{
 // ── Status badge ──────────────────────────────────────────
 function StatusBadge({status}:{status:"pending"|"approved"}) {
   return status==="approved"
-    ? <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><CheckCircle2 className="w-3 h-3"/>approved</span>
-    : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><Clock className="w-3 h-3"/>pending</span>;
+    ? <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><CheckCircle2 className="w-3 h-3"/>Approved</span>
+    : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><Clock className="w-3 h-3"/>Pending</span>;
 }
 
 // ── Dashboard ─────────────────────────────────────────────
@@ -287,35 +289,35 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
   const knownTypes = ["all","waitlist","remit","login","demo"];
 
   if(loading) return (
-    <div className="min-h-screen bg-[#F5F8FC] flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin"/>
-        <p className="text-slate-400 text-sm" style={F}>loading dashboard...</p>
+        <p className="text-slate-400 text-sm" style={F}>Loading dashboard...</p>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC] dark:bg-[#0B1120] transition-colors">
+    <div className="min-h-screen bg-background dark:bg-background transition-colors">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-[#F5F8FC]/90 dark:bg-[#0B1120]/90 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06]">
+      <header className="sticky top-0 z-40 bg-background/90 dark:bg-background/90 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image src="/brand-assets/logo.png" alt="rive." width={72} height={32} style={{objectFit:"contain"}} className="dark:brightness-200 dark:contrast-100" priority/>
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"/>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>admin</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>Admin</span>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <button onClick={refresh} disabled={refreshing}
+            <Button onClick={refresh} disabled={refreshing}
               className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium disabled:opacity-50" style={F}>
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing?"animate-spin":""}`}/>
               {refreshing?"refreshing...":"refresh"}
-            </button>
-            <button onClick={onLogout}
+            </Button>
+            <Button onClick={onLogout}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-red-200 dark:hover:border-red-900/50 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" style={F}>
               <LogOut className="w-3.5 h-3.5"/>sign out
-            </button>
+            </Button>
           </div>
         </div>
       </header>
@@ -324,10 +326,10 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
 
         {/* Title */}
         <div>
-          <h1 className="text-3xl font-bold text-[#0C1E36] dark:text-white" style={F}>dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground dark:text-white" style={F}>Dashboard</h1>
           <p className="text-slate-400 text-sm mt-0.5 flex items-center gap-2" style={F}>
             live data · auto-refreshes every 30s
-            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"/>live</span>
+            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"/>Live</span>
           </p>
         </div>
 
@@ -349,7 +351,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
         {/* Top pages + type breakdown */}
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>top pages by views</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>Top pages by views</p>
             {analytics?.topPaths.length ? analytics.topPaths.map((p,i)=>{
               const max = analytics.topPaths[0].views;
               return (
@@ -364,11 +366,11 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                   </div>
                 </div>
               );
-            }) : <div className="text-slate-400 text-sm py-8 text-center" style={F}>no page views yet</div>}
+            }) : <div className="text-slate-400 text-sm py-8 text-center" style={F}>No page views yet</div>}
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>signup source breakdown</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>Signup source breakdown</p>
             {analytics?.typeBreakdown.length ? analytics.typeBreakdown.map(t=>{
               const ttl = analytics.typeBreakdown.reduce((s,x)=>s+x.count,0);
               const pct = ttl>0?Math.round((t.count/ttl)*100):0;
@@ -385,7 +387,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                   </div>
                 </div>
               );
-            }) : <div className="text-slate-400 text-sm py-8 text-center" style={F}>no signups yet</div>}
+            }) : <div className="text-slate-400 text-sm py-8 text-center" style={F}>No signups yet</div>}
           </div>
         </div>
 
@@ -396,7 +398,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
           <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h2 className="font-bold text-[#0C1E36] dark:text-white text-lg" style={F}>waitlist</h2>
+                <h2 className="font-bold text-foreground dark:text-white text-lg" style={F}>Waitlist</h2>
                 <p className="text-slate-400 text-xs mt-0.5" style={F}>
                   {total} entries · page {page} of {Math.max(totalPages,1)}
                 </p>
@@ -405,41 +407,41 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
               <form onSubmit={handleSearch} className="flex gap-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
-                  <input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="search emails..."
+                  <Input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="Search emails..."
                     className="pl-8 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all w-52" style={F}/>
                 </div>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors" style={F}>search</button>
-                {search && <button type="button" onClick={handleClear} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors" style={F}>clear</button>}
+                <Button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors" style={F}>Search</Button>
+                {search && <Button type="button" onClick={handleClear} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors" style={F}>Clear</Button>}
               </form>
             </div>
 
             {/* Filter row */}
             <div className="flex flex-wrap gap-2 items-center">
               <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0"/>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>filter:</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>Filter:</span>
 
               {/* Status filter */}
               <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
                 {(["all","pending","approved"] as const).map(s=>(
-                  <button key={s} onClick={()=>{setFilterStatus(s);setPage(1);}}
+                  <Button key={s} onClick={()=>{setFilterStatus(s);setPage(1);}}
                     className={`px-3 py-1.5 transition-colors ${filterStatus===s?"bg-blue-600 text-white":"text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`} style={F}>
                     {s}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
               {/* Type filter */}
-              <select value={filterType} onChange={e=>{setFilterType(e.target.value);setPage(1);}}
+              <Select value={filterType} onChange={e=>{setFilterType(e.target.value);setPage(1);}}
                 className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 focus:outline-none focus:border-blue-400 transition-all" style={F}>
                 {knownTypes.map(t=><option key={t} value={t}>{t==="all"?"all sources":t}</option>)}
-              </select>
+              </Select>
 
               {/* Active filter indicators */}
               {(filterStatus!=="all"||filterType!=="all"||search) && (
-                <button onClick={()=>{setFilterStatus("all");setFilterType("all");handleClear();}}
+                <Button onClick={()=>{setFilterStatus("all");setFilterType("all");handleClear();}}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors" style={F}>
                   <XCircle className="w-3 h-3"/>reset all
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -454,7 +456,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                   <SortTh field="type"       label="source"    sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
                   <SortTh field="status"     label="status"    sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
                   <SortTh field="created_at" label="signed up" sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
-                  <th className="text-right px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest" style={F}>action</th>
+                  <th className="text-right px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest" style={F}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -491,7 +493,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                         </div>
                       </td>
                       <td className="px-6 py-3.5 text-right">
-                        <button
+                        <Button
                           onClick={()=>handleApprove(entry)}
                           disabled={isApproving}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed ${
@@ -502,11 +504,11 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                           {isApproving ? (
                             <Loader2 className="w-3 h-3 animate-spin"/>
                           ) : entry.status==="approved" ? (
-                            <><XCircle className="w-3 h-3"/>revoke</>
+                            <><XCircle className="w-3 h-3"/>Revoke</>
                           ) : (
-                            <><CheckCircle2 className="w-3 h-3"/>approve</>
+                            <><CheckCircle2 className="w-3 h-3"/>Approve</>
                           )}
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -524,13 +526,13 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
               </span>
               <div className="h-3.5 w-px bg-slate-200"/>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium" style={F}>per page</span>
+                <span className="text-xs text-slate-400 font-medium" style={F}>Per page</span>
                 <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
                   {[10,20,50,100].map(n=>(
-                    <button key={n} onClick={()=>{ setLimit(n); setPage(1); }}
+                    <Button key={n} onClick={()=>{ setLimit(n); setPage(1); }}
                       className={`px-3 py-1.5 transition-colors ${limit===n?"bg-blue-600 text-white":"text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`} style={F}>
                       {n}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -538,23 +540,23 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
             {/* Right: page nav */}
             {totalPages>1 && (
               <div className="flex items-center gap-2">
-                <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}
+                <Button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}
                   className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                   <ChevronLeft className="w-4 h-4"/>
-                </button>
+                </Button>
                 {Array.from({length:Math.min(5,totalPages)},(_,i)=>{
                   const pg=Math.max(1,Math.min(page-2,totalPages-4))+i;
                   return (
-                    <button key={pg} onClick={()=>setPage(pg)}
+                    <Button key={pg} onClick={()=>setPage(pg)}
                       className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${pg===page?"bg-blue-600 text-white":"border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600"}`} style={F}>
                       {pg}
-                    </button>
+                    </Button>
                   );
                 })}
-                <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages}
+                <Button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages}
                   className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                   <ChevronRight className="w-4 h-4"/>
-                </button>
+                </Button>
               </div>
             )}
           </div>

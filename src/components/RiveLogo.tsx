@@ -27,7 +27,7 @@ export function RiveLogo({
         fontFamily: "var(--font-sans)",
       }}
     >
-      <span style={{ textTransform: "lowercase" }}>rive</span>
+      <span style={{ textTransform: "lowercase" }}>Rive</span>
       <span style={{ color: accentColor, marginLeft: "0.05em" }}>.</span>
     </div>
   );

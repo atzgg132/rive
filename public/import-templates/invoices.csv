@@ -1,0 +1,2 @@
+invoice_number,client_email,project_title,issue_date,due_date,status,total
+INV-001,hello@acme.example,Website redesign,2026-07-15,2026-07-30,sent,2500

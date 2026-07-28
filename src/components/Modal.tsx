@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input } from "@/components/ui";
+
 import { X, CheckCircle2, Play, Loader2, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { submitToWaitlist } from "@/utils/api";
@@ -89,7 +91,7 @@ function WaitlistForm({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -98,7 +100,7 @@ function WaitlistForm({
             disabled={state === "loading"}
             className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-all duration-200 disabled:opacity-60"
           />
-          <button
+          <Button
             type="submit"
             disabled={state === "loading"}
             className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${ctaClass} disabled:opacity-75`}
@@ -107,12 +109,12 @@ function WaitlistForm({
             {state === "loading" ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>checking...</span>
+                <span>Checking...</span>
               </>
             ) : (
               ctaLabel
             )}
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -132,14 +134,14 @@ function WaitlistForm({
         </div>
         <div>
           <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-1" style={{ fontFamily: "var(--font-display)" }}>
-            you&apos;re on the list!
+            You&apos;re on the list!
           </h3>
           <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontFamily: "var(--font-body)" }}>
-            we&apos;ll reach out as soon as your spot is ready.
+            We&apos;ll reach out as soon as your spot is ready.
           </p>
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-            {emailSent ? `confirmation sent to ${email}` : `spot saved for ${email}`}
+            {emailSent ? `Confirmation sent to ${email}` : `Spot saved for ${email}`}
           </div>
         </div>
       </div>
@@ -159,12 +161,12 @@ function WaitlistForm({
         </div>
         <div>
           <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-1" style={{ fontFamily: "var(--font-display)" }}>
-            already on the list
+            You&apos;re already on the list
           </h3>
           <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontFamily: "var(--font-body)" }}>
-            you&apos;re already registered with this email.
+            You&apos;re already registered with this email.
             <br />
-            sit tight — we&apos;ll notify you when your batch opens.
+            We&apos;ll notify you when your access is ready.
           </p>
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse inline-block" />
@@ -191,6 +193,20 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -207,7 +223,10 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
 
       {/* Card */}
       <div
-        className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-2xl shadow-slate-200/80 dark:shadow-none z-10 transition-colors"
+        role="dialog"
+        aria-modal="true"
+        aria-label={type === "demo" ? "Product demo" : type === "login" ? "Developer access" : "Join the waitlist"}
+        className="relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-100 bg-white p-5 shadow-2xl shadow-slate-200/80 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-8"
         style={{
           transition: "transform 350ms cubic-bezier(.16,1,.3,1), opacity 300ms",
           transform: visible ? "translateY(0) scale(1)" : "translateY(20px) scale(0.97)",
@@ -215,20 +234,21 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
         }}
       >
         {/* Close */}
-        <button
+        <Button
           onClick={onClose}
+          aria-label="Close dialog"
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           <X className="w-5 h-5" />
-        </button>
+        </Button>
 
         {/* ── Waitlist ── */}
         {type === "waitlist" && (
           <WaitlistForm
             onClose={onClose}
-            heading="join the waitlist"
-            subtext="we're in closed alpha. drop your email to secure early access in our next batch release."
-            ctaLabel="request invitation"
+            heading="Join the waitlist"
+            subtext="We’re opening access in small groups. Leave your email and we’ll let you know as soon as your workspace is ready."
+            ctaLabel="Request an invitation"
             ctaClass="bg-gradient-to-r from-blue-600 to-sky-500 text-white hover:from-blue-700 hover:to-sky-600 shadow-md shadow-blue-600/10"
             submitType="waitlist"
           />
@@ -238,9 +258,9 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
         {type === "login" && (
           <WaitlistForm
             onClose={onClose}
-            heading="developer portal"
-            subtext="no general access yet. enter your invited email to join the alpha waitlist."
-            ctaLabel="register for alpha access"
+            heading="Developer portal"
+            subtext="Enter your invited email to request access to the current release."
+            ctaLabel="Request access"
             ctaClass="bg-slate-800 text-white hover:bg-slate-900 shadow-md"
             submitType="login"
           />
@@ -257,18 +277,18 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
                 rive. product preview
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontFamily: "var(--font-body)" }}>
-                watch how our native ai handles invoicing and client management.
+                See how clients, projects, invoices, and expenses stay connected.
               </p>
             </div>
 
             <div className="relative aspect-video w-full rounded-2xl bg-gradient-to-br from-blue-50 to-sky-50 border border-slate-200 flex items-center justify-center overflow-hidden group">
-              <button
+              <Button
                 onClick={() => setDemoPlayed(true)}
                 className="relative z-10 w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform duration-200"
                 style={{ opacity: demoPlayed ? 0 : 1, transition: "opacity 300ms" }}
               >
                 <Play className="w-6 h-6 fill-current ml-1" />
-              </button>
+              </Button>
 
               <div
                 className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/95 dark:bg-slate-900/95 px-6"
@@ -283,12 +303,12 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
                   className="text-slate-700 text-sm font-bold"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  your workspace is ready to organize
+                  Your workspace is ready
                 </p>
                 <p className="text-slate-400 text-xs" style={{ fontFamily: "var(--font-body)" }}>
-                  manage clients, projects, invoices, and expenses from one calm dashboard.
+                  Manage clients, projects, invoices, and expenses from one calm dashboard.
                 </p>
-                <button
+                <Button
                   onClick={() => {
                     setDemoPlayed(false);
                     onClose();
@@ -300,8 +320,8 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
                   className="mt-1 px-5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  join waitlist →
-                </button>
+                  Join the waitlist →
+                </Button>
               </div>
             </div>
           </div>

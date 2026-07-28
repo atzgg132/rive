@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
       where: { id: session.userId },
       select: {
         name: true,
+        avatarUrl: true,
         email: true,
         projects: {
           orderBy: { updatedAt: "desc" },
@@ -85,10 +86,13 @@ export async function PATCH(req: NextRequest) {
     }
 
     const data: Record<string, unknown> = { revision: current.revision + 1 };
+    let syncedProfileImage: string | undefined;
     if (body.content !== undefined) {
       const contentError = validatePortfolioContent(body.content);
       if (contentError) return NextResponse.json({ success: false, message: contentError }, { status: 400 });
-      data.content = mergePortfolioContent(body.content);
+      const mergedContent = mergePortfolioContent(body.content);
+      data.content = mergedContent;
+      syncedProfileImage = mergedContent.profileImageUrl;
     }
     if (body.theme !== undefined) data.theme = { ...current.theme as object, ...body.theme };
     if (body.templateKey !== undefined && typeof body.templateKey === "string") data.templateKey = body.templateKey;
@@ -105,7 +109,16 @@ export async function PATCH(req: NextRequest) {
       data.publishedAt = body.status === "published" ? new Date() : null;
     }
 
-    const portfolio = await prisma.portfolio.update({ where: { userId: session.userId }, data });
+    const portfolio = await prisma.$transaction(async (transaction) => {
+      const updatedPortfolio = await transaction.portfolio.update({ where: { userId: session.userId }, data });
+      if (syncedProfileImage !== undefined) {
+        await transaction.user.update({
+          where: { id: session.userId },
+          data: { avatarUrl: syncedProfileImage || null },
+        });
+      }
+      return updatedPortfolio;
+    });
     return NextResponse.json({ success: true, portfolio });
   } catch (error) {
     console.error("Portfolio update error:", error);

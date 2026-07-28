@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui";
+
 import { MapPin, Clock, DollarSign, ArrowRight, Sparkles } from "lucide-react";
 
 const gigs = [
@@ -57,7 +59,7 @@ const urgencyStyles: Record<string, string> = {
 
 export default function GigBoard() {
   return (
-    <section id="gig-board" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
+    <section id="gig-board" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-28 bg-gradient-to-b from-transparent via-blue-500/15 to-transparent" />
@@ -71,7 +73,7 @@ export default function GigBoard() {
           <div>
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-5">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
-              <span style={{ fontFamily: "var(--font-body)" }}>Beta — Live Now</span>
+              <span style={{ fontFamily: "var(--font-body)" }}>Product direction</span>
             </div>
             <h2
               className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight mb-3"
@@ -83,18 +85,18 @@ export default function GigBoard() {
               className="text-slate-600 dark:text-slate-300 text-[1.05rem] max-w-lg leading-relaxed"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              Find and post gigs — for freelancers and businesses alike. AI surfaces the
-              best matches for your skills automatically.
+              We are exploring a curated opportunity marketplace for independent professionals
+              and the businesses that hire them.
             </p>
           </div>
-          <button
+          <Button
             onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
             className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-blue-100 text-blue-600 text-sm font-semibold hover:bg-blue-50/50 transition-all duration-200 shrink-0"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Explore all gigs
+            Join the waitlist
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </button>
+          </Button>
         </div>
 
         {/* ── AI banner ───────────────────────────────── */}
@@ -103,16 +105,16 @@ export default function GigBoard() {
             <Sparkles className="w-4 h-4 text-blue-600" />
           </div>
           <p className="text-sm text-slate-700 leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
-            <span className="text-blue-800 font-bold">rive. is currently indexing gigs</span> for our upcoming launch. 
-            sign up to see your personalized board when we go live.
+            <span className="text-blue-800 font-bold">The cards below are an illustrative preview.</span>{" "}
+            Join the waitlist to help shape how opportunity matching should work.
           </p>
-          <button
+          <Button
             onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
             className="ml-auto text-xs font-semibold text-blue-600 hover:text-blue-800 whitespace-nowrap transition-colors shrink-0"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            join waitlist →
-          </button>
+            Join waitlist →
+          </Button>
         </div>
 
         {/* ── Gig cards ───────────────────────────────── */}

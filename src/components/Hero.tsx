@@ -1,15 +1,17 @@
 "use client";
 
+import { Button, Input } from "@/components/ui";
+
 import { useState } from "react";
 import { ArrowRight, Play, Zap, BarChart3, Users, Shield, Loader2, Clock } from "lucide-react";
 
 import { submitToWaitlist } from "@/utils/api";
 
 const floatingStats = [
-  { icon: Shield,   label: "keep 100% of your earnings. no service fees or commissions.", value: "no commissions" },
-  { icon: Users,    label: "your client list and contracts belong to you. no lock-in.", value: "privacy first" },
-  { icon: BarChart3, label: "built transparently with our open community roadmap.", value: "fully open" },
-  { icon: Zap,      label: "ai built native to your dashboard, not bolted-on.", value: "native ai" },
+  { icon: Shield,   label: "Important writes are validated on the server, not only in the interface.", value: "Server validated" },
+  { icon: Users,    label: "Clients, projects, invoices, tasks, and calendar dates share context.", value: "Connected records" },
+  { icon: BarChart3, label: "Financial and operational signals update from the work you already track.", value: "Useful insights" },
+  { icon: Zap,      label: "A public portfolio and analytics are included in the same workspace.", value: "Portfolio included" },
 ];
 
 export default function Hero() {
@@ -31,7 +33,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#F5F8FC] dark:bg-[#0B1120] pt-28 pb-20">
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 pb-16 pt-24 dark:bg-background sm:px-6 sm:pb-20 sm:pt-28">
 
       {/* ── Background orbs ─────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none select-none">
@@ -61,16 +63,16 @@ export default function Hero() {
           className="text-xs font-medium tracking-wide"
           style={{ fontFamily: "var(--font-body)", color: "#1D4ED8" }}
         >
-          in active development — get early access
+          Early access is open
         </span>
       </div>
 
       {/* ── Headline ────────────────────────────────── */}
       <h1
-        className="relative text-center leading-none tracking-wide max-w-5xl px-8 mb-7 text-slate-900 dark:text-white"
-        style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(3.5rem, 10vw, 8rem)" }}
+        className="relative mb-7 max-w-5xl text-center leading-[0.95] tracking-wide text-slate-900 dark:text-white"
+        style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(2.6rem, 10vw, 8rem)" }}
       >
-        <span>Your entire </span>
+        <span>Your freelance business, </span>
         <span className="relative inline-block">
           <span style={{
             background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
@@ -78,7 +80,7 @@ export default function Hero() {
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}>
-            freelance OS
+            finally connected
           </span>
           {/* Underline */}
           <svg
@@ -102,26 +104,23 @@ export default function Hero() {
             </defs>
           </svg>
         </span>
-        <span>,</span>
-        <br />
-        <span>powered by AI.</span>
+        <span>.</span>
       </h1>
 
       {/* ── Subheadline ─────────────────────────────── */}
       <p
-        className="relative text-center text-slate-600 dark:text-slate-300 max-w-xl px-8 mb-10 leading-relaxed"
+        className="relative mb-10 max-w-xl text-center leading-relaxed text-slate-600 dark:text-slate-300"
         style={{ fontFamily: "var(--font-body)", fontSize: "clamp(1rem, 2vw, 1.2rem)" }}
       >
-        Manage projects, clients, revenue, and gigs — all in one place. Let
-        rive.&apos;s AI co-pilot handle the heavy lifting so you can focus on the
-        work you love.
+        Manage clients, projects, invoices, expenses, your calendar, and your public
+        portfolio from one thoughtfully connected workspace.
       </p>
 
       {/* ── CTA row ─────────────────────────────────── */}
-      <div className="relative flex flex-col sm:flex-row items-center gap-4 px-8 mb-16 w-full max-w-lg">
+      <div className="relative mb-16 flex w-full max-w-lg flex-col items-center gap-4 sm:flex-row">
         {formState === "idle" || formState === "loading" ? (
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full">
-            <input
+            <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -138,7 +137,7 @@ export default function Hero() {
               onFocus={e => { e.target.style.borderColor = "rgba(29,78,216,0.4)"; e.target.style.boxShadow = "0 2px 12px rgba(29,78,216,0.06)"; }}
               onBlur={e => { e.target.style.borderColor = "rgba(12, 30, 54, 0.12)"; e.target.style.boxShadow = "0 2px 8px rgba(12, 30, 54, 0.02)"; }}
             />
-            <button
+            <Button
               type="submit"
               disabled={formState === "loading"}
               className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-sm transition-all duration-200 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
@@ -149,26 +148,26 @@ export default function Hero() {
               }}
             >
               {formState === "loading" ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /><span>checking...</span></>
+                <><Loader2 className="w-4 h-4 animate-spin" /><span>Checking...</span></>
               ) : (
-                <>Get Early Access <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
+                <>Join the waitlist <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
               )}
-            </button>
+            </Button>
           </form>
         ) : formState === "success" ? (
           <div className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl text-emerald-700 font-medium text-sm animate-fade-in"
             style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            you&apos;re on the list! we&apos;ll be in touch when your batch opens.
+            You&apos;re on the list. We&apos;ll email you when your access is ready.
           </div>
         ) : (
           <div className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl text-blue-700 font-medium text-sm animate-fade-in"
             style={{ background: "rgba(29,78,216,0.07)", border: "1px solid rgba(29,78,216,0.15)" }}>
             <Clock className="w-4 h-4 shrink-0 text-blue-500" />
-            already on the list — we&apos;ll notify you when your batch is ready.
+            You&apos;re already on the list. We&apos;ll notify you when your access is ready.
           </div>
         )}
-        <button 
+        <Button
           onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "demo" }))}
           className="inline-flex items-center gap-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors group shrink-0"
         >
@@ -177,16 +176,16 @@ export default function Hero() {
             <Play className="w-3 h-3 fill-current ml-0.5 text-slate-600" />
           </div>
           Watch Demo
-        </button>
+        </Button>
       </div>
 
       {/* ── Stats bar ───────────────────────────────── */}
-      <div className="relative w-full max-w-4xl px-8">
+      <div className="relative w-full max-w-4xl">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {floatingStats.map(({ icon: Icon, label, value }) => (
             <div
               key={label}
-              className="group flex flex-col items-center gap-2.5 p-5 rounded-2xl transition-all duration-300 cursor-default"
+              className="group flex min-w-0 cursor-default flex-col items-center gap-2.5 rounded-2xl p-3 transition-all duration-300 sm:p-5"
               style={{ background: "#ffffff", border: "1px solid rgba(12, 30, 54, 0.05)", boxShadow: "0 4px 15px rgba(12,30,54,0.02)" }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.background = "rgba(29,78,216,0.03)";
@@ -201,7 +200,7 @@ export default function Hero() {
                 style={{ background: "rgba(29,78,216,0.06)" }}>
                 <Icon className="w-[18px] h-[18px]" style={{ color: "#1D4ED8" }} />
               </div>
-              <div className="text-xl font-bold text-slate-800" style={{ fontFamily: "var(--font-display)" }}>
+              <div className="text-center text-base font-bold text-slate-800 sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
                 {value}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-tight" style={{ fontFamily: "var(--font-body)" }}>
@@ -213,7 +212,7 @@ export default function Hero() {
       </div>
 
       {/* ── Dashboard preview ───────────────────────── */}
-      <div className="relative w-full max-w-6xl px-8 mt-16">
+      <div className="relative mt-12 w-full max-w-6xl sm:mt-16">
         <div className="relative rounded-2xl overflow-hidden shadow-xl shadow-slate-200/50"
           style={{ border: "1px solid rgba(12,30,54,0.08)" }}>
 
@@ -308,19 +307,18 @@ export default function Hero() {
                       style={{ background: "rgba(29,78,216,0.1)" }}>
                       <Zap className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400" style={{ fontFamily: "var(--font-display)" }}>AI Insight</p>
+                    <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400" style={{ fontFamily: "var(--font-display)" }}>Next action</p>
                   </div>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium" style={{ fontFamily: "var(--font-body)" }}>
-                    3 gigs matching your skills worth{" "}
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">$2,400</span> are live on the Gig Board.
+                    One invoice is overdue, and two project deadlines are approaching.
                   </p>
-                  <button 
+                  <Button
                     onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
                     className="text-[10px] font-bold mt-auto text-left text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
-                    View Gigs →
-                  </button>
+                    Review workspace →
+                  </Button>
                 </div>
               </div>
             </div>

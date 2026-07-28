@@ -15,59 +15,59 @@ import {
 const features = [
   {
     icon: FolderKanban,
-    title: "Project Management",
-    description: "End-to-end tracking with milestones, tasks, and timelines. Never miss a deadline.",
+    title: "Project delivery",
+    description: "Plan projects, milestones, tasks, priorities, budgets, and deadlines without losing context.",
     color: "blue",
     wide: false,
   },
   {
     icon: Users,
-    title: "Client Management",
-    description: "A powerful CRM built for freelancers. Track relationships, history, and communication.",
+    title: "Client relationships",
+    description: "Keep contact details, project history, invoices, notes, and lifetime value in one client record.",
     color: "indigo",
     wide: false,
   },
   {
     icon: TrendingUp,
-    title: "Income & Spends Tracker",
-    description: "Personal-finance-style dashboard showing your real financial health at a glance.",
+    title: "Business overview",
+    description: "Understand revenue, expenses, receivables, margins, and upcoming work at a glance.",
     color: "emerald",
     wide: false,
   },
   {
     icon: Bot,
-    title: "AI Co-Pilot",
+    title: "Connected calendar",
     description:
-      "AI-assisted functions across every suite — with double confirmation for sensitive decisions. Your smartest team member.",
+      "See meetings, project deadlines, milestones, invoice due dates, and scheduled focus blocks on one timeline.",
     color: "blue",
     wide: true,
     highlight: true,
   },
   {
     icon: DollarSign,
-    title: "Revenue Management",
-    description: "Invoice, billing, and revenue analytics tailored for your freelance business.",
+    title: "Invoicing and revenue",
+    description: "Create invoices, track payment status, monitor collections, and understand who drives your revenue.",
     color: "emerald",
     wide: false,
   },
   {
     icon: Receipt,
-    title: "Expense Management",
-    description: "Track, categorize, and analyze spending. Know exactly where every dollar goes.",
+    title: "Expense tracking",
+    description: "Categorize costs, link expenses to projects, and separate billable spending from overhead.",
     color: "amber",
     wide: false,
   },
   {
     icon: Sparkles,
-    title: "Lead Gen Assistant",
-    description: "AI-powered outreach that finds and qualifies leads so you spend time closing, not prospecting.",
+    title: "Public portfolio",
+    description: "Turn your work into a polished, shareable portfolio with case studies and privacy-conscious analytics.",
     color: "rose",
     wide: false,
   },
   {
     icon: FileSignature,
-    title: "Agreement Signing",
-    description: "Sign gig agreements digitally — auto-transferred to your Project Management suite.",
+    title: "Guided onboarding",
+    description: "Start with your existing business data, import structured records, and avoid an empty first session.",
     color: "indigo",
     wide: false,
   },
@@ -83,7 +83,7 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; badge
 
 export default function Features() {
   return (
-    <section id="features" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
+    <section id="features" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-blue-100/10 rounded-full blur-[120px]" />
@@ -94,7 +94,7 @@ export default function Features() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5">
             <LayoutGrid className="w-3 h-3 shrink-0" />
-            <span style={{ fontFamily: "var(--font-body)" }}>Everything you need</span>
+            <span style={{ fontFamily: "var(--font-body)" }}>One connected workspace</span>
           </div>
           <h2
             className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-5 tracking-tight"
@@ -114,7 +114,7 @@ export default function Features() {
             className="text-slate-600 dark:text-slate-300 text-lg max-w-xl mx-auto font-normal leading-relaxed"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            No bloated enterprise complexity. Just clean, powerful tools designed specifically for solo business operators.
+            The operational depth of serious business software, designed around the way independent professionals actually work.
           </p>
         </div>
 
@@ -156,7 +156,7 @@ export default function Features() {
                           className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100/50 text-blue-700 font-semibold border border-blue-100/60"
                           style={{ fontFamily: "var(--font-body)" }}
                         >
-                          AI-Powered
+                          Connected
                         </span>
                       )}
                     </div>

@@ -169,6 +169,50 @@ export async function GET(req: NextRequest) {
       if (monthlyChartData[key]) monthlyChartData[key].expenses += Number(exp.amount);
     });
 
+    const now = new Date();
+    const upcomingCutoff = new Date(now);
+    upcomingCutoff.setDate(upcomingCutoff.getDate() + 14);
+    const [
+      clientCount,
+      projectCount,
+      invoiceCount,
+      expenseCount,
+      overdueInvoices,
+      upcomingProjects,
+      expenseCategories,
+    ] = await Promise.all([
+      prisma.client.count({ where: { userId } }),
+      prisma.project.count({ where: { userId } }),
+      prisma.invoice.count({ where: { userId } }),
+      prisma.expense.count({ where: { userId } }),
+      prisma.invoice.aggregate({
+        where: { userId, dueDate: { lt: now }, status: { in: ["sent", "viewed", "overdue"] } },
+        _count: { _all: true },
+        _sum: { total: true },
+      }),
+      prisma.project.findMany({
+        where: { userId, dueDate: { gte: now, lte: upcomingCutoff }, status: { notIn: ["completed", "cancelled"] } },
+        select: { id: true, title: true, dueDate: true },
+        orderBy: { dueDate: "asc" },
+        take: 3,
+      }),
+      prisma.expense.groupBy({
+        by: ["category"],
+        where: { userId },
+        _sum: { amount: true },
+        orderBy: { _sum: { amount: "desc" } },
+        take: 1,
+      }),
+    ]);
+
+    const receivableBase = totalPaid + totalPending;
+    const collectionRate = receivableBase > 0 ? Math.round((totalPaid / receivableBase) * 100) : 0;
+    const profitMargin = totalPaid > 0 ? Math.round((netEarnings / totalPaid) * 100) : 0;
+    const activation = {
+      counts: { clients: clientCount, projects: projectCount, invoices: invoiceCount, expenses: expenseCount },
+      completed: [clientCount > 0, projectCount > 0, invoiceCount > 0, expenseCount > 0].filter(Boolean).length,
+    };
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -180,7 +224,21 @@ export async function GET(req: NextRequest) {
       },
       topClients,
       recentActivity,
-      chartData: Object.values(monthlyChartData)
+      chartData: Object.values(monthlyChartData),
+      activation,
+      insights: {
+        collectionRate,
+        profitMargin,
+        overdueCount: overdueInvoices._count._all,
+        overdueAmount: Number(overdueInvoices._sum.total || 0),
+        topExpenseCategory: expenseCategories[0]?.category || null,
+        topExpenseAmount: Number(expenseCategories[0]?._sum.amount || 0),
+        upcomingProjects: upcomingProjects.map((project) => ({
+          id: project.id,
+          title: project.title,
+          dueDate: project.dueDate?.toISOString() || null,
+        })),
+      },
     });
   } catch (error: unknown) {
     console.error("Dashboard analytics error:", error);

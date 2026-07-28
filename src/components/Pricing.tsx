@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui";
+
 import { Check, Zap } from "lucide-react";
 
 const plans = [
@@ -62,7 +64,7 @@ const plans = [
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
+    <section id="pricing" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-blue-100/10 rounded-full blur-[120px]" />
@@ -164,13 +166,13 @@ export default function Pricing() {
               </ul>
 
               {/* CTA */}
-              <button
+              <Button
                 onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
                 className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 ${plan.ctaStyle}`}
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {plan.cta}
-              </button>
+              </Button>
             </div>
           ))}
         </div>

@@ -41,11 +41,11 @@ const socials = [
 
 export default function Footer() {
   return (
-    <footer className="relative bg-[#F5F8FC] dark:bg-[#0B1120] border-t border-slate-100 pt-16 pb-10">
-      <div className="max-w-7xl mx-auto px-8">
+    <footer className="relative bg-background dark:bg-background border-t border-slate-100 pt-16 pb-10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         {/* ── Top grid ──────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-10 mb-14">
+        <div className="mb-14 grid grid-cols-2 gap-x-5 gap-y-10 sm:gap-x-8 md:grid-cols-6">
 
           {/* Logo + blurb */}
           <div className="col-span-2 flex flex-col gap-4">

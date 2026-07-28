@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { eventsToIcs, getCalendarEvents, hashSubscriptionToken } from "@/utils/calendar";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const subscription = await prisma.calendarSubscription.findUnique({
     where: { tokenHash: hashSubscriptionToken(token) },

@@ -1,16 +1,18 @@
 "use client";
 
+import { Button, Input, Textarea, Select } from "@/components/ui";
+
 import React, { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { 
-  Briefcase, 
-  Plus, 
-  Search, 
-  Calendar, 
-  User, 
-  DollarSign, 
-  X, 
-  Loader2, 
+import {
+  Briefcase,
+  Plus,
+  Search,
+  Calendar,
+  User,
+  DollarSign,
+  X,
+  Loader2,
   MoreVertical,
   Edit2,
   Trash2,
@@ -21,6 +23,7 @@ import { DndContext, useDraggable, useDroppable, DragEndEvent, closestCorners } 
 import { CSS } from "@dnd-kit/utilities";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 interface Project {
   id: string;
@@ -50,6 +53,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState("all");
   const [loading, setLoading] = useState(true);
 
@@ -71,7 +75,7 @@ export default function ProjectsPage() {
 
   const loadProjects = async () => {
     try {
-      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(search)}&status=${status}`);
+      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(debouncedSearch)}&status=${status}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -104,7 +108,7 @@ export default function ProjectsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status]);
+  }, [debouncedSearch, status]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -145,16 +149,16 @@ export default function ProjectsPage() {
     if (!window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
       return;
     }
-    
+
     setOpenDropdownId(null);
     const loadingToast = toast.loading(`Deleting ${name}...`);
-    
+
     try {
       const res = await fetch(`/api/workflow/projects?id=${id}`, {
         method: "DELETE",
       });
       const data = await res.json();
-      
+
       if (data.success) {
         toast.success(data.message || "Project deleted successfully", { id: loadingToast });
         loadProjects();
@@ -274,62 +278,62 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#0C1E36] dark:text-slate-50">projects board</h1>
-          <p className="text-sm text-[#4A5E78] dark:text-slate-400">track deliverables, manage milestone tasks, and view budget consumption.</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-slate-50 sm:text-3xl">Projects</h1>
+          <p className="text-sm text-muted-foreground dark:text-slate-400">Plan delivery, connect milestones and tasks, and keep budgets and deadlines visible.</p>
         </div>
-        <button 
+        <Button
           onClick={openCreate}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1D4ED8] dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 font-semibold text-xs transition-all shadow-[0_4px_10px_rgba(29,78,216,0.1)] dark:shadow-none self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 font-semibold text-xs transition-all shadow-[0_4px_10px_rgba(29,78,216,0.1)] dark:shadow-none self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
-          <span>create new project</span>
-        </button>
+          <span>Create new project</span>
+        </Button>
       </div>
 
       {/* Filter and Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-[#E2EAF4] dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A5E78] dark:text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="search by title, description..." 
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
+          <Input
+            type="text"
+            placeholder="Search by title, description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-400 transition-all"
+            className="w-full pl-9 pr-4 py-2 rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-400 transition-all"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs text-[#4A5E78] dark:text-slate-400">status:</span>
-          <select 
-            value={status} 
+          <span className="text-xs text-muted-foreground dark:text-slate-400">Status:</span>
+          <Select
+            value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="px-2.5 py-1.5 bg-white dark:bg-slate-950 border border-[#E2EAF4] dark:border-slate-700 rounded-lg text-xs font-semibold text-[#0C1E36] dark:text-slate-200 focus:outline-none"
+            className="px-2.5 py-1.5 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs font-semibold text-foreground dark:text-slate-200 focus:outline-none"
           >
-            <option value="all">all status</option>
-            <option value="active">in progress</option>
-            <option value="paused">paused</option>
-            <option value="completed">completed</option>
-          </select>
+            <option value="all">All status</option>
+            <option value="active">In progress</option>
+            <option value="paused">Paused</option>
+            <option value="completed">Completed</option>
+          </Select>
         </div>
       </div>
 
       {/* Kanban Board Layout */}
       {loading ? (
         <div className="flex justify-center items-center h-48">
-          <Loader2 className="h-6 w-6 animate-spin text-[#1D4ED8] dark:text-blue-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : projects.length === 0 ? (
         <div className="glass p-12 text-center flex flex-col items-center justify-center bg-white/70 dark:bg-slate-900/70 border-dashed dark:border-slate-800">
           <Briefcase className="h-10 w-10 text-slate-400 dark:text-slate-500 mb-3" />
-          <h3 className="font-bold text-sm text-[#0C1E36] dark:text-slate-200 mb-1">no projects yet</h3>
-          <p className="text-xs text-[#4A5E78] dark:text-slate-400 mb-4">log a project, assign it a budget, and link milestones.</p>
-          <button 
+          <h3 className="font-bold text-sm text-foreground dark:text-slate-200 mb-1">No projects yet</h3>
+          <p className="text-xs text-muted-foreground dark:text-slate-400 mb-4">Log a project, assign it a budget, and link milestones.</p>
+          <Button
             onClick={openCreate}
-            className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-[#EFF6FF] dark:bg-blue-900/30 text-[#1D4ED8] dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 hover:bg-[#E2EAF4] dark:hover:bg-blue-900/50 transition-all"
+            className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-accent dark:bg-blue-900/30 text-primary dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 hover:bg-[#E2EAF4] dark:hover:bg-blue-900/50 transition-all"
           >
             create project
-          </button>
+          </Button>
         </div>
       ) : (
         <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
@@ -339,12 +343,12 @@ export default function ProjectsPage() {
               return (
                 <DroppableColumn key={col.id} id={col.id} title={col.title} color={col.color} count={filteredProjects.length}>
                   {filteredProjects.length === 0 ? (
-                    <div className="text-center py-8 text-[11px] text-[#4A5E78] dark:text-slate-500 border border-dashed border-[#E2EAF4] dark:border-slate-700 rounded-xl bg-white/30 dark:bg-slate-900/30">
+                    <div className="text-center py-8 text-[11px] text-muted-foreground dark:text-slate-500 border border-dashed border-border dark:border-slate-700 rounded-xl bg-white/30 dark:bg-slate-900/30">
                       no projects in this state
                     </div>
                   ) : (
                     filteredProjects.map((p) => (
-                      <DraggableProjectCard 
+                      <DraggableProjectCard
                         key={p.id}
                         project={p}
                         openDropdownId={openDropdownId}
@@ -367,148 +371,148 @@ export default function ProjectsPage() {
       {drawerOpen && (
         <Portal>
           <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full flex flex-col justify-between py-6 px-6 shadow-2xl border-l border-[#E2EAF4] dark:border-slate-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full flex flex-col justify-between py-6 px-6 shadow-2xl border-l border-border dark:border-slate-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-[#0C1E36] dark:text-slate-200">{editingId ? "edit project" : "create new project"}</h3>
-                    <p className="text-xs text-[#4A5E78] dark:text-slate-400">{editingId ? "update project details and parameters." : "launch a project tracker linked to an optional client profile."}</p>
+                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "edit project" : "create new project"}</h3>
+                    <p className="text-xs text-muted-foreground dark:text-slate-400">{editingId ? "update project details and parameters." : "launch a project tracker linked to an optional client profile."}</p>
                   </div>
-                  <button 
+                  <Button
                     onClick={() => setDrawerOpen(false)}
-                    className="p-1.5 rounded-lg text-[#4A5E78] dark:text-slate-400 hover:bg-[#F5F8FC] dark:hover:bg-slate-800"
+                    className="p-1.5 rounded-lg text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
                   >
                     <X className="h-5 w-5" />
-                  </button>
+                  </Button>
                 </div>
 
                 <form onSubmit={handleSave} className="flex flex-col gap-4 max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">project title *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="e.g. website redesign, mobile launch"
-                      value={title} 
+                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Project title *</label>
+                    <Input
+                      type="text"
+                      required
+                      placeholder="E.g. website redesign, mobile launch"
+                      value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="px-3 py-2 border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-[#0C1E36] dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">description</label>
-                    <textarea 
+                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Description</label>
+                    <Textarea
                       rows={2}
-                      placeholder="describe the project parameters..."
-                      value={description} 
+                      placeholder="Describe the project parameters..."
+                      value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="px-3 py-2 border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-[#0C1E36] dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none"
+                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">link client</label>
-                    <select 
-                      value={clientId} 
+                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Link client</label>
+                    <Select
+                      value={clientId}
                       onChange={(e) => setClientId(e.target.value)}
-                      className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-[#E2EAF4] dark:border-slate-700 rounded-lg text-xs text-[#0C1E36] dark:text-slate-200 focus:outline-none"
+                      className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
                     >
-                      <option value="">select client (optional)</option>
+                      <option value="">Select client (optional)</option>
                       {clients.map(c => (
                         <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ""}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">priority</label>
-                      <select 
-                        value={priority} 
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Priority</label>
+                      <Select
+                        value={priority}
                         onChange={(e) => setPriority(e.target.value)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-[#E2EAF4] dark:border-slate-700 rounded-lg text-xs text-[#0C1E36] dark:text-slate-200 focus:outline-none"
+                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
                       >
-                        <option value="low">low</option>
-                        <option value="medium">medium</option>
-                        <option value="high">high</option>
-                        <option value="urgent">urgent</option>
-                      </select>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">status</label>
-                      <select 
-                        value={projectStatus} 
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Status</label>
+                      <Select
+                        value={projectStatus}
                         onChange={(e) => setProjectStatus(e.target.value)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-[#E2EAF4] dark:border-slate-700 rounded-lg text-xs text-[#0C1E36] dark:text-slate-200 focus:outline-none"
+                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
                       >
-                        <option value="active">in progress</option>
-                        <option value="paused">paused</option>
-                        <option value="completed">completed</option>
-                      </select>
+                        <option value="active">In progress</option>
+                        <option value="paused">Paused</option>
+                        <option value="completed">Completed</option>
+                      </Select>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">budget ($ USD)</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g. 5000"
-                      value={budget} 
+                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Budget ($ USD)</label>
+                    <Input
+                      type="number"
+                      placeholder="E.g. 5000"
+                      value={budget}
                       onChange={(e) => setBudget(e.target.value)}
-                      className="px-3 py-2 border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-[#0C1E36] dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">start date</label>
-                      <input 
-                        type="date" 
-                        value={startDate} 
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Start date</label>
+                      <Input
+                        type="date"
+                        value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="px-3 py-2 border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">due date</label>
-                      <input 
-                        type="date" 
-                        value={dueDate} 
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Due date</label>
+                      <Input
+                        type="date"
+                        value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
-                        className="px-3 py-2 border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
                       />
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-[#0C1E36] dark:text-slate-200 uppercase tracking-wider">milestones / tasks (one per line)</label>
-                    <textarea 
+                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Milestones / tasks (one per line)</label>
+                    <Textarea
                       rows={3}
                       placeholder={editingId ? "Note: updating this replaces all incomplete milestones." : "e.g. wireframes signoff\ndraft contract\nfinal deployment"}
-                      value={milestonesInput} 
+                      value={milestonesInput}
                       onChange={(e) => setMilestonesInput(e.target.value)}
-                      className="px-3 py-2 border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-[#0C1E36] dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none font-sans"
+                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none font-sans"
                     />
                   </div>
                 </form>
               </div>
 
-              <div className="flex items-center gap-2 border-t border-[#E2EAF4] dark:border-slate-800 pt-4 mt-6">
-                <button 
+              <div className="flex items-center gap-2 border-t border-border dark:border-slate-800 pt-4 mt-6">
+                <Button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="w-1/3 py-2 border border-[#E2EAF4] dark:border-slate-700 rounded-xl text-xs font-semibold text-[#4A5E78] dark:text-slate-400 hover:bg-[#F5F8FC] dark:hover:bg-slate-800 transition-all"
+                  className="w-1/3 py-2 border border-border dark:border-slate-700 rounded-xl text-xs font-semibold text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 transition-all"
                 >
                   cancel
-                </button>
-                <button 
+                </Button>
+                <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-2/3 py-2 bg-[#1D4ED8] dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 shadow-md disabled:opacity-70"
+                  className="w-2/3 py-2 bg-primary dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 shadow-md disabled:opacity-70"
                 >
                   {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                   <span>{editingId ? "update project" : "launch project"}</span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -521,13 +525,13 @@ export default function ProjectsPage() {
 function DroppableColumn({ id, title, color, count, children }: { id: string; title: string; color: string; count: number; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={`flex flex-col gap-4 p-4 rounded-2xl border min-h-[450px] transition-colors ${isOver ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/50' : 'bg-slate-50/50 dark:bg-slate-800/30 border-[#E2EAF4] dark:border-slate-800'}`}>
+    <div ref={setNodeRef} className={`flex flex-col gap-4 p-4 rounded-2xl border min-h-[450px] transition-colors ${isOver ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/50' : 'bg-slate-50/50 dark:bg-slate-800/30 border-border dark:border-slate-800'}`}>
       <div className="flex justify-between items-center px-1">
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${color}`}></span>
-          <h3 className="text-sm font-bold text-[#0C1E36] dark:text-slate-200">{title}</h3>
+          <h3 className="text-sm font-bold text-foreground dark:text-slate-200">{title}</h3>
         </div>
-        <span className="text-[10px] font-bold bg-white dark:bg-slate-800 border border-[#E2EAF4] dark:border-slate-700 px-1.5 py-0.5 rounded text-[#4A5E78] dark:text-slate-400">
+        <span className="text-[10px] font-bold bg-white dark:bg-slate-800 border border-border dark:border-slate-700 px-1.5 py-0.5 rounded text-muted-foreground dark:text-slate-400">
           {count}
         </span>
       </div>
@@ -538,23 +542,23 @@ function DroppableColumn({ id, title, color, count, children }: { id: string; ti
   );
 }
 
-function DraggableProjectCard({ 
-  project, 
-  openDropdownId, 
-  setOpenDropdownId, 
-  openEdit, 
-  handleDelete, 
-  getPriorityColor, 
-  getProgressPercent 
+function DraggableProjectCard({
+  project,
+  openDropdownId,
+  setOpenDropdownId,
+  openEdit,
+  handleDelete,
+  getPriorityColor,
+  getProgressPercent
 }: { project: Project; openDropdownId: string | null; setOpenDropdownId: (id: string | null) => void; openEdit: (project: Project) => void; handleDelete: (id: string, name: string) => void; getPriorityColor: (priority: string) => string; getProgressPercent: (project: Project) => number }) {
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
-  
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ 
-    id: project.id, 
-    data: project 
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: project.id,
+    data: project
   });
-  
-  const style = { 
+
+  const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 50 : 'auto',
@@ -563,12 +567,12 @@ function DraggableProjectCard({
   const pct = getProgressPercent(project);
 
   return (
-    <div ref={setNodeRef} style={style} className="glass bg-white dark:bg-slate-900 p-5 hover:shadow-md dark:hover:shadow-none hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col gap-4 group relative border border-[#E2EAF4] dark:border-slate-800 rounded-xl">
+    <div ref={setNodeRef} style={style} className="glass bg-white dark:bg-slate-900 p-5 hover:shadow-md dark:hover:shadow-none hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col gap-4 group relative border border-border dark:border-slate-800 rounded-xl">
       {/* Dropdown Actions */}
       <div className="absolute top-4 right-4 z-10">
-        <button 
-          onClick={(e) => { 
-            e.stopPropagation(); 
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
             if (openDropdownId === project.id) {
               setOpenDropdownId(null);
             } else {
@@ -579,23 +583,23 @@ function DraggableProjectCard({
           className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
         >
           <MoreVertical className="h-4 w-4" />
-        </button>
-        
+        </Button>
+
         {openDropdownId === project.id && (
           <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
             <div className="w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up">
-              <button 
+              <Button
                 onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
               >
                 <Edit2 className="h-3.5 w-3.5" /> edit
-              </button>
-              <button 
+              </Button>
+              <Button
                 onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); setOpenDropdownId(null); }}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" /> delete
-              </button>
+              </Button>
             </div>
           </DropdownPortal>
         )}
@@ -608,26 +612,26 @@ function DraggableProjectCard({
               <GripVertical className="h-4 w-4" />
             </div>
             <Link href={`/workflow/projects/${project.id}`}>
-              <h4 className="text-xs font-bold text-[#0C1E36] dark:text-slate-200 line-clamp-1 group-hover:text-[#1D4ED8] dark:group-hover:text-blue-400 transition-colors hover:underline">{project.title}</h4>
+              <h4 className="text-xs font-bold text-foreground dark:text-slate-200 line-clamp-1 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors hover:underline">{project.title}</h4>
             </Link>
           </div>
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ${getPriorityColor(project.priority)}`}>
             {project.priority}
           </span>
         </div>
-        <p className="text-[11px] text-[#4A5E78] dark:text-slate-400 line-clamp-2 leading-relaxed ml-6">{project.description || "no description provided."}</p>
+        <p className="text-[11px] text-muted-foreground dark:text-slate-400 line-clamp-2 leading-relaxed ml-6">{project.description || "no description provided."}</p>
       </div>
 
       {/* Progress bar */}
       {project.milestone_count > 0 && (
         <div className="flex flex-col gap-1.5 ml-6">
-          <div className="flex justify-between text-[9px] font-bold text-[#4A5E78] dark:text-slate-400">
-            <span>progress</span>
+          <div className="flex justify-between text-[9px] font-bold text-muted-foreground dark:text-slate-400">
+            <span>Progress</span>
             <span>{pct}% ({project.completed_milestones}/{project.milestone_count})</span>
           </div>
           <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-[#1D4ED8] dark:bg-blue-500 rounded-full transition-all duration-500" 
+            <div
+              className="h-full bg-primary dark:bg-blue-500 rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             ></div>
           </div>
@@ -635,11 +639,11 @@ function DraggableProjectCard({
       )}
 
       {/* Metadata */}
-      <div className="flex flex-col gap-1.5 border-t border-[#E2EAF4] dark:border-slate-800 pt-3 text-[10px] text-[#4A5E78] dark:text-slate-400 ml-6">
+      <div className="flex flex-col gap-1.5 border-t border-border dark:border-slate-800 pt-3 text-[10px] text-muted-foreground dark:text-slate-400 ml-6">
         {project.client_name && (
           <div className="flex items-center gap-1.5 truncate">
-            <User className="h-3.5 w-3.5 text-[#1D4ED8] dark:text-blue-400" />
-            <span className="font-semibold text-[#0C1E36] dark:text-slate-200">{project.client_name}</span>
+            <User className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
+            <span className="font-semibold text-foreground dark:text-slate-200">{project.client_name}</span>
           </div>
         )}
         <div className="flex items-center justify-between mt-1">
@@ -649,7 +653,7 @@ function DraggableProjectCard({
               <span>due {new Date(project.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
             </span>
           ) : (
-            <span>no due date</span>
+            <span>No due date</span>
           )}
           {project.budget && (
             <span className="font-extrabold text-[#10B981] dark:text-emerald-400 flex items-center">

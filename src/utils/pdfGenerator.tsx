@@ -1,4 +1,3 @@
-import React from "react";
 import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 
 type InvoiceLineItem = { description: string; quantity: string | number; unit_price: string | number; amount?: string | number };

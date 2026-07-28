@@ -2,16 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  *, ::before, ::after {
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 400ms;
-  }
-}
-
 /* ─── Brand Color Variables ──────────────────────── */
 :root {
+  /* Semantic design tokens consumed by the shared Rive component system. */
+  --background: 245 248 252;
+  --foreground: 12 30 54;
+  --card: 255 255 255;
+  --card-foreground: 12 30 54;
+  --popover: 255 255 255;
+  --popover-foreground: 12 30 54;
+  --primary: 29 78 216;
+  --primary-foreground: 255 255 255;
+  --secondary: 239 246 255;
+  --secondary-foreground: 30 64 175;
+  --muted: 238 243 249;
+  --muted-foreground: 74 94 120;
+  --accent: 239 246 255;
+  --accent-foreground: 29 78 216;
+  --destructive: 220 38 38;
+  --destructive-foreground: 255 255 255;
+  --success: 5 150 105;
+  --success-foreground: 6 78 59;
+  --warning: 217 119 6;
+  --warning-foreground: 146 64 14;
+  --border: 226 234 244;
+  --input: 203 213 225;
+  --ring: 59 130 246;
+  --radius: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(12 30 54 / 0.03), 0 8px 28px rgb(12 30 54 / 0.055);
+  --shadow-overlay: 0 24px 70px rgb(12 30 54 / 0.2);
+
   /* Rive light theme palette — blue & whitish, soothing */
   --bg-primary:        #F5F8FC;   /* Very soft ice-blue/white */
   --bg-secondary:      #FFFFFF;   /* Pure white cards */
@@ -29,7 +49,7 @@
   --font-hero:    Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
 }
 
-/* ─── Base & Force Lowercase ─────────────────────── */
+/* ─── Base styles ────────────────────────────────── */
 @layer base {
   *,
   *::before,
@@ -37,10 +57,6 @@
     box-sizing: border-box;
   }
 
-  /* Stylize the entire website with lowercase typography */
-  html, body, button, input, select, option, textarea, h1, h2, h3, h4, h5, h6, span, p, a, div {
-    text-transform: lowercase !important;
-  }
 }
 
 html {
@@ -54,6 +70,32 @@ html {
    surfaces when the theme changes. */
 .dark {
   color-scheme: dark;
+
+  --background: 11 17 32;
+  --foreground: 248 250 252;
+  --card: 17 24 39;
+  --card-foreground: 248 250 252;
+  --popover: 17 24 39;
+  --popover-foreground: 248 250 252;
+  --primary: 96 165 250;
+  --primary-foreground: 9 20 40;
+  --secondary: 30 41 59;
+  --secondary-foreground: 226 232 240;
+  --muted: 30 41 59;
+  --muted-foreground: 148 163 184;
+  --accent: 23 37 84;
+  --accent-foreground: 191 219 254;
+  --destructive: 248 113 113;
+  --destructive-foreground: 69 10 10;
+  --success: 52 211 153;
+  --success-foreground: 209 250 229;
+  --warning: 251 191 36;
+  --warning-foreground: 254 243 199;
+  --border: 38 52 73;
+  --input: 51 65 85;
+  --ring: 96 165 250;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25), 0 16px 36px rgb(0 0 0 / 0.16);
+  --shadow-overlay: 0 28px 80px rgb(0 0 0 / 0.55);
 
   --bg-primary:        #0B1120;
   --bg-secondary:      #111827;
@@ -75,6 +117,62 @@ body {
   font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-blue-primary);
+  outline-offset: 2px;
+}
+
+/* Legacy marketing pages used desktop-only spacing. Keep their authored
+   desktop rhythm while providing a safe mobile gutter everywhere. */
+@media (max-width: 639px) {
+  [class*="max-w-"][class*="mx-auto"][class*="px-8"] {
+    padding-inline: 1rem;
+  }
+
+  .text-8xl,
+  .text-7xl,
+  .text-6xl,
+  .text-5xl {
+    font-size: clamp(2.25rem, 11vw, 3.25rem);
+    line-height: 1.05;
+  }
+
+  .py-28,
+  .py-24 {
+    padding-block: 4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Portfolio Studio uses one focused editing surface at a time. The underlying
