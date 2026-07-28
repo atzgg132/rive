@@ -2,7 +2,8 @@
 FROM --platform=$BUILDPLATFORM node:24-alpine AS build-dependencies
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
 RUN npm ci
 
 FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
@@ -18,7 +19,8 @@ RUN npm run build
 FROM node:24-alpine AS runtime-dependencies
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
 RUN npm ci
 
 FROM node:24-alpine AS migrator
