@@ -17,9 +17,9 @@ export default function ChangelogPage() {
       <section className="relative py-24 overflow-hidden">
         <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-blue-100/15 rounded-full blur-[100px] pointer-events-none" />
         <div className="relative max-w-3xl mx-auto px-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-5" style={font}>product history</div>
-          <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>changelog</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 leading-relaxed" style={font}>a transparent log of what we&apos;ve shipped, in reverse chronological order.</p>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-5" style={font}>Product history</div>
+          <h1 className="text-6xl font-bold text-foreground dark:text-white tracking-tight mb-4" style={fontD}>Changelog</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 leading-relaxed" style={font}>A transparent log of what we&apos;ve shipped, in reverse chronological order.</p>
 
           <div className="relative">
             <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gradient-to-b from-blue-200 dark:from-blue-800 via-slate-200 dark:via-slate-800 to-transparent" />
@@ -36,7 +36,7 @@ export default function ChangelogPage() {
                       <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" style={font}>{item.date}</span>
                       {item.badge && <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold uppercase">{item.badge}</span>}
                     </div>
-                    <h3 className="text-lg font-bold text-[#0C1E36] dark:text-white mb-2" style={fontD}>{item.title}</h3>
+                    <h3 className="text-lg font-bold text-foreground dark:text-white mb-2" style={fontD}>{item.title}</h3>
                     <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed" style={font}>{item.desc}</p>
                   </div>
                 </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input } from "@/components/ui";
+
 import { useState } from "react";
 import { ArrowRight, Loader2, Clock } from "lucide-react";
 import { submitToWaitlist } from "@/utils/api";
@@ -23,7 +25,7 @@ export default function FinalCTA() {
   };
 
   return (
-    <section className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-32 overflow-hidden">
+    <section className="relative bg-background dark:bg-background py-32 overflow-hidden">
       {/* Backgrounds */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 via-transparent to-sky-50/15" />
@@ -45,7 +47,7 @@ export default function FinalCTA() {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600">
           <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
-          <span style={{ fontFamily: "var(--font-body)" }}>alpha waitlist open — join free today</span>
+          <span style={{ fontFamily: "var(--font-body)" }}>Early access is open</span>
         </div>
 
         {/* Headline */}
@@ -67,8 +69,8 @@ export default function FinalCTA() {
           className="text-slate-600 dark:text-slate-300 text-lg max-w-xl leading-relaxed font-medium"
           style={{ fontFamily: "var(--font-body)" }}
         >
-          rive. gives freelancers and businesses one unified platform to manage everything
-          — with AI that actually understands how you work.
+          rive. gives independent professionals one connected place to manage delivery,
+          relationships, finances, planning, and the work they share publicly.
         </p>
 
         {/* Form / States */}
@@ -83,7 +85,7 @@ export default function FinalCTA() {
               transform: formState === "idle" || formState === "loading" ? "translateY(0)" : "translateY(-12px)",
             }}
           >
-            <input
+            <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -93,18 +95,18 @@ export default function FinalCTA() {
               className="flex-1 min-w-0 px-5 py-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-all duration-200 disabled:opacity-60"
               style={{ fontFamily: "var(--font-body)" }}
             />
-            <button
+            <Button
               type="submit"
               disabled={formState === "loading"}
               className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {formState === "loading" ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /><span>checking...</span></>
+                <><Loader2 className="w-4 h-4 animate-spin" /><span>Checking...</span></>
               ) : (
-                <>Get Early Access <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>
+                <>Join the waitlist <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>
               )}
-            </button>
+            </Button>
           </form>
 
           {/* Success */}
@@ -119,7 +121,7 @@ export default function FinalCTA() {
             <div className="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-semibold text-sm shadow-sm">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <span style={{ fontFamily: "var(--font-body)" }}>
-                you&apos;re on the list! we&apos;ll be in touch when your batch opens.
+                You&apos;re on the list. We&apos;ll email you when your access is ready.
               </span>
             </div>
           </div>
@@ -136,7 +138,7 @@ export default function FinalCTA() {
             <div className="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 font-semibold text-sm shadow-sm">
               <Clock className="w-4 h-4 shrink-0 text-blue-500" />
               <span style={{ fontFamily: "var(--font-body)" }}>
-                already on the list — sit tight, your batch is coming.
+                You&apos;re already on the list. We&apos;ll notify you when your access is ready.
               </span>
             </div>
           </div>

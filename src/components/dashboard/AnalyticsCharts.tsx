@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export interface ChartData {
@@ -12,7 +11,7 @@ export interface ChartData {
 export default function AnalyticsCharts({ data }: { data: ChartData[] }) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center border border-dashed border-[#E2EAF4] dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-900/50 text-[#4A5E78] dark:text-slate-400 text-sm">
+      <div className="flex h-64 items-center justify-center border border-dashed border-border dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-900/50 text-muted-foreground dark:text-slate-400 text-sm">
         No data available for charts yet.
       </div>
     );
@@ -24,15 +23,15 @@ export default function AnalyticsCharts({ data }: { data: ChartData[] }) {
   };
 
   return (
-    <div className="glass bg-white dark:bg-[#111827] p-6 rounded-2xl border border-[#E2EAF4] dark:border-slate-800 w-full animate-fade-in-up">
+    <div className="glass bg-white dark:bg-[#111827] p-6 rounded-2xl border border-border dark:border-slate-800 w-full animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
-          <h3 className="text-lg font-bold text-[#0C1E36] dark:text-white">Financial Overview</h3>
-          <p className="text-xs text-[#4A5E78] dark:text-slate-400">Revenue vs Expenses (Last 6 Months)</p>
+          <h3 className="text-lg font-bold text-foreground dark:text-white">Financial Overview</h3>
+          <p className="text-xs text-muted-foreground dark:text-slate-400">Revenue vs Expenses (Last 6 Months)</p>
         </div>
         <div className="flex items-center gap-4 mt-2 sm:mt-0 text-xs font-semibold">
-          <div className="flex items-center gap-1.5 text-[#1D4ED8] dark:text-blue-400">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#1D4ED8] dark:bg-blue-400"></span>
+          <div className="flex items-center gap-1.5 text-primary dark:text-blue-400">
+            <span className="h-2.5 w-2.5 rounded-full bg-primary dark:bg-blue-400"></span>
             <span>Revenue</span>
           </div>
           <div className="flex items-center gap-1.5 text-[#EF4444] dark:text-red-400">

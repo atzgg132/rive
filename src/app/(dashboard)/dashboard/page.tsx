@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   DollarSign, 
@@ -10,10 +10,15 @@ import {
   FileText,
   ChevronRight,
   TrendingUp,
-  Activity
+  Activity,
+  AlertTriangle,
+  CalendarDays,
+  Target,
+  Upload
 } from "lucide-react";
 import AnalyticsCharts from "@/components/dashboard/AnalyticsCharts";
 import type { ChartData } from "@/components/dashboard/AnalyticsCharts";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 
 interface Stats {
   totalPaid: number;
@@ -37,6 +42,27 @@ interface RecentActivity {
   created_at: string;
 }
 
+interface Activation {
+  counts: { clients: number; projects: number; invoices: number; expenses: number };
+  completed: number;
+}
+
+interface Insights {
+  collectionRate: number;
+  profitMargin: number;
+  overdueCount: number;
+  overdueAmount: number;
+  topExpenseCategory: string | null;
+  topExpenseAmount: number;
+  upcomingProjects: { id: string; title: string; dueDate: string | null }[];
+}
+
+const metricsGridClassName =
+  "grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 xl:grid-cols-4";
+
+const insightCardClassName =
+  "flex min-h-28 h-full flex-col rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-card transition-[border-color,box-shadow,transform]";
+
 export default function DashboardOverview() {
   const [stats, setStats] = useState<Stats>({
     totalPaid: 0,
@@ -48,6 +74,8 @@ export default function DashboardOverview() {
   const [topClients, setTopClients] = useState<TopClient[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [activation, setActivation] = useState<Activation | null>(null);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,6 +89,8 @@ export default function DashboardOverview() {
             setTopClients(data.topClients);
             setActivities(data.recentActivity);
             setChartData(data.chartData || []);
+            setActivation(data.activation || null);
+            setInsights(data.insights || null);
           }
         }
       } catch (err) {
@@ -83,58 +113,111 @@ export default function DashboardOverview() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="animate-pulse text-[#4A5E78]">loading metrics...</div>
+        <div className="animate-pulse text-muted-foreground">Loading metrics...</div>
       </div>
     );
   }
 
   const statCards = [
-    { title: "revenue collected", value: formatCurrency(stats.totalPaid), sub: `pending: ${formatCurrency(stats.totalPending)}`, icon: DollarSign, color: "text-[#059669] dark:text-emerald-300 bg-[#ECFDF5] dark:bg-emerald-950/60 ring-1 ring-emerald-100 dark:ring-emerald-800/60" },
-    { title: "active projects", value: stats.activeProjects, sub: "on track & ongoing", icon: Briefcase, color: "text-[#1D4ED8] dark:text-blue-300 bg-[#EFF6FF] dark:bg-blue-950/60 ring-1 ring-blue-100 dark:ring-blue-800/60" },
-    { title: "expenses logged", value: formatCurrency(stats.totalExpenses), sub: "all categorized costs", icon: Receipt, color: "text-[#DC2626] dark:text-red-300 bg-[#FEF2F2] dark:bg-red-950/60 ring-1 ring-red-100 dark:ring-red-800/60" },
-    { title: "net earnings", value: formatCurrency(stats.netEarnings), sub: "revenue minus expenses", icon: TrendingUp, color: "text-[#7C3AED] dark:text-violet-300 bg-[#F5F3FF] dark:bg-violet-950/60 ring-1 ring-violet-100 dark:ring-violet-800/60" },
+    { title: "Revenue collected", value: formatCurrency(stats.totalPaid), sub: `Pending: ${formatCurrency(stats.totalPending)}`, icon: DollarSign, color: "text-[#059669] dark:text-emerald-300 bg-[#ECFDF5] dark:bg-emerald-950/60 ring-1 ring-emerald-100 dark:ring-emerald-800/60" },
+    { title: "Active projects", value: stats.activeProjects, sub: "Currently in progress", icon: Briefcase, color: "text-primary dark:text-blue-300 bg-accent dark:bg-blue-950/60 ring-1 ring-blue-100 dark:ring-blue-800/60" },
+    { title: "Expenses logged", value: formatCurrency(stats.totalExpenses), sub: "All categorized business costs", icon: Receipt, color: "text-[#DC2626] dark:text-red-300 bg-[#FEF2F2] dark:bg-red-950/60 ring-1 ring-red-100 dark:ring-red-800/60" },
+    { title: "Net earnings", value: formatCurrency(stats.netEarnings), sub: "Collected revenue minus expenses", icon: TrendingUp, color: "text-[#7C3AED] dark:text-violet-300 bg-[#F5F3FF] dark:bg-violet-950/60 ring-1 ring-violet-100 dark:ring-violet-800/60" },
   ];
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#0C1E36] dark:text-white">your workspace overview</h1>
-          <p className="text-sm text-[#4A5E78] dark:text-slate-400">real-time financial health, projects, and recent activity updates.</p>
-        </div>
-
-        {/* Quick action group */}
-        <div className="flex items-center gap-2">
-          <Link href="/workflow/projects" className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-[#E2EAF4] dark:border-slate-700 hover:bg-[#F5F8FC] dark:hover:bg-slate-700 text-[#0C1E36] dark:text-white transition-all">
+      <PageHeader
+        title="Your workspace overview"
+        description="See the financial health, delivery status, and activity that need your attention."
+        actions={
+          <>
+          <Link href="/workflow/projects" className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-border dark:border-slate-700 hover:bg-background dark:hover:bg-slate-700 text-foreground dark:text-white transition-all">
             <Plus className="h-3.5 w-3.5" />
-            <span>new project</span>
+            <span>New project</span>
           </Link>
-          <Link href="/workflow/revenue" className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-[#1D4ED8] text-white hover:bg-blue-700 transition-all shadow-[0_4px_10px_rgba(29,78,216,0.1)]">
+          <Link href="/workflow/revenue" className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-primary text-white hover:bg-blue-700 transition-all shadow-[0_4px_10px_rgba(29,78,216,0.1)]">
             <FileText className="h-3.5 w-3.5" />
-            <span>new invoice</span>
+            <span>New invoice</span>
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
+
+      {activation && activation.completed < 4 && (
+        <section className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-600/10 sm:p-7">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+            <div className="max-w-xl">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Activation center</div>
+              <h2 className="mt-2 text-2xl font-black tracking-tight">{activation.completed === 0 ? "Bring your business into focus." : "Your operating system is taking shape."}</h2>
+              <p className="mt-2 text-sm leading-6 text-blue-100">Complete the connected loop once—client, project, invoice, and expense—and rive. can start surfacing useful decisions instead of empty charts.</p>
+            </div>
+            <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:w-[460px]">
+              {[
+                ["clients", activation.counts.clients, "/workflow/clients"],
+                ["projects", activation.counts.projects, "/workflow/projects"],
+                ["invoices", activation.counts.invoices, "/workflow/revenue"],
+                ["expenses", activation.counts.expenses, "/workflow/expenses"],
+              ].map(([label, count, href]) => <Link key={String(label)} href={String(href)} className="flex items-center justify-between rounded-xl bg-white/10 px-3.5 py-3 text-xs font-bold ring-1 ring-white/15 transition hover:bg-white/15"><span>{Number(count) > 0 ? "✓" : "○"} {label}</span><span className="text-blue-100">{count}</span></Link>)}
+              <Link href="/onboarding?restart=1" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-black text-blue-700 sm:col-span-2"><Upload className="h-3.5 w-3.5" /> Import or guided setup</Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={metricsGridClassName}>
         {statCards.map((c, idx) => {
           const Icon = c.icon;
           return (
-            <div key={idx} className="glass p-6 bg-white/90 dark:bg-slate-800/90 shadow-[0_4px_20px_-2px_rgba(12,30,54,0.02)]">
-              <div className="flex justify-between items-start mb-4">
-                <span className="text-xs font-bold text-[#4A5E78] dark:text-slate-400 uppercase tracking-wider">{c.title}</span>
+            <Card key={idx} className="glass flex min-h-36 flex-col bg-card p-6 shadow-card">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{c.title}</span>
                 <span className={`p-2 rounded-lg ${c.color}`}>
                   <Icon className="h-4 w-4" />
                 </span>
               </div>
-              <h3 className="text-2xl font-black text-[#0C1E36] dark:text-white mb-1">{c.value}</h3>
-              <p className="text-xs text-[#4A5E78] dark:text-slate-400">{c.sub}</p>
-            </div>
+              <div className="mt-auto">
+                <h3 className="mb-1 text-2xl font-black text-foreground">{c.value}</h3>
+                <p className="text-xs text-muted-foreground">{c.sub}</p>
+              </div>
+            </Card>
           );
         })}
       </div>
+
+      {insights && (
+        <section className={metricsGridClassName}>
+          <Card className={insightCardClassName}>
+            <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Collection health</p>
+            <div className="mt-auto pt-2">
+              <p className="text-xl font-black text-foreground">{insights.collectionRate}%</p>
+              <p className="mt-1 text-xs text-muted-foreground">Of issued value collected</p>
+            </div>
+          </Card>
+          <Card className={insightCardClassName}>
+            <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Profit margin</p>
+            <div className="mt-auto pt-2">
+              <p className={`text-xl font-black ${insights.profitMargin < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>{insights.profitMargin}%</p>
+              <p className="mt-1 text-xs text-muted-foreground">After logged expenses</p>
+            </div>
+          </Card>
+          <Link href="/workflow/revenue" className={`${insightCardClassName} hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg dark:hover:border-amber-700`}>
+            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground"><AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> Overdue</p>
+            <div className="mt-auto pt-2">
+              <p className="text-xl font-black text-foreground">{formatCurrency(insights.overdueAmount)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{insights.overdueCount} invoice{insights.overdueCount === 1 ? "" : "s"} {insights.overdueCount === 1 ? "needs" : "need"} attention</p>
+            </div>
+          </Link>
+          <Link href="/calendar" className={`${insightCardClassName} hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg dark:hover:border-blue-700`}>
+            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground"><CalendarDays className="h-3.5 w-3.5 text-blue-500" /> Next 14 days</p>
+            <div className="mt-auto min-w-0 pt-2">
+              <p className="truncate text-sm font-black text-foreground">{insights.upcomingProjects[0]?.title || "No project deadlines"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{insights.upcomingProjects.length ? `${insights.upcomingProjects.length} upcoming project${insights.upcomingProjects.length === 1 ? "" : "s"}` : "Calendar is clear"}</p>
+            </div>
+          </Link>
+        </section>
+      )}
 
       {/* Analytics Chart */}
       <AnalyticsCharts data={chartData} />
@@ -145,35 +228,37 @@ export default function DashboardOverview() {
         <div className="lg:col-span-2 glass bg-white/95 dark:bg-slate-800/95 p-6 flex flex-col gap-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-[#1D4ED8]" />
-              <h3 className="font-bold text-base text-[#0C1E36] dark:text-white">recent activities</h3>
+              <Activity className="h-4 w-4 text-primary" />
+              <h3 className="font-bold text-base text-foreground dark:text-white">Recent activities</h3>
             </div>
-            <span className="text-[10px] bg-[#EFF6FF] dark:bg-blue-950/40 text-[#1D4ED8] dark:text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-900/50 uppercase">
-              live log
-            </span>
+            <Badge className="uppercase">
+              Live activity
+            </Badge>
           </div>
 
           <div className="flex flex-col gap-4 max-h-[380px] overflow-y-auto pr-2">
             {activities.length === 0 ? (
-              <div className="text-center py-12 text-[#4A5E78] dark:text-slate-500 text-xs">
-                no activities logged yet. try adding a client, project, or invoice to get started!
-              </div>
+              <EmptyState
+                icon={<Activity className="h-4 w-4" />}
+                title="No activity yet"
+                description="Add a client, create a project, or issue an invoice to begin building your timeline."
+              />
             ) : (
               activities.map((a, idx) => {
-                let badgeColor = "bg-blue-50 dark:bg-blue-950/50 text-[#1D4ED8] dark:text-blue-300 border-blue-100 dark:border-blue-900/60";
+                let badgeColor = "bg-blue-50 dark:bg-blue-950/50 text-primary dark:text-blue-300 border-blue-100 dark:border-blue-900/60";
                 if (a.type === "client_added") badgeColor = "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60";
                 if (a.type === "invoice_created") badgeColor = "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60";
                 if (a.type === "expense_logged") badgeColor = "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60";
 
                 return (
-                  <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border border-[#E2EAF4] dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 transition-all bg-white dark:bg-slate-800">
+                  <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border border-border dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 transition-all bg-white dark:bg-slate-800">
                     <div className="flex items-center gap-3">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border uppercase tracking-wide ${badgeColor}`}>
                         {a.type.replace("_", " ")}
                       </span>
-                      <span className="text-sm font-semibold text-[#0C1E36] dark:text-white">{a.title}</span>
+                      <span className="text-sm font-semibold text-foreground dark:text-white">{a.title}</span>
                     </div>
-                    <span className="text-[10px] text-[#4A5E78] dark:text-slate-500">
+                    <span className="text-[10px] text-muted-foreground dark:text-slate-500">
                       {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
@@ -186,21 +271,21 @@ export default function DashboardOverview() {
         {/* Top Clients Ranking */}
         <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 flex flex-col gap-5">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-base text-[#0C1E36] dark:text-white">top clients</h3>
-            <Link href="/workflow/clients" className="text-xs text-[#1D4ED8] dark:text-blue-400 font-bold hover:underline flex items-center">
-              <span>view all</span>
+            <h3 className="font-bold text-base text-foreground dark:text-white">Top clients</h3>
+            <Link href="/workflow/clients" className="text-xs text-primary dark:text-blue-400 font-bold hover:underline flex items-center">
+              <span>View all</span>
               <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
 
           <div className="flex flex-col gap-4">
             {topClients.length === 0 ? (
-              <div className="text-center py-12 text-[#4A5E78] dark:text-slate-500 text-xs">
-                no revenue metrics. mark some invoices as paid!
+              <div className="text-center py-12 text-muted-foreground dark:text-slate-500 text-xs">
+                No revenue metrics yet. Mark an invoice as paid to build this ranking.
               </div>
             ) : (
               topClients.map((client) => (
-                <div key={client.id} className="flex items-center justify-between p-3 rounded-xl border border-[#E2EAF4] dark:border-slate-700 bg-white dark:bg-slate-800">
+                <div key={client.id} className="flex items-center justify-between p-3 rounded-xl border border-border dark:border-slate-700 bg-white dark:bg-slate-800">
                   <div className="flex items-center gap-3">
                     <div 
                       className="h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs uppercase"
@@ -209,8 +294,8 @@ export default function DashboardOverview() {
                       {client.name.substring(0, 2)}
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xs font-bold text-[#0C1E36] dark:text-white">{client.name}</span>
-                      <span className="text-[10px] text-[#4A5E78] dark:text-slate-500">{client.company || "private client"}</span>
+                      <span className="text-xs font-bold text-foreground dark:text-white">{client.name}</span>
+                      <span className="text-[10px] text-muted-foreground dark:text-slate-500">{client.company || "Independent client"}</span>
                     </div>
                   </div>
                   <span className="text-xs font-extrabold text-[#10B981]">

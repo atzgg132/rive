@@ -17,6 +17,12 @@ export async function GET(req: NextRequest) {
         name: true,
         plan: true,
         avatarUrl: true,
+        onboardingStatus: true,
+        onboardingStep: true,
+        businessType: true,
+        profession: true,
+        currency: true,
+        timeZone: true,
         createdAt: true
       }
     });
@@ -32,13 +38,21 @@ export async function GET(req: NextRequest) {
       name: user.name,
       plan: user.plan,
       avatar_url: user.avatarUrl,
+      onboarding_status: user.onboardingStatus,
+      onboarding_step: user.onboardingStep,
+      business_type: user.businessType,
+      profession: user.profession,
+      currency: user.currency,
+      time_zone: user.timeZone,
       created_at: user.createdAt
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: formattedUser
     });
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   } catch (error: unknown) {
     console.error("Session fetch error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });

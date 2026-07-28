@@ -1,4 +1,6 @@
 "use client";
+
+import { Button } from "@/components/ui";
 import PageShell from "@/components/PageShell";
 import { FolderOpen, Globe, Zap, Users, Briefcase, BarChart3 } from "lucide-react";
 
@@ -25,7 +27,7 @@ export default function GuidesPage() {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>
             guides
           </div>
-          <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>
+          <h1 className="text-6xl font-bold text-foreground dark:text-white tracking-tight mb-4" style={fontD}>
             learn rive.
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-lg mb-14 max-w-lg leading-relaxed" style={font}>
@@ -40,7 +42,7 @@ export default function GuidesPage() {
                   <Icon className={`w-5 h-5 ${color}`} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#0C1E36] dark:text-white text-sm leading-snug mb-3" style={fontD}>{title}</h3>
+                  <h3 className="font-bold text-foreground dark:text-white text-sm leading-snug mb-3" style={fontD}>{title}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed" style={font}>{detail}</p>
                 </div>
               </div>
@@ -49,17 +51,17 @@ export default function GuidesPage() {
 
           {/* CTA */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 text-center max-w-md mx-auto transition-colors">
-            <h3 className="text-xl font-bold text-[#0C1E36] dark:text-white mb-2" style={fontD}>be first to learn</h3>
+            <h3 className="text-xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Be first to learn</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-5" style={font}>
               join the waitlist and we&apos;ll send you guides as soon as they&apos;re published.
             </p>
-            <button
+            <Button
               onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
               className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15"
               style={fontD}
             >
               join the waitlist →
-            </button>
+            </Button>
           </div>
         </div>
       </section>

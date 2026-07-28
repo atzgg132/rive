@@ -2,32 +2,32 @@
 
 import { Zap, Brain, Shield, MessageSquare, TrendingUp } from "lucide-react";
 
-const aiCapabilities = [
+const connectedCapabilities = [
   {
     icon: Brain,
-    title: "Smart Gig Suggestions",
-    description: "Personalized recommendations worth $X based on your skill set and earnings history.",
+    title: "Shared business context",
+    description: "Clients, projects, tasks, invoices, expenses, and calendar events remain meaningfully linked.",
   },
   {
     icon: Shield,
-    title: "Double Confirmation",
-    description: "Sensitive financial actions require AI verification before executing — no costly mistakes.",
+    title: "Protected by default",
+    description: "Account-scoped data, server-side validation, and deliberate confirmations protect important actions.",
   },
   {
     icon: TrendingUp,
-    title: "Revenue Forecasting",
-    description: "AI predicts your income trajectory and flags potential gaps before they happen.",
+    title: "Decisions, not raw data",
+    description: "Collections, margins, overdue invoices, project deadlines, and cost patterns become useful signals.",
   },
   {
     icon: MessageSquare,
-    title: "Lead Gen Assistant",
-    description: "AI drafts personalized outreach and surfaces qualified leads for your services.",
+    title: "A client-ready presence",
+    description: "Turn the work already in your workspace into a polished portfolio with detailed case studies.",
   },
 ];
 
 export default function AISection() {
   return (
-    <section className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
+    <section className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background blobs */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-0 w-[480px] h-[480px] bg-blue-500/[0.04] rounded-full blur-[130px] -translate-y-1/2" />
@@ -69,21 +69,21 @@ export default function AISection() {
                 <div className="absolute -top-1 right-0 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-md dark:shadow-none flex items-center gap-1.5 whitespace-nowrap transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <p className="text-[11px] text-slate-500 dark:text-slate-300 font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                    smart gig matching active
+                    Project deadlines linked
                   </p>
                 </div>
                 {/* Bottom-left */}
                 <div className="absolute bottom-4 -left-4 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-md dark:shadow-none flex items-center gap-1.5 whitespace-nowrap transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                   <p className="text-[11px] text-slate-500 dark:text-slate-300 font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                    co-pilot engine: operational
+                    Workspace sync active
                   </p>
                 </div>
                 {/* Right-center */}
                 <div className="absolute top-1/2 -right-28 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-md dark:shadow-none flex items-center gap-1.5 whitespace-nowrap transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   <p className="text-[11px] text-slate-500 dark:text-slate-300 font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                    verifying billing safety
+                    Server checks enabled
                   </p>
                 </div>
               </div>
@@ -97,16 +97,16 @@ export default function AISection() {
           <div className="order-1 lg:order-2 flex flex-col gap-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 w-fit">
               <Zap className="w-3 h-3 shrink-0" />
-              <span style={{ fontFamily: "var(--font-body)" }}>rive. AI Co-Pilot</span>
+              <span style={{ fontFamily: "var(--font-body)" }}>Connected by design</span>
             </div>
 
             <h2
               className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.08]"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              AI that works{" "}
+              One record.{" "}
               <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
-                as hard as you do.
+                Every workflow in sync.
               </span>
             </h2>
 
@@ -114,12 +114,12 @@ export default function AISection() {
               className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              rive.&apos;s AI co-pilot is embedded across every suite — not bolted on as an afterthought.
-              It learns your patterns, anticipates your needs, and handles the busywork.
+              rive. is built around shared context. Update the source once, and every connected
+              view reflects the change—from project planning and payment dates to your calendar and dashboard.
             </p>
 
             <div className="flex flex-col gap-5 mt-2">
-              {aiCapabilities.map(({ icon: Icon, title, description }) => (
+              {connectedCapabilities.map(({ icon: Icon, title, description }) => (
                 <div key={title} className="flex gap-4 group">
                   <div className="shrink-0 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100/50 dark:border-blue-900/60 flex items-center justify-center group-hover:bg-blue-100/50 dark:group-hover:bg-blue-900/60 transition-colors duration-200 mt-0.5">
                     <Icon className="w-[18px] h-[18px] text-blue-600" />

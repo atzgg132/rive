@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Select } from "@/components/ui";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, ArrowRight, Zap, Lock, Clock, Loader2,
@@ -148,7 +150,7 @@ export default function RemitSection() {
   };
 
   return (
-    <section id="remit" className="relative bg-[#F5F8FC] dark:bg-[#0B1120] py-28 overflow-hidden">
+    <section id="remit" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-50/20 to-transparent" />
@@ -166,27 +168,27 @@ export default function RemitSection() {
           <div className="flex flex-col gap-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 w-fit">
               <Globe className="w-3 h-3 shrink-0" />
-              <span style={{ fontFamily: "var(--font-body)" }}>coming soon — join the waitlist</span>
+              <span style={{ fontFamily: "var(--font-body)" }}>Concept preview</span>
             </div>
 
             <h2 className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.08]" style={{ fontFamily: "var(--font-display)" }}>
               Remit{" "}
               <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Payments</span>
               <br />
-              <span className="text-3xl text-slate-500 dark:text-slate-400 font-medium">by rive.</span>
+              <span className="text-3xl text-slate-500 dark:text-slate-400 font-medium">By rive.</span>
             </h2>
 
             <p className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
-              Get paid internationally — fast, cheap, and without the headache. Remit is
-              rive.&apos;s global payment layer, built specifically for freelancers crossing borders.
+              Remit is our long-term direction for simpler international freelancer payments.
+              The calculator below is a rate preview, not a live transfer product.
             </p>
 
             {/* Feature pills */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { icon: Zap,         label: "Instant Transfers",   sub: "Sub-second settlement"  },
-                { icon: Lock,        label: "Bank-Grade Security",  sub: "256-bit encryption"     },
-                { icon: TrendingUp,  label: "0.5% flat fee",        sub: "Best rate, always"      },
+                { icon: Zap,         label: "Faster payouts",       sub: "Planned capability" },
+                { icon: Lock,        label: "Secure by design",     sub: "Core requirement" },
+                { icon: TrendingUp,  label: "Clear pricing",        sub: "No hidden markups" },
               ].map(({ icon: Icon, label, sub }) => (
                 <div key={label} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-center shadow-sm dark:shadow-none transition-colors">
                   <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -199,30 +201,30 @@ export default function RemitSection() {
             {/* Waitlist form */}
             {formState === "idle" || formState === "loading" ? (
               <form onSubmit={handleSubmit} className="flex gap-3 mt-2">
-                <input
+                <Input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com" required disabled={formState === "loading"}
                   className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 transition-all duration-200 disabled:opacity-60"
                   style={{ fontFamily: "var(--font-body)" }}
                 />
-                <button type="submit" disabled={formState === "loading"}
+                <Button type="submit" disabled={formState === "loading"}
                   className="group inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
                   style={{ fontFamily: "var(--font-display)" }}>
                   {formState === "loading"
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /><span>checking...</span></>
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Checking...</span></>
                     : <>Join Waitlist <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
                   }
-                </button>
+                </Button>
               </form>
             ) : formState === "success" ? (
               <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-medium text-sm mt-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span style={{ fontFamily: "var(--font-body)" }}>you&apos;re on the Remit early-access list. we&apos;ll reach out when there&apos;s something meaningful to try.</span>
+                <span style={{ fontFamily: "var(--font-body)" }}>You&apos;re on the Remit early-access list. We&apos;ll reach out when there is something meaningful to test.</span>
               </div>
             ) : (
               <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium text-sm mt-2">
                 <Clock className="w-4 h-4 shrink-0 text-blue-500 dark:text-blue-400" />
-                <span style={{ fontFamily: "var(--font-body)" }}>already on the list — you&apos;ll be first to know when Remit launches.</span>
+                <span style={{ fontFamily: "var(--font-body)" }}>Already on the list — you&apos;ll be first to know when Remit launches.</span>
               </div>
             )}
           </div>
@@ -234,35 +236,35 @@ export default function RemitSection() {
               {/* Widget header */}
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200" style={{ fontFamily: "var(--font-display)" }}>remit calculator</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200" style={{ fontFamily: "var(--font-display)" }}>Exchange-rate preview</p>
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
                     {ratesState === "loading" ? (
-                      <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> fetching rates...</span>
+                      <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Fetching rates...</span>
                     ) : ratesState === "error" ? (
-                      <span className="text-red-400">rate fetch failed</span>
+                      <span className="text-red-400">Rate fetch failed</span>
                     ) : lastFetched ? (
                       <span>live ECB rates · updated {ageLabel}</span>
                     ) : "—"}
                   </p>
                 </div>
                 {/* Refresh button */}
-                <button
+                <Button
                   onClick={handleRefresh}
                   disabled={cooldown > 0 || ratesState === "loading"}
-                  title={cooldown > 0 ? `refresh available in ${cooldown}s` : "refresh rates"}
+                  title={cooldown > 0 ? `Refresh available in ${cooldown}s` : "Refresh rates"}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${ratesState === "loading" ? "animate-spin" : ""}`} />
-                  {cooldown > 0 ? `${cooldown}s` : "refresh"}
-                </button>
+                  {cooldown > 0 ? `${cooldown}s` : "Refresh"}
+                </Button>
               </div>
 
               {/* You send */}
               <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 p-4 mb-2 transition-colors">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>you send</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>You send</p>
                 <div className="flex items-center gap-3">
-                  <select
+                  <Select
                     value={fromCode}
                     onChange={e => setFromCode(e.target.value)}
                     className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
@@ -271,8 +273,8 @@ export default function RemitSection() {
                     {CURRENCIES.map(c => (
                       <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
                     ))}
-                  </select>
-                  <input
+                  </Select>
+                  <Input
                     type="number" min="1" step="any"
                     value={amount}
                     onChange={e => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
@@ -304,9 +306,9 @@ export default function RemitSection() {
 
               {/* They receive */}
               <div className="bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-100/50 dark:border-blue-900/40 p-4 mb-4 transition-colors">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>they receive</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>They receive</p>
                 <div className="flex items-center gap-3">
-                  <select
+                  <Select
                     value={toCode}
                     onChange={e => setToCode(e.target.value)}
                     className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/50 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
@@ -315,7 +317,7 @@ export default function RemitSection() {
                     {CURRENCIES.map(c => (
                       <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
                     ))}
-                  </select>
+                  </Select>
                   <span
                     className={`flex-1 text-right text-3xl font-bold text-blue-600 dark:text-blue-400 transition-all duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
                     style={{ fontFamily: "var(--font-display)" }}
@@ -337,13 +339,13 @@ export default function RemitSection() {
                 </div>
               )}
 
-              <button
+              <Button
                 onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-px"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                coming soon — join waitlist
-              </button>
+                Coming soon — join the waitlist
+              </Button>
 
               {/* Powered by */}
               <p className="text-center text-[10px] text-slate-300 mt-3" style={{ fontFamily: "var(--font-body)" }}>

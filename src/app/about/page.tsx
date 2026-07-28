@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from "@/components/ui";
 import PageShell from '@/components/PageShell';
 import { Hammer, Eye, Shield } from 'lucide-react';
 
@@ -79,7 +80,7 @@ export default function AboutPage() {
           </span>
 
           <h1
-            className="text-6xl md:text-7xl lg:text-8xl font-black text-[#0C1E36] dark:text-white leading-[1.05] mb-7"
+            className="text-6xl md:text-7xl lg:text-8xl font-black text-foreground dark:text-white leading-[1.05] mb-7"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}
           >
             about{' '}
@@ -145,7 +146,7 @@ export default function AboutPage() {
               what we stand for
             </span>
             <h2
-              className="mt-3 text-4xl md:text-5xl font-black text-[#0C1E36] dark:text-white"
+              className="mt-3 text-4xl md:text-5xl font-black text-foreground dark:text-white"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
             >
               our values
@@ -171,7 +172,7 @@ export default function AboutPage() {
 
                 <div>
                   <h3
-                    className="text-lg font-black text-[#0C1E36] dark:text-white mb-2"
+                    className="text-lg font-black text-foreground dark:text-white mb-2"
                     style={{ fontFamily: 'var(--font-display)' }}
                   >
                     {title}
@@ -197,7 +198,7 @@ export default function AboutPage() {
               the people
             </span>
             <h2
-              className="mt-3 text-4xl md:text-5xl font-black text-[#0C1E36] dark:text-white"
+              className="mt-3 text-4xl md:text-5xl font-black text-foreground dark:text-white"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
             >
               meet the team
@@ -219,7 +220,7 @@ export default function AboutPage() {
                 </div>
                 <div className="text-center">
                   <p
-                    className="font-black text-[#0C1E36] dark:text-white text-base"
+                    className="font-black text-foreground dark:text-white text-base"
                     style={{ fontFamily: 'var(--font-display)' }}
                   >
                     {name}
@@ -247,7 +248,7 @@ export default function AboutPage() {
       <section className="py-16 md:py-24">
         <div className="max-w-3xl mx-auto px-6 md:px-8 text-center">
           <h2
-            className="text-4xl md:text-5xl font-black text-[#0C1E36] dark:text-white mb-5"
+            className="text-4xl md:text-5xl font-black text-foreground dark:text-white mb-5"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
           >
             ready to shape the future?
@@ -255,7 +256,7 @@ export default function AboutPage() {
           <p className="text-slate-500 dark:text-slate-400 mb-10 text-lg" style={{ fontFamily: 'var(--font-body)' }}>
             be among the first to experience a platform truly built for freelancers.
           </p>
-          <button
+          <Button
             onClick={() =>
               window.dispatchEvent(new CustomEvent('open-modal', { detail: 'waitlist' }))
             }
@@ -263,7 +264,7 @@ export default function AboutPage() {
             style={{ fontFamily: 'var(--font-display)' }}
           >
             join the waitlist
-          </button>
+          </Button>
         </div>
       </section>
     </PageShell>

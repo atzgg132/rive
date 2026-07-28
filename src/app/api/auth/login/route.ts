@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({
       success: true,
       message: "Login successful.",
+      destination: user.onboardingStatus === "complete" || user.onboardingStatus === "skipped" ? "/dashboard" : "/onboarding",
       user: {
         id: user.id,
         email: user.email,
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
     });
 
     setSessionCookie(response, token);
+    response.headers.set("Cache-Control", "no-store");
 
     return response;
   } catch (error: unknown) {

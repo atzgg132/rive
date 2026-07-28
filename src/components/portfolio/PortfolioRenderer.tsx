@@ -35,7 +35,7 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     workTitle: "A considered selection of work.",
     servicesTitle: "How I create value.",
     heroClass: "lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]",
-    headlineClass: "text-5xl sm:text-6xl lg:text-7xl",
+    headlineClass: "text-4xl sm:text-6xl lg:text-7xl",
     projectsClass: "md:grid-cols-2",
     visual: false,
     numbered: true,
@@ -45,7 +45,7 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     workTitle: "Stories, frames, and finished work.",
     servicesTitle: "Creative capabilities.",
     heroClass: "lg:grid-cols-[minmax(0,0.8fr)_minmax(420px,1.2fr)]",
-    headlineClass: "text-5xl sm:text-7xl lg:text-8xl",
+    headlineClass: "text-4xl sm:text-7xl lg:text-8xl",
     projectsClass: "md:grid-cols-2 lg:grid-cols-12",
     visual: true,
     numbered: false,
@@ -55,7 +55,7 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     workTitle: "Products built to perform.",
     servicesTitle: "From idea to shipped outcome.",
     heroClass: "lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]",
-    headlineClass: "text-5xl sm:text-6xl lg:text-7xl",
+    headlineClass: "text-4xl sm:text-6xl lg:text-7xl",
     projectsClass: "md:grid-cols-2",
     visual: false,
     numbered: true,
@@ -65,7 +65,7 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     workTitle: "Experience applied to real outcomes.",
     servicesTitle: "Ways I can support you.",
     heroClass: "lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]",
-    headlineClass: "text-5xl sm:text-6xl lg:text-7xl",
+    headlineClass: "text-4xl sm:text-6xl lg:text-7xl",
     projectsClass: "md:grid-cols-2",
     visual: false,
     numbered: false,
@@ -75,7 +75,7 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     workTitle: "Worth watching, reading, and sharing.",
     servicesTitle: "Ways we can collaborate.",
     heroClass: "lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)]",
-    headlineClass: "text-5xl sm:text-7xl lg:text-8xl",
+    headlineClass: "text-4xl sm:text-7xl lg:text-8xl",
     projectsClass: "md:grid-cols-2 lg:grid-cols-12",
     visual: true,
     numbered: false,
@@ -85,7 +85,7 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     workTitle: "Partnerships with measurable impact.",
     servicesTitle: "A focused team for ambitious work.",
     heroClass: "lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]",
-    headlineClass: "text-5xl sm:text-6xl lg:text-7xl",
+    headlineClass: "text-4xl sm:text-6xl lg:text-7xl",
     projectsClass: "md:grid-cols-2",
     visual: false,
     numbered: true,
@@ -304,12 +304,12 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
         </div>
       )}
 
-      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-6 sm:px-10 lg:px-14">
-        <a href="#top" className="text-base font-black tracking-[-0.03em] text-[var(--portfolio-ink)]">
+      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-6 sm:px-10 lg:px-14">
+        <a href="#top" className="min-w-0 truncate text-base font-black tracking-[-0.03em] text-[var(--portfolio-ink)]">
           {content.name || "Your portfolio"}
           <span className="text-[var(--portfolio-accent)]">.</span>
         </a>
-        <nav aria-label="Portfolio navigation" className="flex items-center gap-3 sm:gap-7">
+        <nav aria-label="Portfolio navigation" className="flex shrink-0 items-center gap-3 sm:gap-7">
           <div className="hidden items-center gap-7 text-xs font-bold text-[var(--portfolio-muted)] sm:flex">
             {visible("projects") && publicProjects.length > 0 && <a href="#work">Work</a>}
             {visible("services") && content.services.length > 0 && <a href="#services">Services</a>}
@@ -361,7 +361,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           </div>
 
           <div className="relative min-h-72 self-stretch sm:min-h-96">
-            <div className="absolute inset-0 translate-x-5 translate-y-5 rounded-[var(--portfolio-radius-large)] border border-[var(--portfolio-border)]" />
+            <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-[var(--portfolio-radius-large)] border border-[var(--portfolio-border)] sm:translate-x-5 sm:translate-y-5" />
             <div className="relative h-full min-h-72 overflow-hidden rounded-[var(--portfolio-radius-large)] bg-[var(--portfolio-soft)] sm:min-h-96">
               {featuredProject?.imageUrl ? (
                 <>
@@ -374,15 +374,35 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                   </div>
                 </>
               ) : (
-                <div className="flex h-full min-h-72 flex-col justify-between p-7 sm:min-h-96 sm:p-9">
-                  <div className="flex items-start justify-between">
-                    <Sparkles className="h-9 w-9 text-[var(--portfolio-accent)]" strokeWidth={1.5} />
-                    <span className="text-xs font-bold text-[var(--portfolio-muted)]">{new Date().getFullYear()}</span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--portfolio-muted)]">Portfolio of</p>
-                    <p className="mt-3 text-4xl font-black tracking-[-0.055em] text-[var(--portfolio-ink)] sm:text-5xl">{content.name}</p>
-                  </div>
+                <div className="flex h-full min-h-72 flex-col justify-between p-6 sm:min-h-96 sm:p-9">
+                  {content.profileImageUrl ? (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="relative h-60 w-full max-w-xs overflow-hidden rounded-[var(--portfolio-radius)] bg-[var(--portfolio-card)] shadow-2xl shadow-black/10 ring-1 ring-[var(--portfolio-border)] sm:h-80">
+                        <img
+                          src={content.profileImageUrl}
+                          alt={`${content.name} profile`}
+                          className="absolute inset-0 h-full w-full object-cover object-center"
+                          style={{ filter: "saturate(.86) contrast(1.04)" }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/5" />
+                        <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
+                          <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/70">Portfolio of</p>
+                          <p className="mt-2 truncate text-2xl font-black tracking-[-0.045em] sm:text-3xl">{content.name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between">
+                        <Sparkles className="h-9 w-9 text-[var(--portfolio-accent)]" strokeWidth={1.5} />
+                        <span className="text-xs font-bold text-[var(--portfolio-muted)]">{new Date().getFullYear()}</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--portfolio-muted)]">Portfolio of</p>
+                        <p className="mt-3 text-4xl font-black tracking-[-0.055em] text-[var(--portfolio-ink)] sm:text-5xl">{content.name}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -476,12 +496,12 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                 <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full border border-white/20" />
                 <div className="relative z-10">
                   <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/70">Have a project in mind?</p>
-                  <h2 className="mt-4 max-w-4xl text-4xl font-black leading-[1.02] tracking-[-0.05em] text-white sm:text-6xl">
+                  <h2 className="mt-4 max-w-4xl text-3xl font-black leading-[1.02] tracking-[-0.05em] text-white sm:text-6xl">
                     Let&apos;s turn the next good idea into meaningful work.
                   </h2>
                   {contactHref ? (
-                    <a href={contactHref} className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3.5 text-sm font-extrabold text-[var(--portfolio-accent)] shadow-xl">
-                      <Mail className="h-4 w-4" /> {content.contactEmail}
+                    <a href={contactHref} className="mt-8 inline-flex max-w-full items-center gap-2 rounded-full bg-white px-5 py-3.5 text-sm font-extrabold text-[var(--portfolio-accent)] shadow-xl">
+                      <Mail className="h-4 w-4 shrink-0" /> <span className="truncate">{content.contactEmail}</span>
                     </a>
                   ) : (
                     <p className="mt-7 text-sm text-white/75">Contact details coming soon.</p>

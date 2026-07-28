@@ -1,4 +1,6 @@
 "use client";
+
+import { Button, Input } from "@/components/ui";
 import PageShell from "@/components/PageShell";
 import { useState } from "react";
 import { submitToWaitlist } from "@/utils/api";
@@ -29,7 +31,7 @@ export default function CommunityPage() {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 mb-5" style={font}>
             community
           </div>
-          <h1 className="text-6xl font-bold text-[#0C1E36] dark:text-white tracking-tight mb-4" style={fontD}>
+          <h1 className="text-6xl font-bold text-foreground dark:text-white tracking-tight mb-4" style={fontD}>
             join the rive. community.
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 max-w-lg leading-relaxed" style={font}>
@@ -44,17 +46,17 @@ export default function CommunityPage() {
                 <MessageSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <h3 className="font-bold text-[#0C1E36] dark:text-white text-lg mb-1" style={fontD}>discord</h3>
+                <h3 className="font-bold text-foreground dark:text-white text-lg mb-1" style={fontD}>Discord</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-5" style={font}>
                   real-time chat, early previews, feedback loops, and direct access to the team.
                 </p>
-                <button
+                <Button
                   onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
                   className="w-full py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all duration-200"
                   style={fontD}
                 >
                   request a discord invite
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -64,7 +66,7 @@ export default function CommunityPage() {
                 <Code2 className="w-6 h-6 text-slate-700 dark:text-slate-300" />
               </div>
               <div>
-                <h3 className="font-bold text-[#0C1E36] dark:text-white text-lg mb-1" style={fontD}>github discussions</h3>
+                <h3 className="font-bold text-foreground dark:text-white text-lg mb-1" style={fontD}>Github discussions</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-5" style={font}>
                   open source feedback — suggest features, report bugs, and vote on the roadmap.
                 </p>
@@ -86,7 +88,7 @@ export default function CommunityPage() {
                 <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="font-bold text-[#0C1E36] dark:text-white text-lg mb-1" style={fontD}>rive. letter</h3>
+                <h3 className="font-bold text-foreground dark:text-white text-lg mb-1" style={fontD}>rive. letter</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-5" style={font}>
                   monthly: product updates, freelance insights, community spotlight. no spam, ever.
                 </p>
@@ -103,7 +105,7 @@ export default function CommunityPage() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubscribe} className="flex flex-col gap-2">
-                    <input
+                    <Input
                       type="email" required value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="your@email.com"
@@ -111,13 +113,13 @@ export default function CommunityPage() {
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition-all disabled:opacity-60"
                       style={font}
                     />
-                    <button
+                    <Button
                       type="submit" disabled={state === "loading"}
                       className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-md shadow-blue-600/15 disabled:opacity-75 flex items-center justify-center gap-2"
                       style={fontD}
                     >
-                      {state === "loading" ? <><Loader2 className="w-4 h-4 animate-spin" />subscribing...</> : "subscribe →"}
-                    </button>
+                      {state === "loading" ? <><Loader2 className="w-4 h-4 animate-spin" />Subscribing...</> : "subscribe →"}
+                    </Button>
                   </form>
                 )}
               </div>

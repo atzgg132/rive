@@ -37,6 +37,7 @@ export type PortfolioTestimonial = {
 
 export type PortfolioContent = {
   name: string;
+  profileImageUrl: string;
   headline: string;
   bio: string;
   location: string;
@@ -66,6 +67,7 @@ export const PORTFOLIO_TEMPLATES = [
 
 export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
   name: "your name",
+  profileImageUrl: "",
   headline: "independent creative building useful things.",
   bio: "Tell people what you do, who you help, and what makes your work different.",
   location: "available worldwide",
@@ -96,6 +98,7 @@ export const DEFAULT_PORTFOLIO_THEME: PortfolioTheme = {
 
 type PortfolioSeedData = {
   name?: string | null;
+  avatarUrl?: string | null;
   email: string;
   projects?: Array<{
     id: string;
@@ -129,6 +132,7 @@ export function buildPrefilledPortfolioContent(user: PortfolioSeedData): Portfol
   return {
     ...DEFAULT_PORTFOLIO_CONTENT,
     name: user.name?.trim() || user.email.split("@")[0] || DEFAULT_PORTFOLIO_CONTENT.name,
+    profileImageUrl: user.avatarUrl || "",
     headline: projects.length > 0 ? "independent professional delivering meaningful work." : DEFAULT_PORTFOLIO_CONTENT.headline,
     bio: projects.length > 0
       ? `A selection of work, projects, and services by ${user.name?.trim() || user.email.split("@")[0] || "me"}.`
@@ -181,6 +185,10 @@ function isSafePortfolioUrl(value: unknown): boolean {
 export function validatePortfolioContent(value: unknown): string | null {
   if (!value || typeof value !== "object") return "Portfolio content must be an object.";
   const input = value as Partial<PortfolioContent>;
+  if (input.profileImageUrl) {
+    if (typeof input.profileImageUrl !== "string" || input.profileImageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Profile image is too large.";
+    if (!INLINE_IMAGE.test(input.profileImageUrl) && !isSafePortfolioUrl(input.profileImageUrl)) return "Profile image must be an HTTPS URL or supported image upload.";
+  }
   if (input.projects !== undefined) {
     if (!Array.isArray(input.projects) || input.projects.length > 30) return "Add up to 30 projects.";
     for (const project of input.projects) {

@@ -38,9 +38,9 @@ export default function PortfolioCaseStudy({ content, project, portfolioSlug, th
 
   return (
     <div style={cssVars} className="min-h-screen bg-[var(--case-bg)] text-[var(--case-ink)]">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 sm:px-10 lg:px-14">
-        <a href={`/p/${portfolioSlug}`} className="inline-flex items-center gap-2 text-xs font-extrabold text-[var(--case-muted)] hover:text-[var(--case-accent)]">
-          <ArrowLeft className="h-4 w-4" /> Back to {content.name}
+      <header className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-6 sm:px-10 lg:px-14">
+        <a href={`/p/${portfolioSlug}`} className="inline-flex min-w-0 items-center gap-2 text-xs font-extrabold text-[var(--case-muted)] hover:text-[var(--case-accent)]">
+          <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="truncate">Back to {content.name}</span>
         </a>
         {content.contactEmail && (
           <a href={`mailto:${content.contactEmail}`} className="inline-flex items-center gap-2 rounded-full border border-[var(--case-border)] bg-[var(--case-card)] px-4 py-2.5 text-xs font-extrabold">
@@ -52,7 +52,7 @@ export default function PortfolioCaseStudy({ content, project, portfolioSlug, th
       <main>
         <section className="mx-auto max-w-7xl px-5 pb-12 pt-12 sm:px-10 sm:pb-20 sm:pt-20 lg:px-14">
           <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--case-accent)]">Case study · {project.year || "Selected work"}</p>
-          <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[0.94] tracking-[-0.065em] text-[var(--case-ink)] sm:text-7xl lg:text-8xl">{project.title}</h1>
+          <h1 className="mt-5 max-w-5xl text-4xl font-black leading-[0.94] tracking-[-0.055em] text-[var(--case-ink)] sm:text-7xl sm:tracking-[-0.065em] lg:text-8xl">{project.title}</h1>
           <p className="mt-7 max-w-3xl text-lg leading-8 text-[var(--case-muted)] sm:text-xl">{project.description}</p>
 
           <div className="mt-10 grid border-y border-[var(--case-border)] sm:grid-cols-2 lg:grid-cols-4">
@@ -100,7 +100,7 @@ export default function PortfolioCaseStudy({ content, project, portfolioSlug, th
           <section className="mx-auto max-w-7xl px-5 pb-20 sm:px-10 sm:pb-28 lg:px-14">
             <div className="mb-8 border-t border-[var(--case-border)] pt-10">
               <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--case-accent)]">Project gallery</p>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] text-[var(--case-ink)] sm:text-5xl">A closer look at the work.</h2>
+              <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] text-[var(--case-ink)] sm:text-5xl">A Closer look at the work.</h2>
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               {project.gallery.map((image, index) => (
@@ -127,7 +127,7 @@ export default function PortfolioCaseStudy({ content, project, portfolioSlug, th
         <section className="mx-auto max-w-7xl px-5 py-20 sm:px-10 sm:py-28 lg:px-14">
           <div className="rounded-[var(--case-radius-large)] bg-[var(--case-accent)] p-7 text-white sm:p-12 lg:p-16">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/70">Like what you see?</p>
-            <h2 className="mt-4 max-w-4xl text-4xl font-black leading-[1.02] tracking-[-0.05em] text-white sm:text-6xl">Let&apos;s create the next strong case study together.</h2>
+            <h2 className="mt-4 max-w-4xl text-3xl font-black leading-[1.02] tracking-[-0.05em] text-white sm:text-6xl">Let&apos;s create the next strong case study together.</h2>
             <div className="mt-8 flex flex-wrap gap-3">
               {content.contactEmail && <a href={`mailto:${content.contactEmail}`} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3.5 text-sm font-extrabold text-[var(--case-accent)]"><Mail className="h-4 w-4" /> Contact {content.name}</a>}
               {projectUrl && <a href={projectUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/30 px-5 py-3.5 text-sm font-extrabold text-white">Visit live project <ArrowUpRight className="h-4 w-4" /></a>}

@@ -64,6 +64,10 @@ export async function POST(req: NextRequest) {
           passwordHash,
           name: normalizedName,
           plan: "free",
+          onboardingStatus: "new",
+          onboardingStep: 0,
+          timeZone: "UTC",
+          currency: "USD",
         },
         select: {
           id: true,
