@@ -12,6 +12,11 @@ RUN apk add --no-cache libc6-compat
 ARG DEPLOYMENT_VERSION=local
 ENV DEPLOYMENT_VERSION=$DEPLOYMENT_VERSION
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
+ENV SESSION_SECRET=build-only-session-secret
+ENV CALENDAR_ENCRYPTION_KEY=build-only-calendar-key
+ENV CRON_SECRET=build-only-cron-secret
+ENV APP_URL=http://127.0.0.1:3000
 COPY --from=build-dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
