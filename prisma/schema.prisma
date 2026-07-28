@@ -40,8 +40,43 @@ model User {
   invoices     Invoice[]
   expenses     Expense[]
   portfolio    Portfolio?
+  authTokens   AuthToken[]
+  calendars    Calendar[]
+  calendarEvents CalendarEvent[]
+  calendarConnections CalendarConnection[]
+  calendarSubscriptions CalendarSubscription[]
+  tasks        Task[]
 
   @@map("users")
+}
+
+model AuthToken {
+  id        String    @id @default(uuid())
+  userId    String?   @map("user_id")
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  type      String
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([email, type, createdAt])
+  @@index([expiresAt])
+  @@map("auth_tokens")
+}
+
+model EmailDelivery {
+  id                String   @id @default(uuid())
+  recipient         String
+  type              String
+  status            String
+  providerMessageId String?  @map("provider_message_id")
+  error             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([recipient, type, createdAt])
+  @@map("email_deliveries")
 }
 
 model Client {
@@ -84,6 +119,7 @@ model Project {
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
   milestones  Milestone[]
+  tasks       Task[]
   invoices    Invoice[]
   expenses    Expense[]
 
@@ -99,8 +135,208 @@ model Milestone {
   completed   Boolean   @default(false)
   completedAt DateTime? @map("completed_at")
   createdAt   DateTime  @default(now()) @map("created_at")
+  tasks       Task[]
 
   @@map("milestones")
+}
+
+model Task {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId        String?   @map("project_id")
+  project          Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestoneId      String?   @map("milestone_id")
+  milestone        Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  title            String
+  description      String?
+  status           String    @default("todo")
+  priority         String    @default("medium")
+  dueDate          DateTime? @map("due_date")
+  scheduledStartAt DateTime? @map("scheduled_start_at")
+  scheduledEndAt   DateTime? @map("scheduled_end_at")
+  timeZone         String?   @map("time_zone")
+  estimatedMinutes Int?      @map("estimated_minutes")
+  billable         Boolean   @default(false)
+  completedAt      DateTime? @map("completed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, status, dueDate])
+  @@index([projectId])
+  @@map("tasks")
+}
+
+model Calendar {
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  color       String          @default("#2563EB")
+  timeZone    String          @default("UTC") @map("time_zone")
+  isDefault   Boolean         @default(false) @map("is_default")
+  isVisible   Boolean         @default(true) @map("is_visible")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  events      CalendarEvent[]
+  externalCalendars ExternalCalendar[]
+
+  @@index([userId, isDefault])
+  @@map("calendars")
+}
+
+model CalendarEvent {
+  id                 String    @id @default(uuid())
+  userId             String    @map("user_id")
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendarId         String    @map("calendar_id")
+  calendar           Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  location           String?
+  meetingUrl         String?   @map("meeting_url")
+  startAt            DateTime? @map("start_at")
+  endAt              DateTime? @map("end_at")
+  startDate          String?   @map("start_date")
+  endDate            String?   @map("end_date")
+  allDay             Boolean   @default(false) @map("all_day")
+  timeZone           String    @default("UTC") @map("time_zone")
+  availability       String    @default("busy")
+  visibility         String    @default("default")
+  status             String    @default("confirmed")
+  recurrenceRule     String?   @map("recurrence_rule")
+  recurringMasterId  String?   @map("recurring_master_id")
+  source             String    @default("native")
+  sourceRevision     Int       @default(1) @map("source_revision")
+  clientId           String?   @map("client_id")
+  projectId          String?   @map("project_id")
+  milestoneId        String?   @map("milestone_id")
+  taskId             String?   @map("task_id")
+  invoiceId          String?   @map("invoice_id")
+  linkBehavior       String?   @map("link_behavior")
+  deletedAt          DateTime? @map("deleted_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  externalMappings   ExternalEventMapping[]
+
+  @@index([userId, startAt])
+  @@index([userId, startDate])
+  @@index([calendarId, deletedAt])
+  @@index([projectId])
+  @@index([taskId])
+  @@map("calendar_events")
+}
+
+model CalendarConnection {
+  id                        String    @id @default(uuid())
+  userId                    String    @map("user_id")
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider                  String
+  providerAccountId         String    @map("provider_account_id")
+  accountEmail              String?   @map("account_email")
+  encryptedCredentials      String    @map("encrypted_credentials")
+  scopes                    String[]
+  status                    String    @default("connected")
+  defaultExternalCalendarId String?   @map("default_external_calendar_id")
+  lastSyncedAt              DateTime? @map("last_synced_at")
+  lastError                 String?   @map("last_error")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  externalCalendars         ExternalCalendar[]
+  webhookChannels           CalendarWebhookChannel[]
+
+  @@unique([userId, provider, providerAccountId])
+  @@index([userId, provider, status])
+  @@map("calendar_connections")
+}
+
+model ExternalCalendar {
+  id                 String    @id @default(uuid())
+  connectionId       String    @map("connection_id")
+  connection         CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  calendarId         String    @map("calendar_id")
+  calendar           Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  providerCalendarId String    @map("provider_calendar_id")
+  name               String
+  color              String?
+  accessRole         String?   @map("access_role")
+  selected           Boolean   @default(true)
+  syncToken          String?   @map("sync_token")
+  lastSyncedAt       DateTime? @map("last_synced_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  mappings           ExternalEventMapping[]
+
+  @@unique([connectionId, providerCalendarId])
+  @@unique([calendarId])
+  @@index([connectionId, selected])
+  @@map("external_calendars")
+}
+
+model ExternalEventMapping {
+  id                String    @id @default(uuid())
+  eventId           String    @map("event_id")
+  event             CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  externalCalendarId String   @map("external_calendar_id")
+  externalCalendar  ExternalCalendar @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
+  providerEventId   String    @map("provider_event_id")
+  iCalUid           String?   @map("ical_uid")
+  providerEtag      String?   @map("provider_etag")
+  providerUpdatedAt DateTime? @map("provider_updated_at")
+  lastFingerprint   String?   @map("last_fingerprint")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([externalCalendarId, providerEventId])
+  @@unique([eventId, externalCalendarId])
+  @@index([iCalUid])
+  @@map("external_event_mappings")
+}
+
+model CalendarSyncOutbox {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  eventId     String?   @map("event_id")
+  operation   String
+  provider    String
+  payload     Json?
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now()) @map("available_at")
+  processedAt DateTime? @map("processed_at")
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([status, availableAt])
+  @@index([userId, eventId])
+  @@map("calendar_sync_outbox")
+}
+
+model CalendarWebhookChannel {
+  id             String    @id
+  connectionId   String    @map("connection_id")
+  connection     CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalCalendarId String @map("external_calendar_id")
+  resourceId     String    @map("resource_id")
+  channelToken   String    @map("channel_token")
+  expiresAt      DateTime  @map("expires_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([connectionId, expiresAt])
+  @@map("calendar_webhook_channels")
+}
+
+model CalendarSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique @map("token_hash")
+  label     String   @default("Apple Calendar")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, revokedAt])
+  @@map("calendar_subscriptions")
 }
 
 model Invoice {

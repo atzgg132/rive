@@ -217,7 +217,7 @@ export default function RemitSection() {
             ) : formState === "success" ? (
               <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-medium text-sm mt-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span style={{ fontFamily: "var(--font-body)" }}>you&apos;re on the Remit waitlist! check your inbox — we&apos;ve sent you a welcome email.</span>
+                <span style={{ fontFamily: "var(--font-body)" }}>you&apos;re on the Remit early-access list. we&apos;ll reach out when there&apos;s something meaningful to try.</span>
               </div>
             ) : (
               <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium text-sm mt-2">

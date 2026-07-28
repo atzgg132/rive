@@ -1,0 +1,15 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionUser } from "@/utils/userAuth";
+import { createCalendarOAuthState } from "@/utils/calendarCrypto";
+import { googleAuthorizationUrl } from "@/utils/googleCalendar";
+
+export async function GET(req: NextRequest) {
+  const session = getSessionUser(req);
+  if (!session) return NextResponse.redirect(new URL("/login?next=/calendar", req.url));
+  try {
+    return NextResponse.redirect(googleAuthorizationUrl(createCalendarOAuthState(session.userId)));
+  } catch (error) {
+    console.error("Google calendar connection error:", error);
+    return NextResponse.redirect(new URL("/calendar?connectionError=google_not_configured", req.url));
+  }
+}

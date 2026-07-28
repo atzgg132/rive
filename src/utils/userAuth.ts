@@ -9,23 +9,29 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Pure Node.js PBKDF2 Password Hashing
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto
-    .pbkdf2Sync(password, salt, 1000, 64, "sha512")
-    .toString("hex");
-  return `${salt}:${hash}`;
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `scrypt:${salt}:${hash}`;
 }
 
 export function verifyPassword(password: string, storedHash: string): boolean {
   try {
-    const [salt, originalHash] = storedHash.split(":");
+    const parts = storedHash.split(":");
+    const isScrypt = parts[0] === "scrypt";
+    const salt = isScrypt ? parts[1] : parts[0];
+    const originalHash = isScrypt ? parts[2] : parts[1];
     if (!salt || !originalHash) return false;
-    const hash = crypto
-      .pbkdf2Sync(password, salt, 1000, 64, "sha512")
-      .toString("hex");
-    return hash === originalHash;
+    const hash = isScrypt
+      ? crypto.scryptSync(password, salt, 64)
+      : crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512");
+    const original = Buffer.from(originalHash, "hex");
+    return original.length === hash.length && crypto.timingSafeEqual(original, hash);
   } catch {
     return false;
   }
+}
+
+export function passwordNeedsUpgrade(storedHash: string): boolean {
+  return !storedHash.startsWith("scrypt:");
 }
 
 // Session Token Generation & Verification (Stateless HMAC Tokens)

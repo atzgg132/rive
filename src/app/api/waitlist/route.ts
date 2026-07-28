@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { sendWelcomeEmail } from "@/utils/email";
+import { sendWaitlistJoinedEmail } from "@/utils/email";
+import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getRequestIp(req);
+    if (!rateLimit(`waitlist:${ip}`, 8, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { success: false, message: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
     let payload: { email?: unknown; type?: unknown };
     try {
       payload = await req.json();
@@ -37,12 +45,12 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Welcome email (fire-and-forget, async)
-    void sendWelcomeEmail(normalizedEmail);
+    const emailResult = await sendWaitlistJoinedEmail(normalizedEmail, normalizedType);
 
     return NextResponse.json({
       success: true,
       message: "successfully joined the waitlist.",
+      emailSent: emailResult.sent,
       data: waitlistEntry
     }, { status: 201 });
   } catch (error) {

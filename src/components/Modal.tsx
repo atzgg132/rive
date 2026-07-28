@@ -30,12 +30,14 @@ function WaitlistForm({
 }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<FormState>("idle");
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || state === "loading") return;
     setState("loading");
     const res = await submitToWaitlist(email, submitType);
+    setEmailSent(res.emailSent);
     if (res.alreadyJoined) {
       setState("already-joined");
     } else if (res.success) {
@@ -137,7 +139,7 @@ function WaitlistForm({
           </p>
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-            confirmation sent to {email}
+            {emailSent ? `confirmation sent to ${email}` : `spot saved for ${email}`}
           </div>
         </div>
       </div>

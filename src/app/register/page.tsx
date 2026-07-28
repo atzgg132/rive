@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, User, Mail, Lock, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
@@ -20,11 +20,19 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
 
   // Status state
   const [statusEmail, setStatusEmail] = useState("");
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusResult, setStatusResult] = useState<{status: string, message: string} | null>(null);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("invite") || "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInviteToken(token);
+    if (!token) setActiveTab("status");
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +45,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, inviteToken }),
       });
 
       const data = await res.json();
@@ -122,6 +130,11 @@ export default function RegisterPage() {
 
           {activeTab === "register" ? (
             <form onSubmit={handleRegister} className="flex flex-col gap-4 animate-fade-in">
+              {!inviteToken && (
+                <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold dark:bg-blue-950/30 dark:border-blue-900 dark:text-blue-300">
+                  Registration requires the personal invitation link we email after approval.
+                </div>
+              )}
               {error && (
                 <div className="p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-semibold">
                   {error}
@@ -178,11 +191,11 @@ export default function RegisterPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !inviteToken}
                 className="mt-2 w-full py-3 px-4 flex justify-center items-center rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-px shadow-[0_4px_14px_rgba(29,78,216,0.25)]"
                 style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)" }}
               >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create Account"}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : inviteToken ? "Create Account" : "Invitation Required"}
               </button>
 
               <div className="mt-4 text-center">
@@ -240,15 +253,7 @@ export default function RegisterPage() {
                     <h4 className="text-sm font-bold capitalize">{statusResult.status.replace("_", " ")}</h4>
                     <p className="text-xs mt-1 opacity-90">{statusResult.message}</p>
                     {statusResult.status === "approved" && (
-                      <button 
-                        onClick={() => {
-                          setEmail(statusEmail);
-                          setActiveTab("register");
-                        }}
-                        className="mt-3 text-xs font-bold underline"
-                      >
-                        Create your account now &rarr;
-                      </button>
+                      <p className="mt-3 text-xs font-semibold">Use the secure registration link in your approval email. If it has expired, contact hello@rive.work.</p>
                     )}
                   </div>
                 </div>

@@ -17,6 +17,9 @@ import {
   Command,
   Loader2,
   Globe2,
+  CalendarDays,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
@@ -41,6 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMac, setIsMac] = useState(true);
   const [notifications, setNotifications] = useState([
     { id: 1, text: "Welcome to Rive! Explore your new freelance OS.", read: false },
@@ -57,6 +61,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       );
     }
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSidebarCollapsed(window.localStorage.getItem("rive:sidebar-collapsed") === "true");
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem("rive:sidebar-collapsed", String(next));
+      return next;
+    });
+  };
 
   const toggleNotifications = () => {
     setNotificationsOpen(!notificationsOpen);
@@ -104,6 +121,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navLinks = [
     { href: "/dashboard", label: "overview", icon: LayoutDashboard },
+    { href: "/calendar", label: "calendar", icon: CalendarDays },
     { href: "/workflow/projects", label: "projects", icon: Briefcase },
     { href: "/workflow/clients", label: "clients", icon: Users },
     { href: "/workflow/revenue", label: "revenue & invoices", icon: DollarSign },
@@ -126,15 +144,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-[#F5F8FC] dark:bg-slate-950">
       <Toaster position="bottom-right" theme="system" />
       {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-[#E2EAF4] dark:border-slate-800 py-6 px-4 shrink-0 justify-between">
+      <aside className={`relative hidden md:flex flex-col bg-white dark:bg-slate-900 border-r border-[#E2EAF4] dark:border-slate-800 py-6 shrink-0 justify-between transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
         <div className="flex flex-col gap-8">
-          <div className="px-3 flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-2">
+          <div className={`flex items-center ${sidebarCollapsed ? "flex-col gap-3" : "justify-between px-3"}`}>
+            <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
               <RiveLogo className="h-6 w-auto text-slate-900 dark:text-white" />
             </Link>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[#1D4ED8] dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 uppercase">
+            {!sidebarCollapsed && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[#1D4ED8] dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 uppercase">
               {user?.plan}
-            </span>
+            </span>}
+            <button onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"}`}>
+              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
           </div>
 
           <nav className="flex flex-col gap-1">
@@ -145,14 +166,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   key={link.href}
                   href={link.href}
+                  title={sidebarCollapsed ? link.label : undefined}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive 
                       ? "bg-[#EFF6FF] dark:bg-blue-900/20 text-[#1D4ED8] dark:text-blue-400 shadow-[0_4px_12px_-4px_rgba(29,78,216,0.08)]" 
                       : "text-[#4A5E78] dark:text-slate-400 hover:text-[#0C1E36] dark:hover:text-slate-200 hover:bg-[#F5F8FC] dark:hover:bg-slate-800/50"
                   }`}
                 >
-                  <Icon className={`h-4.5 w-4.5 ${isActive ? "text-[#1D4ED8] dark:text-blue-400" : "text-[#4A5E78] dark:text-slate-400"}`} />
-                  <span>{link.label}</span>
+                  <Icon className={`h-4.5 w-4.5 shrink-0 ${isActive ? "text-[#1D4ED8] dark:text-blue-400" : "text-[#4A5E78] dark:text-slate-400"}`} />
+                  {!sidebarCollapsed && <span>{link.label}</span>}
                 </Link>
               );
             })}
@@ -160,22 +182,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <div className="flex flex-col gap-4 border-t border-[#E2EAF4] dark:border-slate-800 pt-4">
-          <div className="flex items-center gap-3 px-3 py-2">
+          <div className={`flex items-center gap-3 px-3 py-2 ${sidebarCollapsed ? "justify-center" : ""}`} title={sidebarCollapsed ? `${user?.name} · ${user?.email}` : undefined}>
             <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold uppercase">
               {user?.name?.substring(0, 2) || "U"}
             </div>
-            <div className="flex flex-col min-w-0">
+            {!sidebarCollapsed && <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-[#0C1E36] dark:text-slate-200 truncate">{user?.name}</span>
               <span className="text-xs text-[#4A5E78] dark:text-slate-400 truncate">{user?.email}</span>
-            </div>
+            </div>}
           </div>
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200"
+            title={sidebarCollapsed ? "Sign out" : undefined}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 ${sidebarCollapsed ? "justify-center" : ""}`}
           >
             <LogOut className="h-4.5 w-4.5" />
-            <span>sign out</span>
+            {!sidebarCollapsed && <span>sign out</span>}
           </button>
         </div>
       </aside>

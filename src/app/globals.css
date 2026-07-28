@@ -77,6 +77,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Portfolio Studio uses one focused editing surface at a time. The underlying
+   forms remain mounted so switching sections never discards unsaved input. */
+.portfolio-editor-panels > section {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.portfolio-editor-panels[data-editor-section="profile"] > section:not(:nth-of-type(3)),
+.portfolio-editor-panels[data-editor-section="work"] > section:not(:nth-of-type(4)),
+.portfolio-editor-panels[data-editor-section="services"] > section:not(:nth-of-type(5)),
+.portfolio-editor-panels[data-editor-section="design"] > section:not(:nth-of-type(2)):not(:nth-of-type(6)) {
+  display: none;
+}
+
+.portfolio-editor-panels[data-editor-section="design"] > section:nth-of-type(2) {
+  border-bottom: 1px solid var(--color-blue-border);
+  padding-bottom: 1.5rem;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   line-height: 1.15;

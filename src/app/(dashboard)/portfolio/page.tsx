@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, Eye, ExternalLink, Globe2, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Monitor, Smartphone, Tablet, Sparkles } from "lucide-react";
+import { Check, Copy, Eye, ExternalLink, Globe2, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Monitor, Smartphone, Tablet, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
 import { DEFAULT_PORTFOLIO_CONTENT, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioProject, type PortfolioTheme } from "@/utils/portfolio";
@@ -74,7 +74,7 @@ function CaseStudyFields({ project, onChange }: { project: PortfolioProject; onC
   };
 
   return (
-    <div className="sm:col-span-2 rounded-xl border border-blue-100 bg-blue-50/40 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+    <div className="sm:col-span-2 border-t border-slate-200 pt-5 dark:border-slate-700">
       <div className="mb-4"><p className="text-xs font-bold text-[#0C1E36] dark:text-white">case study details</p><p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">These fields power the dedicated public case-study page.</p></div>
       <div className="grid gap-3 sm:grid-cols-2">
         <input className={inputClass} value={project.client || ""} placeholder="client or independent project" onChange={(event) => onChange({ client: event.target.value })} />
@@ -88,7 +88,7 @@ function CaseStudyFields({ project, onChange }: { project: PortfolioProject; onC
           <button type="button" onClick={addGalleryUrl} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-2 text-[10px] font-bold text-white"><Plus className="h-3.5 w-3.5" /> image URL</button>
         </div>
       </div>
-      {(project.gallery || []).length > 0 && <div className="mt-4 space-y-3">{(project.gallery || []).map((image, imageIndex) => <div key={image.id} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900 sm:grid-cols-[56px_1fr_auto]">
+      {(project.gallery || []).length > 0 && <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-700 dark:border-slate-700">{(project.gallery || []).map((image, imageIndex) => <div key={image.id} className="grid gap-3 py-3 sm:grid-cols-[56px_1fr_auto]">
         <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg bg-slate-100 text-[10px] font-bold text-slate-400 dark:bg-slate-800">{image.url ? <img src={image.url} alt="" className="h-full w-full object-cover" /> : imageIndex + 1}</div>
         <div className="grid min-w-0 gap-2 sm:grid-cols-2"><input className={`${inputClass} sm:col-span-2`} value={image.url.startsWith("data:") ? "uploaded image" : image.url} readOnly={image.url.startsWith("data:")} placeholder="https://example.com/image.jpg" onChange={(event) => updateGalleryImage(image.id, { url: event.target.value })} /><input className={inputClass} value={image.alt} placeholder="accessible description" onChange={(event) => updateGalleryImage(image.id, { alt: event.target.value })} /><input className={inputClass} value={image.caption} placeholder="caption (optional)" onChange={(event) => updateGalleryImage(image.id, { caption: event.target.value })} /></div>
         <button type="button" title="remove gallery image" onClick={() => onChange({ gallery: (project.gallery || []).filter((item) => item.id !== image.id) })} className="self-start rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /></button>
@@ -126,6 +126,7 @@ export default function PortfolioDashboardPage() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [copied, setCopied] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [editorSection, setEditorSection] = useState<"profile" | "work" | "services" | "design">("profile");
 
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${slug}` : `/p/${slug}`;
   const readiness = getPortfolioReadiness(content, seo);
@@ -219,9 +220,9 @@ export default function PortfolioDashboardPage() {
   if (loading) return <div className="flex min-h-80 items-center justify-center text-sm text-[#4A5E78] dark:text-slate-400">loading portfolio studio...</div>;
 
   return (
-    <div className="flex flex-col gap-6 pb-12">
-      <div className="flex flex-col gap-4 border-b border-[#E2EAF4] pb-6 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
-        <div><div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400"><Globe2 className="h-4 w-4" /> portfolio studio</div><h1 className="text-3xl font-black tracking-tight text-[#0C1E36] dark:text-white">your public presence.</h1><p className="mt-1 text-sm text-[#4A5E78] dark:text-slate-400">one polished portfolio for the work you want to be hired for.</p></div>
+    <div className="flex flex-col gap-5 pb-10">
+      <div className="flex flex-col gap-4 border-b border-[#E2EAF4] pb-5 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
+        <div><div className="mb-1.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400"><Globe2 className="h-4 w-4" /> portfolio studio</div><h1 className="text-2xl font-black tracking-tight text-[#0C1E36] dark:text-white">shape your public presence</h1><p className="mt-1 text-xs text-[#4A5E78] dark:text-slate-400">edit with focus, preview continuously, publish when ready.</p></div>
         <div className="flex flex-wrap items-center gap-2">
           {portfolio?.status === "published" && <a href={`/p/${slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-[#E2EAF4] px-3 py-2 text-xs font-semibold text-[#4A5E78] hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><ExternalLink className="h-3.5 w-3.5" /> open public</a>}
           <button onClick={() => save()} disabled={saving || !dirty} className="inline-flex items-center gap-1.5 rounded-xl border border-[#E2EAF4] px-3 py-2 text-xs font-semibold text-[#4A5E78] disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"><Save className="h-3.5 w-3.5" /> {saving ? "saving..." : "save draft"}</button>
@@ -229,14 +230,34 @@ export default function PortfolioDashboardPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E2EAF4] bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap gap-1"><button onClick={() => setTab("edit")} className={`rounded-xl px-3 py-2 text-xs font-bold ${tab === "edit" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" : "text-slate-500"}`}><LayoutTemplate className="mr-1 inline h-3.5 w-3.5" /> edit</button><button onClick={() => setTab("preview")} className={`rounded-xl px-3 py-2 text-xs font-bold ${tab === "preview" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" : "text-slate-500"}`}><Eye className="mr-1 inline h-3.5 w-3.5" /> preview</button><button onClick={() => setTab("analytics")} className={`rounded-xl px-3 py-2 text-xs font-bold ${tab === "analytics" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" : "text-slate-500"}`}><BarChart3 className="mr-1 inline h-3.5 w-3.5" /> analytics</button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2EAF4] dark:border-slate-800">
+        <div className="flex flex-wrap gap-1"><button onClick={() => setTab("edit")} className={`border-b-2 px-3 py-2.5 text-xs font-bold ${tab === "edit" ? "border-blue-600 text-blue-700 dark:text-blue-300" : "border-transparent text-slate-500"}`}><LayoutTemplate className="mr-1 inline h-3.5 w-3.5" /> editor</button><button onClick={() => setTab("preview")} className={`border-b-2 px-3 py-2.5 text-xs font-bold ${tab === "preview" ? "border-blue-600 text-blue-700 dark:text-blue-300" : "border-transparent text-slate-500"}`}><Eye className="mr-1 inline h-3.5 w-3.5" /> full preview</button><button onClick={() => setTab("analytics")} className={`border-b-2 px-3 py-2.5 text-xs font-bold ${tab === "analytics" ? "border-blue-600 text-blue-700 dark:text-blue-300" : "border-transparent text-slate-500"}`}><BarChart3 className="mr-1 inline h-3.5 w-3.5" /> analytics</button></div>
         <div className="flex max-w-full items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span className={`h-2 w-2 rounded-full ${portfolio?.status === "published" ? "bg-emerald-500" : "bg-amber-500"}`} /> {portfolio?.status === "published" ? "live" : "draft"} · <span className="truncate">{publicUrl}</span><button onClick={copyUrl} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="copy public URL">{copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}</button></div>
       </div>
 
-      {tab === "edit" && <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
-        <div className="flex flex-col gap-6">
-          <section className="overflow-hidden rounded-2xl border border-[#E2EAF4] bg-[#0C1E36] text-white shadow-sm dark:border-slate-700">
+      {tab === "edit" && <div className="grid min-h-[680px] overflow-hidden rounded-xl border border-[#E2EAF4] bg-white dark:border-slate-800 dark:bg-slate-900 2xl:grid-cols-[190px_minmax(0,1fr)_minmax(380px,0.85fr)]">
+        <aside className="border-b border-[#E2EAF4] bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40 2xl:border-b-0 2xl:border-r">
+          <nav className="grid grid-cols-2 gap-1 sm:grid-cols-4 2xl:sticky 2xl:top-5 2xl:grid-cols-1">
+            {([
+              { key: "profile", label: "profile", sub: "identity & contact", icon: UserRound },
+              { key: "work", label: "selected work", sub: `${content.projects.length} projects`, icon: FolderKanban },
+              { key: "services", label: "services", sub: `${content.services.length} offers`, icon: BriefcaseBusiness },
+              { key: "design", label: "design & SEO", sub: "template & visibility", icon: Settings2 },
+            ] as const).map(({ key, label, sub, icon: Icon }) => (
+              <button key={key} onClick={() => setEditorSection(key)} className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition ${editorSection === key ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-blue-300 dark:ring-slate-700" : "text-slate-600 hover:bg-white/70 dark:text-slate-400 dark:hover:bg-slate-800/70"}`}>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0"><span className="block truncate text-xs font-bold">{label}</span><span className="hidden truncate text-[10px] text-slate-400 2xl:block">{sub}</span></span>
+              </button>
+            ))}
+            <div className="col-span-2 mt-2 border-t border-slate-200 pt-3 dark:border-slate-700 sm:col-span-4 2xl:col-span-1">
+              <div className="flex items-center justify-between"><span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500"><Sparkles className="h-3.5 w-3.5 text-blue-500" /> readiness</span><span className="text-xs font-black text-[#0C1E36] dark:text-white">{readiness.score}%</span></div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${readiness.score}%` }} /></div>
+              <p className="mt-2 text-[10px] leading-4 text-slate-500">{readiness.completed} of {readiness.checks.length} quality signals complete.</p>
+            </div>
+          </nav>
+        </aside>
+        <div className="portfolio-editor-panels flex min-w-0 flex-col gap-5 p-5 sm:p-7" data-editor-section={editorSection}>
+          <section className="hidden">
             <div className="grid gap-6 p-6 sm:grid-cols-[160px_1fr] sm:items-center">
               <div className="relative mx-auto grid h-32 w-32 place-items-center rounded-full" style={{ background: `conic-gradient(#60A5FA ${readiness.score}%, rgba(255,255,255,.12) 0)` }}>
                 <div className="grid h-24 w-24 place-items-center rounded-full bg-[#0C1E36]">
@@ -261,7 +282,7 @@ export default function PortfolioDashboardPage() {
 
           <section className="rounded-2xl border border-[#E2EAF4] bg-white p-6 dark:border-slate-800 dark:bg-slate-900"><h2 className="mb-5 font-bold text-[#0C1E36] dark:text-white">appearance & visibility</h2><div className="grid gap-4 sm:grid-cols-3"><label className="flex flex-col gap-2"><span className={labelClass}>accent</span><input type="color" className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent dark:border-slate-700" value={theme.accent} onChange={(event) => { setTheme({ ...theme, accent: event.target.value }); setDirty(true); }} /></label><label className="flex flex-col gap-2"><span className={labelClass}>site mode</span><select className={inputClass} value={theme.mode} onChange={(event) => { setTheme({ ...theme, mode: event.target.value as PortfolioTheme["mode"] }); setDirty(true); }}><option value="light">light</option><option value="dark">dark</option></select></label><label className="flex flex-col gap-2"><span className={labelClass}>corners</span><select className={inputClass} value={theme.radius} onChange={(event) => { setTheme({ ...theme, radius: event.target.value as PortfolioTheme["radius"] }); setDirty(true); }}><option value="soft">soft</option><option value="sharp">sharp</option></select></label></div><div className="mt-5 flex items-center gap-3"><input id="about-visible" type="checkbox" checked={content.sections.find((section) => section.key === "about")?.visible ?? true} onChange={(event) => updateContent({ sections: content.sections.map((section) => section.key === "about" ? { ...section, visible: event.target.checked } : section) })} /><label htmlFor="about-visible" className="text-sm text-slate-600 dark:text-slate-300">show about section publicly</label></div><div className="mt-3 flex items-center gap-3"><input id="indexable" type="checkbox" checked={seo.indexable} onChange={(event) => { setSeo({ ...seo, indexable: event.target.checked }); setDirty(true); }} /><label htmlFor="indexable" className="text-sm text-slate-600 dark:text-slate-300">allow search engines to index my portfolio</label></div></section>
         </div>
-        <div className="hidden xl:block"><div className="sticky top-6 overflow-hidden rounded-2xl border border-[#E2EAF4] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"><div className="border-b border-[#E2EAF4] px-5 py-3 text-xs font-bold text-slate-500 dark:border-slate-800">live preview</div><div className="max-h-[calc(100vh-170px)] overflow-y-auto"><PortfolioRenderer content={content} theme={theme} templateKey={templateKey} /></div></div></div>
+        <div className="hidden border-l border-[#E2EAF4] bg-slate-100/60 p-3 dark:border-slate-800 dark:bg-slate-950/50 2xl:block"><div className="sticky top-5"><div className="mb-2 flex items-center justify-between px-1"><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">live preview</span><button onClick={() => setTab("preview")} className="text-[10px] font-bold text-blue-600">expand</button></div><div className="max-h-[calc(100vh-155px)] overflow-y-auto rounded-lg bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"><PortfolioRenderer content={content} theme={theme} templateKey={templateKey} /></div></div></div>
       </div>}
 
       {tab === "preview" && <div className="rounded-2xl border border-[#E2EAF4] bg-slate-100 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">

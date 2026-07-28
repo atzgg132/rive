@@ -5,6 +5,7 @@
 export type WaitlistResult = {
   success: boolean;
   alreadyJoined: boolean;
+  emailSent: boolean;
   message: string;
 };
 
@@ -25,6 +26,7 @@ export async function submitToWaitlist(
       return {
         success: false,
         alreadyJoined: true,
+        emailSent: false,
         message: data.message || "email address is already registered.",
       };
     }
@@ -32,6 +34,7 @@ export async function submitToWaitlist(
     return {
       success: response.ok,
       alreadyJoined: false,
+      emailSent: data.emailSent === true,
       message: data.message || "successfully submitted.",
     };
   } catch {
@@ -39,6 +42,7 @@ export async function submitToWaitlist(
     return {
       success: false,
       alreadyJoined: false,
+      emailSent: false,
       message: "we couldn't reach the server. please try again.",
     };
   }
