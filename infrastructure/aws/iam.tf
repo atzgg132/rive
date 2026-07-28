@@ -151,15 +151,15 @@ data "aws_iam_policy_document" "github_deploy" {
     resources = [aws_ecr_repository.app.arn]
   }
   statement {
-    actions = [
-      "ssm:SendCommand",
-      "ssm:GetCommandInvocation",
-      "ssm:ListCommandInvocations",
-    ]
+    actions = ["ssm:SendCommand"]
     resources = [
       aws_instance.app.arn,
       "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript",
     ]
+  }
+  statement {
+    actions   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
+    resources = ["*"]
   }
   statement {
     actions   = ["ec2:DescribeInstances", "ssm:DescribeInstanceInformation"]
