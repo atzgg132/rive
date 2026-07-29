@@ -201,13 +201,15 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: var(--text-primary);
+  /* Let a component own its contrast. This prevents light typography inside
+     dark panels from being overwritten by a late global rule. */
+  color: inherit;
 }
 
 p {
   font-family: var(--font-body);
   line-height: 1.65;
-  color: var(--text-secondary);
+  color: inherit;
   font-weight: 500;
 }
 
