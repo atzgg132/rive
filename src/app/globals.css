@@ -266,3 +266,30 @@ p {
   border-radius: 16px;
   box-shadow: 0 4px 20px -2px color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
+
+/* Marketing primitives */
+.rive-primary-button,
+.rive-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  border-radius: .75rem;
+  font-size: .875rem;
+  font-weight: 800;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+
+.rive-primary-button {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: white;
+  padding: .65rem 1rem;
+  box-shadow: 0 10px 24px rgb(37 99 235 / .2);
+}
+
+.rive-primary-button:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgb(37 99 235 / .28); }
+.rive-secondary-button { border: 1px solid rgb(148 163 184 / .35); background: rgb(255 255 255 / .7); color: #334155; }
+.dark .rive-secondary-button { background: rgb(15 23 42 / .65); color: #e2e8f0; border-color: rgb(148 163 184 / .25); }
+.rive-secondary-button:hover { background: white; }
+.dark .rive-secondary-button:hover { background: #172033; }
+.rive-eyebrow { display: inline-flex; align-items: center; gap: .5rem; border: 1px solid rgb(37 99 235 / .16); border-radius: 999px; background: rgb(239 246 255 / .8); color: #1d4ed8; padding: .45rem .75rem; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.dark .rive-eyebrow { border-color: rgb(96 165 250 / .25); background: rgb(30 64 175 / .18); color: #bfdbfe; }

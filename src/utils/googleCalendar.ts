@@ -389,7 +389,7 @@ export async function watchGoogleCalendar(externalCalendarId: string) {
     include: { connection: true },
   });
   const config = googleConfig();
-  if (!config.appUrl.startsWith("https://")) return;
+  if (!config.appUrl.startsWith("https://")) return null;
   const id = crypto.randomUUID();
   const channelToken = crypto.randomBytes(24).toString("base64url");
   const response = await googleFetch<{ resourceId: string; expiration?: string }>(
@@ -416,6 +416,7 @@ export async function watchGoogleCalendar(externalCalendarId: string) {
       expiresAt: response.expiration ? new Date(Number(response.expiration)) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
+  return id;
 }
 
 function eventToGooglePayload(event: {

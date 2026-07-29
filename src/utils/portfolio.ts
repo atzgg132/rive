@@ -176,6 +176,7 @@ const MAX_INLINE_IMAGE_LENGTH = 7_000_000;
 const MAX_TEXT_LENGTH = 5_000;
 const HTTP_URL = /^https?:\/\/[^\s<>]+$/i;
 const INLINE_IMAGE = /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
+const MANAGED_IMAGE = /^\/api\/public\/assets\/portfolio\/[a-z0-9%/-]+\.(?:jpg|png|webp|gif)$/i;
 
 function isSafePortfolioUrl(value: unknown): boolean {
   return typeof value === "string" && value.length <= 2_000 && HTTP_URL.test(value);
@@ -187,7 +188,7 @@ export function validatePortfolioContent(value: unknown): string | null {
   const input = value as Partial<PortfolioContent>;
   if (input.profileImageUrl) {
     if (typeof input.profileImageUrl !== "string" || input.profileImageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Profile image is too large.";
-    if (!INLINE_IMAGE.test(input.profileImageUrl) && !isSafePortfolioUrl(input.profileImageUrl)) return "Profile image must be an HTTPS URL or supported image upload.";
+    if (!INLINE_IMAGE.test(input.profileImageUrl) && !MANAGED_IMAGE.test(input.profileImageUrl) && !isSafePortfolioUrl(input.profileImageUrl)) return "Profile image must be an HTTPS URL or supported image upload.";
   }
   if (input.projects !== undefined) {
     if (!Array.isArray(input.projects) || input.projects.length > 30) return "Add up to 30 projects.";
@@ -201,7 +202,7 @@ export function validatePortfolioContent(value: unknown): string | null {
       }
       if (item.imageUrl) {
         if (typeof item.imageUrl !== "string" || item.imageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Project images are too large.";
-        if (!INLINE_IMAGE.test(item.imageUrl) && !isSafePortfolioUrl(item.imageUrl)) return "Project images must be HTTPS URLs or supported image uploads.";
+        if (!INLINE_IMAGE.test(item.imageUrl) && !MANAGED_IMAGE.test(item.imageUrl) && !isSafePortfolioUrl(item.imageUrl)) return "Project images must be HTTPS URLs or supported image uploads.";
       }
       if (item.url && !isSafePortfolioUrl(item.url)) return "Project links must use HTTPS URLs.";
       if (item.tools && (!Array.isArray(item.tools) || item.tools.length > 30 || item.tools.some((tool) => typeof tool !== "string" || tool.length > 80))) return "Project tools are invalid.";
@@ -210,7 +211,7 @@ export function validatePortfolioContent(value: unknown): string | null {
         if (!Array.isArray(item.gallery) || item.gallery.length > 12) return "Add up to 12 gallery images per project.";
         for (const image of item.gallery) {
           if (!image || typeof image !== "object" || typeof image.id !== "string" || image.id.length > 120) return "Gallery images are invalid.";
-          if (typeof image.url !== "string" || image.url.length > MAX_INLINE_IMAGE_LENGTH || (!INLINE_IMAGE.test(image.url) && !isSafePortfolioUrl(image.url))) return "Gallery images must be HTTPS URLs or supported image uploads.";
+          if (typeof image.url !== "string" || image.url.length > MAX_INLINE_IMAGE_LENGTH || (!INLINE_IMAGE.test(image.url) && !MANAGED_IMAGE.test(image.url) && !isSafePortfolioUrl(image.url))) return "Gallery images must be HTTPS URLs or supported image uploads.";
           if (typeof image.alt !== "string" || image.alt.length > 300 || typeof image.caption !== "string" || image.caption.length > 500) return "Gallery image details are too long.";
         }
       }

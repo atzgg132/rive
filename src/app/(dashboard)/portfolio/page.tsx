@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Eye, ExternalLink, Globe2, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Monitor, Smartphone, Tablet, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_PORTFOLIO_CONTENT, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioProject, type PortfolioTheme } from "@/utils/portfolio";
+import { uploadImage } from "@/utils/clientUploads";
 
 /* Validated portfolio uploads and remote image hosts cannot use a static Next image allowlist. */
 /* eslint-disable @next/next/no-img-element */
@@ -45,7 +46,7 @@ function CaseStudyFields({ project, onChange }: { project: PortfolioProject; onC
     onChange({ gallery: [...(project.gallery || []), { id: id("gallery"), url: "", alt: "", caption: "" }] });
   };
 
-  const uploadGalleryImages = (files: FileList | null) => {
+  const uploadGalleryImages = async (files: FileList | null) => {
     if (!files?.length) return;
     const remaining = 12 - (project.gallery || []).length;
     const selected = Array.from(files).slice(0, remaining);
@@ -57,13 +58,11 @@ function CaseStudyFields({ project, onChange }: { project: PortfolioProject; onC
       toast.error("gallery images must be 1.5 MB or smaller");
       return;
     }
-    Promise.all(selected.map((file) => new Promise<NonNullable<PortfolioProject["gallery"]>[number]>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => typeof reader.result === "string"
-        ? resolve({ id: id("gallery"), url: reader.result, alt: file.name.replace(/\.[^.]+$/, ""), caption: "" })
-        : reject(new Error("could not read image"));
-      reader.onerror = () => reject(new Error("could not read image"));
-      reader.readAsDataURL(file);
+    Promise.all(selected.map(async (file) => ({
+      id: id("gallery"),
+      url: await uploadImage(file),
+      alt: file.name.replace(/\.[^.]+$/, ""),
+      caption: "",
     }))).then((images) => {
       onChange({ gallery: [...(project.gallery || []), ...images] });
       toast.success(`${images.length} gallery image${images.length === 1 ? "" : "s"} added`);
@@ -179,7 +178,7 @@ export default function PortfolioDashboardPage() {
     setDirty(true);
   };
 
-  const handleImageUpload = (projectId: string, file: File | undefined) => {
+  const handleImageUpload = async (projectId: string, file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("choose an image file");
@@ -189,14 +188,13 @@ export default function PortfolioDashboardPage() {
       toast.error("images must be 5 MB or smaller");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const imageUrl = typeof reader.result === "string" ? reader.result : "";
-      if (!imageUrl) return;
+    try {
+      const imageUrl = await uploadImage(file);
       updateContent({ projects: content.projects.map((item) => item.id === projectId ? { ...item, imageUrl } : item) });
       toast.success("image added");
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "could not upload image");
+    }
   };
 
   async function save(
@@ -233,7 +231,7 @@ export default function PortfolioDashboardPage() {
     void save(undefined, nextContent, message);
   };
 
-  const handleProfileImageUpload = (file: File | undefined) => {
+  const handleProfileImageUpload = async (file: File | undefined) => {
     if (!file) return;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       toast.error("choose a PNG, JPEG, or WebP image");
@@ -243,13 +241,11 @@ export default function PortfolioDashboardPage() {
       toast.error("profile photos must be 2 MB or smaller");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== "string") return;
-      persistProfileImage(reader.result, "profile photo saved");
-    };
-    reader.onerror = () => toast.error("could not read that image");
-    reader.readAsDataURL(file);
+    try {
+      persistProfileImage(await uploadImage(file), "profile photo saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "could not upload profile photo");
+    }
   };
 
   const copyUrl = async () => {

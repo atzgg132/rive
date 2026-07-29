@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { prisma } from "@/utils/db";
 
 export type EmailType =
@@ -7,7 +8,8 @@ export type EmailType =
   | "registration_complete"
   | "password_reset"
   | "password_changed"
-  | "login_success";
+  | "login_success"
+  | "contact_message";
 
 export type EmailResult = {
   sent: boolean;
@@ -18,6 +20,9 @@ export type EmailResult = {
 const smtpConfigured = Boolean(
   process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS,
 );
+const emailProvider = process.env.EMAIL_PROVIDER || "smtp";
+const sesConfigured = emailProvider === "ses" && Boolean(process.env.AWS_REGION);
+const ses = sesConfigured ? new SESv2Client({ region: process.env.AWS_REGION }) : null;
 
 const transporter = smtpConfigured
   ? nodemailer.createTransport({
@@ -123,15 +128,15 @@ async function deliver({
   html: string;
   text: string;
 }): Promise<EmailResult> {
-  if (!transporter) {
-    console.warn(`email: ${type} skipped because SMTP is not configured`);
+  if (!ses && !transporter) {
+    console.warn(`email: ${type} skipped because an email provider is not configured`);
     await prisma.emailDelivery
       .create({
         data: {
           recipient: to,
           type,
           status: "skipped",
-          error: "SMTP is not configured",
+          error: "Email provider is not configured",
         },
       })
       .catch((error) => console.error("email: failed to record skipped delivery", error));
@@ -139,25 +144,47 @@ async function deliver({
   }
 
   try {
-    const info = await transporter.sendMail({
-      from: fromAddress,
-      replyTo,
-      to,
-      subject,
-      html,
-      text,
-    });
+    const messageId = ses
+      ? (
+          await ses.send(
+            new SendEmailCommand({
+              FromEmailAddress: fromAddress,
+              ReplyToAddresses: [replyTo],
+              Destination: { ToAddresses: [to] },
+              Content: {
+                Simple: {
+                  Subject: { Data: subject, Charset: "UTF-8" },
+                  Body: {
+                    Html: { Data: html, Charset: "UTF-8" },
+                    Text: { Data: text, Charset: "UTF-8" },
+                  },
+                },
+              },
+              ConfigurationSetName: process.env.SES_CONFIGURATION_SET || undefined,
+            }),
+          )
+        ).MessageId
+      : (
+          await transporter!.sendMail({
+            from: fromAddress,
+            replyTo,
+            to,
+            subject,
+            html,
+            text,
+          })
+        ).messageId;
     await prisma.emailDelivery
       .create({
         data: {
           recipient: to,
           type,
           status: "sent",
-          providerMessageId: info.messageId,
+          providerMessageId: messageId,
         },
       })
       .catch((error) => console.error("email: failed to record successful delivery", error));
-    return { sent: true, messageId: info.messageId };
+    return { sent: true, messageId };
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 500) : "Unknown delivery error";
     console.error(`email: ${type} delivery failed`, error);
@@ -303,5 +330,37 @@ export function sendLoginSuccessEmail(to: string): Promise<EmailResult> {
       recipient: to,
     }),
     text: `New sign-in to your rive. account on ${signedInAt} IST.\n\nIf this was you, no action is needed. If not, reset your password immediately: ${appUrl}/forgot-password`,
+  });
+}
+
+export function sendContactMessageEmail(input: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}): Promise<EmailResult> {
+  const safeName = escapeHtml(input.name);
+  const safeEmail = escapeHtml(input.email);
+  const safeSubject = escapeHtml(input.subject);
+  const safeMessage = escapeHtml(input.message).replace(/\n/g, "<br>");
+
+  return deliver({
+    to: "hello@rive.work",
+    type: "contact_message",
+    subject: `[rive. contact] ${input.subject}`,
+    html: baseTemplate({
+      eyebrow: "website enquiry",
+      title: input.subject,
+      intro: `${input.name} sent a message through rive.work.`,
+      body: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">From:</strong> ${safeName} &lt;${safeEmail}&gt;</td></tr>
+        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">Subject:</strong> ${safeSubject}</td></tr>
+        <tr><td style="padding:18px 0 0;color:#42556F;font-size:15px;line-height:25px">${safeMessage}</td></tr>
+      </table>`,
+      action: "Reply to sender",
+      actionUrl: `mailto:${encodeURIComponent(input.email)}`,
+      recipient: "hello@rive.work",
+    }),
+    text: `${input.subject}\n\nFrom: ${input.name} <${input.email}>\n\n${input.message}`,
   });
 }

@@ -47,3 +47,12 @@ next-env.d.ts
 # server specific
 server/.env
 server/dist/
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+infrastructure/aws/.build/*.zip

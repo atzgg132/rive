@@ -25,6 +25,7 @@ import {
 import { toast, Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { uploadImage } from "@/utils/clientUploads";
 
 /* User uploads are validated data URLs or remote hosts unavailable to a static image allowlist. */
 /* eslint-disable @next/next/no-img-element */
@@ -149,14 +150,16 @@ export default function OnboardingPage() {
     setStep(2);
   }
 
-  function handleAvatar(file?: File) {
+  async function handleAvatar(file?: File) {
     if (!file) return;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 1.8 * 1024 * 1024) {
       return toast.error("Use a PNG, JPEG, or WebP image under 1.8 MB.");
     }
-    const reader = new FileReader();
-    reader.onload = () => setAvatarUrl(typeof reader.result === "string" ? reader.result : "");
-    reader.readAsDataURL(file);
+    try {
+      setAvatarUrl(await uploadImage(file));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Profile photo could not be uploaded.");
+    }
   }
 
   async function runImport(mode: "preview" | "commit") {

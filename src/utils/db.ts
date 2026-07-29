@@ -20,9 +20,16 @@ if (globalForPrisma.prisma) {
 
   const pool = new Pool({
     connectionString,
-    ssl: {
-      rejectUnauthorized: false
-    }
+    max: Number.parseInt(process.env.DATABASE_POOL_MAX || "10", 10),
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+    ssl: process.env.DATABASE_SSL === "disable"
+      ? false
+      : {
+          rejectUnauthorized:
+            process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true" ||
+            (process.env.NODE_ENV === "production" && process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false"),
+        },
   });
 
   const adapter = new PrismaPg(pool);
@@ -34,11 +41,3 @@ if (globalForPrisma.prisma) {
 }
 
 export const prisma = prismaInstance;
-
-// Mock functions for legacy raw SQL compatibility
-export function getDbPool(): Record<string, never> {
-  return {};
-}
-export async function initDbSchema(): Promise<void> {
-  return;
-}
