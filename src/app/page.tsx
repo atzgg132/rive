@@ -1,51 +1,91 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Navbar from "@/components/Navbar";
-import Hero from "@/components/Hero";
-import Features from "@/components/Features";
-import AISection from "@/components/AISection";
-import GigBoard from "@/components/GigBoard";
-import RemitSection from "@/components/RemitSection";
-import Faq from "@/components/Faq";
-import Pricing from "@/components/Pricing";
-import FinalCTA from "@/components/FinalCTA";
-import Footer from "@/components/Footer";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import {
+  ArrowRight, BarChart3, BriefcaseBusiness, CalendarDays, Check, ChevronDown,
+  Clock3, FileText, Globe2, Menu, MousePointer2, Palette, ReceiptText,
+  Sparkles, Users, X, Zap,
+} from "lucide-react";
 import Modal from "@/components/Modal";
+import RiveLogo from "@/components/RiveLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
+const productFeatures = [
+  { icon: BriefcaseBusiness, title: "Projects that move", text: "Turn scattered work into clear projects, milestones, tasks, and next actions." },
+  { icon: Users, title: "Clients with context", text: "Keep contacts, conversations, projects, invoices, and payment history together." },
+  { icon: ReceiptText, title: "Revenue you can trust", text: "Create invoices, track what is due, and see what your work is really earning." },
+  { icon: CalendarDays, title: "A calendar for the work", text: "Plan delivery, client calls, and deadlines in the same place as your projects." },
+  { icon: Globe2, title: "A portfolio that sells", text: "Publish a polished, editable portfolio with case studies, services, and analytics." },
+  { icon: BarChart3, title: "Signals, not spreadsheets", text: "Understand cash flow, margins, workload, portfolio traffic, and what needs attention." },
+];
+
+const audiences = ["Freelancers", "Consultants", "Creators", "Studios", "Small teams"];
 
 export default function Home() {
-  const [modal, setModal] = useState<{ open: boolean; type: "login" | "waitlist" | "demo" }>({
-    open: false,
-    type: "waitlist",
-  });
+  const [modal, setModal] = useState<{ open: boolean; type: "login" | "waitlist" | "demo" }>({ open: false, type: "waitlist" });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [faq, setFaq] = useState<number | null>(0);
 
   useEffect(() => {
-    const handleOpen = (e: Event) => {
-      const type = (e as CustomEvent).detail;
-      setModal({ open: true, type });
-    };
-    window.addEventListener("open-modal", handleOpen);
-    return () => window.removeEventListener("open-modal", handleOpen);
+    const open = (event: Event) => setModal({ open: true, type: (event as CustomEvent).detail });
+    window.addEventListener("open-modal", open);
+    return () => window.removeEventListener("open-modal", open);
   }, []);
 
-  return (
-    <main className="bg-background dark:bg-background min-h-screen">
-      <Navbar />
-      <Hero />
-      <Features />
-      <AISection />
-      <GigBoard />
-      <RemitSection />
-      <Faq />
-      <Pricing />
-      <FinalCTA />
-      <Footer />
+  const openWaitlist = () => setModal({ open: true, type: "waitlist" });
 
-      <Modal
-        isOpen={modal.open}
-        onClose={() => setModal((prev) => ({ ...prev, open: false }))}
-        type={modal.type}
-      />
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#0c1e36] dark:bg-[#070d19] dark:text-white">
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/70 bg-[#f7f9fc]/85 backdrop-blur-xl dark:border-white/10 dark:bg-[#070d19]/85">
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 sm:px-8">
+          <Link href="/" aria-label="rive home"><RiveLogo height={30} /></Link>
+          <div className="hidden items-center gap-8 md:flex">
+            <a href="#product" className="text-sm font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300">Product</a>
+            <a href="#how-it-works" className="text-sm font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300">How it works</a>
+            <a href="#for-you" className="text-sm font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300">Who it is for</a>
+            <Link href="/changelog" className="text-sm font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300">Changelog</Link>
+          </div>
+          <div className="hidden items-center gap-3 md:flex"><ThemeToggle /><Link href="/login" className="rounded-xl px-4 py-2 text-sm font-bold hover:bg-slate-100 dark:hover:bg-white/10">Log in</Link><button onClick={openWaitlist} className="rive-primary-button">Get started free <ArrowRight size={16} /></button></div>
+          <div className="flex items-center gap-2 md:hidden"><ThemeToggle /><button className="rounded-lg p-2" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button></div>
+        </div>
+        {menuOpen && <div className="border-t border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#0d1626] md:hidden"><div className="flex flex-col gap-2"><a href="#product" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-3 font-semibold">Product</a><a href="#how-it-works" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-3 font-semibold">How it works</a><Link href="/login" className="rounded-xl border border-slate-200 px-3 py-3 text-center font-bold dark:border-white/10">Log in</Link><button onClick={openWaitlist} className="rive-primary-button justify-center">Get started free <ArrowRight size={16} /></button></div></div>}
+      </nav>
+
+      <section className="relative px-5 pb-20 pt-36 sm:px-8 sm:pt-44">
+        <div className="pointer-events-none absolute left-1/2 top-24 h-[560px] w-[920px] -translate-x-1/2 rounded-full bg-blue-400/10 blur-[130px] dark:bg-blue-600/15" />
+        <div className="relative mx-auto max-w-5xl text-center">
+          <div className="rive-eyebrow"><span className="h-2 w-2 rounded-full bg-blue-500" /> The operating system for independent work</div>
+          <h1 className="mt-7 text-5xl font-black leading-[.98] tracking-[-.055em] sm:text-7xl lg:text-[88px]">Run the work.<br /><span className="gradient-text">Grow the business.</span></h1>
+          <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300 sm:text-xl">Rive brings projects, clients, money, time, and your public presence into one calm, connected workspace—so you can spend less time managing the business and more time doing your best work.</p>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"><button onClick={openWaitlist} className="rive-primary-button px-6 py-3.5 text-base">Start building for free <ArrowRight size={18} /></button><button onClick={() => setModal({ open: true, type: "demo" })} className="rive-secondary-button px-6 py-3.5 text-base"><MousePointer2 size={16} /> See how Rive works</button></div>
+          <p className="mt-4 text-xs font-semibold text-slate-500">One workspace. No credit card. Built for the way you actually work.</p>
+        </div>
+        <div className="relative mx-auto mt-16 max-w-6xl rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_30px_100px_-35px_rgba(12,30,54,.38)] dark:border-slate-700 dark:bg-slate-900 sm:p-3">
+          <div className="flex items-center gap-2 rounded-t-2xl border-b border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950"><span className="h-2.5 w-2.5 rounded-full bg-red-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /><div className="mx-auto rounded-md bg-white px-5 py-1 text-[10px] font-bold text-slate-400 shadow-sm dark:bg-slate-900">app.rive.work</div></div>
+          <div className="grid min-h-[360px] grid-cols-1 bg-[#f7f9fc] dark:bg-[#0b1220] sm:grid-cols-[170px_1fr]">
+            <aside className="hidden border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:block"><div className="mb-8 font-black">rive<span className="text-blue-600">.</span></div>{["Overview", "Calendar", "Projects", "Clients", "Revenue", "Portfolio"].map((item, i) => <div key={item} className={`mb-2 rounded-lg px-3 py-2 text-xs font-bold ${i === 0 ? "bg-blue-50 text-blue-600 dark:bg-blue-950/50" : "text-slate-400"}`}>{item}</div>)}</aside>
+            <div className="p-5 sm:p-7"><div className="flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Tuesday, July 29</p><h3 className="mt-2 text-xl font-black sm:text-2xl">Your workspace overview</h3></div><div className="hidden rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white sm:block">+ New project</div></div><div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">{[["Revenue collected", "$16,875", "#10b981"],["Active projects", "3", "#3b82f6"],["Expenses logged", "$542", "#f43f5e"],["Net earnings", "$16,333", "#8b5cf6"]].map(([label, value, color]) => <div key={label} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-3 text-lg font-black" style={{ color }}>{value}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">Updated from your work</p></div>)}</div><div className="mt-4 grid gap-3 lg:grid-cols-[1.5fr_1fr]"><div className="h-36 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Revenue & expenses</p><div className="mt-5 flex h-16 items-end gap-2">{[34,48,42,64,56,78,70,92].map((height, i) => <span key={i} className="flex-1 rounded-t bg-gradient-to-t from-blue-600 to-sky-300" style={{ height: `${height}%`, opacity: .45 + i * .06 }} />)}</div></div><div className="h-36 rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/30"><p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Next up</p><p className="mt-4 text-sm font-black">Client review call</p><p className="mt-1 text-xs font-semibold text-slate-500">Today · 4:00 PM</p><div className="mt-4 text-[10px] font-bold text-blue-600">Open calendar →</div></div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="for-you" className="border-y border-slate-200/80 bg-white px-5 py-8 dark:border-white/10 dark:bg-[#0b1220] sm:px-8"><div className="mx-auto flex max-w-6xl flex-col items-center gap-5 sm:flex-row sm:justify-between"><p className="text-sm font-bold text-slate-500">Made for people building independently</p><div className="flex flex-wrap justify-center gap-2">{audiences.map((a) => <span key={a} className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">{a}</span>)}</div></div></section>
+
+      <section id="product" className="px-5 py-24 sm:px-8 sm:py-32"><div className="mx-auto max-w-6xl"><div className="max-w-2xl"><div className="rive-eyebrow">Everything connected</div><h2 className="mt-5 text-4xl font-black tracking-[-.04em] sm:text-6xl">The less you manage,<br /><span className="text-blue-600">the more you can make.</span></h2><p className="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-300">Rive replaces the tabs, tools, and mental overhead that make independent work feel harder than it needs to be.</p></div><div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{productFeatures.map(({ icon: Icon, title, text }) => <div key={title} className="group rounded-2xl border border-slate-200 bg-white p-6 transition hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/5 dark:border-slate-800 dark:bg-slate-900"><div className="mb-12 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300"><Icon size={21} /></div><h3 className="text-lg font-black">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{text}</p></div>)}</div></div></section>
+
+      <section id="how-it-works" className="bg-[#0c1e36] px-5 py-24 text-white sm:px-8 sm:py-32"><div className="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[.9fr_1.1fr] lg:items-center"><div><div className="rive-eyebrow border-blue-400/30 bg-blue-400/10 text-blue-200">From first login to momentum</div><h2 className="mt-5 text-4xl font-black tracking-[-.04em] sm:text-6xl">A better first day<br />at work.</h2><p className="mt-6 max-w-md text-lg leading-8 text-blue-100/70">Rive starts with what you already know, helps you import the rest, and turns an empty dashboard into a useful command centre.</p><button onClick={openWaitlist} className="mt-8 rive-primary-button bg-white text-[#0c1e36] shadow-none hover:bg-blue-50">Build your workspace <ArrowRight size={17} /></button></div><div className="space-y-3">{[[Sparkles, "Tell us what you do", "Choose your work type and goals. Rive shapes the workspace around you."],[FileText, "Bring your work in", "Import clients, projects, invoices, and expenses with templates or guided setup."],[Zap, "See what matters", "Get a clear next action, useful financial signals, and a professional presence to share."]].map(([Icon, title, text], i) => <div key={title as string} className="flex gap-5 rounded-2xl border border-white/10 bg-white/[.06] p-5"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-300"><Icon size={19} /></div><div><p className="text-xs font-bold text-blue-300">0{i + 1}</p><h3 className="mt-1 font-black">{title as string}</h3><p className="mt-1 text-sm leading-6 text-blue-100/60">{text as string}</p></div></div>)}</div></div></section>
+
+      <section className="px-5 py-24 sm:px-8 sm:py-32"><div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2"><div className="rounded-3xl bg-blue-600 p-8 text-white sm:p-12"><Palette className="mb-20" size={28} /><h2 className="text-4xl font-black tracking-[-.04em] sm:text-5xl">Your work deserves<br />a better front door.</h2><p className="mt-5 max-w-md leading-7 text-blue-100">Create one polished portfolio with editable templates, case studies, services, testimonials, and a shareable URL.</p><div className="mt-8 flex flex-wrap gap-2">{["Editable templates", "File uploads", "Public URL", "Portfolio analytics"].map((t) => <span key={t} className="rounded-full bg-white/15 px-3 py-2 text-xs font-bold">{t}</span>)}</div><Link href="/portfolio-preview" className="mt-9 inline-flex items-center gap-2 font-black hover:gap-3">Explore portfolios <ArrowRight size={17} /></Link></div><div className="rounded-3xl border border-slate-200 bg-white p-8 dark:border-slate-800 dark:bg-slate-900 sm:p-12"><BarChart3 className="mb-20 text-emerald-500" size={28} /><h2 className="text-4xl font-black tracking-[-.04em] sm:text-5xl">Know what is working.</h2><p className="mt-5 max-w-md leading-7 text-slate-500 dark:text-slate-400">Understand portfolio visits, engagement, revenue, margin, overdue invoices, and workload without building another spreadsheet.</p><div className="mt-8 grid grid-cols-2 gap-3">{[["Portfolio views", "+38%"],["Collection health", "61%"],["Profit margin", "97%"],["Next action", "Today"]].map(([a,b]) => <div key={a} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{a}</p><p className="mt-2 text-xl font-black text-slate-900 dark:text-white">{b}</p></div>)}</div></div></div></section>
+
+      <section className="border-y border-slate-200 bg-white px-5 py-24 dark:border-white/10 dark:bg-[#0b1220] sm:px-8"><div className="mx-auto max-w-4xl text-center"><Clock3 className="mx-auto text-blue-600" size={28} /><h2 className="mt-5 text-4xl font-black tracking-[-.04em] sm:text-5xl">Less admin. More momentum.</h2><p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-500 dark:text-slate-400">Stop stitching together tools that were never designed to work together. Rive keeps the business side close to the work.</p><div className="mt-10 grid gap-3 text-left sm:grid-cols-3">{[[Check,"Everything in one place"],[Check,"Built for independent work"],[Check,"Ready when you are"]].map(([Icon, text]) => <div key={text as string} className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-4 text-sm font-bold dark:border-slate-800"><Icon size={17} className="text-emerald-500" />{text as string}</div>)}</div></div></section>
+
+      <section className="px-5 py-24 sm:px-8 sm:py-32"><div className="mx-auto max-w-3xl text-center"><div className="rive-eyebrow">Questions, answered</div><h2 className="mt-5 text-4xl font-black tracking-[-.04em] sm:text-5xl">A calmer way to work is overdue.</h2><div className="mt-10 text-left">{[["What is Rive?","Rive is a connected operating system for freelancers, creators, consultants, and small teams. It brings the work and the business behind it into one workspace."],["Can I use Rive for my kind of work?","Yes. Start with the workspace you need today—projects, clients, revenue, expenses, calendar, and portfolio—and grow from there."],["Is my portfolio really public?","You choose when to publish it. Once live, it gets a shareable Rive URL and its own analytics dashboard."],["How do I get started?","Join the waitlist or sign in if you already have access. Onboarding guides you through setup and importing what you already have."]].map(([q,a], i) => <div key={q} className="border-b border-slate-200 dark:border-slate-800"><button className="flex w-full items-center justify-between gap-5 py-5 text-left font-black" onClick={() => setFaq(faq === i ? null : i)}>{q}<ChevronDown size={18} className={`shrink-0 transition ${faq === i ? "rotate-180 text-blue-600" : "text-slate-400"}`} /></button>{faq === i && <p className="max-w-2xl pb-5 text-sm leading-7 text-slate-500 dark:text-slate-400">{a}</p>}</div>)}</div></div></section>
+
+      <section className="px-5 pb-24 sm:px-8 sm:pb-32"><div className="mx-auto max-w-6xl overflow-hidden rounded-[32px] bg-gradient-to-br from-blue-600 to-indigo-700 px-6 py-16 text-center text-white sm:px-12"><Sparkles className="mx-auto mb-6" size={26} /><h2 className="text-4xl font-black tracking-[-.04em] sm:text-6xl">Make the work feel lighter.</h2><p className="mx-auto mt-5 max-w-xl text-lg leading-8 text-blue-100">Your next project, client, invoice, and idea can live in the same place.</p><button onClick={openWaitlist} className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-black text-blue-700 shadow-xl shadow-blue-950/20 hover:bg-blue-50">Get started free <ArrowRight size={17} /></button></div></section>
+
+      <footer className="border-t border-slate-200 px-5 py-10 dark:border-slate-800 sm:px-8"><div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 sm:flex-row"><div><RiveLogo height={28} /><p className="mt-2 text-xs font-semibold text-slate-400">The operating system for independent work.</p></div><div className="flex flex-wrap justify-center gap-5 text-xs font-bold text-slate-500"><Link href="/about">About</Link><Link href="/changelog">Changelog</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><a href="mailto:hello@rive.work">hello@rive.work</a></div><p className="text-xs font-semibold text-slate-400">© 2026 rive.</p></div></footer>
+      <Modal isOpen={modal.open} onClose={() => setModal({ ...modal, open: false })} type={modal.type} />
     </main>
   );
 }
