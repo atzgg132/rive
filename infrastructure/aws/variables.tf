@@ -48,6 +48,30 @@ variable "google_calendar_client_secret" {
   description = "Google OAuth client secret. Replace after callback domains exist."
 }
 
+variable "zoho_smtp_user" {
+  type        = string
+  default     = "hello@rive.work"
+  description = "Zoho Mail account used for production transactional email."
+}
+
+variable "zoho_smtp_password" {
+  type        = string
+  sensitive   = true
+  default     = "UNCONFIGURED"
+  description = "Zoho app password for production SMTP. Supply through TF_VAR_zoho_smtp_password; never commit it."
+}
+
+variable "email_provider" {
+  type        = string
+  default     = "zoho"
+  description = "Production transactional provider. Keep zoho until SES production access is approved, then set ses."
+
+  validation {
+    condition     = contains(["zoho", "ses"], var.email_provider)
+    error_message = "email_provider must be either zoho or ses."
+  }
+}
+
 variable "environment_domains" {
   type = map(string)
   default = {

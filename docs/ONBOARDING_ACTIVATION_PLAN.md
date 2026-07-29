@@ -50,7 +50,7 @@ The first production version accepts multiple CSV files and:
 
 Future versions add:
 
-- native Zoho, QuickBooks, Xero, FreshBooks, Stripe, bank, Drive, and Calendar connectors;
+- native Zoho, QuickBooks, Xero, FreshBooks, Stripe, bank, and Drive connectors;
 - saved field mappings per source;
 - background imports with resumable jobs;
 - reconciliation and rollback;

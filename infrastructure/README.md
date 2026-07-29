@@ -6,7 +6,7 @@ Rive runs in `ap-south-1` on a deliberately small AWS footprint:
 - one private, encrypted RDS PostgreSQL instance with separate databases and roles;
 - one private S3 asset bucket per environment;
 - ECR for immutable application and migration images;
-- SES for production transactional email;
+- Zoho Mail SMTP for production transactional email, with SES resources retained as a fallback;
 - EventBridge and Lambda for calendar outbox and webhook maintenance;
 - SSM Parameter Store and Session Manager instead of SSH or access keys;
 - CloudWatch and AWS Budgets for operational and cost controls.
@@ -49,6 +49,43 @@ terraform -chdir=infrastructure/aws plan `
 Never commit `.tfvars`, state files, plans, credentials, database exports, or
 generated environment files.
 
+Before planning or applying email-related infrastructure, provide the Zoho app
+password only in the current shell:
+
+```powershell
+$env:TF_VAR_zoho_smtp_password = "<Zoho app password>"
+```
+
+The variable keeps Terraform from reverting the manually verified production
+SMTP parameter to the old SES provider configuration. Clear the shell variable
+after the apply.
+
+Production remains on Zoho while the SES account is in the sandbox. After AWS
+approves SES production access, select the AWS SDK-based provider before the
+Terraform plan:
+
+```powershell
+$env:TF_VAR_email_provider = "ses"
+```
+
+SES sends through the AWS API from the instance role. It does not require SMTP
+credentials or an outbound SMTP port.
+
+## Local development against AWS
+
+RDS is intentionally private. Local development connects to the `rive_dev`
+database through an authenticated SSM port-forwarding session:
+
+```powershell
+aws sso login
+npm run dev:aws
+```
+
+The helper reads the development database URL from SSM into the process, opens a
+temporary tunnel on local port 5433, verifies the RDS TLS certificate against
+the real endpoint, and closes the tunnel when Next.js exits. It never writes
+the database password to an environment file.
+
 ## Branch promotion
 
 | Branch | Runtime environment | Domain | Trigger |
@@ -72,8 +109,8 @@ records using the Terraform `application_public_ip` output:
 | A | `@` | application public IP | DNS only until cutover |
 | A | `www` | application public IP | DNS only until cutover |
 
-Do not change `@` or `www` until production validation and the final Neon write
-freeze. Caddy obtains and renews the origin certificates.
+The production cutover is complete. Caddy obtains and renews the origin
+certificates for the AWS-hosted application.
 
 SES DKIM records are Terraform outputs. Add each token as:
 
@@ -86,5 +123,5 @@ Preserve all MX, SPF, DMARC, Google verification, and existing mail records.
 ## Rollback
 
 Application rollback redeploys the previous Git SHA through the workflow.
-Database rollback uses the pre-release RDS snapshot or a forward migration.
-During final cutover, Vercel and Neon remain available for at least seven days.
+Database rollback uses an RDS snapshot or, preferably, a tested forward
+migration. Neon and Vercel are no longer part of the runtime architecture.

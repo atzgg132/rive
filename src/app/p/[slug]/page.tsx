@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import { createHash } from "crypto";
+import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { prisma } from "@/utils/db";
 import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
 import { isPortfolioPublished, mergePortfolioContent, DEFAULT_PORTFOLIO_THEME, type PortfolioTheme } from "@/utils/portfolio";
 
 type Props = { params: Promise<{ slug: string }> };
 
-async function loadPortfolio(slug: string) {
+const loadPortfolio = cache(async (slug: string) => {
   const portfolio = await prisma.portfolio.findUnique({ where: { slug } });
   if (!portfolio || !isPortfolioPublished(portfolio.status)) return null;
   return portfolio;
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -37,13 +39,12 @@ export default async function PublicPortfolioPage({ params }: Props) {
   const userAgent = requestHeaders.get("user-agent") || "";
   const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
   const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-  await prisma.portfolioView.create({
-    data: {
-      portfolioId: portfolio.id,
-      visitorHash,
-      referrer: requestHeaders.get("referer")?.slice(0, 500) || null,
-      deviceType: /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop",
-    },
+  const referrer = requestHeaders.get("referer")?.slice(0, 500) || null;
+  const deviceType = /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop";
+  after(async () => {
+    await prisma.portfolioView.create({
+      data: { portfolioId: portfolio.id, visitorHash, referrer, deviceType },
+    });
   });
 
   const theme = (portfolio.theme && typeof portfolio.theme === "object" ? portfolio.theme : DEFAULT_PORTFOLIO_THEME) as PortfolioTheme;

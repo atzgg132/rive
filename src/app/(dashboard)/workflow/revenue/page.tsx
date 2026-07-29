@@ -17,7 +17,6 @@ import {
 import { toast } from "sonner";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
-import { downloadInvoicePDF } from "@/utils/pdfGenerator";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 interface InvoiceItemForm {
@@ -455,7 +454,11 @@ export default function RevenuePage() {
                               </Button>
                             )}
                             <Button
-                              onClick={() => { downloadInvoicePDF(inv); setOpenDropdownId(null); }}
+                              onClick={async () => {
+                                setOpenDropdownId(null);
+                                const { downloadInvoicePDF } = await import("@/utils/pdfGenerator");
+                                await downloadInvoicePDF(inv);
+                              }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
                             >
                               <FileText className="h-3.5 w-3.5" /> download pdf

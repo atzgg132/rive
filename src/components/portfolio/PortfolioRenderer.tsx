@@ -490,7 +490,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
             </section>
           )}
 
-          {visible("contact") && (
+          {visible("contact") && contactHref && (
             <section id="contact" className="pb-8 pt-10 sm:pb-12">
               <div className="relative overflow-hidden rounded-[var(--portfolio-radius-large)] bg-[var(--portfolio-accent)] p-7 text-white sm:p-12 lg:p-16">
                 <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/20" />
@@ -503,11 +503,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                     </h2>
                     <p className="mt-5 max-w-md text-sm leading-6 text-white/70">Share what you are building and what success looks like. This is the fastest way to start a focused conversation.</p>
                   </div>
-                  {contactHref ? (
-                    <PortfolioInquiryForm portfolioSlug={portfolioSlug} contactEmail={content.contactEmail} preview={preview} />
-                  ) : (
-                    <p className="text-sm text-white/75">Contact details coming soon.</p>
-                  )}
+                  <PortfolioInquiryForm portfolioSlug={portfolioSlug} contactEmail={content.contactEmail} preview={preview} />
                 </div>
               </div>
             </section>

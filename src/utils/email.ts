@@ -1,3 +1,5 @@
+import "server-only";
+
 import nodemailer from "nodemailer";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { prisma } from "@/utils/db";
@@ -18,21 +20,42 @@ export type EmailResult = {
   reason?: "not_configured" | "delivery_failed";
 };
 
-const smtpConfigured = Boolean(
-  process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS,
+type EmailProvider = "disabled" | "smtp" | "zoho" | "ses";
+
+const requestedProvider = (process.env.EMAIL_PROVIDER || "smtp").toLowerCase();
+const emailProvider: EmailProvider = ["disabled", "smtp", "zoho", "ses"].includes(requestedProvider)
+  ? requestedProvider as EmailProvider
+  : "disabled";
+const smtpHost = process.env.SMTP_HOST || "";
+const smtpPort = Number.parseInt(process.env.SMTP_PORT || (emailProvider === "zoho" ? "465" : "587"), 10);
+const smtpSecure = process.env.SMTP_SECURE
+  ? process.env.SMTP_SECURE === "true"
+  : smtpPort === 465;
+const smtpConfigured = (emailProvider === "smtp" || emailProvider === "zoho") && Boolean(
+  smtpHost && process.env.SMTP_USER && process.env.SMTP_PASS && Number.isSafeInteger(smtpPort),
 );
-const emailProvider = process.env.EMAIL_PROVIDER || "smtp";
 const sesConfigured = emailProvider === "ses" && Boolean(process.env.AWS_REGION);
 const ses = sesConfigured ? new SESv2Client({ region: process.env.AWS_REGION }) : null;
 
 const transporter = smtpConfigured
   ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number.parseInt(process.env.SMTP_PORT || "587", 10),
-      secure: process.env.SMTP_SECURE === "true",
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      requireTLS: !smtpSecure,
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
+      },
+      tls: {
+        minVersion: "TLSv1.2",
+        servername: smtpHost,
       },
     })
   : null;
@@ -40,6 +63,48 @@ const transporter = smtpConfigured
 const appUrl = (process.env.APP_URL || "https://www.rive.work").replace(/\/$/, "");
 const fromAddress = process.env.EMAIL_FROM || `"rive." <${process.env.SMTP_USER || "hello@rive.work"}>`;
 const replyTo = process.env.EMAIL_REPLY_TO || "hello@rive.work";
+
+export function getEmailConfigurationStatus() {
+  return {
+    provider: emailProvider,
+    configured: Boolean(ses || transporter),
+    smtpHost: transporter ? smtpHost : undefined,
+    smtpPort: transporter ? smtpPort : undefined,
+    smtpSecure: transporter ? smtpSecure : undefined,
+    fromAddress,
+    replyTo,
+    missing: emailProvider === "ses"
+      ? (!process.env.AWS_REGION ? ["AWS_REGION"] : [])
+      : emailProvider === "smtp" || emailProvider === "zoho"
+        ? [
+            ...(!smtpHost ? ["SMTP_HOST"] : []),
+            ...(!process.env.SMTP_USER ? ["SMTP_USER"] : []),
+            ...(!process.env.SMTP_PASS ? ["SMTP_PASS"] : []),
+          ]
+        : emailProvider === "disabled"
+          ? ["EMAIL_PROVIDER"]
+          : ["EMAIL_PROVIDER"],
+  };
+}
+
+export async function verifyEmailTransport(): Promise<{ ok: boolean; message: string }> {
+  if (transporter) {
+    try {
+      await transporter.verify();
+      return { ok: true, message: `SMTP connection to ${smtpHost}:${smtpPort} authenticated successfully.` };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : "SMTP verification failed." };
+    }
+  }
+  if (ses) return { ok: true, message: `Amazon SES is configured in ${process.env.AWS_REGION}.` };
+  const status = getEmailConfigurationStatus();
+  return {
+    ok: false,
+    message: status.provider === "disabled"
+      ? "Email delivery is disabled."
+      : `Email delivery is missing: ${status.missing.join(", ")}.`,
+  };
+}
 
 function escapeHtml(value: string): string {
   return value.replace(

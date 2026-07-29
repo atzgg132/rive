@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { isPortfolioPublished, mergePortfolioContent } from "@/utils/portfolio";
 
@@ -21,8 +21,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
     const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
     const referrer = req.headers.get("referer")?.slice(0, 500) || null;
-    await prisma.portfolioView.create({
-      data: { portfolioId: portfolio.id, visitorHash, referrer, deviceType: deviceFromUserAgent(userAgent) },
+    const deviceType = deviceFromUserAgent(userAgent);
+    after(async () => {
+      await prisma.portfolioView.create({
+        data: { portfolioId: portfolio.id, visitorHash, referrer, deviceType },
+      });
     });
 
     return NextResponse.json({

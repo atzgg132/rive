@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { 
   DollarSign, 
@@ -16,7 +17,6 @@ import {
   Target,
   Upload
 } from "lucide-react";
-import AnalyticsCharts from "@/components/dashboard/AnalyticsCharts";
 import type { ChartData } from "@/components/dashboard/AnalyticsCharts";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 
@@ -62,6 +62,10 @@ const metricsGridClassName =
 
 const insightCardClassName =
   "flex min-h-28 h-full flex-col rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-card transition-[border-color,box-shadow,transform]";
+
+const AnalyticsCharts = dynamic(() => import("@/components/dashboard/AnalyticsCharts"), {
+  loading: () => <div className="h-[380px] animate-pulse rounded-2xl border border-border bg-card" />,
+});
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState<Stats>({

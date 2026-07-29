@@ -13,6 +13,7 @@ model Waitlist {
   status    String   @default("pending")
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([status, createdAt])
   @@map("waitlist")
 }
 
@@ -23,6 +24,7 @@ model PageView {
   userAgent String?  @map("user_agent")
   visitedAt DateTime @default(now()) @map("visited_at")
 
+  @@index([visitedAt])
   @@map("page_views")
 }
 
@@ -83,6 +85,7 @@ model EmailDelivery {
   createdAt         DateTime @default(now()) @map("created_at")
 
   @@index([recipient, type, createdAt])
+  @@index([status, createdAt])
   @@map("email_deliveries")
 }
 
@@ -105,6 +108,8 @@ model Client {
   projects    Project[]
   invoices    Invoice[]
 
+  @@index([userId, createdAt])
+  @@index([userId, status])
   @@map("clients")
 }
 
@@ -130,6 +135,9 @@ model Project {
   invoices    Invoice[]
   expenses    Expense[]
 
+  @@index([userId, createdAt])
+  @@index([userId, status, dueDate])
+  @@index([clientId])
   @@map("projects")
 }
 
@@ -144,6 +152,7 @@ model Milestone {
   createdAt   DateTime  @default(now()) @map("created_at")
   tasks       Task[]
 
+  @@index([projectId, dueDate])
   @@map("milestones")
 }
 
@@ -370,6 +379,11 @@ model Invoice {
   items         InvoiceItem[]
 
   @@unique([userId, invoiceNumber], name: "unique_user_invoice_number")
+  @@index([userId, createdAt])
+  @@index([userId, status, dueDate])
+  @@index([userId, status, issueDate])
+  @@index([clientId])
+  @@index([projectId])
   @@map("invoices")
 }
 
@@ -383,6 +397,7 @@ model InvoiceItem {
   amount      Decimal  @default(0) @db.Decimal(12, 2)
   sortOrder   Int      @default(0) @map("sort_order")
 
+  @@index([invoiceId])
   @@map("invoice_items")
 }
 
@@ -403,6 +418,10 @@ model Expense {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  @@index([userId, date])
+  @@index([userId, createdAt])
+  @@index([userId, category])
+  @@index([projectId])
   @@map("expenses")
 }
 

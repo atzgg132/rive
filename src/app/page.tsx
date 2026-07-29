@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { BarChart3, CheckCircle2, FileUp, Link2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
@@ -12,18 +9,10 @@ import Faq from "@/components/Faq";
 import Pricing from "@/components/Pricing";
 import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
-import Modal from "@/components/Modal";
 import MarketingPortfolioSection from "@/components/MarketingPortfolioSection";
+import MarketingModalHost from "@/components/MarketingModalHost";
 
 export default function Home() {
-  const [modal, setModal] = useState<{ open: boolean; type: "login" | "waitlist" | "demo" }>({ open: false, type: "waitlist" });
-
-  useEffect(() => {
-    const handleOpen = (event: Event) => setModal({ open: true, type: (event as CustomEvent).detail });
-    window.addEventListener("open-modal", handleOpen);
-    return () => window.removeEventListener("open-modal", handleOpen);
-  }, []);
-
   return <main className="min-h-screen overflow-hidden bg-background">
     <Navbar />
     <Hero />
@@ -37,7 +26,7 @@ export default function Home() {
     <Pricing />
     <FinalCTA />
     <Footer />
-    <Modal isOpen={modal.open} onClose={() => setModal((state) => ({ ...state, open: false }))} type={modal.type} />
+    <MarketingModalHost />
   </main>;
 }
 

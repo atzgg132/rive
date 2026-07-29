@@ -7,6 +7,19 @@ Rive currently has two production-capable onboarding ingestion paths:
 
 The onboarding UI only labels Google Calendar as a live connector. CSV provider names describe supported export formats; they are not presented as direct API connections.
 
+## Apple Calendar support
+
+Rive provides a revocable, per-user iCalendar subscription URL from the
+Calendar screen. Adding that URL to Apple Calendar keeps Rive events visible
+there without exposing Rive credentials. This is a one-way Rive-to-Apple
+subscription, which is the reliable standards-based integration available
+without collecting a user's Apple app-specific password.
+
+Rive does not claim two-way Apple Calendar sync. A future CalDAV connector would
+need encrypted app-specific-password storage, conflict resolution, account
+revocation, and production testing across iCloud calendar edge cases before it
+could be presented as a live connector.
+
 ## Google Calendar credentials required
 
 Create one Google Cloud project for Rive and provide:

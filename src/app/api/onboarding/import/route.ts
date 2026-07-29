@@ -10,6 +10,7 @@ type Entity = "clients" | "projects" | "invoices" | "expenses" | "unknown";
 
 const MAX_FILES = 6;
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
+const MAX_TOTAL_ROWS = 5_000;
 
 function normalizeHeader(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -117,6 +118,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: `${file.name} has no importable rows.` }, { status: 400 });
     }
     sources.push({ name: file.name.slice(0, 180), entity: detectEntity(rows), rows, headers: Object.keys(rows[0]) });
+  }
+  const totalRows = sources.reduce((sum, source) => sum + source.rows.length, 0);
+  if (totalRows > MAX_TOTAL_ROWS) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: `Import up to ${MAX_TOTAL_ROWS.toLocaleString()} rows at a time. Split larger migrations into smaller batches.`,
+      },
+      { status: 400 },
+    );
   }
 
   const preview = sources.map((source) => ({
