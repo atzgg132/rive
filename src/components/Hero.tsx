@@ -73,7 +73,7 @@ export default function Hero() {
         style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(3rem, 7vw, 6.4rem)" }}
       >
         <span>Run your freelance business </span>
-        <span className="relative inline-block">
+        <span className="inline">
           <span style={{
             background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
             WebkitBackgroundClip: "text",
@@ -82,27 +82,6 @@ export default function Hero() {
           }}>
             without the chaos
           </span>
-          {/* Underline */}
-          <svg
-            className="absolute -bottom-1 left-0 w-full"
-            viewBox="0 0 400 10"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden
-          >
-            <path
-              d="M2 7 Q100 2 200 5 Q300 8 398 3"
-              stroke="url(#ug)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-            <defs>
-              <linearGradient id="ug" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stopColor="#1D4ED8" />
-                <stop offset="100%" stopColor="#3B82F6" />
-              </linearGradient>
-            </defs>
-          </svg>
         </span>
         <span>.</span>
       </h1>
