@@ -9,9 +9,10 @@ import { RiveLogo } from "@/components/RiveLogo";
 
 const navLinks = [
   { label: "Features", href: "#features" },
+  { label: "Portfolio", href: "#portfolio" },
   { label: "Gig Board", href: "#gig-board" },
-  { label: "Pricing", href: "#pricing" },
   { label: "Remit", href: "#remit" },
+  { label: "Pricing", href: "#pricing" },
 ];
 
 export default function Navbar() {
@@ -40,7 +41,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-6 lg:gap-8">
           {navLinks.map((link) => (
             <a
               key={link.label}

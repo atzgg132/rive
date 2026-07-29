@@ -8,10 +8,10 @@ import { ArrowRight, Play, Zap, BarChart3, Users, Shield, Loader2, Clock } from 
 import { submitToWaitlist } from "@/utils/api";
 
 const floatingStats = [
-  { icon: Shield,   label: "Important writes are validated on the server, not only in the interface.", value: "Server validated" },
-  { icon: Users,    label: "Clients, projects, invoices, tasks, and calendar dates share context.", value: "Connected records" },
-  { icon: BarChart3, label: "Financial and operational signals update from the work you already track.", value: "Useful insights" },
-  { icon: Zap,      label: "A public portfolio and analytics are included in the same workspace.", value: "Portfolio included" },
+  { icon: Shield, label: "Projects, deadlines, and next actions in one delivery view.", value: "Deliver on time" },
+  { icon: Users, label: "Every client, conversation, project, and payment stays connected.", value: "Know your clients" },
+  { icon: BarChart3, label: "Revenue, invoices, expenses, and margins without another spreadsheet.", value: "Own your numbers" },
+  { icon: Zap, label: "Turn completed work into a portfolio that helps win the next client.", value: "Show your best work" },
 ];
 
 export default function Hero() {
@@ -33,7 +33,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 pb-16 pt-24 dark:bg-background sm:px-6 sm:pb-20 sm:pt-28">
+    <section className="relative flex flex-col items-center overflow-hidden bg-background px-4 pb-16 pt-32 dark:bg-background sm:px-6 sm:pb-20 sm:pt-36">
 
       {/* ── Background orbs ─────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none select-none">
@@ -69,40 +69,19 @@ export default function Hero() {
 
       {/* ── Headline ────────────────────────────────── */}
       <h1
-        className="relative mb-7 max-w-5xl text-center leading-[0.95] tracking-wide text-slate-900 dark:text-white"
-        style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(2.6rem, 10vw, 8rem)" }}
+        className="relative mb-6 max-w-5xl text-center leading-[0.94] tracking-[-0.055em] text-slate-900 dark:text-white"
+        style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(3rem, 7vw, 6.4rem)" }}
       >
-        <span>Your freelance business, </span>
-        <span className="relative inline-block">
+        <span>Run your freelance business </span>
+        <span className="inline">
           <span style={{
             background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}>
-            finally connected
+            without the chaos
           </span>
-          {/* Underline */}
-          <svg
-            className="absolute -bottom-1 left-0 w-full"
-            viewBox="0 0 400 10"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden
-          >
-            <path
-              d="M2 7 Q100 2 200 5 Q300 8 398 3"
-              stroke="url(#ug)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-            <defs>
-              <linearGradient id="ug" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stopColor="#1D4ED8" />
-                <stop offset="100%" stopColor="#3B82F6" />
-              </linearGradient>
-            </defs>
-          </svg>
         </span>
         <span>.</span>
       </h1>
@@ -112,12 +91,12 @@ export default function Hero() {
         className="relative mb-10 max-w-xl text-center leading-relaxed text-slate-600 dark:text-slate-300"
         style={{ fontFamily: "var(--font-body)", fontSize: "clamp(1rem, 2vw, 1.2rem)" }}
       >
-        Manage clients, projects, invoices, expenses, your calendar, and your public
-        portfolio from one thoughtfully connected workspace.
+        Rive brings clients, projects, money, planning, and your portfolio into one
+        connected workspace built for independent professionals.
       </p>
 
       {/* ── CTA row ─────────────────────────────────── */}
-      <div className="relative mb-16 flex w-full max-w-lg flex-col items-center gap-4 sm:flex-row">
+      <div className="relative mb-12 flex w-full max-w-xl flex-col items-center gap-4 sm:flex-row">
         {formState === "idle" || formState === "loading" ? (
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full">
             <Input
@@ -127,15 +106,10 @@ export default function Hero() {
               placeholder="Enter your email"
               required
               disabled={formState === "loading"}
-              className="flex-1 min-w-0 px-4 py-3 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none transition-all duration-200 disabled:opacity-60"
+              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 disabled:opacity-60"
               style={{
                 fontFamily: "var(--font-body)",
-                background: "#ffffff",
-                border: "1px solid rgba(12, 30, 54, 0.12)",
-                boxShadow: "0 2px 8px rgba(12, 30, 54, 0.02)",
               }}
-              onFocus={e => { e.target.style.borderColor = "rgba(29,78,216,0.4)"; e.target.style.boxShadow = "0 2px 12px rgba(29,78,216,0.06)"; }}
-              onBlur={e => { e.target.style.borderColor = "rgba(12, 30, 54, 0.12)"; e.target.style.boxShadow = "0 2px 8px rgba(12, 30, 54, 0.02)"; }}
             />
             <Button
               type="submit"
@@ -171,9 +145,8 @@ export default function Hero() {
           onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "demo" }))}
           className="inline-flex items-center gap-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors group shrink-0"
         >
-          <div className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 group-hover:border-[rgba(29,78,216,0.2)]"
-            style={{ border: "1px solid rgba(12, 30, 54, 0.1)", background: "#ffffff" }}>
-            <Play className="w-3 h-3 fill-current ml-0.5 text-slate-600" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white transition-all duration-200 group-hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900">
+            <Play className="ml-0.5 h-3 w-3 fill-current text-slate-600 dark:text-slate-300" />
           </div>
           Watch Demo
         </Button>
@@ -185,22 +158,13 @@ export default function Hero() {
           {floatingStats.map(({ icon: Icon, label, value }) => (
             <div
               key={label}
-              className="group flex min-w-0 cursor-default flex-col items-center gap-2.5 rounded-2xl p-3 transition-all duration-300 sm:p-5"
-              style={{ background: "#ffffff", border: "1px solid rgba(12, 30, 54, 0.05)", boxShadow: "0 4px 15px rgba(12,30,54,0.02)" }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(29,78,216,0.03)";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(29,78,216,0.12)";
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.background = "#ffffff";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(12, 30, 54, 0.05)";
-              }}
+              className="group flex min-w-0 cursor-default flex-col items-center gap-2.5 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm transition-all duration-300 hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900 dark:hover:bg-slate-800 sm:p-5"
             >
               <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
                 style={{ background: "rgba(29,78,216,0.06)" }}>
                 <Icon className="w-[18px] h-[18px]" style={{ color: "#1D4ED8" }} />
               </div>
-              <div className="text-center text-base font-bold text-slate-800 sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
+              <div className="text-center text-base font-bold text-slate-800 dark:text-slate-100 sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
                 {value}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-tight" style={{ fontFamily: "var(--font-body)" }}>
@@ -213,20 +177,18 @@ export default function Hero() {
 
       {/* ── Dashboard preview ───────────────────────── */}
       <div className="relative mt-12 w-full max-w-6xl sm:mt-16">
-        <div className="relative rounded-2xl overflow-hidden shadow-xl shadow-slate-200/50"
+        <div className="relative overflow-hidden rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/30"
           style={{ border: "1px solid rgba(12,30,54,0.08)" }}>
 
           {/* Browser chrome bar */}
-          <div className="flex items-center gap-2 px-5 py-3 border-b"
-            style={{ background: "#F1F5F9", borderColor: "rgba(12,30,54,0.06)" }}>
+          <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-100 px-5 py-3 dark:border-slate-800 dark:bg-slate-900">
             <div className="flex gap-1.5 shrink-0">
               <div className="w-3 h-3 rounded-full bg-red-400" />
               <div className="w-3 h-3 rounded-full bg-amber-400" />
               <div className="w-3 h-3 rounded-full bg-emerald-400" />
             </div>
             <div className="flex-1 mx-6">
-              <div className="w-44 h-5 rounded-md mx-auto flex items-center justify-center"
-                style={{ background: "#ffffff", border: "1px solid rgba(12,30,54,0.06)" }}>
+              <div className="mx-auto flex h-5 w-44 items-center justify-center rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
                 <span className="text-[10px] text-slate-400 font-medium" style={{ fontFamily: "var(--font-body)" }}>
                   app.rive.work
                 </span>
@@ -246,7 +208,7 @@ export default function Hero() {
                 </div>
                 <span className="text-slate-800 dark:text-slate-200 text-xs font-semibold" style={{ fontFamily: "var(--font-display)" }}>rive.</span>
               </div>
-              {["Dashboard", "Projects", "Clients", "Revenue", "Gig Board", "AI Assistant"].map((item, i) => (
+              {["Overview", "Calendar", "Projects", "Clients", "Revenue", "Portfolio"].map((item, i) => (
                 <div
                   key={item}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors"

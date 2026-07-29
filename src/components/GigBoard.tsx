@@ -100,17 +100,17 @@ export default function GigBoard() {
         </div>
 
         {/* ── AI banner ───────────────────────────────── */}
-        <div className="mb-6 px-5 py-4 rounded-2xl bg-blue-50 border border-blue-100/60 flex items-center gap-4 shadow-sm shadow-blue-100/20">
-          <div className="w-9 h-9 rounded-xl bg-blue-100/50 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-blue-600" />
+        <div className="mb-6 flex items-center gap-4 rounded-2xl border border-blue-100/60 bg-blue-50 px-5 py-4 shadow-sm shadow-blue-100/20 dark:border-blue-900/50 dark:bg-blue-950/35 dark:shadow-none">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100/50 dark:bg-blue-900/50">
+            <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-300" />
           </div>
-          <p className="text-sm text-slate-700 leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
-            <span className="text-blue-800 font-bold">The cards below are an illustrative preview.</span>{" "}
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300" style={{ fontFamily: "var(--font-body)" }}>
+            <span className="font-bold text-blue-800 dark:text-blue-300">The cards below are an illustrative preview.</span>{" "}
             Join the waitlist to help shape how opportunity matching should work.
           </p>
           <Button
             onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
-            className="ml-auto text-xs font-semibold text-blue-600 hover:text-blue-800 whitespace-nowrap transition-colors shrink-0"
+            className="ml-auto shrink-0 whitespace-nowrap text-xs font-semibold text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Join waitlist →
