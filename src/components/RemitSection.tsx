@@ -150,7 +150,7 @@ export default function RemitSection() {
   };
 
   return (
-    <section id="remit" className="relative bg-background dark:bg-background py-28 overflow-hidden">
+    <section id="remit" className="relative overflow-hidden bg-background py-20 dark:bg-background sm:py-28">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-50/20 to-transparent" />
@@ -161,8 +161,8 @@ export default function RemitSection() {
         style={{ backgroundImage: "radial-gradient(circle, rgba(29,78,216,0.07) 1px, transparent 1px)", backgroundSize: "42px 42px" }}
       />
 
-      <div className="max-w-7xl mx-auto px-8">
-        <div className="grid lg:grid-cols-2 gap-20 items-center">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 
           {/* ── Left: Content ─────────────────────────── */}
           <div className="flex flex-col gap-6">
@@ -171,11 +171,11 @@ export default function RemitSection() {
               <span style={{ fontFamily: "var(--font-body)" }}>Concept preview</span>
             </div>
 
-            <h2 className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.08]" style={{ fontFamily: "var(--font-display)" }}>
+            <h2 className="text-4xl font-bold leading-[1.06] tracking-tight text-slate-900 dark:text-white sm:text-6xl" style={{ fontFamily: "var(--font-display)" }}>
               Remit{" "}
               <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Payments</span>
               <br />
-              <span className="text-3xl text-slate-500 dark:text-slate-400 font-medium">By rive.</span>
+              <span className="text-2xl font-medium text-slate-500 dark:text-slate-400 sm:text-3xl">By Rive.</span>
             </h2>
 
             <p className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
@@ -184,7 +184,7 @@ export default function RemitSection() {
             </p>
 
             {/* Feature pills */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               {[
                 { icon: Zap,         label: "Faster payouts",       sub: "Planned capability" },
                 { icon: Lock,        label: "Secure by design",     sub: "Core requirement" },
@@ -200,7 +200,7 @@ export default function RemitSection() {
 
             {/* Waitlist form */}
             {formState === "idle" || formState === "loading" ? (
-              <form onSubmit={handleSubmit} className="flex gap-3 mt-2">
+              <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-3 sm:flex-row">
                 <Input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com" required disabled={formState === "loading"}
@@ -231,10 +231,10 @@ export default function RemitSection() {
 
           {/* ── Right: Live currency widget ────────────── */}
           <div className="relative">
-            <div className="relative p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl dark:shadow-none transition-colors">
+            <div className="relative rounded-3xl border border-slate-100 bg-white p-4 shadow-xl transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-7">
 
               {/* Widget header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-200" style={{ fontFamily: "var(--font-display)" }}>Exchange-rate preview</p>
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
@@ -289,11 +289,11 @@ export default function RemitSection() {
                 <div className="flex min-w-0 items-center gap-1.5">
                   <div className="w-px h-4 bg-blue-200 dark:bg-blue-800" />
                   <span className="text-[11px] text-slate-400 dark:text-slate-500" style={{ fontFamily: "var(--font-body)" }}>
-                    rive. fee (0.5%) — <span className="text-slate-600 dark:text-slate-300 font-semibold">{fromCurrency.flag} {fmt(feeAmount, fromCode)} {fromCode}</span>
+                    Rive fee preview (0.5%) — <span className="text-slate-600 dark:text-slate-300 font-semibold">{fromCurrency.flag} {fmt(feeAmount, fromCode)} {fromCode}</span>
                   </span>
                 </div>
                 <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full" style={{ fontFamily: "var(--font-body)" }}>
-                  best rate ✓
+                  Indicative
                 </span>
               </div>
 
