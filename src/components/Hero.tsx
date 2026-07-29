@@ -72,7 +72,7 @@ export default function Hero() {
         className="relative mb-6 max-w-5xl text-center leading-[0.94] tracking-[-0.055em] text-slate-900 dark:text-white"
         style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(3rem, 7vw, 6.4rem)" }}
       >
-        <span>Run your service business </span>
+        <span>Run your services </span>
         <span className="inline">
           <span style={{
             background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
@@ -91,8 +91,7 @@ export default function Hero() {
         className="relative mb-10 max-w-xl text-center leading-relaxed text-slate-600 dark:text-slate-300"
         style={{ fontFamily: "var(--font-body)", fontSize: "clamp(1rem, 2vw, 1.2rem)" }}
       >
-        Manage clients, deliver projects, track revenue and expenses, plan your calendar,
-        and present your work from one connected operating workspace.
+        Clients, projects, revenue, expenses, and planning—connected in one workspace.
       </p>
 
       {/* ── CTA row ─────────────────────────────────── */}

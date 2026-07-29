@@ -52,15 +52,15 @@ export default function FinalCTA() {
 
         {/* Headline */}
         <h2
-          className="text-slate-900 dark:text-white leading-none tracking-wide"
+          className="max-w-4xl font-black leading-[0.98] tracking-[-0.045em] text-slate-900 dark:text-white"
           style={{
-            fontFamily: "var(--font-hero)",
-            fontSize: "clamp(3rem, 9vw, 7rem)",
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(2.75rem, 7vw, 5.75rem)",
           }}
         >
-          Stop juggling tools.{" "}
-          <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 bg-clip-text text-transparent">
-            Start running your business.
+          Stop juggling tools.
+          <span className="mt-2 block bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 bg-clip-text text-transparent">
+            Run everything together.
           </span>
         </h2>
 
@@ -69,8 +69,7 @@ export default function FinalCTA() {
           className="text-slate-600 dark:text-slate-300 text-lg max-w-xl leading-relaxed font-medium"
           style={{ fontFamily: "var(--font-body)" }}
         >
-          Rive gives digital service businesses one connected place to manage clients,
-          delivery, finances, planning, and the work they share publicly.
+          Bring client work, delivery, finances, planning, and your public presence into one connected workspace.
         </p>
 
         {/* Form / States */}
