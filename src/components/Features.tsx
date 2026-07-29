@@ -100,21 +100,21 @@ export default function Features() {
             className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-5 tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Built for how freelancers <br />
+            Everything your service business needs, <br />
             <span
               className="bg-clip-text text-transparent"
               style={{
                 backgroundImage: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 50%, #60A5FA 100%)",
               }}
             >
-              actually work.
+              working as one system.
             </span>
           </h2>
           <p
             className="text-slate-600 dark:text-slate-300 text-lg max-w-xl mx-auto font-normal leading-relaxed"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            The operational depth of serious business software, designed around the way independent professionals actually work.
+            Client management, project delivery, financial control, scheduling, and business development—connected without enterprise complexity.
           </p>
         </div>
 

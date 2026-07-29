@@ -12,7 +12,7 @@ const guides = [
   { icon: Globe, title: "sending your first payment with remit", color: "text-emerald-600", bg: "bg-emerald-50", darkBg: "dark:bg-emerald-950/40", detail: "Use the Remit section to preview exchange rates and request access to cross-border transfers." },
   { icon: Zap, title: "using the ai co-pilot", color: "text-amber-600", bg: "bg-amber-50", darkBg: "dark:bg-amber-950/40", detail: "Use the assistant surfaces to organize repetitive workflow tasks while keeping final control." },
   { icon: Users, title: "managing clients and contracts", color: "text-purple-600", bg: "bg-purple-50", darkBg: "dark:bg-purple-950/40", detail: "Keep contact details, notes, tags, projects, and invoices together on each client profile." },
-  { icon: Briefcase, title: "listing on the gig board", color: "text-sky-600", bg: "bg-sky-50", darkBg: "dark:bg-sky-950/40", detail: "Browse the board to understand the matching workflow and keep your profile ready for launch." },
+  { icon: Briefcase, title: "finding new opportunities", color: "text-sky-600", bg: "bg-sky-50", darkBg: "dark:bg-sky-950/40", detail: "Explore the planned opportunity workflow and keep your business profile ready for future matching." },
   { icon: BarChart3, title: "invoice and revenue tracking", color: "text-rose-600", bg: "bg-rose-50", darkBg: "dark:bg-rose-950/40", detail: "Issue invoices, track payment status, record expenses, and review net earnings in the dashboard." },
 ];
 

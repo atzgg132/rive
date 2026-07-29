@@ -12,7 +12,7 @@ import Modal from "@/components/Modal";
 
 const navLinks = [
   { label: "Features", href: "/#features" },
-  { label: "Gig Board", href: "/#gig-board" },
+  { label: "Opportunities", href: "/#gig-board" },
   { label: "Pricing", href: "/#pricing" },
   { label: "Remit", href: "/#remit" },
 ];

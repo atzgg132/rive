@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     for (const external of calendars.filter((calendar) => calendar.selected)) {
       await watchGoogleCalendar(external.id).catch((error) => console.error("Google watch setup failed:", error));
     }
-    return NextResponse.redirect(new URL("/calendar?connected=google", req.url));
+    return NextResponse.redirect(new URL(`${state.returnTo}?connected=google`, req.url));
   } catch (error) {
     console.error("Google calendar callback failed:", error);
     const existing = await prisma.calendarConnection.findFirst({
@@ -31,6 +31,6 @@ export async function GET(req: NextRequest) {
         data: { status: "error", lastError: error instanceof Error ? error.message.slice(0, 500) : "Connection failed" },
       });
     }
-    return NextResponse.redirect(new URL("/calendar?connectionError=google_sync_failed", req.url));
+    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=google_sync_failed`, req.url));
   }
 }

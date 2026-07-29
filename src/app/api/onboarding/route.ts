@@ -4,6 +4,8 @@ import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
 import { mergePortfolioContent } from "@/utils/portfolio";
+import { ensureDefaultCalendar } from "@/utils/calendar";
+import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 
 const IMAGE = /^(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s<>]+)$/i;
 const BUSINESS_TYPES = ["freelancer", "studio", "consultant", "creator", "small_business"];
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
   const session = getSessionUser(req);
   if (!session) return unauthorized();
 
-  const [user, clients, projects, invoices, expenses] = await Promise.all([
+  const [user, clients, projects, invoices, expenses, connections] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
       select: {
@@ -38,6 +40,10 @@ export async function GET(req: NextRequest) {
     prisma.project.count({ where: { userId: session.userId } }),
     prisma.invoice.count({ where: { userId: session.userId } }),
     prisma.expense.count({ where: { userId: session.userId } }),
+    prisma.calendarConnection.findMany({
+      where: { userId: session.userId },
+      select: { id: true, provider: true, accountEmail: true, status: true, lastSyncedAt: true },
+    }),
   ]);
   if (!user) return NextResponse.json({ success: false, message: "User not found." }, { status: 404 });
 
@@ -45,6 +51,13 @@ export async function GET(req: NextRequest) {
     success: true,
     user,
     counts: { clients, projects, invoices, expenses },
+    connections,
+    connectorAvailability: {
+      googleCalendar: Boolean(
+        process.env.GOOGLE_CALENDAR_CLIENT_ID &&
+        process.env.GOOGLE_CALENDAR_CLIENT_SECRET,
+      ),
+    },
   });
 }
 
@@ -107,6 +120,12 @@ export async function PATCH(req: NextRequest) {
     }
     return updated;
   });
+  if (body.status === "complete" || body.status === "skipped") {
+    await Promise.all([
+      ensureDefaultCalendar(session.userId, user.timeZone),
+      ensurePrefilledPortfolio(session.userId),
+    ]);
+  }
   return NextResponse.json({ success: true, user });
 }
 
@@ -184,6 +203,10 @@ export async function POST(req: NextRequest) {
     });
     return { client, project, invoice };
   });
+  await Promise.all([
+    ensureDefaultCalendar(session.userId),
+    ensurePrefilledPortfolio(session.userId),
+  ]);
 
   return NextResponse.json({ success: true, result }, { status: 201 });
 }

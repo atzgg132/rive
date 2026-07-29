@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Globe2,
+  Link2,
   Loader2,
   Receipt,
   Rocket,
@@ -45,6 +46,14 @@ type ImportReport = {
   expenses: number;
   skipped: number;
   unresolvedLinks: number;
+};
+
+type OnboardingConnection = {
+  id: string;
+  provider: string;
+  accountEmail: string | null;
+  status: string;
+  lastSyncedAt: string | null;
 };
 
 const inputClass = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-950";
@@ -85,6 +94,8 @@ export default function OnboardingPage() {
   const [projectDescription, setProjectDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [invoiceAmount, setInvoiceAmount] = useState("");
+  const [connections, setConnections] = useState<OnboardingConnection[]>([]);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -106,7 +117,12 @@ export default function OnboardingPage() {
       setTimeZone(data.user.timeZone === "UTC" ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" : data.user.timeZone);
       setAvatarUrl(data.user.avatarUrl || "");
       setGoal(data.user.onboardingData?.goal || "organize");
-      const restarting = new URLSearchParams(window.location.search).get("restart") === "1";
+      setConnections(data.connections || []);
+      setGoogleAvailable(data.connectorAvailability?.googleCalendar === true);
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("connected") === "google") toast.success("Google Calendar connected. Your existing schedule is now in Rive.");
+      if (params.get("connectionError")) toast.error("Google Calendar could not be connected. You can continue and try again later.");
+      const restarting = params.get("restart") === "1";
       if (!restarting && ["complete", "skipped"].includes(data.user.onboardingStatus)) {
         router.replace("/dashboard");
         return;
@@ -118,6 +134,7 @@ export default function OnboardingPage() {
   }, [router]);
 
   const progress = useMemo(() => Math.min(100, Math.round(((Math.min(step, 3) + 1) / 4) * 100)), [step]);
+  const googleConnection = connections.find((connection) => connection.provider === "google");
 
   async function saveProfile() {
     if (!name.trim() || !profession.trim()) return toast.error("Add your name and what you do.");
@@ -252,11 +269,16 @@ export default function OnboardingPage() {
 
           {step === 1 && <div className="p-6 sm:p-9"><p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">Choose your first win</p><h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">What should rive. improve first?</h2><p className="mt-2 text-sm text-slate-500 dark:text-slate-400">We will prioritize your setup and dashboard around this—not lock you into it.</p><div className="mt-7 grid gap-3 sm:grid-cols-2">{GOALS.map((item) => { const Icon = item.icon; return <Button key={item.id} onClick={() => setGoal(item.id)} className={`flex gap-4 rounded-2xl border p-4 text-left ${goal === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 hover:border-blue-200 dark:border-slate-700"}`}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-800"><Icon className="h-5 w-5" /></span><span><span className="block text-sm font-black">{item.title}</span><span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">{item.detail}</span></span></Button>; })}</div><div className="mt-7 flex justify-between"><Button onClick={() => setStep(0)} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-4 w-4" />Back</Button><Button onClick={saveGoal} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50">Choose my path <ArrowRight className="h-4 w-4" /></Button></div></div>}
 
-          {step === 2 && <div className="p-6 sm:p-9"><p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">No dead-end setup</p><h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">How do you want to get useful?</h2><div className="mt-7 grid gap-4 md:grid-cols-3">{[
+          {step === 2 && <div className="p-6 sm:p-9"><p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">Bring your business with you</p><h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Start with context, not an empty workspace.</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Connect your schedule now, then import business records or create one real workflow. Every source remains clearly identified and under your control.</p>
+            {(googleAvailable || googleConnection) && <div className={`mt-7 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${googleConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-blue-200 bg-blue-50/60 dark:border-blue-900 dark:bg-blue-950/20"}`}>
+              <div className="flex min-w-0 gap-4"><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${googleConnection?.status === "connected" ? "bg-emerald-600 text-white" : "bg-white text-blue-600 shadow-sm dark:bg-slate-900"}`}>{googleConnection?.status === "connected" ? <Check className="h-5 w-5" /> : <CalendarDays className="h-5 w-5" />}</span><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-black">Google Calendar</p><span className="rounded-full border border-current/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">{googleAvailable || googleConnection ? "Live connector" : "Setup pending"}</span></div><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{googleConnection?.status === "connected" ? `${googleConnection.accountEmail || "Google account"} connected · events and updates sync both ways.` : googleAvailable ? "Import existing calendars and events now. New Rive events can sync back to Google." : "Direct calendar import is ready in Rive and activates when the Google OAuth application is configured."}</p></div></div>
+              {googleConnection?.status === "connected" ? <a href="/calendar" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-xs font-black text-emerald-700 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300">Review calendars <ArrowRight className="h-3.5 w-3.5" /></a> : googleAvailable ? <a href="/api/calendar/connections/google/start?from=onboarding" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white shadow-lg shadow-blue-600/20"><Link2 className="h-3.5 w-3.5" />Connect Google</a> : <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black text-slate-400 dark:border-slate-700">Awaiting OAuth setup</span>}
+            </div>}
+            <div className="mt-7"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Choose how to populate operational data</p><div className="mt-3 grid gap-4 md:grid-cols-3">{[
             { id: "import" as const, icon: FileSpreadsheet, title: "Import my work", detail: "Upload CSV exports from Zoho, FreshBooks, QuickBooks, Wave, Xero, or spreadsheets.", badge: "Fastest switch" },
             { id: "quickstart" as const, icon: Rocket, title: "Build one real workflow", detail: "Create a connected client, project, deadline, and optional draft invoice.", badge: "Best first run" },
             { id: "clean" as const, icon: Sparkles, title: "Start clean", detail: "Enter an empty workspace with a contextual activation checklist.", badge: "No sample data" },
-          ].map((item) => { const Icon = item.icon; return <Button key={item.id} onClick={() => setPath(item.id)} className={`relative rounded-2xl border p-5 text-left ${path === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}><span className="absolute right-3 top-3 rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase text-blue-600 shadow-sm dark:bg-slate-800">{item.badge}</span><Icon className="h-6 w-6 text-blue-600" /><p className="mt-8 text-sm font-black">{item.title}</p><p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{item.detail}</p></Button>; })}</div><div className="mt-7 flex justify-between"><Button onClick={() => setStep(1)} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-4 w-4" />Back</Button><Button onClick={() => path === "clean" ? void startClean() : setStep(3)} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50">{path === "clean" ? "open my workspace" : "continue"} <ArrowRight className="h-4 w-4" /></Button></div></div>}
+          ].map((item) => { const Icon = item.icon; return <Button key={item.id} onClick={() => setPath(item.id)} className={`relative flex min-h-40 min-w-0 flex-col items-start justify-start whitespace-normal rounded-2xl border p-5 text-left ${path === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}><span className="absolute right-3 top-3 rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase text-blue-600 shadow-sm dark:bg-slate-800">{item.badge}</span><Icon className="h-6 w-6 shrink-0 text-blue-600" /><p className="mt-8 text-sm font-black">{item.title}</p><p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{item.detail}</p></Button>; })}</div></div><div className="mt-7 flex justify-between"><Button onClick={() => setStep(1)} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-4 w-4" />Back</Button><Button onClick={() => path === "clean" ? void startClean() : setStep(3)} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50">{path === "clean" ? "open my workspace" : "continue"} <ArrowRight className="h-4 w-4" /></Button></div></div>}
 
           {step === 3 && path === "import" && <div className="p-6 sm:p-9"><p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">Universal CSV import</p><h2 className="mt-2 text-2xl font-black tracking-tight">Drop in what you already have.</h2><p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Upload separate client, project, invoice, or expense exports together. rive. detects them, previews the result, and links related records where possible.</p><label className="mt-7 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-5 py-10 text-center hover:border-blue-400 dark:border-blue-900 dark:bg-blue-950/20"><Upload className="h-8 w-8 text-blue-600" /><p className="mt-3 text-sm font-black">Choose up to six CSV files</p><p className="mt-1 text-[10px] text-slate-500">2 MB Each · clients, projects, invoices, and expenses</p><Input type="file" accept=".csv,text/csv" multiple className="sr-only" onChange={(event) => { setFiles(Array.from(event.target.files || []).slice(0, 6)); setPreview([]); }} /></label>{files.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{files.map((file) => <span key={`${file.name}-${file.size}`} className="rounded-full border border-slate-200 px-2.5 py-1 text-[9px] font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">{file.name}</span>)}</div>}{preview.length > 0 && <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700"><div className="grid grid-cols-[1fr_100px_70px] bg-slate-50 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800"><span>File</span><span>Detected as</span><span>Rows</span></div>{preview.map((item) => <div key={item.name} className="grid grid-cols-[1fr_100px_70px] border-t border-slate-100 px-4 py-3 text-xs dark:border-slate-800"><span className="truncate font-bold">{item.name}</span><span className={item.entity === "unknown" ? "font-bold text-red-500" : "font-bold text-blue-600"}>{item.entity}</span><span>{item.rows}</span>{item.warning && <span className="col-span-3 mt-1 text-[9px] text-red-500">{item.warning}</span>}</div>)}</div>}<div className="mt-7 flex flex-wrap justify-between gap-3"><Button onClick={() => setStep(2)} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-4 w-4" />Choose another path</Button><div className="flex gap-2"><Button onClick={() => runImport("preview")} disabled={saving || !files.length} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200">Analyze files</Button><Button onClick={() => runImport("commit")} disabled={saving || !preview.length || preview.some((item) => item.entity === "unknown")} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-40">{saving && <Loader2 className="h-4 w-4 animate-spin" />}import workspace</Button></div></div></div>}
 

@@ -17,10 +17,10 @@ const tagColors: Record<string,string> = {
 };
 
 const posts = [
-  { tag: "founders note", title: "why the freelance economy needs a real operating system", date: "july 10, 2026", featured: true, excerpt: "freelancers represent the fastest-growing segment of the global workforce. yet the tools available to them are fragmented, clunky, and built for someone else. we started rive. because we lived this problem." },
+  { tag: "founders note", title: "why service businesses need a connected operating system", date: "july 10, 2026", featured: true, excerpt: "Digital service providers create enormous value, yet their operations remain fragmented across generic tools. We started Rive to connect client work, delivery, and financial control." },
   { tag: "engineering",   title: "how we built the remit payments engine", date: "july 5, 2026", featured: false, excerpt: "building a cross-border payments layer from scratch is not for the faint of heart. here's how we did it." },
   { tag: "design",        title: "designing for trust: ux lessons from building rive.", date: "june 28, 2026", featured: false, excerpt: "when your product handles money and client relationships, trust is everything. here's what we learned." },
-  { tag: "research",      title: "the gig economy by numbers: 2026 report", date: "june 15, 2026", featured: false, excerpt: "over 1.1 billion freelancers worldwide. $1.5T in annual output. and almost no great software." },
+  { tag: "research",      title: "the digital services economy: 2026 report", date: "june 15, 2026", featured: false, excerpt: "A growing global services economy still runs on fragmented software, manual handoffs, and disconnected financial records." },
 ];
 
 export default function BlogPage() {

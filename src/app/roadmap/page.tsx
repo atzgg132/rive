@@ -11,7 +11,7 @@ const fontD = { fontFamily: "var(--font-display)" };
 const phases = [
   {
     quarter: "Q3 2026", label: "alpha", status: "active",
-    items: ["gig board live", "client management", "ai co-pilot beta", "remit payments v1", "alpha waitlist rollout"],
+    items: ["opportunity marketplace", "client management", "workflow assistant beta", "remit payments v1", "early-access rollout"],
   },
   {
     quarter: "Q4 2026", label: "beta", status: "upcoming",

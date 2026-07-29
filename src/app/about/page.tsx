@@ -7,8 +7,8 @@ import { Hammer, Eye, Shield } from 'lucide-react';
 const values = [
   {
     icon: Hammer,
-    title: 'built by freelancers',
-    desc: 'every feature is designed with lived freelance experience — not boardroom assumptions. we know what you need because we needed it too.',
+    title: 'built from real client work',
+    desc: 'Every feature is grounded in the realities of selling, delivering, and operating a digital service business.',
   },
   {
     icon: Eye,
@@ -27,7 +27,7 @@ const team = [
     initials: 'AB',
     name: 'Arnav Bhattacharya',
     role: 'founder · product & engineering',
-    bio: 'Software engineer and builder based in Bengaluru, creating rive. — a freelance OS for managing projects, clients, revenue, and gigs in one place. Arnav works across full-stack product development, payments, APIs, databases, and systems operations, with a focus on building practical, reliable tools that help freelancers and solo builders work smarter.',
+    bio: 'Software engineer and builder based in Bengaluru, creating Rive—an operating workspace for managing clients, projects, revenue, expenses, and business development in one place. Arnav works across full-stack product development, payments, APIs, databases, and systems operations, with a focus on practical, dependable business software.',
   },
   {
     initials: 'AC',
@@ -91,7 +91,7 @@ export default function AboutPage() {
             className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
             style={{ fontFamily: 'var(--font-body)' }}
           >
-            we are building the operating system for the future of freelance work.
+            We are building the operating system for modern service businesses.
           </p>
         </div>
       </section>
@@ -126,10 +126,10 @@ export default function AboutPage() {
               className="relative text-xl md:text-2xl leading-relaxed text-slate-200 font-medium"
               style={{ fontFamily: 'var(--font-body)' }}
             >
-              freelancers power the modern economy — yet they&apos;re chronically underserved
-              by tools built for enterprises. rive. exists to change that. one unified platform
-              for projects, clients, payments, and ai — built by people who&apos;ve lived the
-              freelance grind.
+              Digital service businesses create enormous value, yet their operations are still
+              fragmented across generic tools and spreadsheets. Rive exists to change that: one
+              connected platform for clients, projects, finances, planning, and growth—without
+              enterprise complexity.
             </p>
           </div>
         </div>
@@ -254,7 +254,7 @@ export default function AboutPage() {
             ready to shape the future?
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mb-10 text-lg" style={{ fontFamily: 'var(--font-body)' }}>
-            be among the first to experience a platform truly built for freelancers.
+            Be among the first to experience a platform built for serious client work.
           </p>
           <Button
             onClick={() =>

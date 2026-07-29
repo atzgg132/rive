@@ -99,6 +99,7 @@ export const DEFAULT_PORTFOLIO_THEME: PortfolioTheme = {
 type PortfolioSeedData = {
   name?: string | null;
   avatarUrl?: string | null;
+  profession?: string | null;
   email: string;
   projects?: Array<{
     id: string;
@@ -133,7 +134,11 @@ export function buildPrefilledPortfolioContent(user: PortfolioSeedData): Portfol
     ...DEFAULT_PORTFOLIO_CONTENT,
     name: user.name?.trim() || user.email.split("@")[0] || DEFAULT_PORTFOLIO_CONTENT.name,
     profileImageUrl: user.avatarUrl || "",
-    headline: projects.length > 0 ? "independent professional delivering meaningful work." : DEFAULT_PORTFOLIO_CONTENT.headline,
+    headline: user.profession?.trim()
+      ? `${user.profession.trim()} delivering thoughtful, dependable work.`
+      : projects.length > 0
+        ? "Digital service professional delivering meaningful work."
+        : DEFAULT_PORTFOLIO_CONTENT.headline,
     bio: projects.length > 0
       ? `A selection of work, projects, and services by ${user.name?.trim() || user.email.split("@")[0] || "me"}.`
       : DEFAULT_PORTFOLIO_CONTENT.bio,

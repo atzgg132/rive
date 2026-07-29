@@ -69,8 +69,8 @@ export default function FinalCTA() {
           className="text-slate-600 dark:text-slate-300 text-lg max-w-xl leading-relaxed font-medium"
           style={{ fontFamily: "var(--font-body)" }}
         >
-          rive. gives independent professionals one connected place to manage delivery,
-          relationships, finances, planning, and the work they share publicly.
+          Rive gives digital service businesses one connected place to manage clients,
+          delivery, finances, planning, and the work they share publicly.
         </p>
 
         {/* Form / States */}

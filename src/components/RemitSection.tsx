@@ -179,7 +179,7 @@ export default function RemitSection() {
             </h2>
 
             <p className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
-              Remit is our long-term direction for simpler international freelancer payments.
+              Remit is our long-term direction for simpler international service payments.
               The calculator below is a rate preview, not a live transfer product.
             </p>
 

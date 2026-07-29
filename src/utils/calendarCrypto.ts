@@ -32,15 +32,15 @@ export function decryptCalendarCredentials<T>(value: string): T {
   return JSON.parse(decrypted.toString("utf8")) as T;
 }
 
-export function createCalendarOAuthState(userId: string): string {
+export function createCalendarOAuthState(userId: string, returnTo: "/calendar" | "/onboarding" = "/calendar"): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("SESSION_SECRET is required for calendar OAuth.");
-  const payload = Buffer.from(JSON.stringify({ userId, expiresAt: Date.now() + 10 * 60 * 1000 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ userId, returnTo, expiresAt: Date.now() + 10 * 60 * 1000 })).toString("base64url");
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
 }
 
-export function verifyCalendarOAuthState(value: string): { userId: string } | null {
+export function verifyCalendarOAuthState(value: string): { userId: string; returnTo: "/calendar" | "/onboarding" } | null {
   const secret = process.env.SESSION_SECRET;
   if (!secret) return null;
   const [payload, signature] = value.split(".");
@@ -49,8 +49,9 @@ export function verifyCalendarOAuthState(value: string): { userId: string } | nu
   const actual = Buffer.from(signature, "base64url");
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
   try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { userId: string; expiresAt: number };
-    return parsed.userId && parsed.expiresAt > Date.now() ? { userId: parsed.userId } : null;
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { userId: string; returnTo?: string; expiresAt: number };
+    if (!parsed.userId || parsed.expiresAt <= Date.now()) return null;
+    return { userId: parsed.userId, returnTo: parsed.returnTo === "/onboarding" ? "/onboarding" : "/calendar" };
   } catch {
     return null;
   }

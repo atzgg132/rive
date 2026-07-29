@@ -79,14 +79,14 @@ export default function GigBoard() {
               className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight mb-3"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              The Gig Board
+              New business opportunities
             </h2>
             <p
               className="text-slate-600 dark:text-slate-300 text-[1.05rem] max-w-lg leading-relaxed"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              We are exploring a curated opportunity marketplace for independent professionals
-              and the businesses that hire them.
+              We are exploring a curated opportunity marketplace that helps digital service
+              providers discover qualified work and helps clients find the right specialists.
             </p>
           </div>
           <Button

@@ -10,7 +10,7 @@ import { RiveLogo } from "@/components/RiveLogo";
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Portfolio", href: "#portfolio" },
-  { label: "Gig Board", href: "#gig-board" },
+  { label: "Opportunities", href: "#gig-board" },
   { label: "Remit", href: "#remit" },
   { label: "Pricing", href: "#pricing" },
 ];

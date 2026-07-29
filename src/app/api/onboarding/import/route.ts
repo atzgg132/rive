@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { ensureDefaultCalendar } from "@/utils/calendar";
+import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 
 type Row = Record<string, string>;
 type Entity = "clients" | "projects" | "invoices" | "expenses" | "unknown";
@@ -317,6 +319,13 @@ export async function POST(req: NextRequest) {
     }
     return counts;
   }, { timeout: 30_000 });
+
+  if (report.clients + report.projects + report.invoices + report.expenses > 0) {
+    await Promise.all([
+      ensureDefaultCalendar(session.userId),
+      ensurePrefilledPortfolio(session.userId),
+    ]);
+  }
 
   return NextResponse.json({ success: true, report });
 }

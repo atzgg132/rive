@@ -35,7 +35,7 @@ export default function CommunityPage() {
             join the rive. community.
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 max-w-lg leading-relaxed" style={font}>
-            connect with freelancers, share workflows, and shape the product with your feedback.
+            Connect with service operators, share workflows, and shape the product with your feedback.
           </p>
 
           {/* Community cards */}
@@ -90,7 +90,7 @@ export default function CommunityPage() {
               <div>
                 <h3 className="font-bold text-foreground dark:text-white text-lg mb-1" style={fontD}>rive. letter</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-5" style={font}>
-                  monthly: product updates, freelance insights, community spotlight. no spam, ever.
+                  Monthly product updates, service-business insights, and community stories. No spam.
                 </p>
 
                 {state === "success" ? (

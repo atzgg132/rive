@@ -44,7 +44,7 @@ export default function PressPage() {
             <h2 className="text-xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Company boilerplate</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-4" style={font}>Copy and paste for articles, profiles, and coverage.</p>
             <blockquote className="bg-slate-50 dark:bg-slate-800 border-l-4 border-blue-500 rounded-r-xl p-5 font-mono text-sm text-slate-700 dark:text-slate-300 leading-relaxed select-all">
-              rive. is an early-stage freelance operating system — a unified platform for project management, client management, invoicing, ai-powered workflows, and international payments. founded in 2026, rive. is backed by a team of former freelancers building the tools they wish existed.
+              Rive is an early-stage operating workspace for digital service businesses—a unified platform for client management, project delivery, invoicing, expenses, calendars, and public portfolios. Founded in 2026, Rive is built by a team focused on making serious business operations simpler and more connected.
             </blockquote>
           </div>
 

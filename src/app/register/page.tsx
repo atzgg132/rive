@@ -101,7 +101,7 @@ export default function RegisterPage() {
           <Link href="/" className="flex items-center gap-2 mb-8">
             <RiveLogo className="h-8 w-auto text-slate-900 dark:text-white" />
           </Link>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground dark:text-slate-100">Join the freelance OS</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground dark:text-slate-100">Create your Rive workspace</h2>
           <p className="mt-1.5 text-sm text-muted-foreground dark:text-slate-400">Set up your workspace and take control of your business.</p>
         </div>
 

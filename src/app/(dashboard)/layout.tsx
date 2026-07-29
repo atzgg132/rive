@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMac, setIsMac] = useState(true);
   const [notifications, setNotifications] = useState([
-    { id: 1, text: "Welcome to Rive! Explore your new freelance OS.", read: false },
+    { id: 1, text: "Welcome to Rive. Your client operations workspace is ready.", read: false },
     { id: 2, text: "Pro Tip: Open search to move around the workspace faster.", read: false },
   ]);
 

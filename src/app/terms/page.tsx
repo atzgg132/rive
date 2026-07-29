@@ -59,7 +59,7 @@ export default function TermsPage() {
               </Section>
 
               <Section id="service" title="2. Description of service">
-                <p>rive. is an early-stage operating system for freelancers and small service businesses. The platform includes tools for client management, project delivery, invoicing, expenses, calendar planning, and public portfolios.</p>
+                <p>Rive is an early-stage operating workspace for digital service providers and small service businesses. The platform includes tools for client management, project delivery, invoicing, expenses, calendar planning, and public portfolios.</p>
                 <p>Features, functionality, and availability may change at any time without notice during the alpha phase. rive. makes no guarantees about uptime, feature completeness, or suitability for any particular purpose during this stage.</p>
               </Section>
 

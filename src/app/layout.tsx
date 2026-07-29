@@ -13,22 +13,22 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "rive. — the freelance os",
+  title: "Rive — Client, Project and Financial Operations",
   description:
-    "rive. is the all-in-one platform for freelancers and businesses. manage projects, clients, revenue, and gigs — powered by ai.",
+    "Rive is an all-in-one workspace for digital service businesses to manage clients, projects, revenue, invoices, expenses, calendars, and portfolios.",
   keywords: [
-    "freelance platform",
+    "digital service business software",
     "project management",
     "client management",
-    "gig board",
-    "ai assistant",
-    "freelancer tools",
+    "agency management software",
+    "service business software",
+    "invoice management",
     "revenue management",
   ],
   openGraph: {
-    title: "rive. — the freelance os",
+    title: "Rive — Run your service business in one place",
     description:
-      "your entire freelance operating system, powered by ai. manage everything in one place.",
+      "Clients, projects, revenue, expenses, calendars, and your public portfolio—connected in one operating workspace.",
     type: "website",
     url: "https://www.rive.work",
   },

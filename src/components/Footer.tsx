@@ -7,7 +7,7 @@ import { ExternalLink, Code2, Link2, Play } from "lucide-react";
 const footerLinks: Record<string, { label: string; href: string }[]> = {
   Product: [
     { label: "Features",   href: "/#features"  },
-    { label: "Gig Board",  href: "/#gig-board" },
+    { label: "Opportunities",  href: "/#gig-board" },
     { label: "Pricing",    href: "/#pricing"   },
     { label: "Changelog",  href: "/changelog"  },
     { label: "Roadmap",    href: "/roadmap"    },
@@ -130,7 +130,7 @@ export default function Footer() {
             className="text-slate-400 text-sm font-medium"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            Built for independent professionals.
+            Built for modern service businesses.
           </p>
         </div>
       </div>

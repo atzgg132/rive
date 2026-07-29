@@ -5,7 +5,7 @@ import { HelpCircle } from "lucide-react";
 const faqs = [
   {
     question: "What is rive.?",
-    answer: "rive. is a connected operating system for freelancers and small service businesses. It brings client management, project delivery, finances, planning, and a public portfolio into one workspace.",
+    answer: "Rive is an all-in-one operating workspace for digital service providers—from individual specialists to studios, agencies, consultancies, and small service teams. It connects client management, project delivery, finances, planning, and a public portfolio.",
   },
   {
     question: "Can I use rive. today?",

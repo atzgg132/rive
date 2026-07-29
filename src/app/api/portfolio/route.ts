@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { buildPrefilledPortfolioContent, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, validatePortfolioContent } from "@/utils/portfolio";
+import { mergePortfolioContent, normalizeSlug, validatePortfolioContent } from "@/utils/portfolio";
+import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 
 function unauthorized() {
   return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -29,43 +30,15 @@ export async function POST(req: NextRequest) {
   if (!session) return unauthorized();
 
   try {
-    const existing = await prisma.portfolio.findUnique({ where: { userId: session.userId } });
-    if (existing) return NextResponse.json({ success: true, portfolio: existing, created: false });
-
     const body = await req.json().catch(() => ({}));
-    const requestedSlug = normalizeSlug(typeof body.slug === "string" ? body.slug : "");
-    const baseSlug = requestedSlug || normalizeSlug(session.email.split("@")[0]) || "your-portfolio";
-    let slug = baseSlug;
-    let suffix = 2;
-    while (await prisma.portfolio.findUnique({ where: { slug } })) {
-      slug = `${baseSlug}-${suffix++}`;
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: {
-        name: true,
-        avatarUrl: true,
-        email: true,
-        projects: {
-          orderBy: { updatedAt: "desc" },
-          select: { id: true, title: true, description: true, tags: true, startDate: true, updatedAt: true },
-        },
-      },
+    const result = await ensurePrefilledPortfolio(session.userId, {
+      requestedSlug: typeof body.slug === "string" ? body.slug : "",
+      templateKey: typeof body.templateKey === "string" ? body.templateKey : "minimal-pro",
     });
-    if (!user) return NextResponse.json({ success: false, message: "User not found." }, { status: 404 });
-
-    const portfolio = await prisma.portfolio.create({
-      data: {
-        userId: session.userId,
-        slug,
-        templateKey: typeof body.templateKey === "string" ? body.templateKey : "minimal-pro",
-        content: buildPrefilledPortfolioContent(user),
-        theme: DEFAULT_PORTFOLIO_THEME,
-        seo: { title: "", description: "", indexable: true },
-      },
-    });
-    return NextResponse.json({ success: true, portfolio, created: true }, { status: 201 });
+    return NextResponse.json(
+      { success: true, portfolio: result.portfolio, created: result.created },
+      { status: result.created ? 201 : 200 },
+    );
   } catch (error) {
     console.error("Portfolio create error:", error);
     return NextResponse.json({ success: false, message: "Could not create portfolio." }, { status: 500 });

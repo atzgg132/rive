@@ -9,7 +9,7 @@ const plans = [
     name: "Starter",
     price: "Free",
     priceNote: "during early access",
-    description: "Everything you need to bring your freelance business into one place.",
+    description: "Everything you need to run client work and business operations in one place.",
     features: [
       "Clients, projects, tasks, and calendar",
       "Revenue, invoices, and expenses",
@@ -26,7 +26,7 @@ const plans = [
     name: "Pro",
     price: "Soon",
     priceNote: "",
-    description: "More automation and control for established independent professionals.",
+    description: "More automation and control for growing service businesses.",
     features: [
       "Everything in Starter",
       "Advanced workflow automation",
