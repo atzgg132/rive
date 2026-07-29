@@ -289,6 +289,11 @@ p {
 }
 
 .rive-primary-button:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgb(37 99 235 / .28); }
+.rive-primary-button:disabled,
+.rive-secondary-button:disabled,
+button:disabled { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; }
+.rive-primary-button:focus-visible,
+.rive-secondary-button:focus-visible { outline: 3px solid rgb(147 197 253 / .8); outline-offset: 3px; }
 .rive-secondary-button { border: 1px solid rgb(148 163 184 / .35); background: rgb(255 255 255 / .7); color: #334155; }
 .dark .rive-secondary-button { background: rgb(15 23 42 / .65); color: #e2e8f0; border-color: rgb(148 163 184 / .25); }
 .rive-secondary-button:hover { background: white; }
