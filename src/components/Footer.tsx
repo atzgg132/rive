@@ -55,7 +55,7 @@ export default function Footer() {
                 alt="rive."
                 width={90}
                 height={40}
-                style={{ objectFit: "contain" }}
+                style={{ objectFit: "contain", width: "90px", height: "40px" }}
               />
             </Link>
 
