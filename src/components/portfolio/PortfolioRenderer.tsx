@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, Mail, MapPin, Play, Quote, Sparkles } from "lucide-react";
+import { ArrowUpRight, Check, MapPin, Play, Quote, Sparkles } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import type {
   PortfolioContent,
@@ -6,6 +6,7 @@ import type {
   PortfolioService,
   PortfolioTheme,
 } from "@/utils/portfolio";
+import PortfolioInquiryForm from "@/components/portfolio/PortfolioInquiryForm";
 
 /* Portfolio owners can supply validated data URLs and arbitrary HTTPS image hosts. */
 /* eslint-disable @next/next/no-img-element */
@@ -317,7 +318,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           </div>
           {visible("contact") && contactHref && (
             <a
-              href={contactHref}
+              href="#contact"
               className="inline-flex items-center gap-2 rounded-full border border-[var(--portfolio-border)] bg-[var(--portfolio-card)] px-4 py-2.5 text-xs font-extrabold text-[var(--portfolio-ink)] shadow-sm"
             >
               Let&apos;s talk <ArrowUpRight className="h-3.5 w-3.5" />
@@ -346,7 +347,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
             <div className="mt-9 flex flex-wrap items-center gap-5">
               {visible("contact") && contactHref && (
                 <a
-                  href={contactHref}
+                  href="#contact"
                   className="inline-flex items-center gap-2 rounded-full bg-[var(--portfolio-accent)] px-5 py-3.5 text-sm font-extrabold text-white shadow-xl shadow-black/10"
                 >
                   Start a conversation <ArrowUpRight className="h-4 w-4" />
@@ -444,7 +445,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                   <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--portfolio-accent)]">Services</p>
                   <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] text-[var(--portfolio-ink)] sm:text-5xl">{profile.servicesTitle}</h2>
                   {visible("contact") && contactHref && (
-                    <a href={contactHref} className="mt-7 inline-flex items-center gap-2 text-sm font-extrabold text-[var(--portfolio-accent)]">
+                    <a href="#contact" className="mt-7 inline-flex items-center gap-2 text-sm font-extrabold text-[var(--portfolio-accent)]">
                       Discuss your project <ArrowUpRight className="h-4 w-4" />
                     </a>
                   )}
@@ -494,17 +495,18 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
               <div className="relative overflow-hidden rounded-[var(--portfolio-radius-large)] bg-[var(--portfolio-accent)] p-7 text-white sm:p-12 lg:p-16">
                 <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-white/20" />
                 <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full border border-white/20" />
-                <div className="relative z-10">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/70">Have a project in mind?</p>
-                  <h2 className="mt-4 max-w-4xl text-3xl font-black leading-[1.02] tracking-[-0.05em] text-white sm:text-6xl">
-                    Let&apos;s turn the next good idea into meaningful work.
-                  </h2>
+                <div className="relative z-10 grid gap-9 lg:grid-cols-[minmax(0,0.8fr)_minmax(360px,1.2fr)] lg:items-start lg:gap-14">
+                  <div>
+                    <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/70">Have a project in mind?</p>
+                    <h2 className="mt-4 max-w-4xl text-3xl font-black leading-[1.02] tracking-[-0.05em] text-white sm:text-5xl">
+                      Let&apos;s turn the next good idea into meaningful work.
+                    </h2>
+                    <p className="mt-5 max-w-md text-sm leading-6 text-white/70">Share what you are building and what success looks like. This is the fastest way to start a focused conversation.</p>
+                  </div>
                   {contactHref ? (
-                    <a href={contactHref} className="mt-8 inline-flex max-w-full items-center gap-2 rounded-full bg-white px-5 py-3.5 text-sm font-extrabold text-[var(--portfolio-accent)] shadow-xl">
-                      <Mail className="h-4 w-4 shrink-0" /> <span className="truncate">{content.contactEmail}</span>
-                    </a>
+                    <PortfolioInquiryForm portfolioSlug={portfolioSlug} contactEmail={content.contactEmail} preview={preview} />
                   ) : (
-                    <p className="mt-7 text-sm text-white/75">Contact details coming soon.</p>
+                    <p className="text-sm text-white/75">Contact details coming soon.</p>
                   )}
                 </div>
               </div>

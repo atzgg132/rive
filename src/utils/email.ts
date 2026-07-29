@@ -9,7 +9,8 @@ export type EmailType =
   | "password_reset"
   | "password_changed"
   | "login_success"
-  | "contact_message";
+  | "contact_message"
+  | "portfolio_inquiry";
 
 export type EmailResult = {
   sent: boolean;
@@ -121,12 +122,14 @@ async function deliver({
   subject,
   html,
   text,
+  replyToAddress,
 }: {
   to: string;
   type: EmailType;
   subject: string;
   html: string;
   text: string;
+  replyToAddress?: string;
 }): Promise<EmailResult> {
   if (!ses && !transporter) {
     console.warn(`email: ${type} skipped because an email provider is not configured`);
@@ -149,7 +152,7 @@ async function deliver({
           await ses.send(
             new SendEmailCommand({
               FromEmailAddress: fromAddress,
-              ReplyToAddresses: [replyTo],
+              ReplyToAddresses: [replyToAddress || replyTo],
               Destination: { ToAddresses: [to] },
               Content: {
                 Simple: {
@@ -167,7 +170,7 @@ async function deliver({
       : (
           await transporter!.sendMail({
             from: fromAddress,
-            replyTo,
+            replyTo: replyToAddress || replyTo,
             to,
             subject,
             html,
@@ -362,5 +365,41 @@ export function sendContactMessageEmail(input: {
       recipient: "hello@rive.work",
     }),
     text: `${input.subject}\n\nFrom: ${input.name} <${input.email}>\n\n${input.message}`,
+  });
+}
+
+export function sendPortfolioInquiryEmail(input: {
+  to: string;
+  portfolioName: string;
+  visitorName: string;
+  visitorEmail: string;
+  projectType: string;
+  message: string;
+}): Promise<EmailResult> {
+  const safeVisitorName = escapeHtml(input.visitorName);
+  const safeVisitorEmail = escapeHtml(input.visitorEmail);
+  const safeProjectType = escapeHtml(input.projectType);
+  const safeMessage = escapeHtml(input.message).replace(/\n/g, "<br>");
+
+  return deliver({
+    to: input.to,
+    type: "portfolio_inquiry",
+    subject: `[Portfolio enquiry] ${input.projectType} — ${input.visitorName}`,
+    replyToAddress: input.visitorEmail,
+    html: baseTemplate({
+      eyebrow: "new portfolio enquiry",
+      title: `${input.visitorName} would like to work with you.`,
+      intro: `A prospective client sent an enquiry through ${input.portfolioName}'s Rive portfolio.`,
+      body: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">From:</strong> ${safeVisitorName} &lt;${safeVisitorEmail}&gt;</td></tr>
+        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">Project:</strong> ${safeProjectType}</td></tr>
+        <tr><td style="padding:18px 0 0;color:#42556F;font-size:15px;line-height:25px">${safeMessage}</td></tr>
+      </table>`,
+      action: "Reply to enquiry",
+      actionUrl: `mailto:${encodeURIComponent(input.visitorEmail)}`,
+      aside: "This enquiry came from your public Rive portfolio. Replying to this email will respond directly to the prospective client.",
+      recipient: input.to,
+    }),
+    text: `New portfolio enquiry\n\nFrom: ${input.visitorName} <${input.visitorEmail}>\nProject: ${input.projectType}\n\n${input.message}`,
   });
 }
