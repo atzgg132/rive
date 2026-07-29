@@ -3,6 +3,7 @@ name: Deploy to AWS
 on:
   push:
     branches:
+      - main
       - test
       - dev
   workflow_dispatch:
