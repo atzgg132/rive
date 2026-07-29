@@ -263,12 +263,12 @@ export default function RemitSection() {
               {/* You send */}
               <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 p-4 mb-2 transition-colors">
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>You send</p>
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <Select
                     value={fromCode}
                     onChange={e => setFromCode(e.target.value)}
                     className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
-                    style={{ fontFamily: "var(--font-display)" }}
+                    style={{ fontFamily: "var(--font-display)", width: "9rem" }}
                   >
                     {CURRENCIES.map(c => (
                       <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
@@ -278,15 +278,15 @@ export default function RemitSection() {
                     type="number" min="1" step="any"
                     value={amount}
                     onChange={e => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="flex-1 bg-transparent text-right text-3xl font-bold text-slate-800 dark:text-slate-100 outline-none border-none w-0"
+                    className="min-w-0 flex-1 bg-transparent text-right text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 outline-none border-none w-0"
                     style={{ fontFamily: "var(--font-display)" }}
                   />
                 </div>
               </div>
 
               {/* Fee row */}
-              <div className="flex items-center justify-between px-4 py-2 mb-2">
-                <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-2 sm:px-4 py-2 mb-2">
+                <div className="flex min-w-0 items-center gap-1.5">
                   <div className="w-px h-4 bg-blue-200 dark:bg-blue-800" />
                   <span className="text-[11px] text-slate-400 dark:text-slate-500" style={{ fontFamily: "var(--font-body)" }}>
                     rive. fee (0.5%) — <span className="text-slate-600 dark:text-slate-300 font-semibold">{fromCurrency.flag} {fmt(feeAmount, fromCode)} {fromCode}</span>
@@ -307,19 +307,19 @@ export default function RemitSection() {
               {/* They receive */}
               <div className="bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-100/50 dark:border-blue-900/40 p-4 mb-4 transition-colors">
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>They receive</p>
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <Select
                     value={toCode}
                     onChange={e => setToCode(e.target.value)}
                     className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/50 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
-                    style={{ fontFamily: "var(--font-display)" }}
+                    style={{ fontFamily: "var(--font-display)", width: "9rem" }}
                   >
                     {CURRENCIES.map(c => (
                       <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
                     ))}
                   </Select>
                   <span
-                    className={`flex-1 text-right text-3xl font-bold text-blue-600 dark:text-blue-400 transition-all duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
+                    className={`min-w-0 flex-1 overflow-hidden text-ellipsis text-right text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400 transition-all duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     {received !== null ? fmt(received, toCode) : "—"}
@@ -329,7 +329,7 @@ export default function RemitSection() {
 
               {/* Live rate line */}
               {rate !== null && (
-                <div className="flex items-center justify-between px-1 mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-1 px-1 mb-4">
                   <span className="text-[11px] text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
                     1 {fromCode} = {fmt(rate, toCode)} {toCode}
                   </span>

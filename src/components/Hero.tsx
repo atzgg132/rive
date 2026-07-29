@@ -8,10 +8,10 @@ import { ArrowRight, Play, Zap, BarChart3, Users, Shield, Loader2, Clock } from 
 import { submitToWaitlist } from "@/utils/api";
 
 const floatingStats = [
-  { icon: Shield,   label: "Important writes are validated on the server, not only in the interface.", value: "Server validated" },
-  { icon: Users,    label: "Clients, projects, invoices, tasks, and calendar dates share context.", value: "Connected records" },
-  { icon: BarChart3, label: "Financial and operational signals update from the work you already track.", value: "Useful insights" },
-  { icon: Zap,      label: "A public portfolio and analytics are included in the same workspace.", value: "Portfolio included" },
+  { icon: Shield, label: "Projects, deadlines, and next actions in one delivery view.", value: "Deliver on time" },
+  { icon: Users, label: "Every client, conversation, project, and payment stays connected.", value: "Know your clients" },
+  { icon: BarChart3, label: "Revenue, invoices, expenses, and margins without another spreadsheet.", value: "Own your numbers" },
+  { icon: Zap, label: "Turn completed work into a portfolio that helps win the next client.", value: "Show your best work" },
 ];
 
 export default function Hero() {
@@ -33,7 +33,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 pb-16 pt-24 dark:bg-background sm:px-6 sm:pb-20 sm:pt-28">
+    <section className="relative flex flex-col items-center overflow-hidden bg-background px-4 pb-16 pt-32 dark:bg-background sm:px-6 sm:pb-20 sm:pt-36">
 
       {/* ── Background orbs ─────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none select-none">
@@ -69,10 +69,10 @@ export default function Hero() {
 
       {/* ── Headline ────────────────────────────────── */}
       <h1
-        className="relative mb-7 max-w-5xl text-center leading-[0.95] tracking-wide text-slate-900 dark:text-white"
-        style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(2.6rem, 10vw, 8rem)" }}
+        className="relative mb-6 max-w-5xl text-center leading-[0.94] tracking-[-0.055em] text-slate-900 dark:text-white"
+        style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(3rem, 7vw, 6.4rem)" }}
       >
-        <span>Your freelance business, </span>
+        <span>Run your freelance business </span>
         <span className="relative inline-block">
           <span style={{
             background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
@@ -80,7 +80,7 @@ export default function Hero() {
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}>
-            finally connected
+            without the chaos
           </span>
           {/* Underline */}
           <svg
@@ -112,12 +112,12 @@ export default function Hero() {
         className="relative mb-10 max-w-xl text-center leading-relaxed text-slate-600 dark:text-slate-300"
         style={{ fontFamily: "var(--font-body)", fontSize: "clamp(1rem, 2vw, 1.2rem)" }}
       >
-        Manage clients, projects, invoices, expenses, your calendar, and your public
-        portfolio from one thoughtfully connected workspace.
+        Rive brings clients, projects, money, planning, and your portfolio into one
+        connected workspace built for independent professionals.
       </p>
 
       {/* ── CTA row ─────────────────────────────────── */}
-      <div className="relative mb-16 flex w-full max-w-lg flex-col items-center gap-4 sm:flex-row">
+      <div className="relative mb-12 flex w-full max-w-xl flex-col items-center gap-4 sm:flex-row">
         {formState === "idle" || formState === "loading" ? (
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full">
             <Input
@@ -246,7 +246,7 @@ export default function Hero() {
                 </div>
                 <span className="text-slate-800 dark:text-slate-200 text-xs font-semibold" style={{ fontFamily: "var(--font-display)" }}>rive.</span>
               </div>
-              {["Dashboard", "Projects", "Clients", "Revenue", "Gig Board", "AI Assistant"].map((item, i) => (
+              {["Overview", "Calendar", "Projects", "Clients", "Revenue", "Portfolio"].map((item, i) => (
                 <div
                   key={item}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors"

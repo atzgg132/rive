@@ -10,8 +10,8 @@ const connectedCapabilities = [
   },
   {
     icon: Shield,
-    title: "Protected by default",
-    description: "Account-scoped data, server-side validation, and deliberate confirmations protect important actions.",
+    title: "Know what needs attention",
+    description: "Upcoming deadlines, unpaid invoices, and unfinished work surface before they become surprises.",
   },
   {
     icon: TrendingUp,
@@ -83,7 +83,7 @@ export default function AISection() {
                 <div className="absolute top-1/2 -right-28 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-md dark:shadow-none flex items-center gap-1.5 whitespace-nowrap transition-colors">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   <p className="text-[11px] text-slate-500 dark:text-slate-300 font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                    Server checks enabled
+                    Payments needing attention
                   </p>
                 </div>
               </div>
@@ -114,8 +114,8 @@ export default function AISection() {
               className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              rive. is built around shared context. Update the source once, and every connected
-              view reflects the change—from project planning and payment dates to your calendar and dashboard.
+              Rive is built around shared context. Update something once and it stays useful
+              everywhere, from project plans and payment dates to your calendar and dashboard.
             </p>
 
             <div className="flex flex-col gap-5 mt-2">

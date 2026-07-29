@@ -63,7 +63,7 @@ export default function Footer() {
               className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-[220px] font-medium"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              The all-in-one operating system for freelancers and businesses. Built for the future of work.
+              One connected workspace to run your clients, projects, money, calendar, and portfolio.
             </p>
 
             {/* Socials */}
@@ -113,7 +113,7 @@ export default function Footer() {
             className="text-slate-400 text-sm font-medium"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            © 2026 rive. All rights reserved.
+            © 2026 Rive. All rights reserved.
           </p>
 
           <div className="flex items-center gap-2">
@@ -130,7 +130,7 @@ export default function Footer() {
             className="text-slate-400 text-sm font-medium"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            Built with ♥ for the freelance generation.
+            Built for independent professionals.
           </p>
         </div>
       </div>

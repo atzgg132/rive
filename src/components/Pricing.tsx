@@ -8,14 +8,14 @@ const plans = [
   {
     name: "Starter",
     price: "Free",
-    priceNote: "Forever",
-    description: "For freelancers just getting started.",
+    priceNote: "during early access",
+    description: "Everything you need to bring your freelance business into one place.",
     features: [
-      "Up to 3 active projects",
-      "Basic client management",
-      "Income & expense tracking",
-      "Gig Board access (view only)",
-      "1 portfolio page",
+      "Clients, projects, tasks, and calendar",
+      "Revenue, invoices, and expenses",
+      "Business overview and useful insights",
+      "One public portfolio with analytics",
+      "Guided onboarding and data import",
     ],
     cta: "join the waitlist",
     ctaStyle: "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50",
@@ -24,38 +24,35 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$19",
-    priceNote: "/month",
-    description: "For serious freelancers ready to scale.",
+    price: "Soon",
+    priceNote: "",
+    description: "More automation and control for established independent professionals.",
     features: [
-      "Unlimited projects & clients",
-      "Full AI co-pilot access",
-      "Revenue & invoice management",
-      "Gig Board posting + AI matches",
-      "Agreement signing",
-      "Customizable portfolio",
-      "Lead Gen Assistant",
+      "Everything in Starter",
+      "Advanced workflow automation",
+      "Deeper financial and portfolio insights",
+      "Expanded customization",
+      "Priority support",
     ],
-    cta: "get pro access",
+    cta: "join the early-access list",
     ctaStyle:
       "bg-gradient-to-r from-blue-600 to-sky-500 text-white hover:from-blue-700 hover:to-sky-600 shadow-lg shadow-blue-600/20",
     highlighted: true,
     checkColor: "text-blue-600 dark:text-blue-400",
   },
   {
-    name: "Agency",
-    price: "$49",
-    priceNote: "/month",
-    description: "For small teams and boutique agencies.",
+    name: "Studio",
+    price: "Later",
+    priceNote: "",
+    description: "A collaborative workspace for small service teams and studios.",
     features: [
       "Everything in Pro",
-      "Multi-seat workspace",
-      "Advanced revenue analytics",
-      "Priority AI co-pilot queue",
-      "White-label invoice branding",
-      "Dedicated support",
+      "Shared team workspace",
+      "Roles and approvals",
+      "Studio-level reporting",
+      "Branded client experiences",
     ],
-    cta: "talk to sales",
+    cta: "tell us what your team needs",
     ctaStyle: "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50",
     highlighted: false,
     checkColor: "text-slate-400 dark:text-slate-500",
@@ -81,21 +78,21 @@ export default function Pricing() {
             className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-5 tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Invest in your business. <br />
+            Start with the complete workspace. <br />
             <span
               className="bg-clip-text text-transparent"
               style={{
                 backgroundImage: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 50%, #60A5FA 100%)",
               }}
             >
-              Pay back in 1 gig.
+              Free during early access.
             </span>
           </h2>
           <p
             className="text-slate-600 dark:text-slate-300 text-lg max-w-xl mx-auto font-normal leading-relaxed"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            Choose the plan that fits where you are today. Upgrade or downgrade anytime.
+            Join early, shape the product with us, and get clear notice before paid plans are introduced.
           </p>
         </div>
 
@@ -181,7 +178,7 @@ export default function Pricing() {
           className="text-center text-slate-400 text-sm mt-9 font-medium"
           style={{ fontFamily: "var(--font-body)" }}
         >
-          All plans include a 14-day free trial. No credit card required.
+          No credit card required. Early users will receive advance notice before pricing changes.
         </p>
       </div>
     </section>
