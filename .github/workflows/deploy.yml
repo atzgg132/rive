@@ -73,7 +73,7 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.sha }}
+          tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
           build-args: DEPLOYMENT_VERSION=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -84,14 +84,14 @@ jobs:
           target: migrator
           platforms: linux/arm64
           push: true
-          tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.sha }}-migrate
+          tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}-migrate
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Deploy immutable image through Systems Manager
         env:
           INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
           ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
         run: |
           command_id=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
