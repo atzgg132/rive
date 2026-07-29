@@ -140,6 +140,58 @@ function sourceLabel(source: string): string {
   return "rive. event";
 }
 
+function eventStartTime(event: CalendarEvent): number {
+  if (event.allDay) return Number.NEGATIVE_INFINITY;
+  return event.startAt ? new Date(event.startAt).getTime() : Number.POSITIVE_INFINITY;
+}
+
+function sortCalendarEvents(events: CalendarEvent[]): CalendarEvent[] {
+  return [...events].sort((left, right) => {
+    const timeDifference = eventStartTime(left) - eventStartTime(right);
+    return timeDifference || left.title.localeCompare(right.title);
+  });
+}
+
+type PositionedEvent = {
+  event: CalendarEvent;
+  lane: number;
+  laneCount: number;
+};
+
+function layoutOverlappingEvents(events: CalendarEvent[]): PositionedEvent[] {
+  const sorted = sortCalendarEvents(events).filter((event) => event.startAt && event.endAt);
+  const clusters: CalendarEvent[][] = [];
+  let cluster: CalendarEvent[] = [];
+  let clusterEnd = Number.NEGATIVE_INFINITY;
+
+  for (const event of sorted) {
+    const start = new Date(event.startAt!).getTime();
+    const end = new Date(event.endAt!).getTime();
+    if (cluster.length && start >= clusterEnd) {
+      clusters.push(cluster);
+      cluster = [];
+      clusterEnd = Number.NEGATIVE_INFINITY;
+    }
+    cluster.push(event);
+    clusterEnd = Math.max(clusterEnd, end);
+  }
+  if (cluster.length) clusters.push(cluster);
+
+  return clusters.flatMap((overlappingEvents) => {
+    const laneEnds: number[] = [];
+    const positioned = overlappingEvents.map((event) => {
+      const start = new Date(event.startAt!).getTime();
+      const end = new Date(event.endAt!).getTime();
+      const availableLane = laneEnds.findIndex((laneEnd) => laneEnd <= start);
+      const lane = availableLane === -1 ? laneEnds.length : availableLane;
+      laneEnds[lane] = end;
+      return { event, lane };
+    });
+    const laneCount = Math.max(1, laneEnds.length);
+    return positioned.map((item) => ({ ...item, laneCount }));
+  });
+}
+
 export default function CalendarPage() {
   const [view, setView] = useState<View>("week");
   const [cursor, setCursor] = useState(() => new Date());
@@ -244,6 +296,7 @@ export default function CalendarPage() {
       const key = eventDateKey(event);
       grouped.set(key, [...(grouped.get(key) || []), event]);
     }
+    for (const [key, items] of grouped) grouped.set(key, sortCalendarEvents(items));
     return grouped;
   }, [visibleEvents]);
 
@@ -720,12 +773,52 @@ function ModalShell({ title, onClose, children, wide = false }: { title: string;
 }
 
 function MonthView({ rangeStart, groupedEvents, onCreate, onSelect }: { rangeStart: Date; groupedEvents: Map<string, CalendarEvent[]>; onCreate: (date: Date) => void; onSelect: (event: CalendarEvent) => void }) {
-  return <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">{WEEK_DAYS.map((day) => <div key={day} className="px-2 py-2 text-center text-[9px] font-black uppercase tracking-wider text-slate-400">{day}</div>)}</div><div className="grid grid-cols-7">{Array.from({ length: 42 }, (_, index) => addDays(rangeStart, index)).map((date) => { const key = dateKey(date); const items = groupedEvents.get(key) || []; const today = key === dateKey(new Date()); return <Button key={key} onDoubleClick={() => onCreate(date)} className="min-h-28 border-b border-r border-slate-100 p-1.5 text-left align-top hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10"><span className={`inline-grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold ${today ? "bg-blue-600 text-white" : "text-slate-500 dark:text-slate-400"}`}>{date.getDate()}</span><div className="mt-1 space-y-1">{items.slice(0, 3).map((event) => <span key={event.id} onClick={(click) => { click.stopPropagation(); onSelect(event); }} className="block truncate rounded-md px-1.5 py-1 text-[9px] font-bold" style={{ background: `${event.color}18`, color: event.color }}>{event.allDay ? "" : `${formatTime(event.startAt)} `}{event.title}</span>)}{items.length > 3 && <span className="block px-1 text-[9px] font-bold text-slate-400">+{items.length - 3} more</span>}</div></Button>; })}</div></div>;
+  const currentMonth = addDays(rangeStart, 7).getMonth();
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="grid [grid-template-columns:repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+        {WEEK_DAYS.map((day) => <div key={day} className="px-1 py-2 text-center text-[9px] font-black uppercase tracking-wider text-slate-400">{day}</div>)}
+      </div>
+      <div className="grid [grid-template-columns:repeat(7,minmax(0,1fr))]">
+        {Array.from({ length: 42 }, (_, index) => addDays(rangeStart, index)).map((date) => {
+          const key = dateKey(date);
+          const items = groupedEvents.get(key) || [];
+          const today = key === dateKey(new Date());
+          const outsideMonth = date.getMonth() !== currentMonth;
+          return (
+            <div
+              key={key}
+              onDoubleClick={() => onCreate(date)}
+              className={`min-h-28 min-w-0 overflow-hidden border-b border-r border-slate-100 p-1.5 transition-colors hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10 ${outsideMonth ? "bg-slate-50/50 dark:bg-slate-950/20" : ""}`}
+            >
+              <span className={`inline-grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold ${today ? "bg-blue-600 text-white" : outsideMonth ? "text-slate-300 dark:text-slate-600" : "text-slate-500 dark:text-slate-400"}`}>{date.getDate()}</span>
+              <div className="mt-1 min-w-0 space-y-1">
+                {items.slice(0, 3).map((event) => (
+                  <Button
+                    key={event.id}
+                    onClick={(click) => { click.stopPropagation(); onSelect(event); }}
+                    title={`${event.allDay ? "All day" : formatTime(event.startAt)} · ${event.title}`}
+                    className="flex h-5 w-full min-w-0 items-center justify-start gap-1 overflow-hidden rounded-md px-1.5 text-left text-[9px] font-bold"
+                    style={{ background: `${event.color}18`, color: event.color }}
+                  >
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: event.color }} />
+                    {!event.allDay && <span className="hidden shrink-0 font-black xl:inline">{formatTime(event.startAt)}</span>}
+                    <span className="min-w-0 flex-1 truncate">{event.title}</span>
+                  </Button>
+                ))}
+                {items.length > 3 && <span className="block truncate px-1 text-[9px] font-bold text-slate-400">+{items.length - 3} more events</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date; events: CalendarEvent[]; onCreate: (date: Date, hour: number) => void; onSelect: (event: CalendarEvent) => void }) {
   const days = Array.from({ length: 7 }, (_, index) => addDays(rangeStart, index));
-  return <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="min-w-[780px]"><div className="grid grid-cols-[54px_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-800"><div /><>{days.map((day) => { const today = dateKey(day) === dateKey(new Date()); return <div key={day.toISOString()} className="border-l border-slate-100 px-2 py-3 text-center dark:border-slate-800"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{WEEK_DAYS[(day.getDay() + 6) % 7]}</p><p className={`mx-auto mt-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black ${today ? "bg-blue-600 text-white" : "text-slate-700 dark:text-slate-200"}`}>{day.getDate()}</p></div>; })}</></div><div className="grid grid-cols-[54px_repeat(7,1fr)]"><div>{HOURS.map((hour) => <div key={hour} className="h-16 -translate-y-2 pr-2 text-right text-[9px] text-slate-400">{hour === 12 ? "12 pm" : hour > 12 ? `${hour - 12} pm` : `${hour} am`}</div>)}</div>{days.map((day) => { const key = dateKey(day); const dayEvents = events.filter((event) => eventDateKey(event) === key); const timed = dayEvents.filter((event) => !event.allDay && event.startAt && event.endAt); const allDay = dayEvents.filter((event) => event.allDay); return <div key={key} className="relative border-l border-slate-100 dark:border-slate-800"><div className="absolute left-1 right-1 top-1 z-10 space-y-1">{allDay.slice(0, 2).map((event) => <Button key={event.id} onClick={() => onSelect(event)} className="block w-full truncate rounded-md px-1.5 py-1 text-left text-[8px] font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.title}</Button>)}</div>{HOURS.map((hour) => <Button key={hour} onDoubleClick={() => onCreate(day, hour)} className="block h-16 w-full border-b border-slate-100 text-left hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10" aria-label={`Create event ${key} at ${hour}:00`} />)}{timed.map((event) => { const start = new Date(event.startAt!); const end = new Date(event.endAt!); const top = Math.max(0, ((start.getHours() * 60 + start.getMinutes()) - 420) / 60 * 64); const height = Math.max(24, (end.getTime() - start.getTime()) / 3600000 * 64); return <Button key={event.id} onClick={() => onSelect(event)} className="absolute left-1 right-1 z-20 overflow-hidden rounded-lg border-l-[3px] px-1.5 py-1 text-left shadow-sm" style={{ top, height, background: `${event.color}1C`, borderColor: event.color, color: event.color }}><span className="block truncate text-[9px] font-black">{event.title}</span><span className="block text-[8px] opacity-80">{formatTime(event.startAt)}</span></Button>; })}</div>; })}</div></div></div>;
+  return <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="min-w-[780px]"><div className="grid grid-cols-[54px_repeat(7,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-800"><div /><>{days.map((day) => { const today = dateKey(day) === dateKey(new Date()); return <div key={day.toISOString()} className="border-l border-slate-100 px-2 py-3 text-center dark:border-slate-800"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{WEEK_DAYS[(day.getDay() + 6) % 7]}</p><p className={`mx-auto mt-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black ${today ? "bg-blue-600 text-white" : "text-slate-700 dark:text-slate-200"}`}>{day.getDate()}</p></div>; })}</></div><div className="grid grid-cols-[54px_repeat(7,minmax(0,1fr))]"><div>{HOURS.map((hour) => <div key={hour} className="h-16 -translate-y-2 pr-2 text-right text-[9px] text-slate-400">{hour === 12 ? "12 pm" : hour > 12 ? `${hour - 12} pm` : `${hour} am`}</div>)}</div>{days.map((day) => { const key = dateKey(day); const dayEvents = events.filter((event) => eventDateKey(event) === key); const timed = layoutOverlappingEvents(dayEvents.filter((event) => !event.allDay && event.startAt && event.endAt)); const allDay = sortCalendarEvents(dayEvents.filter((event) => event.allDay)); return <div key={key} className="relative min-w-0 border-l border-slate-100 dark:border-slate-800"><div className="absolute left-1 right-1 top-1 z-10 space-y-1">{allDay.slice(0, 2).map((event) => <Button key={event.id} onClick={() => onSelect(event)} className="block w-full min-w-0 truncate rounded-md px-1.5 py-1 text-left text-[8px] font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.title}</Button>)}</div>{HOURS.map((hour) => <Button key={hour} onDoubleClick={() => onCreate(day, hour)} className="block h-16 w-full border-b border-slate-100 text-left hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10" aria-label={`Create event ${key} at ${hour}:00`} />)}{timed.map(({ event, lane, laneCount }) => { const start = new Date(event.startAt!); const end = new Date(event.endAt!); const top = Math.max(0, ((start.getHours() * 60 + start.getMinutes()) - 420) / 60 * 64); const height = Math.max(24, (end.getTime() - start.getTime()) / 3600000 * 64); return <Button key={event.id} onClick={() => onSelect(event)} title={`${formatTime(event.startAt)} · ${event.title}`} className="absolute z-20 min-w-0 overflow-hidden rounded-lg border-l-[3px] px-1.5 py-1 text-left shadow-sm" style={{ top, height, left: `calc(${lane * (100 / laneCount)}% + 3px)`, width: `calc(${100 / laneCount}% - 5px)`, background: `${event.color}1C`, borderColor: event.color, color: event.color }}><span className="block truncate text-[9px] font-black">{event.title}</span><span className="block truncate text-[8px] opacity-80">{formatTime(event.startAt)}</span></Button>; })}</div>; })}</div></div></div>;
 }
 
 function AgendaView({ events, onSelect }: { events: CalendarEvent[]; onSelect: (event: CalendarEvent) => void }) {
