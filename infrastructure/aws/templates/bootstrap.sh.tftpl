@@ -86,6 +86,7 @@ mv "$TMP_FILE" "$ENV_FILE"
 
 aws ecr get-login-password --region "$REGION" |
   docker login --username AWS --password-stdin "$${REPOSITORY_URL%%/*}"
+docker image prune -af >/dev/null 2>&1 || true
 docker pull "$REPOSITORY_URL:$IMAGE"
 docker pull "$REPOSITORY_URL:$IMAGE-migrate"
 
