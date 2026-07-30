@@ -1,5 +1,8 @@
+import crypto from "crypto";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { expect, test } from "@playwright/test";
-import type { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
 
 test.describe("admin waitlist operations", () => {
   test.describe.configure({ mode: "serial" });
@@ -11,11 +14,12 @@ test.describe("admin waitlist operations", () => {
   let waitlistId: number;
 
   test.beforeAll(async () => {
-    const [{ prisma: database }, { generateToken }] = await Promise.all([
-      import("../../src/utils/db"),
-      import("../../src/utils/auth"),
-    ]);
-    prisma = database;
+    const { generateToken } = await import("../../src/utils/auth");
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: false,
+    });
+    prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
     adminToken = generateToken();
 
     const entry = await prisma.waitlist.create({
@@ -69,9 +73,14 @@ test.describe("admin waitlist operations", () => {
   });
 
   test("a failed resend preserves an older active invitation", async ({ request }) => {
-    const { prepareAuthToken } = await import("../../src/utils/authTokens");
-    const prior = prepareAuthToken({ email, type: "waitlist_invite" });
-    const priorInvitation = await prisma.authToken.create({ data: prior.data });
+    const priorInvitation = await prisma.authToken.create({
+      data: {
+        email,
+        type: "waitlist_invite",
+        tokenHash: crypto.randomBytes(32).toString("hex"),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
 
     const response = await request.patch(`/api/admin/waitlist/${waitlistId}`, {
       headers: { "x-admin-token": adminToken },
