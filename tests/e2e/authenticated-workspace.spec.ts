@@ -1,5 +1,8 @@
 import { loadEnvConfig } from "@next/env";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { Pool } from "pg";
 
 const dashboardRoutes = [
   { route: "/dashboard", endpoint: "/api/workflow/dashboard" },
@@ -20,10 +23,14 @@ async function getSessionToken() {
       const email = process.env.E2E_USER_EMAIL?.trim().toLowerCase();
       if (!email) throw new Error("E2E_USER_EMAIL is required for authenticated workspace tests.");
 
-      const [{ prisma }, { generateUserToken }] = await Promise.all([
-        import("../../src/utils/db"),
-        import("../../src/utils/userAuth"),
-      ]);
+      const { generateUserToken } = await import("../../src/utils/userAuth");
+      const ssl =
+        process.env.DATABASE_SSL === "disable" ||
+        process.env.DATABASE_URL?.includes("sslmode=disable")
+          ? false
+          : { rejectUnauthorized: false };
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
+      const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
       try {
         const user = await prisma.user.findUnique({
@@ -34,6 +41,7 @@ async function getSessionToken() {
         return generateUserToken(user.id, user.email, user.plan);
       } finally {
         await prisma.$disconnect();
+        await pool.end();
       }
     })();
   }
