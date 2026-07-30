@@ -16,6 +16,7 @@ const protectedGetRoutes = [
   "/api/calendar/events",
   "/api/calendar/tasks",
   "/api/calendar/connections",
+  "/api/admin/waitlist",
 ];
 
 for (const route of protectedGetRoutes) {
@@ -27,6 +28,13 @@ for (const route of protectedGetRoutes) {
 
 test("/api/connectors/zoho-books/sync rejects unauthenticated access", async ({ request }) => {
   const response = await request.post("/api/connectors/zoho-books/sync", { data: {} });
+  expect(response.status()).toBe(401);
+});
+
+test("/api/admin/waitlist/[id] rejects requests without an admin token", async ({ request }) => {
+  const response = await request.patch("/api/admin/waitlist/13", {
+    data: { status: "approved" },
+  });
   expect(response.status()).toBe(401);
 });
 
