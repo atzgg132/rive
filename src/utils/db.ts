@@ -48,9 +48,12 @@ if (globalForPrisma.prisma) {
       ? false
       : {
           rejectUnauthorized,
-          checkServerIdentity: sslServerName
-            ? (_hostname, certificate) => checkServerIdentity(sslServerName, certificate)
-            : undefined,
+          ...(sslServerName
+            ? {
+                checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) =>
+                  checkServerIdentity(sslServerName, certificate),
+              }
+            : {}),
         },
   });
 
