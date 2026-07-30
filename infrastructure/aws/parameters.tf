@@ -44,7 +44,6 @@ locals {
       "${environment}/ASSET_BUCKET"                     = aws_s3_bucket.assets[environment].id
       "${environment}/MIGRATION_QUEUE_URL"              = aws_sqs_queue.migration[environment].url
       "${environment}/MAX_UPLOAD_BYTES"                 = "10485760"
-      "${environment}/ADMIN_USERNAME"                   = var.admin_username
     }
   ]...)
 }
@@ -62,6 +61,18 @@ resource "aws_ssm_parameter" "admin_password_hash" {
   type        = "SecureString"
   value       = var.admin_password_hash
   description = "Admin portal password hash (scrypt). Generate with: node scripts/setup-admin.mjs"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "admin_username" {
+  for_each    = local.environments
+  name        = "/rive/${each.key}/ADMIN_USERNAME"
+  type        = "String"
+  value       = var.admin_username
+  description = "Admin portal username. Change manually in SSM after bootstrap."
 
   lifecycle {
     ignore_changes = [value]
