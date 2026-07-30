@@ -8,7 +8,7 @@ import {
   Users, Eye, TrendingUp, Zap, LogOut, Search, RefreshCw,
   ChevronLeft, ChevronRight, Mail, Clock, Shield, Loader2,
   AlertCircle, CheckCircle2, XCircle, ChevronUp, ChevronDown,
-  Filter, CheckCheck,
+  Filter, CheckCheck, Send, UserCheck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RiveLogo } from "@/components/RiveLogo";
@@ -27,6 +27,11 @@ type Analytics = {
 type WaitlistEntry = {
   id: number; email: string; type: string;
   status: "pending" | "approved"; created_at: string;
+  registered: boolean; registered_at: string | null;
+  invite_status: "not_sent" | "active" | "delivery_failed" | "expired" | "revoked" | "registered";
+  invite_expires_at: string | null;
+  latest_delivery_status: string | null;
+  latest_delivery_at: string | null;
 };
 
 type SortField = "email" | "type" | "status" | "created_at";
@@ -197,6 +202,27 @@ function StatusBadge({status}:{status:"pending"|"approved"}) {
     : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><Clock className="w-3 h-3"/>Pending</span>;
 }
 
+function InviteBadge({entry}:{entry:WaitlistEntry}) {
+  const F = {fontFamily:"Outfit,sans-serif"};
+  if(entry.registered) {
+    return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400" style={F}><UserCheck className="w-3 h-3"/>Registered</span>;
+  }
+  if(entry.invite_status==="active") {
+    const retryFailed = entry.latest_delivery_status==="failed" || entry.latest_delivery_status==="skipped";
+    return <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${retryFailed?"text-amber-700 dark:text-amber-400":"text-blue-600 dark:text-blue-400"}`} style={F}>
+      {retryFailed?<AlertCircle className="w-3 h-3"/>:<Mail className="w-3 h-3"/>}
+      {retryFailed?"Invite active · retry failed":"Invite active"}
+    </span>;
+  }
+  if(entry.invite_status==="delivery_failed") {
+    return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 dark:text-red-400" style={F}><AlertCircle className="w-3 h-3"/>Delivery failed</span>;
+  }
+  if(entry.invite_status==="expired") {
+    return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400" style={F}><Clock className="w-3 h-3"/>Invite expired</span>;
+  }
+  return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400" style={F}><Mail className="w-3 h-3"/>{entry.status==="approved"?"Invite unavailable":"Not invited"}</span>;
+}
+
 // ── Dashboard ─────────────────────────────────────────────
 function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
   const [analytics,  setAnalytics]  = useState<Analytics|null>(null);
@@ -210,6 +236,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
   const [sortField,  setSortField]  = useState<SortField>("created_at");
   const [sortOrder,  setSortOrder]  = useState<SortOrder>("DESC");
   const [approving,  setApproving]  = useState<Set<number>>(new Set());
+  const [notice, setNotice] = useState<{kind:"success"|"warning"|"error";message:string}|null>(null);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [limit, setLimit]    = useState(20);
@@ -262,23 +289,26 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
     setPage(1);
   };
 
-  const handleApprove = async (entry:WaitlistEntry)=>{
-    const newStatus = entry.status==="approved"?"pending":"approved";
+  const handleWaitlistAction = async (entry:WaitlistEntry, action:"approve"|"revoke"|"resend")=>{
     setApproving(s=>new Set(s).add(entry.id));
-    // Optimistic update
-    setWaitlist(prev=>prev.map(e=>e.id===entry.id?{...e,status:newStatus}:e));
+    setNotice(null);
     try {
-      const r = await fetch(`${API}/api/admin/waitlist/${entry.id}`,{method:"PATCH",headers,body:JSON.stringify({status:newStatus})});
+      const body = action==="resend"
+        ? {action:"resend_invite"}
+        : {status:action==="approve"?"approved":"pending"};
+      const r = await fetch(`${API}/api/admin/waitlist/${entry.id}`,{method:"PATCH",headers,body:JSON.stringify(body)});
       const d = await r.json();
-      if(!d.success) {
-        // Revert on failure
-        setWaitlist(prev=>prev.map(e=>e.id===entry.id?{...e,status:entry.status}:e));
+      if(!r.ok || !d.success) {
+        setNotice({kind:"error",message:d.message||"The waitlist entry could not be updated."});
       } else {
-        // Update analytics count
-        setAnalytics(prev=>prev?{...prev,approvedCount:prev.approvedCount+(newStatus==="approved"?1:-1)}:prev);
+        setNotice({
+          kind:d.emailSent===false&&(action==="approve"||action==="resend")?"warning":"success",
+          message:d.message||"Waitlist entry updated.",
+        });
       }
+      await Promise.all([fetchWaitlist(),fetchAnalytics()]);
     } catch {
-      setWaitlist(prev=>prev.map(e=>e.id===entry.id?{...e,status:entry.status}:e));
+      setNotice({kind:"error",message:"The server could not be reached. Refresh and try again."});
     }
     setApproving(s=>{ const n=new Set(s); n.delete(entry.id); return n; });
   };
@@ -332,6 +362,22 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
             <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"/>Live</span>
           </p>
         </div>
+
+        {notice && (
+          <div role="status" aria-live="polite" className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
+            notice.kind==="success"
+              ?"border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+              :notice.kind==="warning"
+                ?"border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
+                :"border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+          }`} style={F}>
+            <span className="flex items-center gap-2">
+              {notice.kind==="success"?<CheckCircle2 className="w-4 h-4 shrink-0"/>:<AlertCircle className="w-4 h-4 shrink-0"/>}
+              {notice.message}
+            </span>
+            <Button variant="ghost" size="icon-sm" aria-label="Dismiss message" onClick={()=>setNotice(null)} className="shrink-0 opacity-70 hover:opacity-100"><XCircle className="w-4 h-4"/></Button>
+          </div>
+        )}
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -485,7 +531,12 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                           "bg-amber-50 text-amber-600 border border-amber-100"
                         }`} style={F}>{entry.type}</span>
                       </td>
-                      <td className="px-6 py-3.5"><StatusBadge status={entry.status}/></td>
+                      <td className="px-6 py-3.5">
+                        <div className="flex flex-col items-start gap-1.5">
+                          <StatusBadge status={entry.status}/>
+                          <InviteBadge entry={entry}/>
+                        </div>
+                      </td>
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-1.5 text-slate-400">
                           <Clock className="w-3.5 h-3.5 shrink-0"/>
@@ -493,22 +544,43 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
                         </div>
                       </td>
                       <td className="px-6 py-3.5 text-right">
-                        <Button
-                          onClick={()=>handleApprove(entry)}
-                          disabled={isApproving}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed ${
-                            entry.status==="approved"
-                              ? "border border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50"
-                              : "border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-                          }`} style={F}>
-                          {isApproving ? (
-                            <Loader2 className="w-3 h-3 animate-spin"/>
-                          ) : entry.status==="approved" ? (
-                            <><XCircle className="w-3 h-3"/>Revoke</>
-                          ) : (
-                            <><CheckCircle2 className="w-3 h-3"/>Approve</>
-                          )}
-                        </Button>
+                        {entry.registered ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300" style={F}>
+                            <UserCheck className="h-3 w-3"/>
+                            Registered
+                          </span>
+                        ) : entry.status === "approved" ? (
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => handleWaitlistAction(entry, "resend")}
+                              disabled={isApproving}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+                              style={F}
+                            >
+                              {isApproving ? <Loader2 className="h-3 w-3 animate-spin"/> : <><Send className="h-3 w-3"/>Resend</>}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleWaitlistAction(entry, "revoke")}
+                              disabled={isApproving}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                              style={F}
+                            >
+                              <XCircle className="h-3 w-3"/>
+                              Revoke
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => handleWaitlistAction(entry, "approve")}
+                            disabled={isApproving}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                            style={F}
+                          >
+                            {isApproving ? <Loader2 className="h-3 w-3 animate-spin"/> : <><CheckCircle2 className="h-3 w-3"/>Approve</>}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

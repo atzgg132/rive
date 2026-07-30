@@ -5,6 +5,7 @@ Rive runs in `ap-south-1` on a deliberately small AWS footprint:
 - one ARM64 EC2 host for the `prod`, `test`, and `dev` containers;
 - one private, encrypted RDS PostgreSQL instance with separate databases and roles;
 - one private S3 asset bucket per environment;
+- one encrypted migration queue and dead-letter queue per environment;
 - ECR for immutable application and migration images;
 - Zoho Mail SMTP for production transactional email, with SES resources retained as a fallback;
 - EventBridge and Lambda for calendar outbox and webhook maintenance;
@@ -19,7 +20,7 @@ does not modify public DNS.
 - The database is not publicly accessible.
 - EC2 has no inbound SSH rule.
 - GitHub deploys through OIDC and a scoped AWS role.
-- `main` deploys only through manual workflow dispatch.
+- `main`, `test`, and `dev` deploy automatically after their branch checks pass.
 - Scheduled jobs are disabled until DNS and all applications are healthy.
 - Production RDS and Terraform state have deletion protection.
 - Development and test suppress real email delivery.
@@ -71,6 +72,32 @@ $env:TF_VAR_email_provider = "ses"
 SES sends through the AWS API from the instance role. It does not require SMTP
 credentials or an outbound SMTP port.
 
+## Activation and migration queues
+
+Terraform provisions `rive-<environment>-migration` and a matching dead-letter
+queue. Queue URLs are exposed through `MIGRATION_QUEUE_URL`. Jobs are retried
+five times before entering the DLQ, and CloudWatch raises an alarm when a
+dead-letter message appears.
+
+Small file previews and commits currently run in the application process while
+recording durable PostgreSQL import jobs. Larger provider imports can move to
+the same queue contract without changing provenance, reconciliation, or
+rollback semantics.
+
+## Zoho Books
+
+Provide the server-based OAuth application credentials only in the current
+Terraform shell:
+
+```powershell
+$env:TF_VAR_zoho_books_client_id = "<client-id>"
+$env:TF_VAR_zoho_books_client_secret = "<client-secret>"
+```
+
+Callback URLs and requested read-only scopes are documented in
+`docs/CONNECTOR_LAUNCH_SETUP.md`. Never commit these credentials to a variable
+file.
+
 ## Local development against AWS
 
 RDS is intentionally private. Local development connects to the `rive_dev`
@@ -92,7 +119,7 @@ the database password to an environment file.
 | --- | --- | --- | --- |
 | `dev` | `dev` | `dev.rive.work` | push |
 | `test` | `test` | `test.rive.work` | push |
-| `main` | `prod` | `rive.work` | manual workflow dispatch |
+| `main` | `prod` | `rive.work` | push after checks |
 
 Promote the same reviewed commit from `dev` to `test`, then merge it to `main`.
 Images are tagged with the Git SHA and are never overwritten.

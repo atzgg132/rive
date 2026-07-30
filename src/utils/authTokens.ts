@@ -12,6 +12,32 @@ export function hashAuthToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+export function prepareAuthToken({
+  email,
+  type,
+  userId,
+}: {
+  email: string;
+  type: AuthTokenType;
+  userId?: string;
+}) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const token = crypto.randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + TOKEN_TTLS[type]);
+
+  return {
+    token,
+    expiresAt,
+    data: {
+      email: normalizedEmail,
+      type,
+      userId,
+      tokenHash: hashAuthToken(token),
+      expiresAt,
+    },
+  };
+}
+
 export async function createAuthToken({
   email,
   type,
@@ -21,27 +47,19 @@ export async function createAuthToken({
   type: AuthTokenType;
   userId?: string;
 }): Promise<{ token: string; expiresAt: Date }> {
-  const normalizedEmail = email.trim().toLowerCase();
-  const token = crypto.randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + TOKEN_TTLS[type]);
+  const prepared = prepareAuthToken({ email, type, userId });
 
   await prisma.$transaction([
     prisma.authToken.updateMany({
-      where: { email: normalizedEmail, type, usedAt: null },
+      where: { email: prepared.data.email, type, usedAt: null },
       data: { usedAt: new Date() },
     }),
     prisma.authToken.create({
-      data: {
-        email: normalizedEmail,
-        type,
-        userId,
-        tokenHash: hashAuthToken(token),
-        expiresAt,
-      },
+      data: prepared.data,
     }),
   ]);
 
-  return { token, expiresAt };
+  return { token: prepared.token, expiresAt: prepared.expiresAt };
 }
 
 export async function findValidAuthToken(token: string, type: AuthTokenType) {

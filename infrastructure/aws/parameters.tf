@@ -29,6 +29,9 @@ locals {
       "${environment}/CRON_SECRET"                      = random_password.cron[environment].result
       "${environment}/GOOGLE_CALENDAR_CLIENT_ID"        = var.google_calendar_client_id
       "${environment}/GOOGLE_CALENDAR_CLIENT_SECRET"    = var.google_calendar_client_secret
+      "${environment}/ZOHO_BOOKS_CLIENT_ID"             = var.zoho_books_client_id
+      "${environment}/ZOHO_BOOKS_CLIENT_SECRET"         = var.zoho_books_client_secret
+      "${environment}/ZOHO_ACCOUNTS_URL"                = "https://accounts.zoho.in"
       "${environment}/EMAIL_PROVIDER"                   = environment == "prod" ? var.email_provider : "disabled"
       "${environment}/EMAIL_FROM"                       = "\"rive.\" <hello@${var.domain_name}>"
       "${environment}/EMAIL_REPLY_TO"                   = "hello@${var.domain_name}"
@@ -39,6 +42,7 @@ locals {
       "${environment}/SMTP_PASS"                        = environment == "prod" ? var.zoho_smtp_password : "DISABLED"
       "${environment}/SES_CONFIGURATION_SET"            = aws_sesv2_configuration_set.transactional.configuration_set_name
       "${environment}/ASSET_BUCKET"                     = aws_s3_bucket.assets[environment].id
+      "${environment}/MIGRATION_QUEUE_URL"              = aws_sqs_queue.migration[environment].url
       "${environment}/MAX_UPLOAD_BYTES"                 = "10485760"
     }
   ]...)

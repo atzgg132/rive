@@ -45,6 +45,10 @@ interface RecentActivity {
 interface Activation {
   counts: { clients: number; projects: number; invoices: number; expenses: number };
   completed: number;
+  total: number;
+  unresolvedImportIssues: number;
+  next: { id: string; label: string; complete: boolean; href: string } | null;
+  steps: { id: string; label: string; complete: boolean; href: string }[];
 }
 
 interface Insights {
@@ -148,22 +152,18 @@ export default function DashboardOverview() {
         }
       />
 
-      {activation && activation.completed < 4 && (
+      {activation && activation.completed < activation.total && (
         <section className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-600/10 sm:p-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-xl">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Activation center</div>
               <h2 className="mt-2 text-2xl font-black tracking-tight">{activation.completed === 0 ? "Bring your business into focus." : "Your operating system is taking shape."}</h2>
-              <p className="mt-2 text-sm leading-6 text-blue-100">Complete the connected loop once—client, project, invoice, and expense—and rive. can start surfacing useful decisions instead of empty charts.</p>
+              <p className="mt-2 text-sm leading-6 text-blue-100">Complete the connected loop once—identity, clients, active work, money, schedule, and proof—and Rive can turn records into useful decisions.</p>
+              {activation.unresolvedImportIssues > 0 && <Link href="/onboarding?restart=1" className="mt-3 inline-flex rounded-full bg-amber-300/20 px-3 py-1 text-[10px] font-black text-amber-100 ring-1 ring-amber-200/30">{activation.unresolvedImportIssues} imported relationship{activation.unresolvedImportIssues === 1 ? "" : "s"} need review</Link>}
             </div>
             <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:w-[460px]">
-              {[
-                ["clients", activation.counts.clients, "/workflow/clients"],
-                ["projects", activation.counts.projects, "/workflow/projects"],
-                ["invoices", activation.counts.invoices, "/workflow/revenue"],
-                ["expenses", activation.counts.expenses, "/workflow/expenses"],
-              ].map(([label, count, href]) => <Link key={String(label)} href={String(href)} className="flex items-center justify-between rounded-xl bg-white/10 px-3.5 py-3 text-xs font-bold ring-1 ring-white/15 transition hover:bg-white/15"><span>{Number(count) > 0 ? "✓" : "○"} {label}</span><span className="text-blue-100">{count}</span></Link>)}
-              <Link href="/onboarding?restart=1" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-black text-blue-700 sm:col-span-2"><Upload className="h-3.5 w-3.5" /> Import or guided setup</Link>
+              {activation.steps.map((item) => <Link key={item.id} href={item.href} className="flex items-center justify-between rounded-xl bg-white/10 px-3.5 py-3 text-xs font-bold ring-1 ring-white/15 transition hover:bg-white/15"><span>{item.complete ? "✓" : "○"} {item.label}</span><ChevronRight className="h-3.5 w-3.5 text-blue-100" /></Link>)}
+              <Link href={activation.next?.href || "/onboarding?restart=1"} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-black text-blue-700 sm:col-span-2"><Upload className="h-3.5 w-3.5" /> {activation.next ? `Next: ${activation.next.label}` : "Review setup"}</Link>
             </div>
           </div>
         </section>

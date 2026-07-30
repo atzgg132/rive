@@ -99,3 +99,37 @@ resource "aws_lambda_permission" "eventbridge" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.jobs[each.key].arn
 }
+
+resource "aws_sqs_queue" "migration_dead_letter" {
+  for_each                  = local.environments
+  name                      = "rive-${each.key}-migration-dlq"
+  message_retention_seconds = 1209600
+  sqs_managed_sse_enabled   = true
+}
+
+resource "aws_sqs_queue" "migration" {
+  for_each                   = local.environments
+  name                       = "rive-${each.key}-migration"
+  visibility_timeout_seconds = 900
+  message_retention_seconds  = 345600
+  receive_wait_time_seconds  = 20
+  sqs_managed_sse_enabled    = true
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.migration_dead_letter[each.key].arn
+    maxReceiveCount     = 5
+  })
+}
+
+resource "aws_cloudwatch_metric_alarm" "migration_dead_letters" {
+  for_each            = local.environments
+  alarm_name          = "rive-${each.key}-migration-dead-letters"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 300
+  statistic           = "Maximum"
+  threshold           = 0
+  alarm_description   = "A Rive migration job exhausted its retries."
+  dimensions          = { QueueName = aws_sqs_queue.migration_dead_letter[each.key].name }
+}

@@ -6,10 +6,12 @@ import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
 import { mergePortfolioContent } from "@/utils/portfolio";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
+import { zohoBooksAvailable } from "@/utils/zohoBooks";
 
 const IMAGE = /^(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s<>]+)$/i;
 const BUSINESS_TYPES = ["freelancer", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
+const STARTING_SOURCES = ["spreadsheets", "zoho_books", "quickbooks", "xero", "freshbooks", "google_calendar", "project_tool", "starting_fresh"];
 
 function unauthorized() {
   return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -19,7 +21,7 @@ export async function GET(req: NextRequest) {
   const session = getSessionUser(req);
   if (!session) return unauthorized();
 
-  const [user, clients, projects, invoices, expenses, connections] = await Promise.all([
+  const [user, clients, projects, invoices, expenses, connections, businessConnections] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
       select: {
@@ -44,6 +46,10 @@ export async function GET(req: NextRequest) {
       where: { userId: session.userId },
       select: { id: true, provider: true, accountEmail: true, status: true, lastSyncedAt: true },
     }),
+    prisma.connectorConnection.findMany({
+      where: { userId: session.userId },
+      select: { id: true, provider: true, accountLabel: true, status: true, lastSyncedAt: true, lastError: true },
+    }),
   ]);
   if (!user) return NextResponse.json({ success: false, message: "User not found." }, { status: 404 });
 
@@ -52,11 +58,13 @@ export async function GET(req: NextRequest) {
     user,
     counts: { clients, projects, invoices, expenses },
     connections,
+    businessConnections,
     connectorAvailability: {
       googleCalendar: Boolean(
         process.env.GOOGLE_CALENDAR_CLIENT_ID &&
         process.env.GOOGLE_CALENDAR_CLIENT_SECRET,
       ),
+      zohoBooks: zohoBooksAvailable(),
     },
   });
 }
@@ -79,8 +87,21 @@ export async function PATCH(req: NextRequest) {
   if (body.status === "in_progress" || body.status === "complete" || body.status === "skipped") {
     data.onboardingStatus = body.status;
   }
-  if (body.goal && GOALS.includes(body.goal)) {
-    data.onboardingData = { goal: body.goal };
+  if (body.goal && GOALS.includes(body.goal) || Array.isArray(body.sources)) {
+    const current = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { onboardingData: true },
+    });
+    const onboardingData = current?.onboardingData && typeof current.onboardingData === "object" && !Array.isArray(current.onboardingData)
+      ? current.onboardingData as Record<string, unknown>
+      : {};
+    data.onboardingData = {
+      ...onboardingData,
+      ...(body.goal && GOALS.includes(body.goal) ? { goal: body.goal } : {}),
+      ...(Array.isArray(body.sources)
+        ? { sources: body.sources.filter((source: unknown): source is string => typeof source === "string" && STARTING_SOURCES.includes(source)).slice(0, 8) }
+        : {}),
+    };
   }
   if (typeof body.avatarUrl === "string") {
     const avatarUrl = body.avatarUrl.trim();

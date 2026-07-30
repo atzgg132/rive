@@ -48,6 +48,20 @@ variable "google_calendar_client_secret" {
   description = "Google OAuth client secret. Replace after callback domains exist."
 }
 
+variable "zoho_books_client_id" {
+  type        = string
+  sensitive   = true
+  default     = "UNCONFIGURED"
+  description = "Zoho Books server-based OAuth client ID."
+}
+
+variable "zoho_books_client_secret" {
+  type        = string
+  sensitive   = true
+  default     = "UNCONFIGURED"
+  description = "Zoho Books server-based OAuth client secret."
+}
+
 variable "zoho_smtp_user" {
   type        = string
   default     = "hello@rive.work"
