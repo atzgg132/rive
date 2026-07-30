@@ -1,90 +1,158 @@
-"use client";
-
-import { Button, Input } from "@/components/ui";
+import Link from "next/link";
+import { Check, Clock3, MessageSquareText } from "lucide-react";
 import PageShell from "@/components/PageShell";
-import { useState } from "react";
-import { Check } from "lucide-react";
 
 const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const phases = [
   {
-    quarter: "Q3 2026", label: "alpha", status: "active",
-    items: ["opportunity marketplace", "client management", "workflow assistant beta", "remit payments v1", "early-access rollout"],
+    label: "Available now",
+    status: "shipped",
+    description: "The private-alpha foundation running today.",
+    items: [
+      "clients, projects, milestones, invoices, and expenses",
+      "connected dashboard and business insights",
+      "Google Calendar and Apple Calendar foundations",
+      "CSV migration with preview, matching, and rollback",
+      "public portfolio studio and analytics",
+      "secure AWS deployment across dev, test, and production",
+    ],
   },
   {
-    quarter: "Q4 2026", label: "beta", status: "upcoming",
-    items: ["project management", "invoicing suite", "portfolio pages", "mobile app (ios & android)", "public beta launch"],
+    label: "Next",
+    status: "active",
+    description: "The work required for a reliable early-access launch.",
+    items: [
+      "production verification for Google Calendar",
+      "Zoho Books organization review and record ingestion",
+      "end-to-end onboarding and connector acceptance testing",
+      "activation analytics and migration quality improvements",
+      "controlled early-access rollout",
+    ],
   },
   {
-    quarter: "2027", label: "launch", status: "future",
-    items: ["teams & agencies", "api access", "integrations marketplace", "white-label offering", "enterprise tier"],
+    label: "Later",
+    status: "planned",
+    description: "Sequenced by evidence from early-access users.",
+    items: [
+      "QuickBooks Online and Xero connectors",
+      "FreshBooks and additional migration sources",
+      "payments and opportunity workflows",
+      "teams and agency workspaces",
+      "mobile applications and public API access",
+    ],
   },
-];
+] as const;
+
+const statusStyles = {
+  shipped: {
+    card: "border-emerald-200 dark:border-emerald-900/70",
+    badge: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
+    icon: "text-emerald-600 dark:text-emerald-400",
+    label: "shipped",
+  },
+  active: {
+    card: "border-blue-200 shadow-lg dark:border-blue-800/80 dark:shadow-none",
+    badge: "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
+    icon: "text-blue-600 dark:text-blue-400",
+    label: "in progress",
+  },
+  planned: {
+    card: "border-slate-100 dark:border-slate-800",
+    badge: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    icon: "text-slate-400",
+    label: "planned",
+  },
+} as const;
 
 export default function RoadmapPage() {
-  const [suggestion, setSuggestion] = useState("");
-  const [sent, setSent] = useState(false);
-
-  const handleSuggest = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuggestion("");
-    setSent(true);
-    setTimeout(() => setSent(false), 3000);
-  };
-
   return (
     <PageShell>
-      <section className="relative py-24 overflow-hidden">
-        <div className="absolute top-0 left-1/3 w-[500px] h-[300px] bg-blue-100/15 rounded-full blur-[110px] pointer-events-none" />
-        <div className="relative max-w-6xl mx-auto px-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>Product roadmap</div>
-          <h1 className="text-6xl font-bold text-foreground dark:text-white tracking-tight mb-4" style={fontD}>Where we&apos;re headed.</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 max-w-xl leading-relaxed" style={font}>Our public roadmap. we build transparently with our community.</p>
+      <section className="relative overflow-hidden py-24">
+        <div className="pointer-events-none absolute left-1/3 top-0 h-[300px] w-[500px] rounded-full bg-blue-100/15 blur-[110px]" />
+        <div className="relative mx-auto max-w-6xl px-8">
+          <div
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/50 px-3.5 py-1.5 text-xs font-semibold text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400"
+            style={font}
+          >
+            Product roadmap
+          </div>
+          <h1
+            className="mb-4 text-5xl font-bold tracking-tight text-foreground dark:text-white sm:text-6xl"
+            style={fontD}
+          >
+            Building toward reliable early access.
+          </h1>
+          <p
+            className="mb-5 max-w-2xl text-lg leading-relaxed text-slate-500 dark:text-slate-400"
+            style={font}
+          >
+            Rive is in private alpha. The core workspace is live; our immediate
+            focus is making onboarding, migration, and calendar connections
+            dependable with real customer data.
+          </p>
+          <p className="mb-16 max-w-2xl text-sm text-slate-400 dark:text-slate-500" style={font}>
+            Priorities may change as early-access feedback arrives. We mark work
+            as shipped only when it is available in the product.
+          </p>
 
-          {/* Phase grid */}
-          <div className="grid md:grid-cols-3 gap-6 mb-16">
-            {phases.map((phase) => (
-              <div key={phase.quarter} className={`rounded-2xl p-7 border flex flex-col gap-5 transition-colors ${phase.status === "active" ? "bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-800/80 shadow-lg dark:shadow-none" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none"}`}>
-                <div className="flex items-center justify-between">
+          <div className="mb-16 grid gap-6 md:grid-cols-3">
+            {phases.map((phase) => {
+              const styles = statusStyles[phase.status];
+              return (
+                <article
+                  key={phase.label}
+                  className={`flex flex-col gap-5 rounded-2xl border bg-white p-7 shadow-sm transition-colors dark:bg-slate-900 ${styles.card}`}
+                >
                   <div>
-                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1" style={font}>{phase.quarter}</p>
-                    <h3 className="text-2xl font-bold text-foreground dark:text-white" style={fontD}>{phase.label}</h3>
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h2 className="text-2xl font-bold text-foreground dark:text-white" style={fontD}>
+                        {phase.label}
+                      </h2>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${styles.badge}`}
+                        style={font}
+                      >
+                        {styles.label}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400" style={font}>
+                      {phase.description}
+                    </p>
                   </div>
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${phase.status === "active" ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400" : "bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-400"}`} style={font}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${phase.status === "active" ? "bg-blue-500 animate-pulse" : "bg-slate-300 dark:bg-slate-600"}`} />
-                    {phase.status === "active" ? "in progress" : "upcoming"}
-                  </div>
-                </div>
-                <ul className="flex flex-col gap-3">
-                  {phase.items.map((item) => (
-                    <li key={item} className="flex items-center gap-2.5 text-sm" style={font}>
-                      <Check className={`w-4 h-4 shrink-0 ${phase.status === "active" ? "text-blue-500 dark:text-blue-400" : "text-slate-300 dark:text-slate-600"}`} />
-                      <span className={phase.status === "active" ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-400"}>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+                  <ul className="flex flex-col gap-3">
+                    {phase.items.map((item) => (
+                      <li key={item} className="flex items-start gap-2.5 text-sm" style={font}>
+                        {phase.status === "active" ? (
+                          <Clock3 className={`mt-0.5 h-4 w-4 shrink-0 ${styles.icon}`} />
+                        ) : (
+                          <Check className={`mt-0.5 h-4 w-4 shrink-0 ${styles.icon}`} />
+                        )}
+                        <span className="text-slate-600 dark:text-slate-300">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              );
+            })}
           </div>
 
-          {/* Suggest feature */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 max-w-xl mx-auto text-center transition-colors">
-            <h3 className="text-xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Suggest a feature</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6" style={font}>Have an idea? we read every submission.</p>
-            {sent ? (
-              <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-sm font-semibold" style={font}>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                thanks for the suggestion!
-              </div>
-            ) : (
-              <form onSubmit={handleSuggest} className="flex gap-3">
-                <Input type="text" value={suggestion} onChange={e => setSuggestion(e.target.value)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-400 transition-all" style={font} placeholder="E.g. multi-currency invoicing" required />
-                <Button type="submit" className="px-5 py-3 rounded-xl bg-blue-600 dark:bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all shrink-0" style={font}>Submit</Button>
-              </form>
-            )}
+          <div className="mx-auto max-w-2xl rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+            <MessageSquareText className="mx-auto mb-4 h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <h2 className="mb-2 text-xl font-bold text-foreground dark:text-white" style={fontD}>
+              Help shape what comes next
+            </h2>
+            <p className="mb-6 text-sm text-slate-500 dark:text-slate-400" style={font}>
+              Tell us about the workflow you need or the product you are migrating from.
+            </p>
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+              style={font}
+            >
+              Share feedback
+            </Link>
           </div>
         </div>
       </section>
