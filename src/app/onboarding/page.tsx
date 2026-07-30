@@ -657,11 +657,11 @@ export default function OnboardingPage() {
                       <Button
                         key={item.id}
                         onClick={() => setBusinessType(item.id)}
-                        className={`rounded-xl border p-3 text-left ${businessType === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
+                        className={`flex min-w-0 flex-col items-start rounded-xl border p-3 text-left whitespace-normal ${businessType === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
                       >
-                        <Icon className="h-4 w-4 text-blue-600" />
-                        <p className="mt-2 text-xs font-black">{item.label}</p>
-                        <p className="mt-1 text-[9px] leading-4 text-slate-400">
+                        <Icon className="h-4 w-4 shrink-0 text-blue-600" />
+                        <p className="mt-2 min-w-0 text-xs font-black leading-4">{item.label}</p>
+                        <p className="mt-1 min-w-0 text-[9px] leading-4 text-slate-400">
                           {item.detail}
                         </p>
                       </Button>
