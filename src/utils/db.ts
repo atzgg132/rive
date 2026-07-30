@@ -3,6 +3,7 @@ import "server-only";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import { checkServerIdentity } from "node:tls";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
@@ -23,22 +24,33 @@ if (globalForPrisma.prisma) {
     }
   }
   
-  // Strip pg-unsupported query parameters like channel_binding to prevent connection crashes
-  connectionString = connectionString.replace(/([?&])channel_binding=[^&]*/g, "$1");
-  connectionString = connectionString.replace(/[?&]$/, "");
+  // The pg Pool receives TLS configuration explicitly below. Remove URL-level
+  // SSL options because pg-connection-string otherwise replaces that object,
+  // which breaks hostname verification when an SSM tunnel uses localhost.
+  const parsedConnectionString = new URL(connectionString);
+  for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) {
+    parsedConnectionString.searchParams.delete(parameter);
+  }
+  connectionString = parsedConnectionString.toString();
+
+  const sslDisabled = process.env.DATABASE_SSL === "disable";
+  const sslServerName = process.env.DATABASE_SSL_SERVERNAME || "";
+  const rejectUnauthorized =
+    process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true" ||
+    (process.env.NODE_ENV === "production" && process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false");
 
   const pool = new Pool({
     connectionString,
     max: Number.parseInt(process.env.DATABASE_POOL_MAX || "10", 10),
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
-    ssl: process.env.DATABASE_SSL === "disable"
+    ssl: sslDisabled
       ? false
       : {
-          rejectUnauthorized:
-            process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true" ||
-            (process.env.NODE_ENV === "production" && process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false"),
-          servername: process.env.DATABASE_SSL_SERVERNAME || undefined,
+          rejectUnauthorized,
+          checkServerIdentity: sslServerName
+            ? (_hostname, certificate) => checkServerIdentity(sslServerName, certificate)
+            : undefined,
         },
   });
 
