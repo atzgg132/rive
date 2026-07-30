@@ -4,6 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
+import { createHash } from "node:crypto";
 
 type Row = Record<string, string>;
 type Entity = "clients" | "projects" | "invoices" | "expenses" | "unknown";
@@ -14,6 +15,14 @@ const MAX_TOTAL_ROWS = 5_000;
 
 function normalizeHeader(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+
+function rowsToRecords(rows: string[][]): Row[] {
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(normalizeHeader);
+  return rows.slice(1, 5_001).map((values) =>
+    Object.fromEntries(headers.map((header, index) => [header, values[index]?.trim() || ""])),
+  );
 }
 
 function parseCsv(text: string): Row[] {
@@ -46,11 +55,22 @@ function parseCsv(text: string): Row[] {
   }
   row.push(field.trim());
   if (row.some(Boolean)) rows.push(row);
-  if (rows.length < 2) return [];
-  const headers = rows[0].map(normalizeHeader);
-  return rows.slice(1, 5_001).map((values) =>
-    Object.fromEntries(headers.map((header, index) => [header, values[index]?.trim() || ""])),
-  );
+  return rowsToRecords(rows);
+}
+
+async function parseUpload(file: File): Promise<{ rows: Row[]; checksum: string }> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const checksum = createHash("sha256").update(bytes).digest("hex");
+  if (file.name.toLowerCase().endsWith(".xlsx")) {
+    const { default: readXlsxFile } = await import("read-excel-file/node");
+    const workbookRows = await readXlsxFile(Buffer.from(bytes));
+    const rows = workbookRows.map((row) => row.map((cell) => {
+      if (cell instanceof Date) return cell.toISOString();
+      return cell == null ? "" : String(cell);
+    }));
+    return { rows: rowsToRecords(rows), checksum };
+  }
+  return { rows: parseCsv(new TextDecoder("utf-8").decode(bytes)), checksum };
 }
 
 function value(row: Row, aliases: string[]): string {
@@ -108,16 +128,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: `Upload between 1 and ${MAX_FILES} CSV files.` }, { status: 400 });
   }
 
-  const sources: Array<{ name: string; entity: Entity; rows: Row[]; headers: string[] }> = [];
+  const sources: Array<{ name: string; entity: Entity; rows: Row[]; headers: string[]; mimeType: string; sizeBytes: number; checksum: string }> = [];
   for (const file of files) {
-    if (file.size > MAX_FILE_BYTES || (!file.name.toLowerCase().endsWith(".csv") && file.type !== "text/csv")) {
-      return NextResponse.json({ success: false, message: `${file.name} must be a CSV file under 2 MB.` }, { status: 400 });
+    const extension = file.name.toLowerCase().split(".").pop();
+    if (file.size > MAX_FILE_BYTES || !["csv", "xlsx"].includes(extension || "")) {
+      return NextResponse.json({ success: false, message: `${file.name} must be a CSV or XLSX file under 2 MB.` }, { status: 400 });
     }
-    const rows = parseCsv(await file.text());
+    const parsed = await parseUpload(file).catch(() => null);
+    const rows = parsed?.rows || [];
     if (!rows.length) {
       return NextResponse.json({ success: false, message: `${file.name} has no importable rows.` }, { status: 400 });
     }
-    sources.push({ name: file.name.slice(0, 180), entity: detectEntity(rows), rows, headers: Object.keys(rows[0]) });
+    sources.push({
+      name: file.name.slice(0, 180),
+      entity: detectEntity(rows),
+      rows,
+      headers: Object.keys(rows[0]),
+      mimeType: file.type || "text/csv",
+      sizeBytes: file.size,
+      checksum: parsed?.checksum || "",
+    });
   }
   const totalRows = sources.reduce((sum, source) => sum + source.rows.length, 0);
   if (totalRows > MAX_TOTAL_ROWS) {
@@ -139,8 +169,45 @@ export async function POST(req: NextRequest) {
     warning: source.entity === "unknown" ? "Could not confidently detect this file. Rename headers using the supplied templates." : null,
   }));
   if (mode === "preview") {
+    const job = await prisma.importJob.create({
+      data: {
+        userId: session.userId,
+        source: typeof form.get("source") === "string" ? String(form.get("source")).slice(0, 80) : "generic_csv",
+        sourceLabel: typeof form.get("sourceLabel") === "string" ? String(form.get("sourceLabel")).slice(0, 160) : null,
+        status: sources.some((source) => source.entity === "unknown") ? "needs_review" : "ready",
+        phase: "review",
+        totalRows,
+        processedRows: totalRows,
+        summary: { preview },
+        files: {
+          create: sources.map((source) => ({
+            name: source.name,
+            mimeType: source.mimeType,
+            sizeBytes: source.sizeBytes,
+            checksum: source.checksum,
+            entity: source.entity,
+            rowCount: source.rows.length,
+            headers: source.headers,
+            sample: source.rows.slice(0, 3),
+          })),
+        },
+        issues: {
+          create: sources
+            .filter((source) => source.entity === "unknown")
+            .map((source) => ({
+              entity: "unknown",
+              severity: "blocking",
+              code: "ENTITY_NOT_DETECTED",
+              message: `${source.name} could not be mapped to a supported record type.`,
+            })),
+        },
+      },
+      select: { id: true, status: true },
+    });
     return NextResponse.json({
       success: true,
+      jobId: job.id,
+      jobStatus: job.status,
       preview,
       totals: Object.fromEntries(["clients", "projects", "invoices", "expenses", "unknown"].map((entity) => [
         entity,
@@ -152,7 +219,60 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Resolve unrecognized CSV files before importing." }, { status: 400 });
   }
 
-  const report = await prisma.$transaction(async (transaction) => {
+  const requestedJobId = typeof form.get("jobId") === "string" ? String(form.get("jobId")) : "";
+  const existingJob = requestedJobId
+    ? await prisma.importJob.findFirst({ where: { id: requestedJobId, userId: session.userId }, include: { files: true } })
+    : null;
+  if (requestedJobId && !existingJob) {
+    return NextResponse.json({ success: false, message: "The analyzed import session could not be found." }, { status: 404 });
+  }
+  if (existingJob) {
+    const expected = existingJob.files.map((file) => `${file.name}:${file.checksum}`).sort();
+    const received = sources.map((source) => `${source.name}:${source.checksum}`).sort();
+    if (expected.length !== received.length || expected.some((value, index) => value !== received[index])) {
+      return NextResponse.json({ success: false, message: "The selected files changed after analysis. Analyze them again before importing." }, { status: 409 });
+    }
+  }
+  const job = existingJob || await prisma.importJob.create({
+    data: {
+      userId: session.userId,
+      source: typeof form.get("source") === "string" ? String(form.get("source")).slice(0, 80) : "generic_csv",
+      sourceLabel: typeof form.get("sourceLabel") === "string" ? String(form.get("sourceLabel")).slice(0, 160) : null,
+      status: "ready",
+      phase: "review",
+      totalRows,
+      processedRows: totalRows,
+      summary: { preview },
+      files: {
+        create: sources.map((source) => ({
+          name: source.name,
+          mimeType: source.mimeType,
+          sizeBytes: source.sizeBytes,
+          checksum: source.checksum,
+          entity: source.entity,
+          rowCount: source.rows.length,
+          headers: source.headers,
+          sample: source.rows.slice(0, 3),
+        })),
+      },
+    },
+    include: { files: true },
+  });
+  if (!["ready", "needs_review"].includes(job.status)) {
+    return NextResponse.json({ success: false, message: "This import has already been finalized." }, { status: 409 });
+  }
+  const importFileIds = new Map(job.files.map((file) => [file.name, file.id]));
+  const claimed = await prisma.importJob.updateMany({
+    where: { id: job.id, userId: session.userId, status: { in: ["ready", "needs_review"] } },
+    data: { status: "importing", phase: "commit", startedAt: new Date(), error: null },
+  });
+  if (!claimed.count) {
+    return NextResponse.json({ success: false, message: "This import is already being processed." }, { status: 409 });
+  }
+
+  let report;
+  try {
+    report = await prisma.$transaction(async (transaction) => {
     const existingClients = await transaction.client.findMany({
       where: { userId: session.userId },
       select: { id: true, name: true, email: true },
@@ -171,7 +291,7 @@ export async function POST(req: NextRequest) {
     const counts = { clients: 0, projects: 0, invoices: 0, expenses: 0, skipped: 0, unresolvedLinks: 0 };
 
     for (const source of sources.filter((item) => item.entity === "clients")) {
-      for (const row of source.rows) {
+      for (const [rowIndex, row] of source.rows.entries()) {
         const name = value(row, ["client_name", "customer_name", "customer", "name", "contact_name"]);
         const email = value(row, ["email", "email_address", "client_email", "customer_email"]).toLowerCase();
         if (!name) {
@@ -196,6 +316,18 @@ export async function POST(req: NextRequest) {
             tags: [],
           },
         });
+        await transaction.importedRecord.create({
+          data: {
+            importJobId: job.id,
+            importFileId: importFileIds.get(source.name),
+            sourceRow: rowIndex + 2,
+            sourceType: "clients",
+            sourceKey: `${source.name}:${rowIndex + 2}`,
+            targetType: "client",
+            targetId: client.id,
+            metadata: { name, email: client.email },
+          },
+        });
         clientMap.set(`name:${normalizeKey(name)}`, client.id);
         if (client.email) clientMap.set(`email:${normalizeKey(client.email)}`, client.id);
         counts.clients += 1;
@@ -203,7 +335,7 @@ export async function POST(req: NextRequest) {
     }
 
     for (const source of sources.filter((item) => item.entity === "projects")) {
-      for (const row of source.rows) {
+      for (const [rowIndex, row] of source.rows.entries()) {
         const title = value(row, ["project_title", "project_name", "title", "name"]);
         if (!title || projectMap.has(normalizeKey(title))) {
           counts.skipped += 1;
@@ -229,6 +361,31 @@ export async function POST(req: NextRequest) {
             tags: value(row, ["tags"]).split(/[,;|]/).map((tag) => tag.trim()).filter(Boolean).slice(0, 20),
           },
         });
+        await transaction.importedRecord.create({
+          data: {
+            importJobId: job.id,
+            importFileId: importFileIds.get(source.name),
+            sourceRow: rowIndex + 2,
+            sourceType: "projects",
+            sourceKey: `${source.name}:${rowIndex + 2}`,
+            targetType: "project",
+            targetId: project.id,
+            metadata: { title, clientMatched: Boolean(clientId) },
+          },
+        });
+        if ((clientName || clientEmail) && !clientId) {
+          await transaction.importIssue.create({
+            data: {
+              importJobId: job.id,
+              importFileId: importFileIds.get(source.name),
+              sourceRow: rowIndex + 2,
+              entity: "projects",
+              code: "CLIENT_NOT_MATCHED",
+              message: `Project "${title}" was imported without a client relationship.`,
+              sourceValue: clientEmail || clientName,
+            },
+          });
+        }
         projectMap.set(normalizeKey(title), project.id);
         counts.projects += 1;
       }
@@ -260,7 +417,7 @@ export async function POST(req: NextRequest) {
         const currency = value(row, ["currency", "currency_code"]).toUpperCase();
         const status = safeStatus(value(row, ["status"]), ["draft", "sent", "viewed", "paid", "overdue", "cancelled"], "draft");
         const issueDate = dateValue(value(row, ["issue_date", "invoice_date", "date"])) || new Date();
-        await transaction.invoice.create({
+        const invoice = await transaction.invoice.create({
           data: {
             userId: session.userId,
             clientId,
@@ -284,13 +441,38 @@ export async function POST(req: NextRequest) {
             },
           },
         });
+        await transaction.importedRecord.create({
+          data: {
+            importJobId: job.id,
+            importFileId: importFileIds.get(source.name),
+            sourceRow: index + 2,
+            sourceType: "invoices",
+            sourceKey: `${source.name}:${index + 2}`,
+            targetType: "invoice",
+            targetId: invoice.id,
+            metadata: { invoiceNumber, clientMatched: Boolean(clientId), projectMatched: Boolean(projectId) },
+          },
+        });
+        if ((clientName || clientEmail) && !clientId) {
+          await transaction.importIssue.create({
+            data: {
+              importJobId: job.id,
+              importFileId: importFileIds.get(source.name),
+              sourceRow: index + 2,
+              entity: "invoices",
+              code: "CLIENT_NOT_MATCHED",
+              message: `Invoice "${invoiceNumber}" was imported without a client relationship.`,
+              sourceValue: clientEmail || clientName,
+            },
+          });
+        }
         existingInvoiceNumbers.add(invoiceNumber.toLowerCase());
         counts.invoices += 1;
       }
     }
 
     for (const source of sources.filter((item) => item.entity === "expenses")) {
-      for (const row of source.rows) {
+      for (const [rowIndex, row] of source.rows.entries()) {
         const description = value(row, ["description", "vendor", "merchant", "expense", "name"]);
         const amount = numberValue(value(row, ["amount", "total", "expense_amount"]));
         if (!description || amount <= 0) {
@@ -301,7 +483,7 @@ export async function POST(req: NextRequest) {
         const projectId = projectTitle ? projectMap.get(normalizeKey(projectTitle)) || null : null;
         if (projectTitle && !projectId) counts.unresolvedLinks += 1;
         const currency = value(row, ["currency", "currency_code"]).toUpperCase();
-        await transaction.expense.create({
+        const expense = await transaction.expense.create({
           data: {
             userId: session.userId,
             projectId,
@@ -313,6 +495,31 @@ export async function POST(req: NextRequest) {
             isBillable: ["yes", "true", "1"].includes(normalizeKey(value(row, ["is_billable", "billable"]))),
           },
         });
+        await transaction.importedRecord.create({
+          data: {
+            importJobId: job.id,
+            importFileId: importFileIds.get(source.name),
+            sourceRow: rowIndex + 2,
+            sourceType: "expenses",
+            sourceKey: `${source.name}:${rowIndex + 2}`,
+            targetType: "expense",
+            targetId: expense.id,
+            metadata: { description, projectMatched: Boolean(projectId) },
+          },
+        });
+        if (projectTitle && !projectId) {
+          await transaction.importIssue.create({
+            data: {
+              importJobId: job.id,
+              importFileId: importFileIds.get(source.name),
+              sourceRow: rowIndex + 2,
+              entity: "expenses",
+              code: "PROJECT_NOT_MATCHED",
+              message: `Expense "${description}" was imported without a project relationship.`,
+              sourceValue: projectTitle,
+            },
+          });
+        }
         counts.expenses += 1;
       }
     }
@@ -329,7 +536,41 @@ export async function POST(req: NextRequest) {
       });
     }
     return counts;
-  }, { timeout: 30_000 });
+    }, { timeout: 30_000 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 1_000) : "Import failed unexpectedly.";
+    await prisma.importJob.update({
+      where: { id: job.id },
+      data: { status: "failed", phase: "commit", error: message, completedAt: new Date() },
+    });
+    return NextResponse.json({ success: false, jobId: job.id, message: "The import could not be completed. No partial records were saved." }, { status: 500 });
+  }
+
+  const importedCount = report.clients + report.projects + report.invoices + report.expenses;
+  await prisma.$transaction([
+    prisma.importJob.update({
+      where: { id: job.id },
+      data: {
+        status: report.unresolvedLinks > 0 ? "completed_with_issues" : "completed",
+        phase: "reconciliation",
+        processedRows: totalRows,
+        createdRecords: importedCount,
+        skippedRecords: report.skipped,
+        unresolvedCount: report.unresolvedLinks,
+        summary: report,
+        completedAt: new Date(),
+      },
+    }),
+    prisma.auditEvent.create({
+      data: {
+        userId: session.userId,
+        action: "import.completed",
+        targetType: "import_job",
+        targetId: job.id,
+        metadata: report,
+      },
+    }),
+  ]);
 
   if (report.clients + report.projects + report.invoices + report.expenses > 0) {
     await Promise.all([
@@ -338,5 +579,5 @@ export async function POST(req: NextRequest) {
     ]);
   }
 
-  return NextResponse.json({ success: true, report });
+  return NextResponse.json({ success: true, jobId: job.id, report });
 }

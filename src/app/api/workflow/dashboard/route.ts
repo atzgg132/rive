@@ -180,6 +180,10 @@ export async function GET(req: NextRequest) {
       overdueInvoices,
       upcomingProjects,
       expenseCategories,
+      workspaceUser,
+      calendarConnectionCount,
+      portfolio,
+      unresolvedImportIssues,
     ] = await Promise.all([
       prisma.client.count({ where: { userId } }),
       prisma.project.count({ where: { userId } }),
@@ -203,14 +207,35 @@ export async function GET(req: NextRequest) {
         orderBy: { _sum: { amount: "desc" } },
         take: 1,
       }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, profession: true, businessType: true },
+      }),
+      prisma.calendarConnection.count({ where: { userId, status: "connected" } }),
+      prisma.portfolio.findUnique({ where: { userId }, select: { status: true, publishedAt: true } }),
+      prisma.importIssue.count({
+        where: { importJob: { userId }, resolvedAt: null, severity: { in: ["warning", "blocking"] } },
+      }),
     ]);
 
     const receivableBase = totalPaid + totalPending;
     const collectionRate = receivableBase > 0 ? Math.round((totalPaid / receivableBase) * 100) : 0;
     const profitMargin = totalPaid > 0 ? Math.round((netEarnings / totalPaid) * 100) : 0;
+    const activationSteps = [
+      { id: "profile", label: "Business profile", complete: Boolean(workspaceUser?.name && workspaceUser.profession && workspaceUser.businessType), href: "/onboarding?restart=1" },
+      { id: "client", label: "First client", complete: clientCount > 0, href: "/workflow/clients" },
+      { id: "project", label: "Active work", complete: projectCount > 0, href: "/workflow/projects" },
+      { id: "financial", label: "Financial context", complete: invoiceCount > 0 || expenseCount > 0, href: invoiceCount > 0 ? "/workflow/revenue" : "/workflow/expenses" },
+      { id: "calendar", label: "Calendar connected", complete: calendarConnectionCount > 0, href: "/calendar" },
+      { id: "portfolio", label: "Portfolio ready", complete: portfolio?.status === "published" || Boolean(portfolio?.publishedAt), href: "/portfolio" },
+    ];
     const activation = {
       counts: { clients: clientCount, projects: projectCount, invoices: invoiceCount, expenses: expenseCount },
-      completed: [clientCount > 0, projectCount > 0, invoiceCount > 0, expenseCount > 0].filter(Boolean).length,
+      completed: activationSteps.filter((step) => step.complete).length,
+      total: activationSteps.length,
+      steps: activationSteps,
+      unresolvedImportIssues,
+      next: activationSteps.find((step) => !step.complete) || null,
     };
 
     return NextResponse.json({

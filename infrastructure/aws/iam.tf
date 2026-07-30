@@ -72,6 +72,21 @@ data "aws_iam_policy_document" "app" {
   }
 
   statement {
+    sid = "MigrationQueues"
+    actions = [
+      "sqs:SendMessage",
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes",
+    ]
+    resources = concat(
+      [for queue in aws_sqs_queue.migration : queue.arn],
+      [for queue in aws_sqs_queue.migration_dead_letter : queue.arn],
+    )
+  }
+
+  statement {
     sid = "TransactionalEmail"
     actions = [
       "ses:SendEmail",

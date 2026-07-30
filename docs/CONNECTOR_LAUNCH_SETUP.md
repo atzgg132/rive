@@ -83,3 +83,31 @@ Before implementing a provider, also supply a sandbox/demo organization containi
 6. Add FreshBooks when customer demand justifies its maintenance cost.
 
 Direct financial integrations should not be displayed as available until OAuth, initial import, incremental sync, disconnect/revocation, audit logging, and failure recovery all pass production tests.
+
+## Zoho Books OAuth setup
+
+The repository contains the provider-neutral connection model, encrypted Zoho
+credential storage, multi-data-centre callback handling, organization discovery,
+connection verification, sync-run history, and onboarding entry point.
+
+Create a **Server-based Application** in the Zoho API Console and register:
+
+- `http://localhost:3000/api/connectors/zoho-books/callback`
+- `https://dev.rive.work/api/connectors/zoho-books/callback`
+- `https://test.rive.work/api/connectors/zoho-books/callback`
+- `https://www.rive.work/api/connectors/zoho-books/callback`
+
+Provide these secrets independently for each environment:
+
+- `ZOHO_BOOKS_CLIENT_ID`
+- `ZOHO_BOOKS_CLIENT_SECRET`
+- `ZOHO_ACCOUNTS_URL=https://accounts.zoho.in`
+
+The requested access is read-only for contacts, settings, projects, invoices,
+customer payments, and expenses. Multi-DC support should be enabled in Zoho if
+Rive will accept accounts outside the Indian Zoho data centre.
+
+Do not advertise automatic Zoho record ingestion until the organization
+confirmation and initial-import review screen have passed sandbox testing with
+representative contacts, invoices, payments, projects, taxes, currencies,
+archived records, and pagination.

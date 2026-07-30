@@ -3,6 +3,9 @@ import { expect, test } from "@playwright/test";
 const protectedGetRoutes = [
   "/api/auth/session",
   "/api/onboarding",
+  "/api/onboarding/import/jobs",
+  "/api/onboarding/import/mappings",
+  "/api/connectors",
   "/api/portfolio",
   "/api/portfolio/analytics",
   "/api/workflow/dashboard",
@@ -21,6 +24,11 @@ for (const route of protectedGetRoutes) {
     expect(response.status(), `${route} should be protected`).toBe(401);
   });
 }
+
+test("/api/connectors/zoho-books/sync rejects unauthenticated access", async ({ request }) => {
+  const response = await request.post("/api/connectors/zoho-books/sync", { data: {} });
+  expect(response.status()).toBe(401);
+});
 
 test("registration validates malformed input on the server", async ({ request }) => {
   const response = await request.post("/api/auth/register", {

@@ -29,32 +29,37 @@ model PageView {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  name         String?
-  avatarUrl    String?   @map("avatar_url")
-  passwordHash String    @map("password_hash")
-  plan         String    @default("free")
-  onboardingStatus String @default("complete") @map("onboarding_status")
-  onboardingStep Int      @default(0) @map("onboarding_step")
-  businessType String?    @map("business_type")
-  profession   String?
-  currency     String     @default("USD")
-  timeZone     String     @default("UTC") @map("time_zone")
-  onboardingData Json?    @map("onboarding_data")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  clients      Client[]
-  projects     Project[]
-  invoices     Invoice[]
-  expenses     Expense[]
-  portfolio    Portfolio?
-  authTokens   AuthToken[]
-  calendars    Calendar[]
-  calendarEvents CalendarEvent[]
-  calendarConnections CalendarConnection[]
+  id                    String                 @id @default(uuid())
+  email                 String                 @unique
+  name                  String?
+  avatarUrl             String?                @map("avatar_url")
+  passwordHash          String                 @map("password_hash")
+  plan                  String                 @default("free")
+  onboardingStatus      String                 @default("complete") @map("onboarding_status")
+  onboardingStep        Int                    @default(0) @map("onboarding_step")
+  businessType          String?                @map("business_type")
+  profession            String?
+  currency              String                 @default("USD")
+  timeZone              String                 @default("UTC") @map("time_zone")
+  onboardingData        Json?                  @map("onboarding_data")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  clients               Client[]
+  projects              Project[]
+  invoices              Invoice[]
+  expenses              Expense[]
+  portfolio             Portfolio?
+  authTokens            AuthToken[]
+  calendars             Calendar[]
+  calendarEvents        CalendarEvent[]
+  calendarConnections   CalendarConnection[]
   calendarSubscriptions CalendarSubscription[]
-  tasks        Task[]
+  tasks                 Task[]
+  importJobs            ImportJob[]
+  importMappings        ImportMapping[]
+  connectorConnections  ConnectorConnection[]
+  syncRuns              SyncRun[]
+  auditEvents           AuditEvent[]
 
   @@map("users")
 }
@@ -157,26 +162,26 @@ model Milestone {
 }
 
 model Task {
-  id               String    @id @default(uuid())
-  userId           String    @map("user_id")
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId        String?   @map("project_id")
-  project          Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  milestoneId      String?   @map("milestone_id")
+  id               String     @id @default(uuid())
+  userId           String     @map("user_id")
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId        String?    @map("project_id")
+  project          Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestoneId      String?    @map("milestone_id")
   milestone        Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   title            String
   description      String?
-  status           String    @default("todo")
-  priority         String    @default("medium")
-  dueDate          DateTime? @map("due_date")
-  scheduledStartAt DateTime? @map("scheduled_start_at")
-  scheduledEndAt   DateTime? @map("scheduled_end_at")
-  timeZone         String?   @map("time_zone")
-  estimatedMinutes Int?      @map("estimated_minutes")
-  billable         Boolean   @default(false)
-  completedAt      DateTime? @map("completed_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  status           String     @default("todo")
+  priority         String     @default("medium")
+  dueDate          DateTime?  @map("due_date")
+  scheduledStartAt DateTime?  @map("scheduled_start_at")
+  scheduledEndAt   DateTime?  @map("scheduled_end_at")
+  timeZone         String?    @map("time_zone")
+  estimatedMinutes Int?       @map("estimated_minutes")
+  billable         Boolean    @default(false)
+  completedAt      DateTime?  @map("completed_at")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
 
   @@index([userId, status, dueDate])
   @@index([projectId])
@@ -184,17 +189,17 @@ model Task {
 }
 
 model Calendar {
-  id          String          @id @default(uuid())
-  userId      String          @map("user_id")
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  color       String          @default("#2563EB")
-  timeZone    String          @default("UTC") @map("time_zone")
-  isDefault   Boolean         @default(false) @map("is_default")
-  isVisible   Boolean         @default(true) @map("is_visible")
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
-  events      CalendarEvent[]
+  id                String             @id @default(uuid())
+  userId            String             @map("user_id")
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  color             String             @default("#2563EB")
+  timeZone          String             @default("UTC") @map("time_zone")
+  isDefault         Boolean            @default(false) @map("is_default")
+  isVisible         Boolean            @default(true) @map("is_visible")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  events            CalendarEvent[]
   externalCalendars ExternalCalendar[]
 
   @@index([userId, isDefault])
@@ -202,38 +207,38 @@ model Calendar {
 }
 
 model CalendarEvent {
-  id                 String    @id @default(uuid())
-  userId             String    @map("user_id")
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  calendarId         String    @map("calendar_id")
-  calendar           Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  title              String
-  description        String?
-  location           String?
-  meetingUrl         String?   @map("meeting_url")
-  startAt            DateTime? @map("start_at")
-  endAt              DateTime? @map("end_at")
-  startDate          String?   @map("start_date")
-  endDate            String?   @map("end_date")
-  allDay             Boolean   @default(false) @map("all_day")
-  timeZone           String    @default("UTC") @map("time_zone")
-  availability       String    @default("busy")
-  visibility         String    @default("default")
-  status             String    @default("confirmed")
-  recurrenceRule     String?   @map("recurrence_rule")
-  recurringMasterId  String?   @map("recurring_master_id")
-  source             String    @default("native")
-  sourceRevision     Int       @default(1) @map("source_revision")
-  clientId           String?   @map("client_id")
-  projectId          String?   @map("project_id")
-  milestoneId        String?   @map("milestone_id")
-  taskId             String?   @map("task_id")
-  invoiceId          String?   @map("invoice_id")
-  linkBehavior       String?   @map("link_behavior")
-  deletedAt          DateTime? @map("deleted_at")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
-  externalMappings   ExternalEventMapping[]
+  id                String                 @id @default(uuid())
+  userId            String                 @map("user_id")
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendarId        String                 @map("calendar_id")
+  calendar          Calendar               @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  title             String
+  description       String?
+  location          String?
+  meetingUrl        String?                @map("meeting_url")
+  startAt           DateTime?              @map("start_at")
+  endAt             DateTime?              @map("end_at")
+  startDate         String?                @map("start_date")
+  endDate           String?                @map("end_date")
+  allDay            Boolean                @default(false) @map("all_day")
+  timeZone          String                 @default("UTC") @map("time_zone")
+  availability      String                 @default("busy")
+  visibility        String                 @default("default")
+  status            String                 @default("confirmed")
+  recurrenceRule    String?                @map("recurrence_rule")
+  recurringMasterId String?                @map("recurring_master_id")
+  source            String                 @default("native")
+  sourceRevision    Int                    @default(1) @map("source_revision")
+  clientId          String?                @map("client_id")
+  projectId         String?                @map("project_id")
+  milestoneId       String?                @map("milestone_id")
+  taskId            String?                @map("task_id")
+  invoiceId         String?                @map("invoice_id")
+  linkBehavior      String?                @map("link_behavior")
+  deletedAt         DateTime?              @map("deleted_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+  externalMappings  ExternalEventMapping[]
 
   @@index([userId, startAt])
   @@index([userId, startDate])
@@ -244,20 +249,20 @@ model CalendarEvent {
 }
 
 model CalendarConnection {
-  id                        String    @id @default(uuid())
-  userId                    String    @map("user_id")
-  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                        String                   @id @default(uuid())
+  userId                    String                   @map("user_id")
+  user                      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider                  String
-  providerAccountId         String    @map("provider_account_id")
-  accountEmail              String?   @map("account_email")
-  encryptedCredentials      String    @map("encrypted_credentials")
+  providerAccountId         String                   @map("provider_account_id")
+  accountEmail              String?                  @map("account_email")
+  encryptedCredentials      String                   @map("encrypted_credentials")
   scopes                    String[]
-  status                    String    @default("connected")
-  defaultExternalCalendarId String?   @map("default_external_calendar_id")
-  lastSyncedAt              DateTime? @map("last_synced_at")
-  lastError                 String?   @map("last_error")
-  createdAt                 DateTime  @default(now()) @map("created_at")
-  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  status                    String                   @default("connected")
+  defaultExternalCalendarId String?                  @map("default_external_calendar_id")
+  lastSyncedAt              DateTime?                @map("last_synced_at")
+  lastError                 String?                  @map("last_error")
+  createdAt                 DateTime                 @default(now()) @map("created_at")
+  updatedAt                 DateTime                 @updatedAt @map("updated_at")
   externalCalendars         ExternalCalendar[]
   webhookChannels           CalendarWebhookChannel[]
 
@@ -267,20 +272,20 @@ model CalendarConnection {
 }
 
 model ExternalCalendar {
-  id                 String    @id @default(uuid())
-  connectionId       String    @map("connection_id")
-  connection         CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  calendarId         String    @map("calendar_id")
-  calendar           Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  providerCalendarId String    @map("provider_calendar_id")
+  id                 String                 @id @default(uuid())
+  connectionId       String                 @map("connection_id")
+  connection         CalendarConnection     @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  calendarId         String                 @map("calendar_id")
+  calendar           Calendar               @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  providerCalendarId String                 @map("provider_calendar_id")
   name               String
   color              String?
-  accessRole         String?   @map("access_role")
-  selected           Boolean   @default(true)
-  syncToken          String?   @map("sync_token")
-  lastSyncedAt       DateTime? @map("last_synced_at")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  accessRole         String?                @map("access_role")
+  selected           Boolean                @default(true)
+  syncToken          String?                @map("sync_token")
+  lastSyncedAt       DateTime?              @map("last_synced_at")
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
   mappings           ExternalEventMapping[]
 
   @@unique([connectionId, providerCalendarId])
@@ -290,18 +295,18 @@ model ExternalCalendar {
 }
 
 model ExternalEventMapping {
-  id                String    @id @default(uuid())
-  eventId           String    @map("event_id")
-  event             CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  externalCalendarId String   @map("external_calendar_id")
-  externalCalendar  ExternalCalendar @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
-  providerEventId   String    @map("provider_event_id")
-  iCalUid           String?   @map("ical_uid")
-  providerEtag      String?   @map("provider_etag")
-  providerUpdatedAt DateTime? @map("provider_updated_at")
-  lastFingerprint   String?   @map("last_fingerprint")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id                 String           @id @default(uuid())
+  eventId            String           @map("event_id")
+  event              CalendarEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  externalCalendarId String           @map("external_calendar_id")
+  externalCalendar   ExternalCalendar @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
+  providerEventId    String           @map("provider_event_id")
+  iCalUid            String?          @map("ical_uid")
+  providerEtag       String?          @map("provider_etag")
+  providerUpdatedAt  DateTime?        @map("provider_updated_at")
+  lastFingerprint    String?          @map("last_fingerprint")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
 
   @@unique([externalCalendarId, providerEventId])
   @@unique([eventId, externalCalendarId])
@@ -329,27 +334,27 @@ model CalendarSyncOutbox {
 }
 
 model CalendarWebhookChannel {
-  id             String    @id
-  connectionId   String    @map("connection_id")
-  connection     CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  externalCalendarId String @map("external_calendar_id")
-  resourceId     String    @map("resource_id")
-  channelToken   String    @map("channel_token")
-  expiresAt      DateTime  @map("expires_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
+  id                 String             @id
+  connectionId       String             @map("connection_id")
+  connection         CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalCalendarId String             @map("external_calendar_id")
+  resourceId         String             @map("resource_id")
+  channelToken       String             @map("channel_token")
+  expiresAt          DateTime           @map("expires_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
 
   @@index([connectionId, expiresAt])
   @@map("calendar_webhook_channels")
 }
 
 model CalendarSubscription {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique @map("token_hash")
-  label     String   @default("Apple Calendar")
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  label     String    @default("Apple Calendar")
   revokedAt DateTime? @map("revoked_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   @@index([userId, revokedAt])
   @@map("calendar_subscriptions")
@@ -388,41 +393,216 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id          String   @id @default(uuid())
-  invoiceId   String   @map("invoice_id")
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id          String  @id @default(uuid())
+  invoiceId   String  @map("invoice_id")
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
-  quantity    Decimal  @default(1) @db.Decimal(10, 2)
-  unitPrice   Decimal  @default(0) @map("unit_price") @db.Decimal(12, 2)
-  amount      Decimal  @default(0) @db.Decimal(12, 2)
-  sortOrder   Int      @default(0) @map("sort_order")
+  quantity    Decimal @default(1) @db.Decimal(10, 2)
+  unitPrice   Decimal @default(0) @map("unit_price") @db.Decimal(12, 2)
+  amount      Decimal @default(0) @db.Decimal(12, 2)
+  sortOrder   Int     @default(0) @map("sort_order")
 
   @@index([invoiceId])
   @@map("invoice_items")
 }
 
 model Expense {
-  id           String    @id @default(uuid())
-  userId       String    @map("user_id")
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId    String?   @map("project_id")
-  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  category     String    @default("other")
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId    String?  @map("project_id")
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  category     String   @default("other")
   description  String
-  amount       Decimal   @db.Decimal(12, 2)
-  currency     String    @default("USD")
-  date         DateTime  @default(now())
-  receiptUrl   String?   @map("receipt_url")
-  isBillable   Boolean   @default(false) @map("is_billable")
-  isReimbursed Boolean   @default(false) @map("is_reimbursed")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  amount       Decimal  @db.Decimal(12, 2)
+  currency     String   @default("USD")
+  date         DateTime @default(now())
+  receiptUrl   String?  @map("receipt_url")
+  isBillable   Boolean  @default(false) @map("is_billable")
+  isReimbursed Boolean  @default(false) @map("is_reimbursed")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@index([userId, date])
   @@index([userId, createdAt])
   @@index([userId, category])
   @@index([projectId])
   @@map("expenses")
+}
+
+model ImportJob {
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source          String           @default("generic_csv")
+  sourceLabel     String?          @map("source_label")
+  status          String           @default("uploaded")
+  phase           String           @default("analysis")
+  mode            String           @default("migration")
+  totalRows       Int              @default(0) @map("total_rows")
+  processedRows   Int              @default(0) @map("processed_rows")
+  createdRecords  Int              @default(0) @map("created_records")
+  updatedRecords  Int              @default(0) @map("updated_records")
+  skippedRecords  Int              @default(0) @map("skipped_records")
+  unresolvedCount Int              @default(0) @map("unresolved_count")
+  summary         Json?
+  error           String?
+  startedAt       DateTime?        @map("started_at")
+  completedAt     DateTime?        @map("completed_at")
+  rolledBackAt    DateTime?        @map("rolled_back_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  files           ImportFile[]
+  records         ImportedRecord[]
+  issues          ImportIssue[]
+
+  @@index([userId, createdAt])
+  @@index([userId, status, createdAt])
+  @@map("import_jobs")
+}
+
+model ImportFile {
+  id          String           @id @default(uuid())
+  importJobId String           @map("import_job_id")
+  importJob   ImportJob        @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  name        String
+  mimeType    String           @map("mime_type")
+  sizeBytes   Int              @map("size_bytes")
+  checksum    String
+  entity      String
+  rowCount    Int              @map("row_count")
+  headers     Json
+  sample      Json?
+  mapping     Json?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  records     ImportedRecord[]
+  issues      ImportIssue[]
+
+  @@index([importJobId])
+  @@index([checksum])
+  @@map("import_files")
+}
+
+model ImportedRecord {
+  id           String      @id @default(uuid())
+  importJobId  String      @map("import_job_id")
+  importJob    ImportJob   @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  importFileId String?     @map("import_file_id")
+  importFile   ImportFile? @relation(fields: [importFileId], references: [id], onDelete: SetNull)
+  sourceRow    Int?        @map("source_row")
+  sourceType   String      @map("source_type")
+  sourceKey    String?     @map("source_key")
+  targetType   String      @map("target_type")
+  targetId     String      @map("target_id")
+  action       String      @default("created")
+  before       Json?
+  metadata     Json?
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  @@unique([importJobId, sourceType, sourceKey])
+  @@index([importJobId, targetType])
+  @@index([targetType, targetId])
+  @@map("imported_records")
+}
+
+model ImportIssue {
+  id           String      @id @default(uuid())
+  importJobId  String      @map("import_job_id")
+  importJob    ImportJob   @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  importFileId String?     @map("import_file_id")
+  importFile   ImportFile? @relation(fields: [importFileId], references: [id], onDelete: SetNull)
+  sourceRow    Int?        @map("source_row")
+  entity       String?
+  severity     String      @default("warning")
+  code         String
+  message      String
+  field        String?
+  sourceValue  String?     @map("source_value")
+  candidates   Json?
+  resolvedAt   DateTime?   @map("resolved_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  @@index([importJobId, severity])
+  @@index([importJobId, resolvedAt])
+  @@map("import_issues")
+}
+
+model ImportMapping {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String
+  entity    String
+  name      String
+  mapping   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, provider, entity, name])
+  @@index([userId, provider])
+  @@map("import_mappings")
+}
+
+model ConnectorConnection {
+  id                   String    @id @default(uuid())
+  userId               String    @map("user_id")
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider             String
+  providerAccountId    String    @map("provider_account_id")
+  accountLabel         String?   @map("account_label")
+  encryptedCredentials String    @map("encrypted_credentials")
+  scopes               String[]
+  status               String    @default("connected")
+  settings             Json?
+  syncCursor           Json?     @map("sync_cursor")
+  lastSyncedAt         DateTime? @map("last_synced_at")
+  lastError            String?   @map("last_error")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  syncRuns             SyncRun[]
+
+  @@unique([userId, provider, providerAccountId])
+  @@index([userId, provider, status])
+  @@map("connector_connections")
+}
+
+model SyncRun {
+  id                    String               @id @default(uuid())
+  userId                String               @map("user_id")
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connectorConnectionId String?              @map("connector_connection_id")
+  connectorConnection   ConnectorConnection? @relation(fields: [connectorConnectionId], references: [id], onDelete: SetNull)
+  provider              String
+  trigger               String               @default("manual")
+  status                String               @default("queued")
+  cursorBefore          Json?                @map("cursor_before")
+  cursorAfter           Json?                @map("cursor_after")
+  summary               Json?
+  attempts              Int                  @default(0)
+  error                 String?
+  startedAt             DateTime?            @map("started_at")
+  completedAt           DateTime?            @map("completed_at")
+  createdAt             DateTime             @default(now()) @map("created_at")
+
+  @@index([userId, provider, createdAt])
+  @@index([status, createdAt])
+  @@map("sync_runs")
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  metadata   Json?
+  ipHash     String?  @map("ip_hash")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_events")
 }
 
 model Portfolio {
