@@ -6,7 +6,7 @@ import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
 import { mergePortfolioContent } from "@/utils/portfolio";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
-import { zohoBooksAvailable } from "@/utils/zohoBooks";
+import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
 
 const IMAGE = /^(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s<>]+)$/i;
 const BUSINESS_TYPES = ["freelancer", "studio", "consultant", "creator", "small_business"];
@@ -60,10 +60,7 @@ export async function GET(req: NextRequest) {
     connections,
     businessConnections,
     connectorAvailability: {
-      googleCalendar: Boolean(
-        process.env.GOOGLE_CALENDAR_CLIENT_ID &&
-        process.env.GOOGLE_CALENDAR_CLIENT_SECRET,
-      ),
+      googleCalendar: googleCalendarAvailable(),
       zohoBooks: zohoBooksAvailable(),
     },
   });
