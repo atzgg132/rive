@@ -2,6 +2,12 @@ import crypto from "crypto";
 import { prisma } from "@/utils/db";
 import { decryptCalendarCredentials, encryptCalendarCredentials } from "@/utils/calendarCrypto";
 import { ensureDefaultCalendar } from "@/utils/calendar";
+import {
+  connectorCredentialConfigured,
+  googleCalendarAvailable,
+} from "@/utils/connectorConfig";
+
+export { googleCalendarAvailable };
 
 type GoogleCredentials = {
   accessToken: string;
@@ -41,7 +47,9 @@ function googleConfig() {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
-  if (!clientId || !clientSecret) throw new Error("Google Calendar OAuth is not configured.");
+  if (!connectorCredentialConfigured(clientId) || !connectorCredentialConfigured(clientSecret)) {
+    throw new Error("Google Calendar OAuth is not configured.");
+  }
   return {
     clientId,
     clientSecret,

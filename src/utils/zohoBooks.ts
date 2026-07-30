@@ -1,5 +1,11 @@
 import { prisma } from "@/utils/db";
 import { decryptCalendarCredentials, encryptCalendarCredentials } from "@/utils/calendarCrypto";
+import {
+  connectorCredentialConfigured,
+  zohoBooksAvailable,
+} from "@/utils/connectorConfig";
+
+export { zohoBooksAvailable };
 
 type ZohoCredentials = {
   accessToken: string;
@@ -33,7 +39,9 @@ function config() {
   const clientSecret = process.env.ZOHO_BOOKS_CLIENT_SECRET;
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const accountsUrl = process.env.ZOHO_ACCOUNTS_URL || "https://accounts.zoho.in";
-  if (!clientId || !clientSecret) throw new Error("Zoho Books OAuth is not configured.");
+  if (!connectorCredentialConfigured(clientId) || !connectorCredentialConfigured(clientSecret)) {
+    throw new Error("Zoho Books OAuth is not configured.");
+  }
   const parsed = new URL(accountsUrl);
   if (parsed.protocol !== "https:" || !ZOHO_ACCOUNT_HOSTS.has(parsed.hostname)) {
     throw new Error("ZOHO_ACCOUNTS_URL is not a supported Zoho data-centre endpoint.");
@@ -44,10 +52,6 @@ function config() {
     accountsUrl: parsed.origin,
     redirectUri: `${appUrl}/api/connectors/zoho-books/callback`,
   };
-}
-
-export function zohoBooksAvailable(): boolean {
-  return Boolean(process.env.ZOHO_BOOKS_CLIENT_ID && process.env.ZOHO_BOOKS_CLIENT_SECRET);
 }
 
 export function zohoAuthorizationUrl(state: string): string {
