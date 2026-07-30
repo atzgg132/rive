@@ -26,6 +26,24 @@ function Test-LocalPort([int]$Port) {
 Require-Command "aws" "Install AWS CLI v2 and sign in with AWS SSO."
 Require-Command "session-manager-plugin" "Run: winget install Amazon.SessionManagerPlugin"
 
+$caBundlePath = Join-Path ([System.IO.Path]::GetTempPath()) "rive-rds-global-bundle.pem"
+$caBundleMaxAge = [DateTime]::UtcNow.AddDays(-7)
+$caBundleNeedsRefresh =
+  -not (Test-Path -LiteralPath $caBundlePath) -or
+  (Get-Item -LiteralPath $caBundlePath).LastWriteTimeUtc -lt $caBundleMaxAge
+
+if ($caBundleNeedsRefresh) {
+  Invoke-WebRequest `
+    -Uri "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem" `
+    -OutFile $caBundlePath `
+    -UseBasicParsing
+}
+
+$caBundle = Get-Content -LiteralPath $caBundlePath -Raw
+if ($caBundle -notmatch "-----BEGIN CERTIFICATE-----") {
+  throw "The downloaded Amazon RDS CA bundle is invalid."
+}
+
 if (Test-LocalPort $LocalPort) {
   throw "Local port $LocalPort is already in use. Stop the existing process or choose another port."
 }
@@ -98,6 +116,7 @@ try {
   $env:DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
   $env:DATABASE_SSL_SERVERNAME = $databaseHost
   $env:DATABASE_POOL_MAX = "4"
+  $env:NODE_EXTRA_CA_CERTS = $caBundlePath
 
   Write-Host "Connected securely to the AWS development database through SSM." -ForegroundColor Green
   npm run dev
