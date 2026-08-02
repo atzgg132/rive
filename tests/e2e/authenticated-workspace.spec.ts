@@ -8,6 +8,7 @@ const dashboardRoutes = [
   { route: "/dashboard", endpoint: "/api/workflow/dashboard" },
   { route: "/calendar", endpoint: "/api/calendar/events" },
   { route: "/workflow/projects", endpoint: "/api/workflow/projects" },
+  { route: "/workflow/contracts", endpoint: "/api/workflow/contracts" },
   { route: "/workflow/clients", endpoint: "/api/workflow/clients" },
   { route: "/workflow/revenue", endpoint: "/api/workflow/invoices" },
   { route: "/workflow/expenses", endpoint: "/api/workflow/expenses" },

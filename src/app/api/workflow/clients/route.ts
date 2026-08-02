@@ -44,6 +44,9 @@ export async function GET(req: NextRequest) {
         invoices: {
           where: { status: "paid" },
           select: { total: true }
+        },
+        contracts: {
+          select: { id: true }
         }
       }
     });
@@ -69,7 +72,8 @@ export async function GET(req: NextRequest) {
         created_at: c.createdAt,
         updated_at: c.updatedAt,
         project_count,
-        total_revenue
+        total_revenue,
+        contract_count: c.contracts.length,
       };
     });
 
@@ -193,6 +197,11 @@ export async function DELETE(req: NextRequest) {
     const existing = await prisma.client.findFirst({ where: { id, userId: session.userId } });
     if (!existing) {
       return NextResponse.json({ success: false, message: "Client not found." }, { status: 404 });
+    }
+
+    const contractCount = await prisma.contract.count({ where: { clientId: id } });
+    if (contractCount > 0) {
+      return NextResponse.json({ success: false, message: "This client has contract records. Archive the client instead of deleting it so signer and evidence history remains intact." }, { status: 409 });
     }
 
     await prisma.client.delete({ where: { id } });

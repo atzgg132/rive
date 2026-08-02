@@ -23,6 +23,7 @@ export const buttonVariants = cva(
         link: "h-auto rounded-none p-0 text-primary underline-offset-4 hover:underline",
       },
       size: {
+        unstyled: "",
         default: "h-10 px-4 py-2",
         sm: "h-8 rounded-lg px-3 text-xs",
         lg: "h-12 px-6 text-base",
@@ -32,6 +33,7 @@ export const buttonVariants = cva(
     },
     defaultVariants: {
       variant: "unstyled",
+      size: "default",
     },
   },
 );
@@ -41,12 +43,19 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {}
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <BaseButton
-      ref={ref}
-      className={cn(buttonVariants({ variant, size }), className)}
-      {...props}
-    />
-  ),
+  ({ className, variant, size, ...props }, ref) => {
+    // Legacy surfaces often provide their complete visual treatment via
+    // className. Bare buttons, however, should behave like real primary
+    // actions instead of falling back to the browser's inset button chrome.
+    const resolvedVariant = variant ?? (className ? "unstyled" : "default");
+    const resolvedSize = size ?? (className && variant === undefined ? "unstyled" : "default");
+    return (
+      <BaseButton
+        ref={ref}
+        className={cn(buttonVariants({ variant: resolvedVariant, size: resolvedSize }), className)}
+        {...props}
+      />
+    );
+  },
 );
 Button.displayName = "Button";

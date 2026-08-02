@@ -15,6 +15,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+For a local session against the AWS development database, authenticate with the AWS CLI once and use the SSM tunnel commands below. The tunnel keeps the development URL in process memory and does not write it to `.env.local`:
+
+```bash
+aws login
+npm run db:migrate:status:aws
+npm run db:migrate:aws
+npm run dev:aws
+```
+
 ## Production deployment
 
 Production runs on AWS in `ap-south-1`. The `dev`, `test`, and `main` branches deploy to isolated AWS environments through GitHub Actions after the quality gate passes. Infrastructure, secrets, migrations, and deployment details live in [`infrastructure/README.md`](infrastructure/README.md).

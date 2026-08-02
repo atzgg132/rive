@@ -12,13 +12,15 @@ import {
   Tag,
   Loader2,
   Calendar,
-  FileText
+  FileText,
+  FileSignature
 } from "lucide-react";
 import { toast } from "sonner";
 
 type ClientProject = { id: string; name: string; dueDate: string | null; status: string };
 type ClientInvoice = { id: string; number: string; issueDate: string; total: number | string; status: string };
-type ClientDetails = { id: string; name: string; company: string | null; avatarColor: string; createdAt: string; status: string; email: string | null; phone: string | null; website: string | null; tags: string[]; ltv: number; notes: string | null; projects: ClientProject[]; invoices: ClientInvoice[] };
+type ClientContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string; projectId: string | null };
+type ClientDetails = { id: string; name: string; company: string | null; avatarColor: string; createdAt: string; status: string; email: string | null; phone: string | null; website: string | null; tags: string[]; ltv: number; notes: string | null; projects: ClientProject[]; invoices: ClientInvoice[]; contracts: ClientContract[] };
 
 export default function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -157,7 +159,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             <h3 className="text-xs font-bold text-blue-100 mb-1 uppercase tracking-wider">Lifetime Value (LTV)</h3>
             <div className="text-3xl font-extrabold mb-6 tracking-tight">{formatCurrency(client.ltv)}</div>
             
-            <div className="grid grid-cols-2 gap-4 border-t border-blue-500/30 pt-4">
+            <div className="grid grid-cols-3 gap-3 border-t border-blue-500/30 pt-4">
               <div>
                 <div className="text-xs text-blue-200 mb-0.5 font-medium">Projects</div>
                 <div className="text-xl font-bold">{client.projects.length}</div>
@@ -165,6 +167,10 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               <div>
                 <div className="text-xs text-blue-200 mb-0.5 font-medium">Invoices</div>
                 <div className="text-xl font-bold">{client.invoices.length}</div>
+              </div>
+              <div>
+                <div className="text-xs text-blue-200 mb-0.5 font-medium">Contracts</div>
+                <div className="text-xl font-bold">{client.contracts.length}</div>
               </div>
             </div>
           </div>
@@ -221,6 +227,38 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                     }`}>
                       {proj.status.replace("_", " ")}
                     </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Linked Contracts */}
+          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
+                <FileSignature className="h-5 w-5 text-blue-600" /> Contracts
+              </h3>
+              <Link href="/workflow/contracts" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
+                View all
+              </Link>
+            </div>
+            {client.contracts.length === 0 ? (
+              <div className="flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-5 py-8 text-center dark:border-slate-700">
+                <FileSignature className="h-7 w-7 text-muted-foreground" />
+                <p className="mt-3 text-sm font-bold">No Rive contracts for this client</p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">Start a standalone agreement or link one of this client’s projects inside the composer.</p>
+                <Link href={`/workflow/contracts?new=1&clientId=${encodeURIComponent(client.id)}`} className="mt-4 inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90">Create contract</Link>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {client.contracts.map((item) => (
+                  <Link key={item.id} href={`/workflow/contracts/${item.id}`} className="flex items-center justify-between gap-4 p-4 rounded-xl border border-border dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all group bg-white dark:bg-slate-800">
+                    <div className="min-w-0">
+                      <h4 className="truncate font-bold text-sm text-foreground dark:text-white">{item.title}</h4>
+                      <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{item.currency} · Updated {formatDate(item.updatedAt)}</p>
+                    </div>
+                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
                   </Link>
                 ))}
               </div>

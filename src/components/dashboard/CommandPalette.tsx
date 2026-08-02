@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
-import { Search, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, LayoutDashboard, CalendarDays } from "lucide-react";
+import { Search, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, LayoutDashboard, CalendarDays, FileSignature } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 
@@ -71,6 +71,12 @@ export default function CommandPalette({ open, setOpen }: { open: boolean, setOp
                 className="flex items-center gap-2 px-3 py-2.5 mt-1 rounded-lg text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 aria-selected:bg-blue-50 aria-selected:text-blue-700 dark:aria-selected:bg-blue-900/30 dark:aria-selected:text-blue-400"
               >
                 <Briefcase className="h-4 w-4" /> Go to Projects
+              </Command.Item>
+              <Command.Item
+                onSelect={() => runCommand(() => router.push("/workflow/contracts"))}
+                className="flex items-center gap-2 px-3 py-2.5 mt-1 rounded-lg text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 aria-selected:bg-blue-50 aria-selected:text-blue-700 dark:aria-selected:bg-blue-900/30 dark:aria-selected:text-blue-400"
+              >
+                <FileSignature className="h-4 w-4" /> Go to Contracts
               </Command.Item>
               <Command.Item
                 onSelect={() => runCommand(() => router.push("/workflow/clients"))}

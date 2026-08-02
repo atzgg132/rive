@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/utils/db";
+import { getSessionUser } from "@/utils/userAuth";
+import { assertContractsEnabled } from "@/utils/contracts";
+import { getEsignProvider } from "@/utils/esign";
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    assertContractsEnabled();
+    const session = getSessionUser(req);
+    if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    const { id } = await params;
+    const parsedBody = await req.json().catch(() => ({}));
+    const body = parsedBody && typeof parsedBody === "object" && !Array.isArray(parsedBody)
+      ? parsedBody as { acknowledgeOpenComments?: boolean }
+      : {};
+
+    const contract = await prisma.contract.findFirst({
+      where: { id, userId: session.userId },
+      include: {
+        client: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } },
+        versions: { orderBy: { version: "desc" }, take: 1, include: { signatures: { select: { id: true } } } },
+        signers: { select: { role: true, name: true, email: true, status: true } },
+        paymentPlanItems: { select: { label: true, currency: true, triggerType: true, triggerDate: true } },
+      },
+    });
+    if (!contract) return NextResponse.json({ success: false, message: "Contract not found." }, { status: 404 });
+    if (contract.status === "ready_to_sign" || contract.status === "signing") return NextResponse.json({ success: true, message: "Contract is already finalized.", status: contract.status });
+    if (!["draft", "in_review", "expired"].includes(contract.status)) {
+      return NextResponse.json({ success: false, message: `A contract in ${contract.status} cannot be finalized.` }, { status: 409 });
+    }
+    if (!contract.client.email) return NextResponse.json({ success: false, message: "Add the client’s email before finalizing the signing version." }, { status: 400 });
+    if (!contract.versions[0]) return NextResponse.json({ success: false, message: "Contract has no draft version." }, { status: 409 });
+    if (contract.versions[0].signatures.length > 0) {
+      return NextResponse.json({ success: false, message: "This exact version already has a signature. Save the requested changes as a new version before finalizing again." }, { status: 409 });
+    }
+    if (contract.paymentPlanItems.some((item) => item.currency !== contract.currency)) {
+      return NextResponse.json({ success: false, message: "Every payment must use the contract currency. Save a corrected version before finalizing." }, { status: 409 });
+    }
+    const unsnapshottedDueTrigger = contract.paymentPlanItems.find((item) => item.triggerType === "milestone_due" && !item.triggerDate);
+    if (unsnapshottedDueTrigger) {
+      return NextResponse.json({ success: false, message: `“${unsnapshottedDueTrigger.label}” does not have an agreed milestone due-date snapshot. Edit and save a new version before finalizing.` }, { status: 409 });
+    }
+    const openCommentCount = await prisma.contractComment.count({
+      where: { contractId: id, versionId: contract.versions[0].id, status: "open" },
+    });
+    if (openCommentCount > 0 && body.acknowledgeOpenComments !== true) {
+      return NextResponse.json({
+        success: false,
+        code: "OPEN_REVIEW_COMMENTS",
+        openCommentCount,
+        message: `${openCommentCount} review comment${openCommentCount === 1 ? " is" : "s are"} still open. Resolve them or explicitly finalize with open comments.`,
+      }, { status: 409 });
+    }
+    const clientSigner = contract.signers.find((signer) => signer.role === "client");
+    const ownerSigner = contract.signers.find((signer) => signer.role === "owner");
+    if (contract.signers.length !== 2 || !clientSigner || !ownerSigner) {
+      return NextResponse.json({ success: false, message: "A contract must have exactly the client and owner as signers." }, { status: 409 });
+    }
+    const ownerName = contract.user.name || contract.user.email;
+    if (clientSigner.name.trim() !== contract.client.name.trim() || clientSigner.email.trim().toLowerCase() !== contract.client.email.trim().toLowerCase()) {
+      return NextResponse.json({ success: false, message: "The client details changed after this draft was created. Save a new contract version before finalizing." }, { status: 409 });
+    }
+    if (ownerSigner.name.trim() !== ownerName.trim() || ownerSigner.email.trim().toLowerCase() !== contract.user.email.trim().toLowerCase()) {
+      return NextResponse.json({ success: false, message: "The owner details changed after this draft was created. Save a new contract version before finalizing." }, { status: 409 });
+    }
+
+    if (contract.status === "expired" && contract.providerEnvelopeId) {
+      try {
+        await getEsignProvider().voidEnvelope(contract.providerEnvelopeId);
+      } catch (error) {
+        console.error("Expired contract envelope cleanup error:", error);
+        return NextResponse.json({ success: false, message: "The previous signing request could not be closed with the e-sign provider. Retry after the provider is available." }, { status: 502 });
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const finalized = await tx.contract.updateMany({ where: { id, userId: session.userId, status: contract.status }, data: { status: "ready_to_sign", finalizedAt: new Date(), reviewExpiresAt: null, ...(contract.status === "expired" ? { providerEnvelopeId: null } : {}) } });
+      if (finalized.count !== 1) throw new Error("The contract changed while it was being finalized. Reload and try again.");
+      await tx.contractVersion.update({ where: { id: contract.versions[0].id }, data: { status: "final", finalizedAt: new Date() } });
+      await tx.contractReviewLink.updateMany({ where: { contractId: id, type: "review", revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "contract_finalized", metadata: { version: contract.versions[0].version, openCommentsAcknowledged: openCommentCount } } });
+    });
+    return NextResponse.json({ success: true, status: "ready_to_sign", version: contract.versions[0].version, message: "Contract version finalized. Start signing when you are ready." });
+  } catch (error) {
+    console.error("Contract finalize error:", error);
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to finalize contract." }, { status: 500 });
+  }
+}

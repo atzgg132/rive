@@ -2,27 +2,25 @@
 
 import { Button, Input } from "@/components/ui";
 
-import { useState, useSyncExternalStore, type InputHTMLAttributes } from "react";
+import { useState, type InputHTMLAttributes } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 type Props = InputHTMLAttributes<HTMLInputElement>;
-const subscribeToHydration = () => () => {};
 
 export default function PasswordInput({ className = "", disabled, ...props }: Props) {
   const [visible, setVisible] = useState(false);
-  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
 
   return (
     <div className="relative">
       <Input
         {...props}
-        disabled={!hydrated || disabled}
+        disabled={disabled}
         type={visible ? "text" : "password"}
         className={`${className} pr-11`}
       />
       <Button
         type="button"
-        disabled={!hydrated}
+        disabled={disabled}
         onClick={() => setVisible((current) => !current)}
         aria-label={visible ? "hide password" : "show password"}
         aria-pressed={visible}

@@ -11,17 +11,28 @@ import {
   FileText,
   Clock,
   CheckCircle,
+  FileSignature,
+  ExternalLink,
+  CircleSlash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button, Input, buttonVariants } from "@/components/ui";
 
-type ProjectInvoice = { id: string; number: string; issueDate: string; total: number | string; status: string };
+type ProjectInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; status: string };
 type ProjectClient = { id: string; name: string; company: string | null; avatarColor: string };
-type ProjectDetails = { id: string; name: string; status: string; createdAt: string; budget: string | null; dueDate: string | null; tags: string[]; description: string | null; client: ProjectClient | null; invoices: ProjectInvoice[] };
+type ProjectMilestone = { id: string; title: string; dueDate: string | null; completed: boolean; completedAt: string | null };
+type ProjectContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string };
+type ProjectDetails = { id: string; title: string; status: string; createdAt: string; budget: string | null; currency: string; dueDate: string | null; tags: string[]; description: string | null; contractCoverage: "undecided" | "rive" | "external" | "none"; externalContractLabel: string | null; externalContractUrl: string | null; contractDecisionAt: string | null; client: ProjectClient | null; invoices: ProjectInvoice[]; milestones: ProjectMilestone[]; contracts: ProjectContract[] };
 
 export default function ProjectProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [project, setProject] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [milestoneBusy, setMilestoneBusy] = useState<string | null>(null);
+  const [coverageBusy, setCoverageBusy] = useState(false);
+  const [externalFormOpen, setExternalFormOpen] = useState(false);
+  const [externalLabel, setExternalLabel] = useState("Contract handled outside Rive");
+  const [externalUrl, setExternalUrl] = useState("");
 
   useEffect(() => {
     async function loadProject() {
@@ -44,12 +55,54 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
     loadProject();
   }, [id]);
 
-  const formatCurrency = (val: number) => {
+  const formatCurrency = (val: number, currency = "USD") => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency,
       minimumFractionDigits: 0
     }).format(val);
+  };
+
+  const updateMilestone = async (milestone: ProjectMilestone) => {
+    setMilestoneBusy(milestone.id);
+    try {
+      const response = await fetch(`/api/workflow/milestones/${milestone.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed: !milestone.completed }) });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || "Unable to update milestone.");
+      setProject((current) => current ? { ...current, milestones: current.milestones.map((item) => item.id === milestone.id ? { ...item, completed: data.milestone.completed, completedAt: data.milestone.completed_at } : item) } : current);
+      toast.success(milestone.completed ? "Milestone reopened." : "Milestone completed. Billing checks updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update milestone.");
+    } finally {
+      setMilestoneBusy(null);
+    }
+  };
+
+  const updateContractCoverage = async (coverage: "external" | "none" | "undecided") => {
+    if (coverageBusy) return;
+    setCoverageBusy(true);
+    try {
+      const response = await fetch(`/api/workflow/projects/${id}/contract-coverage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverage, ...(coverage === "external" ? { externalLabel, externalUrl } : {}) }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || "Unable to update contract coverage.");
+      setProject((current) => current ? {
+        ...current,
+        contractCoverage: data.coverage.status,
+        externalContractLabel: data.coverage.external_label,
+        externalContractUrl: data.coverage.external_url,
+        contractDecisionAt: data.coverage.decided_at,
+      } : current);
+      toast.success(data.message);
+      setExternalFormOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update contract coverage.");
+    } finally {
+      setCoverageBusy(false);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -95,7 +148,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-white sm:text-3xl">{project.name}</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-white sm:text-3xl">{project.title}</h1>
             <p className="text-sm text-muted-foreground dark:text-slate-400 font-medium flex items-center gap-2 mt-1">
               <Calendar className="h-4 w-4" /> Started {formatDate(project.createdAt)}
             </p>
@@ -141,7 +194,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
             <div className="flex flex-col gap-5">
               <div>
                 <div className="text-xs text-slate-400 mb-1 flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Budget</div>
-                <div className="text-2xl font-bold text-emerald-400">{project.budget ? formatCurrency(parseFloat(project.budget)) : "Unspecified"}</div>
+                <div className="text-2xl font-bold text-emerald-400">{project.budget ? formatCurrency(parseFloat(project.budget), project.currency) : "Unspecified"}</div>
               </div>
               
               <div className="h-px bg-slate-700/50 w-full" />
@@ -184,6 +237,61 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
             )}
           </div>
 
+          {/* Milestones */}
+          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-blue-600" /> Milestones
+              </h3>
+              <span className="text-xs text-muted-foreground">{project.milestones.filter((item) => item.completed).length}/{project.milestones.length} complete</span>
+            </div>
+            {project.milestones.length === 0 ? (
+              <div className="text-center py-8 border border-dashed border-border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-muted-foreground dark:text-slate-400">No milestones recorded for this project.</div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {project.milestones.map((milestone) => (
+                  <div key={milestone.id} className="flex items-center justify-between gap-4 rounded-xl border border-border dark:border-slate-700 p-4">
+                    <div className="min-w-0">
+                      <p className={`truncate text-sm font-semibold ${milestone.completed ? "text-emerald-700 dark:text-emerald-300" : "text-foreground dark:text-slate-200"}`}>{milestone.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">Due {milestone.dueDate ? formatDate(milestone.dueDate) : "No due date"}</p>
+                    </div>
+                    <Button size="sm" variant={milestone.completed ? "secondary" : "outline"} disabled={milestoneBusy === milestone.id} onClick={() => void updateMilestone(milestone)}>{milestoneBusy === milestone.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : milestone.completed ? "Completed" : "Mark complete"}</Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Linked Contracts */}
+          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2"><FileSignature className="h-5 w-5 text-blue-600" /> Contracts</h3>
+              <Link href="/workflow/contracts" className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">View all</Link>
+            </div>
+            {project.contracts.length === 0 ? project.contractCoverage === "external" ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                <div className="flex items-start gap-3"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{project.externalContractLabel || "Contract handled outside Rive"}</p><p className="mt-1 text-xs leading-5 text-emerald-800/80 dark:text-emerald-200/80">This project intentionally has no Rive contract. Milestones and invoices continue to work normally.</p>{project.externalContractUrl ? <a href={project.externalContractUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 underline dark:text-emerald-200">Open external record <ExternalLink className="h-3 w-3" /></a> : null}</div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div>
+              </div>
+            ) : project.contractCoverage === "none" ? (
+              <div className="rounded-xl border border-border bg-muted/40 p-4"><div className="flex items-start gap-3"><CircleSlash2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">No contract required</p><p className="mt-1 text-xs leading-5 text-muted-foreground">This is an intentional project decision, not a missing setup step.</p></div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div></div>
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+                <div className="flex items-start gap-3"><FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-amber-950 dark:text-amber-100">Contract coverage is undecided</p><p className="mt-1 text-xs leading-5 text-amber-900/80 dark:text-amber-200/80">A Rive contract is optional, but record how this engagement is covered so it does not look accidentally incomplete.</p></div></div>
+                <div className="mt-4 flex flex-wrap gap-2">{project.client ? <Link className={buttonVariants({ variant: "default", size: "sm" })} href={`/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client.id)}`}><FileSignature className="h-3.5 w-3.5" /> Create Rive contract</Link> : <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">Link a client before creating a Rive contract.</p>}<Button size="sm" variant="outline" disabled={coverageBusy} onClick={() => setExternalFormOpen((current) => !current)}><ExternalLink className="h-3.5 w-3.5" /> Handled elsewhere</Button><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("none")}><CircleSlash2 className="h-3.5 w-3.5" /> Not needed</Button></div>
+                {externalFormOpen ? <div className="mt-3 grid gap-2 rounded-xl border border-amber-300/70 bg-white/60 p-3 dark:border-amber-800 dark:bg-slate-950/30"><p className="text-xs font-bold text-amber-950 dark:text-amber-100">External contract reference</p><Input value={externalLabel} onChange={(event) => setExternalLabel(event.target.value)} maxLength={180} placeholder="Client MSA in Drive" /><Input type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} placeholder="Optional https:// link" /><div className="flex justify-end"><Button size="sm" disabled={coverageBusy} onClick={() => void updateContractCoverage("external")}>{coverageBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />} Save reference</Button></div></div> : null}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {project.contracts.map((item) => (
+                  <Link key={item.id} href={`/workflow/contracts/${item.id}`} className="flex items-center justify-between gap-4 rounded-xl border border-border dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all">
+                    <div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground dark:text-slate-200">{item.title}</p><p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{item.currency} · Updated {formatDate(item.updatedAt)}</p></div>
+                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Linked Invoices */}
           <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
             <div className="flex items-center justify-between mb-6">
@@ -204,11 +312,11 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
                 {project.invoices && project.invoices.map((inv) => (
                   <div key={inv.id} className="flex items-center justify-between p-4 rounded-xl border border-border dark:border-slate-700 hover:border-blue-300 transition-all bg-white dark:bg-slate-800">
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm text-foreground dark:text-slate-200">{inv.number}</span>
+                      <span className="font-bold text-sm text-foreground dark:text-slate-200">{inv.invoiceNumber}</span>
                       <span className="text-xs text-muted-foreground dark:text-slate-400">Issued: {formatDate(inv.issueDate)}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="font-extrabold text-sm text-foreground dark:text-slate-200">{formatCurrency(Number(inv.total))}</span>
+                      <span className="font-extrabold text-sm text-foreground dark:text-slate-200">{formatCurrency(Number(inv.total), project.currency)}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
                          inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
                          inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :

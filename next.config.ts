@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   deploymentId: process.env.DEPLOYMENT_VERSION,
+  // The local app is routinely opened through 127.0.0.1 while Next starts on
+  // localhost. Allow the dev HMR endpoint from both local hostnames.
+  allowedDevOrigins: ["localhost", "127.0.0.1"],
   poweredByHeader: false,
   async headers() {
     return [

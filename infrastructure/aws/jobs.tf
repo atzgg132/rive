@@ -74,6 +74,14 @@ locals {
         { environment = "dev", path = "/api/calendar/maintenance" },
       ]
     }
+    contract_billing = {
+      expression = "rate(15 minutes)"
+      targets = [
+        { environment = "prod", path = "/api/contracts/maintenance" },
+        { environment = "test", path = "/api/contracts/maintenance" },
+        { environment = "dev", path = "/api/contracts/maintenance" },
+      ]
+    }
   }
 }
 
@@ -81,7 +89,7 @@ resource "aws_cloudwatch_event_rule" "jobs" {
   for_each            = local.scheduled_jobs
   name                = "rive-${replace(each.key, "_", "-")}"
   schedule_expression = each.value.expression
-  state               = var.scheduled_jobs_enabled ? "ENABLED" : "DISABLED"
+  state               = each.key == "contract_billing" ? (var.contract_billing_jobs_enabled ? "ENABLED" : "DISABLED") : (var.scheduled_jobs_enabled ? "ENABLED" : "DISABLED")
 }
 
 resource "aws_cloudwatch_event_target" "jobs" {

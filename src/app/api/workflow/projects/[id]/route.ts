@@ -29,7 +29,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         },
         invoices: {
           orderBy: { issueDate: "desc" }
-        }
+        },
+        milestones: {
+          orderBy: { dueDate: "asc" }
+        },
+        contracts: {
+          orderBy: { updatedAt: "desc" },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            currency: true,
+            executedAt: true,
+            updatedAt: true,
+          },
+        },
       }
     });
 

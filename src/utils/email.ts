@@ -12,7 +12,12 @@ export type EmailType =
   | "password_changed"
   | "login_success"
   | "contact_message"
-  | "portfolio_inquiry";
+  | "portfolio_inquiry"
+  | "contract_review"
+  | "contract_signing"
+  | "contract_executed"
+  | "invoice_ready"
+  | "invoice_sent";
 
 export type EmailResult = {
   sent: boolean;
@@ -466,5 +471,141 @@ export function sendPortfolioInquiryEmail(input: {
       recipient: input.to,
     }),
     text: `New portfolio enquiry\n\nFrom: ${input.visitorName} <${input.visitorEmail}>\nProject: ${input.projectType}\n\n${input.message}`,
+  });
+}
+
+export function sendContractReviewEmail(input: {
+  to: string;
+  clientName: string;
+  ownerName: string;
+  contractTitle: string;
+  reviewUrl: string;
+  expiresAt: Date;
+}): Promise<EmailResult> {
+  const safeOwner = escapeHtml(input.ownerName);
+  const safeTitle = escapeHtml(input.contractTitle);
+  const expiry = input.expiresAt.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
+  return deliver({
+    to: input.to,
+    type: "contract_review",
+    subject: `${input.ownerName} shared a contract for review`,
+    html: baseTemplate({
+      eyebrow: "contract review",
+      title: `${safeOwner} shared a draft with you.`,
+      intro: `Please review “${safeTitle}” and leave comments or suggested edits before anyone signs.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">This is a review link, not a signature request. The agreement will not be executed until the parties review the final version and complete the separate signing step.</p>`,
+      action: "Review contract",
+      actionUrl: input.reviewUrl,
+      aside: `This link expires on ${expiry} (IST). If you were not expecting this message, do not sign anything; contact ${safeOwner} through a trusted channel.`,
+      recipient: input.to,
+    }),
+    text: `${input.ownerName} shared “${input.contractTitle}” for review.\n\nReview it here: ${input.reviewUrl}\n\nThis link expires on ${expiry} IST. This is not a signature request.`,
+  });
+}
+
+export function sendContractSigningEmail(input: {
+  to: string;
+  signerName: string;
+  contractTitle: string;
+  signUrl: string;
+  expiresAt: Date;
+}): Promise<EmailResult> {
+  const expiry = input.expiresAt.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
+  return deliver({
+    to: input.to,
+    type: "contract_signing",
+    subject: `Signature requested: ${input.contractTitle}`,
+    html: baseTemplate({
+      eyebrow: "signature requested",
+      title: "A contract is ready for your signature.",
+      intro: `Please read the complete contract before signing “${escapeHtml(input.contractTitle)}”.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">The signing page will show the exact version, signer consent language, and the record that will be created when you sign. Only the named client and freelancer signatories are invited to sign.</p>`,
+      action: "Open signing page",
+      actionUrl: input.signUrl,
+      aside: `This link expires on ${expiry} (IST). Do not forward it. If the name or terms are incorrect, ask the sender to void and reissue the signing request.`,
+      recipient: input.to,
+    }),
+    text: `Signature requested for “${input.contractTitle}”.\n\nOpen the signing page: ${input.signUrl}\n\nThis link expires on ${expiry} IST. Do not forward it.`,
+  });
+}
+
+export function sendContractExecutedEmail(input: {
+  to: string;
+  recipientName: string;
+  contractTitle: string;
+  artifactUrl: string;
+}): Promise<EmailResult> {
+  return deliver({
+    to: input.to,
+    type: "contract_executed",
+    subject: `Completed contract: ${input.contractTitle}`,
+    html: baseTemplate({
+      eyebrow: "contract completed",
+      title: "Both signatures are recorded.",
+      intro: `The completed version of “${escapeHtml(input.contractTitle)}” is ready to download and retain.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Keep the completed document and its signing evidence with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
+      action: "View completed contract",
+      actionUrl: input.artifactUrl,
+      aside: "This message confirms the record created in rive.; it does not replace any legal, tax, identity, or regulatory requirement that applies to the transaction.",
+      recipient: input.to,
+    }),
+    text: `Both signatures are recorded for “${input.contractTitle}”.\n\nView the completed contract: ${input.artifactUrl}`,
+  });
+}
+
+export function sendInvoiceReadyEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  dueDate: Date | null;
+}): Promise<EmailResult> {
+  const due = input.dueDate
+    ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
+    : "not specified";
+  return deliver({
+    to: input.to,
+    type: "invoice_ready",
+    subject: `Invoice ${input.invoiceNumber} is ready to review`,
+    html: baseTemplate({
+      eyebrow: "invoice ready",
+      title: `Invoice ${escapeHtml(input.invoiceNumber)} is ready.`,
+      intro: `A milestone-linked draft invoice for ${escapeHtml(input.clientName)} has been generated for review.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Amount: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
+      action: "Open revenue workspace",
+      actionUrl: `${appUrl}/workflow/revenue`,
+      aside: "This email is a prompt to review. No invoice is sent to the client automatically by this notification.",
+      recipient: input.to,
+    }),
+    text: `Invoice ${input.invoiceNumber} is ready to review.\n\nAmount: ${input.currency} ${input.total}\nDue: ${due}\n\nOpen revenue workspace: ${appUrl}/workflow/revenue`,
+  });
+}
+
+export function sendInvoiceSentEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  dueDate: Date | null;
+  senderName: string;
+}): Promise<EmailResult> {
+  const due = input.dueDate
+    ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
+    : "not specified";
+  return deliver({
+    to: input.to,
+    type: "invoice_sent",
+    subject: `Invoice ${input.invoiceNumber} from ${input.senderName}`,
+    html: baseTemplate({
+      eyebrow: "invoice",
+      title: `Invoice ${escapeHtml(input.invoiceNumber)}`,
+      intro: `${escapeHtml(input.senderName)} sent an invoice for your review and payment.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Amount due: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
+      aside: "The invoice email is a delivery notice. Please verify the sender and payment details using a trusted channel before paying.",
+      recipient: input.to,
+    }),
+    text: `Invoice ${input.invoiceNumber} from ${input.senderName}.\n\nAmount due: ${input.currency} ${input.total}\nDue: ${due}\n\nVerify payment details through a trusted channel before paying.`,
   });
 }

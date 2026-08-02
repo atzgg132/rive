@@ -1,9 +1,10 @@
 "use client";
 
-import { Button, Input, Textarea, Select } from "@/components/ui";
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Briefcase,
   Plus,
@@ -16,7 +17,11 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
-  GripVertical
+  GripVertical,
+  FileSignature,
+  ExternalLink,
+  CircleSlash2,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DndContext, useDraggable, useDroppable, DragEndEvent, closestCorners } from "@dnd-kit/core";
@@ -41,6 +46,11 @@ interface Project {
   client_company: string | null;
   milestone_count: number;
   completed_milestones: number;
+  contract_coverage: "undecided" | "rive" | "external" | "none";
+  external_contract_label: string | null;
+  external_contract_url: string | null;
+  contract_count: number;
+  latest_contract: { id: string; title: string; status: string } | null;
 }
 
 interface Client {
@@ -50,6 +60,7 @@ interface Client {
 }
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
@@ -71,7 +82,14 @@ export default function ProjectsPage() {
   const [dueDate, setDueDate] = useState("");
   const [milestonesInput, setMilestonesInput] = useState("");
   const [projectStatus, setProjectStatus] = useState("active");
+  const [workspaceCurrency, setWorkspaceCurrency] = useState("USD");
+  const [projectCurrency, setProjectCurrency] = useState("USD");
   const [saving, setSaving] = useState(false);
+  const [contractPrompt, setContractPrompt] = useState<{ id: string; title: string; clientId: string | null; clientName: string | null } | null>(null);
+  const [savingCoverage, setSavingCoverage] = useState(false);
+  const [externalCoverageOpen, setExternalCoverageOpen] = useState(false);
+  const [externalCoverageLabel, setExternalCoverageLabel] = useState("Contract handled outside Rive");
+  const [externalCoverageUrl, setExternalCoverageUrl] = useState("");
 
   const loadProjects = async () => {
     try {
@@ -104,6 +122,19 @@ export default function ProjectsPage() {
     }
   };
 
+  const loadWorkspaceCurrency = async () => {
+    try {
+      const response = await fetch("/api/auth/session", { cache: "no-store" });
+      const data = await response.json();
+      if (response.ok && data.success && /^[A-Z]{3}$/.test(data.user?.currency || "")) {
+        setWorkspaceCurrency(data.user.currency);
+        setProjectCurrency((current) => current === "USD" ? data.user.currency : current);
+      }
+    } catch {
+      // The projects API still applies the workspace currency as its server-side default.
+    }
+  };
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
@@ -113,6 +144,7 @@ export default function ProjectsPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadClients();
+    void loadWorkspaceCurrency();
   }, []);
 
   const openCreate = () => {
@@ -126,6 +158,7 @@ export default function ProjectsPage() {
     setDueDate("");
     setMilestonesInput("");
     setProjectStatus("active");
+    setProjectCurrency(workspaceCurrency);
     setDrawerOpen(true);
     setOpenDropdownId(null);
   };
@@ -139,8 +172,9 @@ export default function ProjectsPage() {
     setBudget(project.budget || "");
     setStartDate(project.start_date ? project.start_date.split("T")[0] : "");
     setDueDate(project.due_date ? project.due_date.split("T")[0] : "");
-    setMilestonesInput(""); // Clear existing milestones for safe editing or let user add new ones
+    setMilestonesInput("");
     setProjectStatus(project.status || "active");
+    setProjectCurrency(project.currency || workspaceCurrency);
     setDrawerOpen(true);
     setOpenDropdownId(null);
   };
@@ -195,9 +229,12 @@ export default function ProjectsPage() {
         status: projectStatus,
         priority,
         budget: budget ? parseFloat(budget) : null,
+        currency: projectCurrency,
         start_date: startDate || null,
         due_date: dueDate || null,
-        milestones: milestones.length > 0 ? milestones : undefined
+        ...(editingId
+          ? { new_milestones: milestones.length > 0 ? milestones : undefined }
+          : { milestones: milestones.length > 0 ? milestones : undefined })
       });
 
       const res = await fetch(url, {
@@ -210,7 +247,19 @@ export default function ProjectsPage() {
       if (data.success) {
         toast.success(data.message || `Project ${editingId ? 'updated' : 'created'} successfully!`, { id: loadingToast });
         setDrawerOpen(false);
-        loadProjects();
+        await loadProjects();
+        if (!editingId && data.project?.id) {
+          const selectedClient = clients.find((client) => client.id === clientId);
+          setContractPrompt({
+            id: data.project.id,
+            title: data.project.title || title,
+            clientId: data.project.client_id || clientId || null,
+            clientName: selectedClient?.name || null,
+          });
+          setExternalCoverageOpen(false);
+          setExternalCoverageLabel("Contract handled outside Rive");
+          setExternalCoverageUrl("");
+        }
       } else {
         toast.error(data.message || "Failed to save project.", { id: loadingToast });
       }
@@ -219,6 +268,35 @@ export default function ProjectsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveContractCoverage = async (coverage: "external" | "none" | "undecided") => {
+    if (!contractPrompt || savingCoverage) return;
+    setSavingCoverage(true);
+    try {
+      const response = await fetch(`/api/workflow/projects/${contractPrompt.id}/contract-coverage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverage, ...(coverage === "external" ? { externalLabel: externalCoverageLabel, externalUrl: externalCoverageUrl } : {}) }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || "Unable to save the contract decision.");
+      toast.success(data.message);
+      setContractPrompt(null);
+      setExternalCoverageOpen(false);
+      await loadProjects();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save the contract decision.");
+    } finally {
+      setSavingCoverage(false);
+    }
+  };
+
+  const startProjectContract = () => {
+    if (!contractPrompt?.clientId) return;
+    const search = new URLSearchParams({ new: "1", projectId: contractPrompt.id, clientId: contractPrompt.clientId });
+    setContractPrompt(null);
+    router.push(`/workflow/contracts?${search.toString()}`);
   };
 
   const getPriorityColor = (prio: string) => {
@@ -452,15 +530,23 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Budget ($ USD)</label>
-                    <Input
-                      type="number"
-                      placeholder="E.g. 5000"
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
-                    />
+                  <div className="grid grid-cols-[minmax(0,1fr)_100px] gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Project budget</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="E.g. 5000"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Currency</label>
+                      <Input value={projectCurrency} onChange={(event) => setProjectCurrency(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))} maxLength={3} className="text-xs" />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -485,10 +571,10 @@ export default function ProjectsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Milestones / tasks (one per line)</label>
+                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">{editingId ? "Add milestones" : "Milestones"} (one per line)</label>
                     <Textarea
                       rows={3}
-                      placeholder={editingId ? "Note: updating this replaces all incomplete milestones." : "e.g. wireframes signoff\ndraft contract\nfinal deployment"}
+                      placeholder={editingId ? "Existing milestones stay unchanged. Add one new milestone per line." : "e.g. wireframes signoff\ndraft contract\nfinal deployment"}
                       value={milestonesInput}
                       onChange={(e) => setMilestonesInput(e.target.value)}
                       className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none font-sans"
@@ -518,6 +604,57 @@ export default function ProjectsPage() {
           </div>
         </Portal>
       )}
+
+      <Dialog open={Boolean(contractPrompt)} onOpenChange={(open) => { if (!open && !savingCoverage) { setContractPrompt(null); setExternalCoverageOpen(false); } }}>
+        <DialogContent className="max-w-xl" showClose={!savingCoverage}>
+          <div className="flex flex-col gap-5">
+            <div className="pr-8">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <FileSignature className="h-5 w-5" />
+              </div>
+              <DialogTitle className="text-xl font-extrabold">How is this project covered?</DialogTitle>
+              <DialogDescription className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                {contractPrompt?.title} can continue without a Rive contract. Recording the decision now keeps the project, milestones, invoices, and legal record aligned.
+              </DialogDescription>
+            </div>
+
+            {contractPrompt?.clientId ? (
+              <button type="button" onClick={startProjectContract} className="group flex w-full items-center gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition hover:border-primary/60 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"><FileSignature className="h-4 w-4" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-sm font-bold">Create a Rive contract</span><span className="mt-0.5 block text-xs leading-5 text-muted-foreground">Prefill {contractPrompt.clientName || "the client"}, project brief, currency, and milestones. You review everything before sharing.</span></span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-primary transition group-hover:translate-x-0.5" />
+              </button>
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                Link a client to this project before creating a Rive contract. You can edit the project and return to this decision later.
+              </div>
+            )}
+
+            {externalCoverageOpen ? <div className="rounded-2xl border border-border bg-muted/25 p-4">
+              <div className="flex items-center gap-2"><ExternalLink className="h-4 w-4 text-primary" /><p className="text-sm font-bold">Record the external contract</p></div>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">The label and link are internal references only. Rive will not alter or sign the external document.</p>
+              <div className="mt-3 grid gap-3">
+                <label className="text-xs font-semibold">Label<Input className="mt-1" value={externalCoverageLabel} onChange={(event) => setExternalCoverageLabel(event.target.value)} maxLength={180} placeholder="Client MSA in Drive" /></label>
+                <label className="text-xs font-semibold">Link (optional)<Input className="mt-1" type="url" value={externalCoverageUrl} onChange={(event) => setExternalCoverageUrl(event.target.value)} placeholder="https://…" /></label>
+              </div>
+              <div className="mt-3 flex justify-end gap-2"><Button type="button" size="sm" variant="ghost" disabled={savingCoverage} onClick={() => setExternalCoverageOpen(false)}>Back</Button><Button type="button" size="sm" disabled={savingCoverage} onClick={() => void saveContractCoverage("external")}>{savingCoverage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />} Save external record</Button></div>
+            </div> : <div className="grid gap-3 sm:grid-cols-2">
+              <Button type="button" variant="outline" className="h-auto justify-start gap-3 px-4 py-3 text-left" disabled={savingCoverage} onClick={() => setExternalCoverageOpen(true)}>
+                <ExternalLink className="h-4 w-4 shrink-0" />
+                <span><span className="block text-sm">Handled elsewhere</span><span className="block text-[11px] font-normal text-muted-foreground">Record external coverage</span></span>
+              </Button>
+              <Button type="button" variant="outline" className="h-auto justify-start gap-3 px-4 py-3 text-left" disabled={savingCoverage} onClick={() => void saveContractCoverage("none")}>
+                <CircleSlash2 className="h-4 w-4 shrink-0" />
+                <span><span className="block text-sm">No contract needed</span><span className="block text-[11px] font-normal text-muted-foreground">Record an intentional exception</span></span>
+              </Button>
+            </div>}
+
+            <Button type="button" variant="ghost" disabled={savingCoverage} onClick={() => void saveContractCoverage("undecided")}>
+              Decide later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -662,6 +799,29 @@ function DraggableProjectCard({
             </span>
           )}
         </div>
+      </div>
+
+      <div className="ml-6 flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-[10px]">
+        {project.contract_coverage === "rive" && project.latest_contract ? (
+          <>
+            <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300"><FileSignature className="h-3.5 w-3.5 shrink-0" /><span className="truncate">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span></span>
+            <Link href={`/workflow/contracts/${project.latest_contract.id}`} className="shrink-0 font-bold text-primary hover:underline">Open</Link>
+          </>
+        ) : project.contract_coverage === "external" ? (
+          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300"><ExternalLink className="h-3.5 w-3.5" /> Contract handled elsewhere</span>
+        ) : project.contract_coverage === "none" ? (
+          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300"><CircleSlash2 className="h-3.5 w-3.5" /> No contract required</span>
+        ) : (
+          <>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300"><FileSignature className="h-3.5 w-3.5" /> Contract undecided</span>
+            <Link
+              href={project.client_id ? `/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client_id)}` : `/workflow/projects/${project.id}`}
+              className="shrink-0 font-bold text-primary hover:underline"
+            >
+              {project.client_id ? "Create" : "Review"}
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

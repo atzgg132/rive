@@ -113,3 +113,9 @@ variable "scheduled_jobs_enabled" {
   default     = false
   description = "Enable only after all environment DNS records and applications are healthy."
 }
+
+variable "contract_billing_jobs_enabled" {
+  type        = bool
+  default     = true
+  description = "Run the contract maintenance worker so milestone and date-based invoice triggers are processed."
+}

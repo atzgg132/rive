@@ -1,6 +1,8 @@
 param(
   [int]$LocalPort = 5433,
-  [string]$Region = "ap-south-1"
+  [string]$Region = "ap-south-1",
+  [ValidateSet("dev", "migrate", "status", "smoke", "cleanup-smoke", "inspect-smoke")]
+  [string]$Action = "dev"
 )
 
 $ErrorActionPreference = "Stop"
@@ -84,6 +86,8 @@ if ($localUrl -eq $remoteUrl) {
 
 $outputLog = Join-Path ([System.IO.Path]::GetTempPath()) "rive-ssm-tunnel-$PID.out.log"
 $errorLog = Join-Path ([System.IO.Path]::GetTempPath()) "rive-ssm-tunnel-$PID.err.log"
+$existingPluginIds = @(Get-Process -Name "session-manager-plugin" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
+$sessionPluginIds = @()
 $parameters = "host=$databaseHost,portNumber=5432,localPortNumber=$LocalPort"
 $tunnel = Start-Process `
   -FilePath (Get-Command aws).Source `
@@ -112,6 +116,10 @@ try {
     Start-Sleep -Milliseconds 300
   }
 
+  $sessionPluginIds = @(Get-Process -Name "session-manager-plugin" -ErrorAction SilentlyContinue |
+    Where-Object { $existingPluginIds -notcontains $_.Id } |
+    Select-Object -ExpandProperty Id)
+
   $env:DATABASE_URL = $localUrl
   $env:DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
   $env:DATABASE_SSL_SERVERNAME = $databaseHost
@@ -119,16 +127,38 @@ try {
   $env:NODE_EXTRA_CA_CERTS = $caBundlePath
 
   Write-Host "Connected securely to the AWS development database through SSM." -ForegroundColor Green
-  npm run dev
+  switch ($Action) {
+    "dev" { npm run dev }
+    "migrate" { npx prisma migrate deploy }
+    "status" { npx prisma migrate status }
+    "smoke" { node scripts/smoke-contracts.mjs }
+    "cleanup-smoke" { node scripts/cleanup-contract-smoke.mjs }
+    "inspect-smoke" { node scripts/inspect-contract-smoke.mjs }
+  }
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } finally {
   if ($tunnel -and -not $tunnel.HasExited) {
     Stop-Process -Id $tunnel.Id -Force
     $tunnel.WaitForExit()
   }
+  foreach ($sessionPluginId in $sessionPluginIds) {
+    $plugin = Get-Process -Id $sessionPluginId -ErrorAction SilentlyContinue
+    if ($plugin -and $plugin.ProcessName -eq "session-manager-plugin") {
+      Stop-Process -Id $sessionPluginId -Force -ErrorAction SilentlyContinue
+    }
+  }
+  Start-Sleep -Milliseconds 500
   foreach ($log in @($outputLog, $errorLog)) {
     if (Test-Path -LiteralPath $log) {
-      Remove-Item -LiteralPath $log -Force
+      $removed = $false
+      for ($attempt = 0; $attempt -lt 5 -and -not $removed; $attempt++) {
+        try {
+          Remove-Item -LiteralPath $log -Force -ErrorAction Stop
+          $removed = $true
+        } catch {
+          Start-Sleep -Milliseconds 250
+        }
+      }
     }
   }
 }

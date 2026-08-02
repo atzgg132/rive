@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "dev:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1",
+    "db:migrate:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action migrate",
+    "db:migrate:status:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action status",
+    "contracts:smoke:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action smoke",
+    "contracts:cleanup-smoke:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action cleanup-smoke",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -551,7 +551,7 @@ export default function CalendarPage() {
     : cursor.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
   return (
-    <div className="min-h-full bg-background dark:bg-slate-950">
+    <div className="calendar-shell min-h-full bg-background dark:bg-slate-950">
       <header className="border-b border-border bg-white px-5 py-5 dark:border-slate-800 dark:bg-slate-900 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

@@ -66,19 +66,19 @@ export const PORTFOLIO_TEMPLATES = [
 ] as const;
 
 export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
-  name: "your name",
+  name: "",
   profileImageUrl: "",
-  headline: "independent creative building useful things.",
-  bio: "Tell people what you do, who you help, and what makes your work different.",
-  location: "available worldwide",
-  availability: "available for select projects",
+  headline: "",
+  bio: "",
+  location: "",
+  availability: "",
   contactEmail: "",
   social: [],
   projects: [
-    { id: "project-1", title: "your first project", description: "Add a concise project story, your role, and the result you created.", role: "your role", year: "2026", url: "", imageUrl: "", client: "", timeline: "", deliverables: [], gallery: [], visibility: "public", challenge: "", solution: "", outcome: "", tools: [] },
+    { id: "project-1", title: "", description: "", role: "", year: "2026", url: "", imageUrl: "", client: "", timeline: "", deliverables: [], gallery: [], visibility: "public", challenge: "", solution: "", outcome: "", tools: [] },
   ],
   services: [
-    { id: "service-1", title: "your first service", description: "Describe the outcome clients can expect when they work with you." },
+    { id: "service-1", title: "", description: "" },
   ],
   testimonials: [],
   sections: [
@@ -116,8 +116,8 @@ export function buildPrefilledPortfolioContent(user: PortfolioSeedData): Portfol
   const projects = (user.projects || []).slice(0, 12).map((project) => ({
     id: `project-${project.id}`,
     title: project.title,
-    description: project.description || "Add the outcome, your contribution, and what made this work successful.",
-    role: "independent professional",
+    description: project.description || "",
+    role: "",
     year: String((project.startDate || project.updatedAt).getFullYear()),
     url: "",
     imageUrl: "",
@@ -127,7 +127,7 @@ export function buildPrefilledPortfolioContent(user: PortfolioSeedData): Portfol
   const services = serviceNames.map((name, index) => ({
     id: `service-${index + 1}`,
     title: name,
-    description: "Describe the outcome clients can expect when they work with you.",
+    description: "",
   }));
 
   return {
@@ -158,20 +158,53 @@ export function normalizeSlug(value: string): string {
     .slice(0, 50);
 }
 
+const LEGACY_PORTFOLIO_STARTER_COPY = new Set([
+  "your name",
+  "independent creative building useful things.",
+  "tell people what you do, who you help, and what makes your work different.",
+  "available worldwide",
+  "available for select projects",
+  "your first project",
+  "add a concise project story, your role, and the result you created.",
+  "your role",
+  "your first service",
+  "describe the outcome clients can expect when they work with you.",
+]);
+
+function clearLegacyStarterCopy(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return LEGACY_PORTFOLIO_STARTER_COPY.has(trimmed.toLowerCase()) ? "" : value;
+}
+
 export function mergePortfolioContent(value: unknown): PortfolioContent {
   const input = (value && typeof value === "object" ? value : {}) as Partial<PortfolioContent>;
   return {
     ...DEFAULT_PORTFOLIO_CONTENT,
     ...input,
+    name: clearLegacyStarterCopy(input.name),
+    headline: clearLegacyStarterCopy(input.headline),
+    bio: clearLegacyStarterCopy(input.bio),
+    location: clearLegacyStarterCopy(input.location),
+    availability: clearLegacyStarterCopy(input.availability),
     social: Array.isArray(input.social) ? input.social : DEFAULT_PORTFOLIO_CONTENT.social,
     projects: Array.isArray(input.projects)
       ? input.projects.map((project) => ({
           ...project,
+          title: clearLegacyStarterCopy(project.title),
+          description: clearLegacyStarterCopy(project.description),
+          role: clearLegacyStarterCopy(project.role),
           deliverables: Array.isArray(project.deliverables) ? project.deliverables : [],
           gallery: Array.isArray(project.gallery) ? project.gallery : [],
         }))
       : DEFAULT_PORTFOLIO_CONTENT.projects,
-    services: Array.isArray(input.services) ? input.services : DEFAULT_PORTFOLIO_CONTENT.services,
+    services: Array.isArray(input.services)
+      ? input.services.map((service) => ({
+          ...service,
+          title: clearLegacyStarterCopy(service.title),
+          description: clearLegacyStarterCopy(service.description),
+        }))
+      : DEFAULT_PORTFOLIO_CONTENT.services,
     testimonials: Array.isArray(input.testimonials) ? input.testimonials : DEFAULT_PORTFOLIO_CONTENT.testimonials,
     sections: Array.isArray(input.sections) ? input.sections : DEFAULT_PORTFOLIO_CONTENT.sections,
   };

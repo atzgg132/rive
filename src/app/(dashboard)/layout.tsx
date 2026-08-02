@@ -20,6 +20,7 @@ import {
   Loader2,
   Globe2,
   CalendarDays,
+  FileSignature,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -38,6 +39,13 @@ interface UserProfile {
   onboarding_status?: string;
 }
 
+interface WorkspaceNotification {
+  id: string;
+  text: string;
+  href?: string | null;
+  read: boolean;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -49,9 +57,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMac, setIsMac] = useState(true);
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "Welcome to Rive. Your client operations workspace is ready.", read: false },
-    { id: 2, text: "Pro Tip: Open search to move around the workspace faster.", read: false },
+  const [notifications, setNotifications] = useState<WorkspaceNotification[]>([
+    { id: "welcome", text: "Welcome to Rive. Your client operations workspace is ready.", read: false },
+    { id: "tip", text: "Pro Tip: Open search to move around the workspace faster.", read: false },
   ]);
 
   useEffect(() => {
@@ -60,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsMac(mac);
       setNotifications(prev =>
-        prev.map(n => n.id === 2 ? { ...n, text: `Pro Tip: Press ${mac ? "⌘K" : "Ctrl+K"} to open the Command Palette.` } : n)
+        prev.map(n => n.id === "tip" ? { ...n, text: `Pro Tip: Press ${mac ? "⌘K" : "Ctrl+K"} to open the Command Palette.` } : n)
       );
     }
   }, []);
@@ -81,6 +89,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const toggleNotifications = () => {
     setNotificationsOpen((open) => !open);
     setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
+    void fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ all: true }) }).catch(() => undefined);
+    void fetch("/api/notifications?unread=false", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.notifications)) setNotifications(data.notifications.map((notification: { id: string; message: string; href?: string | null; read_at?: string | null }) => ({ id: notification.id, text: notification.message, href: notification.href, read: Boolean(notification.read_at) })));
+      })
+      .catch(() => undefined);
   };
 
   // Authenticate user session
@@ -125,6 +140,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [router]);
 
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void fetch("/api/notifications?unread=false", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (cancelled || !data?.success || !Array.isArray(data.notifications) || data.notifications.length === 0) return;
+        setNotifications(data.notifications.map((notification: { id: string; message: string; href?: string | null; read_at?: string | null }) => ({ id: notification.id, text: notification.message, href: notification.href, read: Boolean(notification.read_at) })));
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [user]);
+
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -141,6 +169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/calendar", label: "Calendar", icon: CalendarDays },
     { href: "/workflow/projects", label: "Projects", icon: Briefcase },
+    { href: "/workflow/contracts", label: "Contracts", icon: FileSignature },
     { href: "/workflow/clients", label: "Clients", icon: Users },
     { href: "/workflow/revenue", label: "Revenue & invoices", icon: DollarSign },
     { href: "/workflow/expenses", label: "Expenses", icon: Receipt },
@@ -159,10 +188,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex min-h-screen bg-background dark:bg-slate-950">
+    <div className="flex h-screen min-h-0 overflow-hidden bg-background dark:bg-slate-950">
       <Toaster position="bottom-right" theme="system" />
       {/* ── Desktop Sidebar ── */}
-      <aside className={`relative hidden md:flex flex-col bg-white dark:bg-slate-900 border-r border-border dark:border-slate-800 py-6 shrink-0 justify-between transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
+      <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col justify-between border-r border-border bg-white py-6 dark:border-slate-800 dark:bg-slate-900 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
         <div className="flex flex-col gap-8">
           <div className={`flex items-center ${sidebarCollapsed ? "flex-col gap-3" : "justify-between px-3"}`}>
             <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
@@ -191,7 +220,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       : "text-muted-foreground dark:text-slate-400 hover:text-foreground dark:hover:text-slate-200 hover:bg-background dark:hover:bg-slate-800/50"
                   }`}
                 >
-                  <Icon className={`h-4.5 w-4.5 shrink-0 ${isActive ? "text-primary dark:text-blue-400" : "text-muted-foreground dark:text-slate-400"}`} />
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary dark:text-blue-400" : "text-muted-foreground dark:text-slate-400"}`} />
                   {!sidebarCollapsed && <span>{link.label}</span>}
                 </Link>
               );
@@ -215,15 +244,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             title={sidebarCollapsed ? "Sign out" : undefined}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 ${sidebarCollapsed ? "justify-center" : ""}`}
           >
-            <LogOut className="h-4.5 w-4.5" />
+            <LogOut className="h-5 w-5" />
             {!sidebarCollapsed && <span>Sign out</span>}
           </Button>
         </div>
       </aside>
 
       {/* ── Mobile Header ── */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <header className="flex md:hidden items-center justify-between h-16 bg-white dark:bg-slate-900 border-b border-border dark:border-slate-800 px-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-4 dark:border-slate-800 dark:bg-slate-900 md:hidden">
           <Link href="/dashboard" className="flex items-center gap-2">
             <RiveLogo className="h-5 w-auto text-slate-900 dark:text-white" />
           </Link>
@@ -236,7 +265,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* ── Desktop Top Bar ── */}
-        <div className="hidden md:flex items-center justify-between h-16 bg-white dark:bg-slate-900 border-b border-border dark:border-slate-800 px-8">
+        <div className="sticky top-0 z-30 hidden h-16 shrink-0 items-center justify-between border-b border-border bg-white px-8 dark:border-slate-800 dark:bg-slate-900 md:flex">
           <div className="flex items-center gap-3 max-w-md w-full">
             <Button
               onClick={() => setCommandPaletteOpen(true)}
@@ -275,9 +304,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Notifications</h4>
                   <div className="flex flex-col gap-2.5">
                     {notifications.map(n => (
-                      <div key={n.id} className="text-xs text-foreground dark:text-slate-300 border-b border-border dark:border-slate-800 pb-2.5 last:border-none last:pb-0">
-                        {n.text}
-                      </div>
+                      n.href ? <Link key={n.id} href={n.href} onClick={() => setNotificationsOpen(false)} className="block text-xs text-foreground dark:text-slate-300 border-b border-border dark:border-slate-800 pb-2.5 last:border-none last:pb-0 hover:text-primary">{n.text}</Link> : <div key={n.id} className="text-xs text-foreground dark:text-slate-300 border-b border-border dark:border-slate-800 pb-2.5 last:border-none last:pb-0">{n.text}</div>
                     ))}
                   </div>
                 </div>
@@ -288,7 +315,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* ── Main Dashboard Workspace Content ── */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 text-foreground dark:text-slate-200 sm:p-4 md:p-6 xl:p-8">
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 text-foreground dark:text-slate-200 sm:p-4 md:p-6 xl:p-8">
           {children}
         </main>
       </div>

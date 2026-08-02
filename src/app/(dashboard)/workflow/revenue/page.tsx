@@ -2,7 +2,8 @@
 
 import { Button, Input, Textarea, Select } from "@/components/ui";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import {
   FileText,
   Plus,
@@ -12,7 +13,8 @@ import {
   Trash2,
   CheckCircle,
   MoreVertical,
-  Edit2
+  Edit2,
+  Send
 } from "lucide-react";
 import { toast } from "sonner";
 import DropdownPortal from "@/components/ui/DropdownPortal";
@@ -42,6 +44,8 @@ interface Invoice {
   notes: string | null;
   client_name: string | null;
   project_title: string | null;
+  contract_id: string | null;
+  contract_title: string | null;
   created_at: string;
   items: InvoiceItemForm[];
 }
@@ -55,6 +59,7 @@ interface Project {
   id: string;
   title: string;
   client_id: string | null;
+  currency: string;
 }
 
 export default function RevenuePage() {
@@ -77,12 +82,15 @@ export default function RevenuePage() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [taxRate, setTaxRate] = useState("0");
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [items, setItems] = useState<InvoiceItemForm[]>([{ description: "", quantity: "1", unit_price: "0" }]);
   const [saving, setSaving] = useState(false);
+  const [highlightedInvoiceId, setHighlightedInvoiceId] = useState<string | null>(null);
+  const invoiceQueryConsumed = useRef(false);
 
   const loadInvoices = async () => {
     try {
@@ -136,6 +144,7 @@ export default function RevenuePage() {
     setEditingId(null);
     setClientId("");
     setProjectId("");
+    setCurrency("USD");
     setTaxRate("0");
     setNotes("");
     setDueDate("");
@@ -143,6 +152,7 @@ export default function RevenuePage() {
     setItems([{ description: "", quantity: "1", unit_price: "0" }]);
     const nextNum = `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`;
     setInvoiceNumber(nextNum);
+    setHighlightedInvoiceId(null);
     setDrawerOpen(true);
     setOpenDropdownId(null);
   };
@@ -152,6 +162,7 @@ export default function RevenuePage() {
     setInvoiceNumber(invoice.invoice_number);
     setClientId(invoice.client_id || "");
     setProjectId(invoice.project_id || "");
+    setCurrency(invoice.currency || "USD");
     setTaxRate(invoice.tax_rate || "0");
     setNotes(invoice.notes || "");
     setDueDate(invoice.due_date ? new Date(invoice.due_date).toISOString().split("T")[0] : "");
@@ -168,8 +179,31 @@ export default function RevenuePage() {
     }
 
     setDrawerOpen(true);
+    setHighlightedInvoiceId(invoice.id);
     setOpenDropdownId(null);
   };
+
+  useEffect(() => {
+    if (loading || invoiceQueryConsumed.current || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const requestedInvoiceId = url.searchParams.get("invoiceId");
+    if (!requestedInvoiceId) {
+      invoiceQueryConsumed.current = true;
+      return;
+    }
+    invoiceQueryConsumed.current = true;
+    const requestedInvoice = invoices.find((invoice) => invoice.id === requestedInvoiceId);
+    if (requestedInvoice) {
+      // This consumes an external navigation intent once after async hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      openEdit(requestedInvoice);
+      toast.info(requestedInvoice.contract_id ? "Review the contract-generated draft before sending it." : "Invoice opened for review.");
+    } else {
+      toast.error("That invoice is unavailable or no longer matches this workspace.");
+    }
+    url.searchParams.delete("invoiceId");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [invoices, loading]);
 
   const handleAddItem = () => {
     setItems([...items, { description: "", quantity: "1", unit_price: "0" }]);
@@ -248,6 +282,21 @@ export default function RevenuePage() {
     }
   };
 
+  const handleSendInvoice = async (id: string, invoiceNum: string) => {
+    setOpenDropdownId(null);
+    if (!window.confirm(`Review invoice ${invoiceNum}, then send it to the client?`)) return;
+    const loadingToast = toast.loading(`Sending invoice ${invoiceNum}...`);
+    try {
+      const res = await fetch(`/api/workflow/invoices/${id}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Invoice was not sent.");
+      toast.success(data.message || "Invoice sent.", { id: loadingToast });
+      loadInvoices();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Invoice was not sent.", { id: loadingToast });
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invoiceNumber || saving) return;
@@ -269,8 +318,9 @@ export default function RevenuePage() {
         id: editingId,
         client_id: clientId || null,
         project_id: projectId || null,
+        currency,
         invoice_number: invoiceNumber,
-        status: editingId ? undefined : "sent", // don't override status if editing
+        status: editingId ? undefined : "draft", // every new invoice stays in review until explicitly sent
         tax_rate: taxRate,
         notes,
         due_date: dueDate || null,
@@ -308,19 +358,23 @@ export default function RevenuePage() {
     }
   };
 
-  const formatCurrency = (val: number) => {
+  const formatCurrency = (val: number, currency = "USD") => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: currency.toUpperCase(),
       minimumFractionDigits: 2
     }).format(val);
   };
 
+  const currencyCodes = new Set(invoices.map((invoice) => invoice.currency).filter(Boolean));
+  const summaryCurrency = currencyCodes.size === 1 ? [...currencyCodes][0] : null;
+  const summaryValue = (value: number) => summaryCurrency ? formatCurrency(value, summaryCurrency) : currencyCodes.size ? "Multiple currencies" : "—";
   const paidRevenue = invoices.filter((invoice) => invoice.status === "paid").reduce((sum, invoice) => sum + Number(invoice.total), 0);
   const outstandingRevenue = invoices.filter((invoice) => ["sent", "viewed", "overdue"].includes(invoice.status)).reduce((sum, invoice) => sum + Number(invoice.total), 0);
   const overdueInvoices = invoices.filter((invoice) => invoice.status === "overdue" || (invoice.due_date && new Date(invoice.due_date) < new Date() && !["paid", "cancelled"].includes(invoice.status)));
   const overdueRevenue = overdueInvoices.reduce((sum, invoice) => sum + Number(invoice.total), 0);
-  const collectionRate = paidRevenue + outstandingRevenue > 0 ? Math.round((paidRevenue / (paidRevenue + outstandingRevenue)) * 100) : 0;
+  const collectionRate = summaryCurrency && paidRevenue + outstandingRevenue > 0 ? Math.round((paidRevenue / (paidRevenue + outstandingRevenue)) * 100) : null;
+  const editingInvoice = editingId ? invoices.find((invoice) => invoice.id === editingId) || null : null;
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in relative min-h-[calc(100vh-8rem)]">
@@ -341,10 +395,10 @@ export default function RevenuePage() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["collected", formatCurrency(paidRevenue), "cash recognized"],
-          ["outstanding", formatCurrency(outstandingRevenue), "sent and awaiting payment"],
-          ["overdue", formatCurrency(overdueRevenue), `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} need follow-up`],
-          ["collection rate", `${collectionRate}%`, "of issued value collected"],
+          ["collected", summaryValue(paidRevenue), "cash recognized"],
+          ["outstanding", summaryValue(outstandingRevenue), "sent and awaiting payment"],
+          ["overdue", summaryValue(overdueRevenue), `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} need follow-up`],
+          ["collection rate", collectionRate === null ? "—" : `${collectionRate}%`, "of issued value collected"],
         ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className={`mt-2 text-xl font-black ${label === "overdue" && overdueRevenue > 0 ? "text-red-600 dark:text-red-400" : "text-foreground dark:text-white"}`}>{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
       </section>
 
@@ -412,21 +466,22 @@ export default function RevenuePage() {
               </thead>
               <tbody className="divide-y divide-[#E2EAF4] dark:divide-slate-800 text-xs text-foreground dark:text-slate-200">
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                  <tr key={inv.id} className={`transition-colors group ${highlightedInvoiceId === inv.id ? "bg-blue-50/80 ring-1 ring-inset ring-primary/20 dark:bg-blue-950/25" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"}`}>
                     <td className="py-4 px-6 font-bold text-primary dark:text-blue-400">{inv.invoice_number}</td>
                     <td className="py-4 px-6 font-semibold">{inv.client_name || "private client"}</td>
-                    <td className="py-4 px-6 text-muted-foreground dark:text-slate-400">{inv.project_title || "none"}</td>
+                    <td className="py-4 px-6 text-muted-foreground dark:text-slate-400"><span>{inv.project_title || "none"}</span>{inv.contract_id && inv.contract_title ? <Link href={`/workflow/contracts/${inv.contract_id}`} className="mt-1 block max-w-[220px] truncate text-[10px] font-semibold text-primary hover:underline">Contract: {inv.contract_title}</Link> : null}</td>
                     <td className="py-4 px-6">{new Date(inv.issue_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                     <td className="py-4 px-6">
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "immediate"}
                     </td>
-                    <td className="py-4 px-6 font-extrabold text-foreground dark:text-slate-100">{formatCurrency(parseFloat(inv.total))}</td>
+                    <td className="py-4 px-6 font-extrabold text-foreground dark:text-slate-100">{formatCurrency(parseFloat(inv.total), inv.currency)}</td>
                     <td className="py-4 px-6">
                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase ${getStatusBadge(inv.status)}`}>
                         {inv.status}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right relative">
+                      {inv.status === "draft" ? <Button size="sm" variant="outline" className="mr-1" onClick={() => openEdit(inv)}><Edit2 className="h-3.5 w-3.5" /> Review</Button> : null}
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -445,7 +500,15 @@ export default function RevenuePage() {
                       {openDropdownId === inv.id && (
                         <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
                           <div className="w-40 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up text-left">
-                            {inv.status !== "paid" && (
+                            {["draft", "overdue"].includes(inv.status) && (
+                              <Button
+                                onClick={() => handleSendInvoice(inv.id, inv.invoice_number)}
+                                className="w-full text-left px-3 py-2 text-xs font-medium text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 flex items-center gap-2 transition-colors"
+                              >
+                                <Send className="h-3.5 w-3.5" /> review & send
+                              </Button>
+                            )}
+                            {!['paid', 'cancelled', 'sending'].includes(inv.status) && (
                               <Button
                                 onClick={() => { handleMarkPaid(inv.id, inv.invoice_number); setOpenDropdownId(null); }}
                                 className="w-full text-left px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors"
@@ -463,18 +526,18 @@ export default function RevenuePage() {
                             >
                               <FileText className="h-3.5 w-3.5" /> download pdf
                             </Button>
-                            <Button
+                            {["draft", "overdue"].includes(inv.status) ? <Button
                               onClick={() => { openEdit(inv); setOpenDropdownId(null); }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
                             >
                               <Edit2 className="h-3.5 w-3.5" /> edit
-                            </Button>
-                            <Button
+                            </Button> : null}
+                            {!inv.contract_id && !["sent", "paid"].includes(inv.status) ? <Button
                               onClick={() => { handleDelete(inv.id, inv.invoice_number); setOpenDropdownId(null); }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5" /> delete
-                            </Button>
+                            </Button> : null}
                           </div>
                         </DropdownPortal>
                       )}
@@ -496,7 +559,7 @@ export default function RevenuePage() {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "edit invoice" : "generate new invoice"}</h3>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">Compile itemized tasks and apply tax adjustments to client bills.</p>
+                    <p className="text-xs text-muted-foreground dark:text-slate-400">{editingInvoice?.contract_id ? "Generated from the signed payment plan. Confirm every detail before sending." : "Compile itemized work and apply any required tax adjustments."}</p>
                   </div>
                   <Button
                     onClick={() => setDrawerOpen(false)}
@@ -507,6 +570,7 @@ export default function RevenuePage() {
                 </div>
 
                 <form onSubmit={handleSave} className="flex flex-col gap-4 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
+                  {editingInvoice?.contract_id ? <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100"><p className="font-bold">Contract-generated draft — not sent</p><p className="mt-0.5 text-blue-900/80 dark:text-blue-200/80">The amount and trigger came from {editingInvoice.contract_title || "the executed contract"}. Your edits affect this invoice only; the signed contract record stays unchanged.</p><Link href={`/workflow/contracts/${editingInvoice.contract_id}`} className="mt-1 inline-flex font-bold underline">Open source contract</Link></div> : null}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Invoice number *</label>
@@ -546,7 +610,8 @@ export default function RevenuePage() {
                       <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Recipient client</label>
                       <Select
                         value={clientId}
-                        onChange={(e) => setClientId(e.target.value)}
+                        onChange={(e) => { setClientId(e.target.value); setProjectId(""); }}
+                        disabled={Boolean(editingInvoice?.contract_id)}
                         className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
                       >
                         <option value="">Select client</option>
@@ -559,15 +624,21 @@ export default function RevenuePage() {
                       <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Link project</label>
                       <Select
                         value={projectId}
-                        onChange={(e) => setProjectId(e.target.value)}
+                        onChange={(e) => { const value = e.target.value; setProjectId(value); const project = projects.find((item) => item.id === value); if (project?.currency) setCurrency(project.currency); }}
+                        disabled={Boolean(editingInvoice?.contract_id)}
                         className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
                       >
                         <option value="">Select project (optional)</option>
-                        {projects.map(p => (
+                        {projects.filter((project) => !clientId || project.client_id === clientId).map(p => (
                           <option key={p.id} value={p.id}>{p.title}</option>
                         ))}
                       </Select>
                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Currency</label>
+                    <Input type="text" maxLength={3} value={currency} disabled={Boolean(editingInvoice?.contract_id)} onChange={(e) => setCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))} placeholder="USD" />
                   </div>
 
                   {/* Line Items List */}
@@ -577,6 +648,7 @@ export default function RevenuePage() {
                       <Button
                         type="button"
                         onClick={handleAddItem}
+                        disabled={Boolean(editingInvoice?.contract_id)}
                         className="text-[10px] font-bold text-primary dark:text-blue-400 hover:underline flex items-center gap-0.5"
                       >
                         <Plus className="h-3 w-3" />
@@ -598,6 +670,7 @@ export default function RevenuePage() {
                           <Input
                             type="number"
                             required
+                            disabled={Boolean(editingInvoice?.contract_id)}
                             placeholder="Qty"
                             value={item.quantity}
                             onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
@@ -606,6 +679,7 @@ export default function RevenuePage() {
                           <Input
                             type="number"
                             required
+                            disabled={Boolean(editingInvoice?.contract_id)}
                             placeholder="Rate"
                             value={item.unit_price}
                             onChange={(e) => handleItemChange(idx, "unit_price", e.target.value)}
@@ -614,7 +688,7 @@ export default function RevenuePage() {
                           <Button
                             type="button"
                             onClick={() => handleRemoveItem(idx)}
-                            disabled={items.length === 1}
+                            disabled={items.length === 1 || Boolean(editingInvoice?.contract_id)}
                             className="p-2 text-muted-foreground dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -638,11 +712,11 @@ export default function RevenuePage() {
                     <div className="flex flex-col gap-1 bg-background dark:bg-slate-800 p-2.5 rounded-lg border border-border dark:border-slate-700 justify-between text-right">
                       <div className="flex justify-between text-[10px] font-bold text-muted-foreground dark:text-slate-400 uppercase">
                         <span>Subtotal:</span>
-                        <span>{formatCurrency(calculateSubtotal())}</span>
+                        <span>{formatCurrency(calculateSubtotal(), currency)}</span>
                       </div>
                       <div className="flex justify-between text-xs font-black text-foreground dark:text-slate-200 border-t border-slate-200 dark:border-slate-700 pt-1.5 mt-1">
                         <span>Grand total:</span>
-                        <span>{formatCurrency(calculateTotal())}</span>
+                        <span>{formatCurrency(calculateTotal(), currency)}</span>
                       </div>
                     </div>
                   </div>
@@ -674,7 +748,7 @@ export default function RevenuePage() {
                   className="w-2/3 py-2 bg-primary dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 shadow-md disabled:opacity-70"
                 >
                   {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                  <span>{editingId ? "update invoice" : "generate invoice"}</span>
+                  <span>{editingId ? "save reviewed draft" : "generate invoice"}</span>
                 </Button>
               </div>
             </div>
