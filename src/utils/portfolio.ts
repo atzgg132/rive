@@ -215,6 +215,28 @@ const MAX_TEXT_LENGTH = 5_000;
 const HTTP_URL = /^https?:\/\/[^\s<>]+$/i;
 const INLINE_IMAGE = /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 const MANAGED_IMAGE = /^\/api\/public\/assets\/portfolio\/[a-z0-9%/-]+\.(?:jpg|png|webp|gif)$/i;
+const ONBOARDING_INLINE_IMAGE = /^data:image\/(?:png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/i;
+const ONBOARDING_HTTPS_IMAGE = /^https:\/\/[^\s<>]+$/i;
+const MAX_ONBOARDING_INLINE_IMAGE_BYTES = Math.floor(1.8 * 1024 * 1024);
+const MAX_ONBOARDING_IMAGE_URL_LENGTH = 2_517_000;
+
+export function isManagedPortfolioImageUrl(value: unknown): boolean {
+  return typeof value === "string" && MANAGED_IMAGE.test(value);
+}
+
+/** Validate the profile image formats accepted during onboarding. */
+export function isValidOnboardingAvatarUrl(value: unknown): boolean {
+  if (typeof value !== "string" || !value || value.length > MAX_ONBOARDING_IMAGE_URL_LENGTH) return false;
+  if (isManagedPortfolioImageUrl(value) || ONBOARDING_HTTPS_IMAGE.test(value)) return true;
+
+  const match = value.match(ONBOARDING_INLINE_IMAGE);
+  if (!match) return false;
+  const base64 = match[1];
+  if (base64.length === 0 || base64.length % 4 !== 0) return false;
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  const decodedBytes = (base64.length / 4) * 3 - padding;
+  return decodedBytes > 0 && decodedBytes <= MAX_ONBOARDING_INLINE_IMAGE_BYTES;
+}
 
 function isSafePortfolioUrl(value: unknown): boolean {
   return typeof value === "string" && value.length <= 2_000 && HTTP_URL.test(value);
@@ -226,7 +248,7 @@ export function validatePortfolioContent(value: unknown): string | null {
   const input = value as Partial<PortfolioContent>;
   if (input.profileImageUrl) {
     if (typeof input.profileImageUrl !== "string" || input.profileImageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Profile image is too large.";
-    if (!INLINE_IMAGE.test(input.profileImageUrl) && !MANAGED_IMAGE.test(input.profileImageUrl) && !isSafePortfolioUrl(input.profileImageUrl)) return "Profile image must be an HTTPS URL or supported image upload.";
+    if (!INLINE_IMAGE.test(input.profileImageUrl) && !isManagedPortfolioImageUrl(input.profileImageUrl) && !isSafePortfolioUrl(input.profileImageUrl)) return "Profile image must be an HTTPS URL or supported image upload.";
   }
   if (input.projects !== undefined) {
     if (!Array.isArray(input.projects) || input.projects.length > 30) return "Add up to 30 projects.";
@@ -240,7 +262,7 @@ export function validatePortfolioContent(value: unknown): string | null {
       }
       if (item.imageUrl) {
         if (typeof item.imageUrl !== "string" || item.imageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Project images are too large.";
-        if (!INLINE_IMAGE.test(item.imageUrl) && !MANAGED_IMAGE.test(item.imageUrl) && !isSafePortfolioUrl(item.imageUrl)) return "Project images must be HTTPS URLs or supported image uploads.";
+        if (!INLINE_IMAGE.test(item.imageUrl) && !isManagedPortfolioImageUrl(item.imageUrl) && !isSafePortfolioUrl(item.imageUrl)) return "Project images must be HTTPS URLs or supported image uploads.";
       }
       if (item.url && !isSafePortfolioUrl(item.url)) return "Project links must use HTTPS URLs.";
       if (item.tools && (!Array.isArray(item.tools) || item.tools.length > 30 || item.tools.some((tool) => typeof tool !== "string" || tool.length > 80))) return "Project tools are invalid.";
@@ -249,7 +271,7 @@ export function validatePortfolioContent(value: unknown): string | null {
         if (!Array.isArray(item.gallery) || item.gallery.length > 12) return "Add up to 12 gallery images per project.";
         for (const image of item.gallery) {
           if (!image || typeof image !== "object" || typeof image.id !== "string" || image.id.length > 120) return "Gallery images are invalid.";
-          if (typeof image.url !== "string" || image.url.length > MAX_INLINE_IMAGE_LENGTH || (!INLINE_IMAGE.test(image.url) && !MANAGED_IMAGE.test(image.url) && !isSafePortfolioUrl(image.url))) return "Gallery images must be HTTPS URLs or supported image uploads.";
+          if (typeof image.url !== "string" || image.url.length > MAX_INLINE_IMAGE_LENGTH || (!INLINE_IMAGE.test(image.url) && !isManagedPortfolioImageUrl(image.url) && !isSafePortfolioUrl(image.url))) return "Gallery images must be HTTPS URLs or supported image uploads.";
           if (typeof image.alt !== "string" || image.alt.length > 300 || typeof image.caption !== "string" || image.caption.length > 500) return "Gallery image details are too long.";
         }
       }
