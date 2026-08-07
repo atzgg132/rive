@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
+import { DISPLAY_CURRENCIES } from "@/lib/currency";
 
 interface Expense {
   id: string;
@@ -36,9 +38,11 @@ interface Expense {
 interface Project {
   id: string;
   title: string;
+  currency?: string;
 }
 
 export default function ExpensesPage() {
+  const { displayCurrency, convert, format, formatConverted, ratesAsOf, ratesStatus } = useCurrency();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState("");
@@ -57,6 +61,7 @@ export default function ExpensesPage() {
   const [description, setDescription] = useState("");
   const [categoryInput, setCategoryInput] = useState("software");
   const [amount, setAmount] = useState("");
+  const [currencyInput, setCurrencyInput] = useState<string>(displayCurrency);
   const [projectId, setProjectId] = useState("");
   const [date, setDate] = useState("");
   const [isBillable, setIsBillable] = useState(false);
@@ -109,6 +114,7 @@ export default function ExpensesPage() {
     setDescription("");
     setCategoryInput("software");
     setAmount("");
+    setCurrencyInput(displayCurrency);
     setProjectId("");
     setDate("");
     setIsBillable(false);
@@ -121,6 +127,7 @@ export default function ExpensesPage() {
     setDescription(expense.description);
     setCategoryInput(expense.category);
     setAmount(expense.amount);
+    setCurrencyInput(expense.currency || displayCurrency);
     setProjectId(expense.project_id || "");
     setDate(expense.date ? new Date(expense.date).toISOString().split('T')[0] : "");
     setIsBillable(expense.is_billable);
@@ -171,6 +178,7 @@ export default function ExpensesPage() {
           category: categoryInput,
           description,
           amount: parseFloat(amount),
+          currency: currencyInput,
           date: date || new Date().toISOString().split("T")[0],
           is_billable: isBillable
         }),
@@ -202,27 +210,33 @@ export default function ExpensesPage() {
     }
   };
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2
-    }).format(val);
-  };
+  const formatCurrency = (val: number, currency: string = displayCurrency) => format(val, currency);
 
   const now = new Date();
   const monthExpenses = expenses.filter((expense) => {
     const expenseDate = new Date(expense.date);
     return expenseDate.getMonth() === now.getMonth() && expenseDate.getFullYear() === now.getFullYear();
   });
-  const monthSpend = monthExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-  const billableOutstanding = expenses.filter((expense) => expense.is_billable && !expense.is_reimbursed).reduce((sum, expense) => sum + Number(expense.amount), 0);
+  const sumExpenses = (itemsToSum: Expense[]) => {
+    let total = 0;
+    for (const expense of itemsToSum) {
+      const converted = convert(Number(expense.amount), expense.currency);
+      if (converted === null) return null;
+      total += converted;
+    }
+    return total;
+  };
+  const formatSummary = (value: number | null) => value === null ? (ratesStatus === "loading" ? "Converting…" : "Rates unavailable") : formatCurrency(value);
+  const monthSpend = sumExpenses(monthExpenses);
+  const billableOutstanding = sumExpenses(expenses.filter((expense) => expense.is_billable && !expense.is_reimbursed));
+  const categoriesAvailable = expenses.every((expense) => convert(Number(expense.amount), expense.currency) !== null);
   const categoryTotals = expenses.reduce<Record<string, number>>((totals, expense) => {
-    totals[expense.category] = (totals[expense.category] || 0) + Number(expense.amount);
+    const converted = convert(Number(expense.amount), expense.currency);
+    totals[expense.category] = (totals[expense.category] || 0) + (converted || 0);
     return totals;
   }, {});
-  const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || null;
-  const linkedSpend = expenses.filter((expense) => expense.project_id).reduce((sum, expense) => sum + Number(expense.amount), 0);
+  const topCategory = categoriesAvailable ? Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || null : null;
+  const linkedSpend = sumExpenses(expenses.filter((expense) => expense.project_id));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in relative min-h-[calc(100vh-8rem)]">
@@ -230,7 +244,7 @@ export default function ExpensesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-slate-50 sm:text-3xl">Expenses</h1>
-          <p className="text-sm text-muted-foreground dark:text-slate-400">Understand where money goes, what belongs to a project, and which costs are recoverable.</p>
+          <p className="text-sm text-muted-foreground dark:text-slate-400">Understand every cost in {displayCurrency} while preserving what you actually paid.</p>
         </div>
         <Button
           onClick={openCreate}
@@ -243,12 +257,14 @@ export default function ExpensesPage() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["this month", formatCurrency(monthSpend), `${monthExpenses.length} logged cost${monthExpenses.length === 1 ? "" : "s"}`],
-          ["billable, unreimbursed", formatCurrency(billableOutstanding), "recoverable from clients"],
+          ["this month", formatSummary(monthSpend), `${monthExpenses.length} logged cost${monthExpenses.length === 1 ? "" : "s"}`],
+          ["billable, unreimbursed", formatSummary(billableOutstanding), "recoverable from clients"],
           ["largest category", topCategory?.[0] || "—", topCategory ? formatCurrency(topCategory[1]) : "categorize costs to reveal spend"],
-          ["linked to projects", formatCurrency(linkedSpend), "available for project profitability"],
+          ["linked to projects", formatSummary(linkedSpend), "available for project profitability"],
         ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className="mt-2 truncate text-xl font-black capitalize text-foreground dark:text-white">{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
       </section>
+
+      <p className="-mt-3 text-[11px] text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
 
       {/* Filter and Search */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800">
@@ -332,7 +348,10 @@ export default function ExpensesPage() {
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase">No</span>
                       )}
                     </td>
-                    <td className="py-4 px-6 font-extrabold text-[#EF4444] dark:text-red-400">{formatCurrency(parseFloat(exp.amount))}</td>
+                    <td className="py-4 px-6 font-extrabold text-[#EF4444] dark:text-red-400">
+                      <span className="block">{formatConverted(parseFloat(exp.amount), exp.currency) || formatCurrency(parseFloat(exp.amount), exp.currency)}</span>
+                      {exp.currency !== displayCurrency && <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
+                    </td>
                     <td className="py-4 px-6 text-right relative">
                       <Button
                         onClick={(e) => {
@@ -408,7 +427,7 @@ export default function ExpensesPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Category</label>
                       <Select
@@ -426,7 +445,7 @@ export default function ExpensesPage() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Amount ($ USD) *</label>
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Amount *</label>
                       <Input
                         type="number"
                         required
@@ -436,6 +455,12 @@ export default function ExpensesPage() {
                         onChange={(e) => setAmount(e.target.value)}
                         className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
                       />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Currency</label>
+                      <Select value={currencyInput} onChange={(event) => setCurrencyInput(event.target.value)} className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs font-bold text-foreground dark:text-slate-200">
+                        {DISPLAY_CURRENCIES.map(({ code, label }) => <option key={code} value={code}>{code} · {label}</option>)}
+                      </Select>
                     </div>
                   </div>
 

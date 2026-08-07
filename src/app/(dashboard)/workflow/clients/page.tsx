@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
 
 interface Client {
   id: string;
@@ -39,9 +40,11 @@ interface Client {
   status: string;
   project_count: number;
   total_revenue: string;
+  revenue_by_currency: Record<string, number>;
 }
 
 export default function ClientsPage() {
+  const { displayCurrency, convert, format } = useCurrency();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -187,12 +190,14 @@ export default function ClientsPage() {
     }
   };
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0
-    }).format(val);
+  const formatClientRevenue = (client: Client) => {
+    let total = 0;
+    for (const [currency, amount] of Object.entries(client.revenue_by_currency || {})) {
+      const converted = convert(amount, currency);
+      if (converted === null) return "Rates unavailable";
+      total += converted;
+    }
+    return format(total, displayCurrency);
   };
 
   return (
@@ -364,7 +369,7 @@ export default function ClientsPage() {
                 </span>
                 <span className="flex items-center gap-1 text-[#10B981] dark:text-emerald-400">
                   <DollarSign className="h-3.5 w-3.5" />
-                  <span>{formatCurrency(parseFloat(c.total_revenue))} paid</span>
+                  <span>{formatClientRevenue(c)} paid</span>
                 </span>
               </div>
             </div>

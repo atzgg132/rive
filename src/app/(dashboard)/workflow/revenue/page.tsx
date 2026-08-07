@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
 
 interface InvoiceItemForm {
   description: string;
@@ -63,6 +64,7 @@ interface Project {
 }
 
 export default function RevenuePage() {
+  const { displayCurrency, convert, format, formatConverted, ratesAsOf, ratesStatus } = useCurrency();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -144,7 +146,7 @@ export default function RevenuePage() {
     setEditingId(null);
     setClientId("");
     setProjectId("");
-    setCurrency("USD");
+    setCurrency(displayCurrency);
     setTaxRate("0");
     setNotes("");
     setDueDate("");
@@ -358,22 +360,23 @@ export default function RevenuePage() {
     }
   };
 
-  const formatCurrency = (val: number, currency = "USD") => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-      minimumFractionDigits: 2
-    }).format(val);
-  };
+  const formatCurrency = (val: number, currency: string = displayCurrency) => format(val, currency);
 
-  const currencyCodes = new Set(invoices.map((invoice) => invoice.currency).filter(Boolean));
-  const summaryCurrency = currencyCodes.size === 1 ? [...currencyCodes][0] : null;
-  const summaryValue = (value: number) => summaryCurrency ? formatCurrency(value, summaryCurrency) : currencyCodes.size ? "Multiple currencies" : "—";
-  const paidRevenue = invoices.filter((invoice) => invoice.status === "paid").reduce((sum, invoice) => sum + Number(invoice.total), 0);
-  const outstandingRevenue = invoices.filter((invoice) => ["sent", "viewed", "overdue"].includes(invoice.status)).reduce((sum, invoice) => sum + Number(invoice.total), 0);
+  const sumInvoices = (itemsToSum: Invoice[]) => {
+    let total = 0;
+    for (const invoice of itemsToSum) {
+      const converted = convert(Number(invoice.total), invoice.currency);
+      if (converted === null) return null;
+      total += converted;
+    }
+    return total;
+  };
+  const summaryValue = (value: number | null) => value === null ? (ratesStatus === "loading" ? "Converting…" : "Rates unavailable") : formatCurrency(value);
+  const paidRevenue = sumInvoices(invoices.filter((invoice) => invoice.status === "paid"));
+  const outstandingRevenue = sumInvoices(invoices.filter((invoice) => ["sent", "viewed", "overdue"].includes(invoice.status)));
   const overdueInvoices = invoices.filter((invoice) => invoice.status === "overdue" || (invoice.due_date && new Date(invoice.due_date) < new Date() && !["paid", "cancelled"].includes(invoice.status)));
-  const overdueRevenue = overdueInvoices.reduce((sum, invoice) => sum + Number(invoice.total), 0);
-  const collectionRate = summaryCurrency && paidRevenue + outstandingRevenue > 0 ? Math.round((paidRevenue / (paidRevenue + outstandingRevenue)) * 100) : null;
+  const overdueRevenue = sumInvoices(overdueInvoices);
+  const collectionRate = paidRevenue !== null && outstandingRevenue !== null && paidRevenue + outstandingRevenue > 0 ? Math.round((paidRevenue / (paidRevenue + outstandingRevenue)) * 100) : null;
   const editingInvoice = editingId ? invoices.find((invoice) => invoice.id === editingId) || null : null;
 
   return (
@@ -382,7 +385,7 @@ export default function RevenuePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-slate-50 sm:text-3xl">Revenue & invoices</h1>
-          <p className="text-sm text-muted-foreground dark:text-slate-400">Create invoices, follow collections, and understand how revenue moves through your business.</p>
+          <p className="text-sm text-muted-foreground dark:text-slate-400">Create invoices, follow collections, and compare every invoice in {displayCurrency} without changing its original terms.</p>
         </div>
         <Button
           onClick={openCreate}
@@ -399,8 +402,10 @@ export default function RevenuePage() {
           ["outstanding", summaryValue(outstandingRevenue), "sent and awaiting payment"],
           ["overdue", summaryValue(overdueRevenue), `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} need follow-up`],
           ["collection rate", collectionRate === null ? "—" : `${collectionRate}%`, "of issued value collected"],
-        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className={`mt-2 text-xl font-black ${label === "overdue" && overdueRevenue > 0 ? "text-red-600 dark:text-red-400" : "text-foreground dark:text-white"}`}>{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
+        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className={`mt-2 text-xl font-black ${label === "overdue" && overdueRevenue !== null && overdueRevenue > 0 ? "text-red-600 dark:text-red-400" : "text-foreground dark:text-white"}`}>{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
       </section>
+
+      <p className="-mt-3 text-[11px] text-muted-foreground">Original invoice currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native invoice amounts remain visible."}</p>
 
       {/* Filter and Search */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800">
@@ -474,7 +479,10 @@ export default function RevenuePage() {
                     <td className="py-4 px-6">
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "immediate"}
                     </td>
-                    <td className="py-4 px-6 font-extrabold text-foreground dark:text-slate-100">{formatCurrency(parseFloat(inv.total), inv.currency)}</td>
+                    <td className="py-4 px-6 font-extrabold text-foreground dark:text-slate-100">
+                      <span className="block">{formatConverted(parseFloat(inv.total), inv.currency) || formatCurrency(parseFloat(inv.total), inv.currency)}</span>
+                      {inv.currency !== displayCurrency && <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(inv.total), inv.currency)}</span>}
+                    </td>
                     <td className="py-4 px-6">
                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase ${getStatusBadge(inv.status)}`}>
                         {inv.status}
