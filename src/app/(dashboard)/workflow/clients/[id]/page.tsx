@@ -16,13 +16,15 @@ import {
   FileSignature
 } from "lucide-react";
 import { toast } from "sonner";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
 
 type ClientProject = { id: string; name: string; dueDate: string | null; status: string };
-type ClientInvoice = { id: string; number: string; issueDate: string; total: number | string; status: string };
+type ClientInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; currency: string; status: string };
 type ClientContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string; projectId: string | null };
 type ClientDetails = { id: string; name: string; company: string | null; avatarColor: string; createdAt: string; status: string; email: string | null; phone: string | null; website: string | null; tags: string[]; ltv: number; notes: string | null; projects: ClientProject[]; invoices: ClientInvoice[]; contracts: ClientContract[] };
 
 export default function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { displayCurrency, convert, format, formatConverted } = useCurrency();
   const { id } = use(params);
   const [client, setClient] = useState<ClientDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,13 +50,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
     loadClient();
   }, [id]);
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0
-    }).format(val);
-  };
+  const formatCurrency = (val: number, currency: string = displayCurrency) => format(val, currency);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -76,6 +72,13 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
       </div>
     );
   }
+
+  const paidInvoices = client.invoices.filter((invoice) => invoice.status === "paid");
+  const convertedLtv = paidInvoices.reduce<number | null>((total, invoice) => {
+    if (total === null) return null;
+    const converted = convert(Number(invoice.total), invoice.currency);
+    return converted === null ? null : total + converted;
+  }, 0);
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in pb-12">
@@ -157,7 +160,8 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           {/* LTV & Stats */}
           <div className="glass bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl border border-blue-800 text-white shadow-lg">
             <h3 className="text-xs font-bold text-blue-100 mb-1 uppercase tracking-wider">Lifetime Value (LTV)</h3>
-            <div className="text-3xl font-extrabold mb-6 tracking-tight">{formatCurrency(client.ltv)}</div>
+            <div className="text-3xl font-extrabold mb-1 tracking-tight">{convertedLtv === null ? "Rates unavailable" : formatCurrency(convertedLtv)}</div>
+            <p className="mb-6 text-[10px] font-semibold text-blue-100">Paid invoices shown in {displayCurrency}</p>
             
             <div className="grid grid-cols-3 gap-3 border-t border-blue-500/30 pt-4">
               <div>
@@ -294,9 +298,12 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                   <tbody>
                     {client.invoices.map((inv) => (
                       <tr key={inv.id} className="border-b border-border hover:bg-background transition-colors">
-                        <td className="py-3 pr-4 text-sm font-semibold text-foreground dark:text-slate-200">{inv.number}</td>
+                        <td className="py-3 pr-4 text-sm font-semibold text-foreground dark:text-slate-200">{inv.invoiceNumber}</td>
                         <td className="py-3 pr-4 text-xs text-muted-foreground">{formatDate(inv.issueDate)}</td>
-                        <td className="py-3 pr-4 text-sm font-bold text-foreground dark:text-slate-200">{formatCurrency(Number(inv.total))}</td>
+                        <td className="py-3 pr-4 text-sm font-bold text-foreground dark:text-slate-200">
+                          <span className="block">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
+                          {inv.currency !== displayCurrency && <span className="block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
+                        </td>
                         <td className="py-3">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
                             inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :

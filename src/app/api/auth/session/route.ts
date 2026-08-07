@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
         businessType: true,
         profession: true,
         currency: true,
+        displayCurrency: true,
         timeZone: true,
         createdAt: true
       }
@@ -43,6 +44,7 @@ export async function GET(req: NextRequest) {
       business_type: user.businessType,
       profession: user.profession,
       currency: user.currency,
+      display_currency: user.displayCurrency,
       time_zone: user.timeZone,
       created_at: user.createdAt
     };
