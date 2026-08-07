@@ -17,14 +17,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, buttonVariants } from "@/components/ui";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
 
-type ProjectInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; status: string };
+type ProjectInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; currency: string; status: string };
 type ProjectClient = { id: string; name: string; company: string | null; avatarColor: string };
 type ProjectMilestone = { id: string; title: string; dueDate: string | null; completed: boolean; completedAt: string | null };
 type ProjectContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string };
 type ProjectDetails = { id: string; title: string; status: string; createdAt: string; budget: string | null; currency: string; dueDate: string | null; tags: string[]; description: string | null; contractCoverage: "undecided" | "rive" | "external" | "none"; externalContractLabel: string | null; externalContractUrl: string | null; contractDecisionAt: string | null; client: ProjectClient | null; invoices: ProjectInvoice[]; milestones: ProjectMilestone[]; contracts: ProjectContract[] };
 
 export default function ProjectProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { displayCurrency, format, formatConverted } = useCurrency();
   const { id } = use(params);
   const [project, setProject] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,13 +57,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
     loadProject();
   }, [id]);
 
-  const formatCurrency = (val: number, currency = "USD") => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0
-    }).format(val);
-  };
+  const formatCurrency = (val: number, currency: string = displayCurrency) => format(val, currency);
 
   const updateMilestone = async (milestone: ProjectMilestone) => {
     setMilestoneBusy(milestone.id);
@@ -316,7 +312,10 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
                       <span className="text-xs text-muted-foreground dark:text-slate-400">Issued: {formatDate(inv.issueDate)}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="font-extrabold text-sm text-foreground dark:text-slate-200">{formatCurrency(Number(inv.total), project.currency)}</span>
+                      <span className="text-right font-extrabold text-sm text-foreground dark:text-slate-200">
+                        <span className="block">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
+                        {inv.currency !== displayCurrency && <span className="block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
+                      </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
                          inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
                          inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :

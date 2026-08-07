@@ -8,7 +8,7 @@ export interface ChartData {
   expenses: number;
 }
 
-export default function AnalyticsCharts({ data }: { data: ChartData[] }) {
+export default function AnalyticsCharts({ data, currency = "USD" }: { data: ChartData[]; currency?: string }) {
   if (!data || data.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center border border-dashed border-border dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-900/50 text-muted-foreground dark:text-slate-400 text-sm">
@@ -18,8 +18,12 @@ export default function AnalyticsCharts({ data }: { data: ChartData[] }) {
   }
 
   const formatCurrency = (value: number) => {
-    if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-    return `$${value}`;
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(value);
   };
 
   return (
@@ -27,7 +31,7 @@ export default function AnalyticsCharts({ data }: { data: ChartData[] }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
           <h3 className="text-lg font-bold text-foreground dark:text-white">Financial Overview</h3>
-          <p className="text-xs text-muted-foreground dark:text-slate-400">Revenue vs Expenses (Last 6 Months)</p>
+          <p className="text-xs text-muted-foreground dark:text-slate-400">Revenue vs expenses · last 6 months · {currency}</p>
         </div>
         <div className="flex items-center gap-4 mt-2 sm:mt-0 text-xs font-semibold">
           <div className="flex items-center gap-1.5 text-primary dark:text-blue-400">
