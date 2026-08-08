@@ -11,11 +11,12 @@ const plans = [
     priceNote: "during early access",
     description: "Everything you need to run client work and business operations in one place.",
     features: [
-      "Clients, projects, tasks, and calendar",
-      "Revenue, invoices, and expenses",
-      "Business overview and useful insights",
-      "One public portfolio with analytics",
-      "Guided onboarding and data import",
+        "Clients, projects, tasks, and calendar",
+        "Agreements, review, acceptance, and payment triggers",
+        "Revenue, invoices, and expenses",
+        "Business overview and useful insights",
+        "One public portfolio with analytics",
+        "Guided onboarding and data import",
     ],
     cta: "join the waitlist",
     ctaStyle: "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50",
@@ -59,7 +60,7 @@ const plans = [
   },
 ];
 
-export default function Pricing() {
+export default function Pricing({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
   return (
     <section id="pricing" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}
@@ -150,7 +151,7 @@ export default function Pricing() {
 
               {/* Features */}
               <ul className="flex flex-col gap-3 mb-8 flex-1">
-                {plan.features.map((feature) => (
+                {plan.features.filter((feature) => agreementsEnabled || !feature.toLowerCase().startsWith("agreements")).map((feature) => (
                   <li
                     key={feature}
                     className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-300 font-medium"

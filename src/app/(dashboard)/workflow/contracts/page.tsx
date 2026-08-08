@@ -47,12 +47,12 @@ type ProjectListItem = ContractComposerProject & {
 const statusMeta: Record<string, { label: string; description: string; badge: "default" | "secondary" | "outline" | "success" | "warning" | "destructive" }> = {
   draft: { label: "Draft", description: "Finish the terms, then share for review.", badge: "secondary" },
   in_review: { label: "In review", description: "Waiting for comments or client approval.", badge: "warning" },
-  ready_to_sign: { label: "Ready to sign", description: "Final version is locked; start signing.", badge: "default" },
-  starting: { label: "Preparing signing", description: "The signing envelope is being prepared.", badge: "warning" },
-  signing: { label: "Signing", description: "Signatures are being collected in sequence.", badge: "default" },
-  executed: { label: "Executed", description: "Both parties signed; payment triggers are active.", badge: "success" },
+  ready_to_sign: { label: "Ready for acceptance", description: "Final version is locked; start recorded acceptance.", badge: "default" },
+  starting: { label: "Preparing acceptance", description: "The acceptance request is being prepared.", badge: "warning" },
+  signing: { label: "Acceptance", description: "Acceptance is being collected in sequence.", badge: "default" },
+  executed: { label: "Accepted", description: "Both parties recorded acceptance; payment triggers are active.", badge: "success" },
   declined: { label: "Changes requested", description: "A signer declined; revise and reissue.", badge: "destructive" },
-  expired: { label: "Expired", description: "Reissue the review or signing request.", badge: "warning" },
+  expired: { label: "Expired", description: "Reissue the review or acceptance request.", badge: "warning" },
   void: { label: "Void", description: "Retained for history; no longer active.", badge: "outline" },
 };
 
@@ -60,22 +60,22 @@ const filters = [
   { value: "all", label: "All" },
   { value: "drafting", label: "Drafting", statuses: ["draft", "declined", "expired"] },
   { value: "review", label: "Review", statuses: ["in_review"] },
-  { value: "signing", label: "Signing", statuses: ["ready_to_sign", "starting", "signing"] },
-  { value: "executed", label: "Executed", statuses: ["executed"] },
+  { value: "signing", label: "Acceptance", statuses: ["ready_to_sign", "starting", "signing"] },
+  { value: "executed", label: "Accepted", statuses: ["executed"] },
   { value: "void", label: "Void", statuses: ["void"] },
 ];
 
 function nextAction(contract: ContractListItem): string {
   if (contract.status === "draft") return "Review draft";
   if (contract.status === "in_review") return "Open review workspace";
-  if (contract.status === "ready_to_sign") return "Start signing";
+  if (contract.status === "ready_to_sign") return "Start recorded acceptance";
   if (contract.status === "signing") {
     const pending = contract.signers.find((signer) => signer.status !== "signed");
-    return pending?.role === "client" ? "Waiting for client" : pending?.role === "owner" ? "Your signature is next" : "Track signing";
+    return pending?.role === "client" ? "Waiting for client" : pending?.role === "owner" ? "Your acceptance is next" : "Track acceptance";
   }
   if (contract.status === "declined") return "Revise requested changes";
   if (contract.status === "expired") return "Reissue request";
-  if (contract.status === "executed") return "View contract & invoices";
+  if (contract.status === "executed") return "View Agreement & invoices";
   return "View record";
 }
 
@@ -107,7 +107,7 @@ export default function ContractsPage() {
         clientResponse.json(),
         projectResponse.json(),
       ]);
-      if (!contractResponse.ok || !contractData.success) throw new Error(contractData.message || "Unable to load contracts.");
+      if (!contractResponse.ok || !contractData.success) throw new Error(contractData.message || "Unable to load Agreements.");
       if (!clientResponse.ok || !clientData.success) throw new Error(clientData.message || "Unable to load clients.");
       if (!projectResponse.ok || !projectData.success) throw new Error(projectData.message || "Unable to load projects.");
       setContracts(contractData.contracts);
@@ -125,7 +125,7 @@ export default function ContractsPage() {
         milestones: project.milestones || [],
       })));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to load the contracts workspace.";
+      const message = error instanceof Error ? error.message : "Unable to load the Agreements workspace.";
       setLoadError(message);
       toast.error(message);
     } finally {
@@ -183,16 +183,16 @@ export default function ContractsPage() {
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 animate-fade-in">
       <PageHeader
-        title="Contracts"
-        description="Move from draft to review, signature, and milestone billing without re-entering client or project data."
-        actions={<Button onClick={() => openComposer()}><Plus className="h-4 w-4" /> New contract</Button>}
+        title="Agreements"
+        description="Move from draft to review, recorded acceptance, and milestone billing without re-entering client or project data."
+        actions={<Button onClick={() => openComposer()}><Plus className="h-4 w-4" /> New Agreement</Button>}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard icon={Sparkles} label="Needs your action" value={counts.action} tone="primary" />
         <SummaryCard icon={MessageSquareText} label="With clients" value={counts.review} tone="amber" />
-        <SummaryCard icon={FileSignature} label="Signing" value={counts.signing} tone="blue" />
-        <SummaryCard icon={FileCheck2} label="Executed" value={counts.executed} tone="green" />
+        <SummaryCard icon={FileSignature} label="Acceptance" value={counts.signing} tone="blue" />
+        <SummaryCard icon={FileCheck2} label="Accepted" value={counts.executed} tone="green" />
       </div>
 
       {uncoveredProjects.length > 0 ? (
@@ -201,7 +201,7 @@ export default function ContractsPage() {
             <div className="flex min-w-0 items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
               <div>
-                <p className="text-sm font-bold">{uncoveredProjects.length} active project{uncoveredProjects.length === 1 ? "" : "s"} need a contract decision</p>
+                <p className="text-sm font-bold">{uncoveredProjects.length} active project{uncoveredProjects.length === 1 ? "" : "s"} need an Agreement decision</p>
                 <p className="mt-0.5 text-xs leading-5 text-muted-foreground">Start with the existing client, brief, milestones, and currency. You can keep, remove, or rewrite every optional clause before sharing.</p>
               </div>
             </div>
@@ -215,30 +215,30 @@ export default function ContractsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative min-w-0 flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Search contracts, clients, projects…" aria-label="Search contracts" />
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Search Agreements, clients, projects…" aria-label="Search Agreements" />
         </div>
-        <Select value={filter} onChange={(event) => setFilter(event.target.value)} className="sm:w-44" aria-label="Filter contracts by stage">
+        <Select value={filter} onChange={(event) => setFilter(event.target.value)} className="sm:w-44" aria-label="Filter Agreements by stage">
           {filters.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
         </Select>
       </div>
 
       {loading ? (
-        <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading contracts…</div>
+        <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading Agreements…</div>
       ) : loadError ? (
-        <EmptyState icon={<AlertTriangle className="h-5 w-5" />} title="Contracts could not be loaded" description={loadError} action={<Button variant="outline" onClick={() => void load()}>Try again</Button>} />
+        <EmptyState icon={<AlertTriangle className="h-5 w-5" />} title="Agreements could not be loaded" description={loadError} action={<Button variant="outline" onClick={() => void load()}>Try again</Button>} />
       ) : contracts.length === 0 ? (
         <EmptyState
           icon={<FileSignature className="h-5 w-5" />}
           title="Create the agreement before the work starts"
           description="Start with an existing client or project. Rive will reuse the brief, milestones, currency, and contact details while every term remains editable."
-          action={<Button onClick={() => openComposer()}><Plus className="h-4 w-4" /> Create first contract</Button>}
+          action={<Button onClick={() => openComposer()}><Plus className="h-4 w-4" /> Create first Agreement</Button>}
         />
       ) : filteredContracts.length === 0 ? (
-        <EmptyState icon={<Search className="h-5 w-5" />} title="No contracts match" description="Try a different search or stage filter." action={<Button variant="outline" onClick={() => { setSearch(""); setFilter("all"); }}>Clear filters</Button>} />
+        <EmptyState icon={<Search className="h-5 w-5" />} title="No Agreements match" description="Try a different search or stage filter." action={<Button variant="outline" onClick={() => { setSearch(""); setFilter("all"); }}>Clear filters</Button>} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredContracts.map((contract) => {
-            const meta = statusMeta[contract.status] || { label: contract.status, description: "Open the contract record.", badge: "outline" as const };
+            const meta = statusMeta[contract.status] || { label: contract.status, description: "Open the Agreement record.", badge: "outline" as const };
             const signedCount = contract.signers.filter((signer) => signer.status === "signed").length;
             const paymentTotal = contract.payment_plan.reduce((sum, item) => sum + Number(item.amount), 0);
             return (
@@ -251,11 +251,11 @@ export default function ContractsPage() {
                     </div>
                     <div className="rounded-xl bg-muted/45 px-3 py-2.5"><p className="text-xs font-bold">{nextAction(contract)}</p><p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{meta.description}</p></div>
                     <div className="mt-auto grid grid-cols-3 gap-3 border-t border-border pt-4 text-xs">
-                      <Metric icon={Users} value={`${signedCount}/2`} label="signed" />
+                      <Metric icon={Users} value={`${signedCount}/2`} label="accepted" />
                       <Metric icon={Clock3} value={`v${contract.current_version?.version || 1}`} label={new Date(contract.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
                       <Metric icon={CircleDollarSign} value={contract.payment_plan.length ? `${contract.currency} ${paymentTotal.toLocaleString()}` : "Manual"} label={contract.payment_plan.length ? `${contract.payment_plan.length} trigger${contract.payment_plan.length === 1 ? "" : "s"}` : "billing"} />
                     </div>
-                    <span className="inline-flex items-center justify-end gap-1 text-xs font-bold text-primary opacity-70 transition group-hover:opacity-100">Open contract <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" /></span>
+                    <span className="inline-flex items-center justify-end gap-1 text-xs font-bold text-primary opacity-70 transition group-hover:opacity-100">Open Agreement <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" /></span>
                   </CardContent>
                 </Card>
               </Link>

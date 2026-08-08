@@ -5,10 +5,12 @@ import { getSessionUser } from "@/utils/userAuth";
 import {
   buildContractContent,
   type ContractContent,
+  assertContractsEnabled,
   CONTRACT_MAX_TITLE_LENGTH,
   normalizeSections,
   sha256,
   stableStringify,
+  transitionContractStatus,
   validatePaymentPlanItem,
 } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
@@ -94,20 +96,22 @@ function mapContract(contract: NonNullable<Awaited<ReturnType<typeof getOwnedCon
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    assertContractsEnabled();
     const session = getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const contract = await getOwnedContract(session.userId, id);
-    if (!contract) return NextResponse.json({ success: false, message: "Contract not found." }, { status: 404 });
+    if (!contract) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
     return NextResponse.json({ success: true, contract: mapContract(contract) });
   } catch (error) {
     console.error("Contract detail fetch error:", error);
-    return NextResponse.json({ success: false, message: "Unable to load contract." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Unable to load Agreement." }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    assertContractsEnabled();
     const session = getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
@@ -115,9 +119,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!body) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
 
     const existing = await getOwnedContract(session.userId, id);
-    if (!existing) return NextResponse.json({ success: false, message: "Contract not found." }, { status: 404 });
+    if (!existing) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
     if (["starting", "signing", "executed", "void"].includes(existing.status)) {
-      return NextResponse.json({ success: false, message: "This contract is locked because signing has started or it has been executed/voided." }, { status: 409 });
+      return NextResponse.json({ success: false, message: "This Agreement is locked because recorded acceptance has started or it has been accepted/voided." }, { status: 409 });
     }
     const owner = await prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true } });
     if (!owner) return NextResponse.json({ success: false, message: "Owner not found." }, { status: 404 });
@@ -125,9 +129,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const currentVersion = existing.versions[0];
     const currentContent = (currentVersion?.content || {}) as unknown as ContractContent;
     const title = clean(body.title ?? existing.title, CONTRACT_MAX_TITLE_LENGTH);
-    if (!title) return NextResponse.json({ success: false, message: "Contract title is required." }, { status: 400 });
+    if (!title) return NextResponse.json({ success: false, message: "Agreement title is required." }, { status: 400 });
     const currency = clean(body.currency ?? existing.currency, 3).toUpperCase();
-    if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ success: false, message: "Use a valid 3-letter contract currency." }, { status: 400 });
+    if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ success: false, message: "Use a valid 3-letter Agreement currency." }, { status: 400 });
     const governingLaw = clean(body.governingLaw ?? currentContent.governingLaw ?? existing.governingLaw, 160) || existing.governingLaw;
     const jurisdiction = Object.prototype.hasOwnProperty.call(body, "jurisdiction")
       ? clean(body.jurisdiction, 160) || null
@@ -135,10 +139,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const sections = normalizeSections(body.sections ?? currentContent.sections, { ownerName: owner.name || owner.email, clientName: existing.client.name });
     const useNewPaymentPlan = Object.prototype.hasOwnProperty.call(body, "paymentPlan");
     const rawPlan = useNewPaymentPlan ? (Array.isArray(body.paymentPlan) ? body.paymentPlan : []) : null;
-    if (rawPlan && rawPlan.length > 25) return NextResponse.json({ success: false, message: "A contract can have at most 25 payment plan items." }, { status: 400 });
+    if (rawPlan && rawPlan.length > 25) return NextResponse.json({ success: false, message: "An Agreement can have at most 25 payment plan items." }, { status: 400 });
     const plan = rawPlan ? rawPlan.map((item, index) => validatePaymentPlanItem(item, index)) : null;
     if (plan) {
-      if (plan.some((item) => item.currency !== currency)) return NextResponse.json({ success: false, message: "Every payment must use the contract currency." }, { status: 400 });
+      if (plan.some((item) => item.currency !== currency)) return NextResponse.json({ success: false, message: "Every payment must use the Agreement currency." }, { status: 400 });
       const existingOccurrences = await prisma.contractBillingOccurrence.count({ where: { contractId: id } });
       if (existingOccurrences > 0) return NextResponse.json({ success: false, message: "Payment plans cannot be replaced after an invoice occurrence exists." }, { status: 409 });
       const milestoneIds = [...new Set(plan.map((item) => item.milestoneId).filter((value): value is string => Boolean(value)))];
@@ -186,40 +190,41 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const version = await tx.contractVersion.create({ data: { contractId: id, version: versionNumber, status: "draft", content: content as unknown as Prisma.InputJsonValue, contentHash: sha256(stableStringify(content)), createdByUserId: session.userId } });
       await tx.contractSigner.updateMany({ where: { contractId: id, role: "client" }, data: { clientId: existing.client.id, name: existing.client.name, email: existing.client.email || "", status: "pending", invitedAt: null, signedAt: null, declinedAt: null } });
       await tx.contractSigner.updateMany({ where: { contractId: id, role: "owner" }, data: { userId: session.userId, name: owner.name || owner.email, email: owner.email, status: "pending", invitedAt: null, signedAt: null, declinedAt: null } });
-      const saved = await tx.contract.updateMany({ where: { id, userId: session.userId, status: existing.status }, data: { title, currency, governingLaw, jurisdiction, status: "draft", finalizedAt: null, executedAt: null, providerEnvelopeId: null, reviewExpiresAt: null } });
-      if (saved.count !== 1) throw new Error("The contract changed while the new version was being saved. Reload and try again.");
+      const saved = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: existing.status, to: "draft", data: { title, currency, governingLaw, jurisdiction, finalizedAt: null, executedAt: null, providerEnvelopeId: null, reviewExpiresAt: null } });
+      if (saved !== 1) throw new Error("The Agreement changed while the new version was being saved. Reload and try again.");
       await tx.contractReviewLink.updateMany({ where: { contractId: id, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, versionId: version.id, actorUserId: session.userId, eventType: "contract_version_created", metadata: { version: versionNumber, projectSnapshotSynced: syncProjectSnapshot } } });
       return version.id;
     });
 
-    return NextResponse.json({ success: true, versionId: updated, message: "A new editable contract version was created." });
+    return NextResponse.json({ success: true, versionId: updated, message: "A new editable Agreement version was created." });
   } catch (error) {
     console.error("Contract update error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to update contract." }, { status: 400 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to update Agreement." }, { status: 400 });
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    assertContractsEnabled();
     const session = getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const contract = await prisma.contract.findFirst({ where: { id, userId: session.userId }, select: { id: true, status: true, providerEnvelopeId: true, projectId: true } });
-    if (!contract) return NextResponse.json({ success: false, message: "Contract not found." }, { status: 404 });
-    if (contract.status === "executed") return NextResponse.json({ success: false, message: "An executed contract is retained as evidence and cannot be deleted." }, { status: 409 });
-    if (contract.status === "void") return NextResponse.json({ success: true, message: "Contract is already void." });
+    if (!contract) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
+    if (contract.status === "executed") return NextResponse.json({ success: false, message: "An accepted Agreement is retained as evidence and cannot be deleted." }, { status: 409 });
+    if (contract.status === "void") return NextResponse.json({ success: true, message: "Agreement is already void." });
     if (contract.status === "signing" && contract.providerEnvelopeId) {
       try {
         await getEsignProvider().voidEnvelope(contract.providerEnvelopeId);
       } catch (error) {
         console.error("Contract provider void error:", error);
-        return NextResponse.json({ success: false, message: "The signing provider could not cancel this envelope. The contract remains active; retry after the provider is available." }, { status: 502 });
+        return NextResponse.json({ success: false, message: "The configured provider could not cancel this request. The Agreement remains active; retry after the provider is available." }, { status: 502 });
       }
     }
     await prisma.$transaction(async (tx) => {
-      const voided = await tx.contract.updateMany({ where: { id, userId: session.userId, status: contract.status }, data: { status: "void", voidedAt: new Date() } });
-      if (voided.count !== 1) throw new Error("The contract changed while it was being voided. Reload and try again.");
+      const voided = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: contract.status, to: "void", data: { voidedAt: new Date() } });
+      if (voided !== 1) throw new Error("The Agreement changed while it was being voided. Reload and try again.");
       await tx.contractReviewLink.updateMany({ where: { contractId: id, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, actorUserId: session.userId, eventType: "contract_voided", metadata: { providerEnvelopeId: contract.providerEnvelopeId } } });
       if (contract.projectId) {
@@ -234,9 +239,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         }
       }
     });
-    return NextResponse.json({ success: true, message: "Contract voided. Its history is retained." });
+    return NextResponse.json({ success: true, message: "Agreement voided. Its history is retained." });
   } catch (error) {
     console.error("Contract void error:", error);
-    return NextResponse.json({ success: false, message: "Unable to void contract." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Unable to void Agreement." }, { status: 500 });
   }
 }

@@ -8,6 +8,7 @@ import {
   Sparkles,
   LayoutGrid,
   FileSignature,
+  FileUp,
   TrendingUp,
   Bot,
 } from "lucide-react";
@@ -66,6 +67,13 @@ const features = [
   },
   {
     icon: FileSignature,
+    title: "Agreements & acceptance",
+    description: "Create versioned Agreements, collect recorded acceptance, and connect payment terms to invoice triggers.",
+    color: "violet",
+    wide: false,
+  },
+  {
+    icon: FileUp,
     title: "Guided onboarding",
     description: "Start with your existing business data, import structured records, and avoid an empty first session.",
     color: "indigo",
@@ -79,9 +87,13 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; badge
   emerald: { bg: "bg-emerald-50/50 dark:bg-emerald-950/40", border: "border-emerald-100/60 dark:border-emerald-900/40", icon: "text-emerald-600 dark:text-emerald-400", badgeBg: "bg-emerald-100/50 dark:bg-emerald-900/40" },
   amber:   { bg: "bg-amber-50/50 dark:bg-amber-950/40",   border: "border-amber-100/60 dark:border-amber-900/40",   icon: "text-amber-600 dark:text-amber-400",   badgeBg: "bg-amber-100/50 dark:bg-amber-900/40" },
   rose:    { bg: "bg-rose-50/50 dark:bg-rose-950/40",    border: "border-rose-100/60 dark:border-rose-900/40",    icon: "text-rose-600 dark:text-rose-400",    badgeBg: "bg-rose-100/50 dark:bg-rose-900/40" },
+  violet:  { bg: "bg-violet-50/50 dark:bg-violet-950/40", border: "border-violet-100/60 dark:border-violet-900/40", icon: "text-violet-600 dark:text-violet-400", badgeBg: "bg-violet-100/50 dark:bg-violet-900/40" },
 };
 
-export default function Features() {
+export default function Features({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
+  const visibleFeatures = agreementsEnabled
+    ? features
+    : features.filter((feature) => feature.title !== "Agreements & acceptance");
   return (
     <section id="features" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}
@@ -120,7 +132,7 @@ export default function Features() {
 
         {/* Bento grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map((feature) => {
+          {visibleFeatures.map((feature) => {
             const { icon: Icon, title, description, color, highlight } = feature;
             const c = colorMap[color];
             return (

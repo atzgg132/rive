@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { Button, Input, buttonVariants } from "@/components/ui";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
+import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
 type ProjectInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; currency: string; status: string };
 type ProjectClient = { id: string; name: string; company: string | null; avatarColor: string };
@@ -27,13 +28,14 @@ type ProjectDetails = { id: string; title: string; status: string; createdAt: st
 
 export default function ProjectProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { displayCurrency, format, formatConverted } = useCurrency();
+  const { agreements } = useFeatureAvailability();
   const { id } = use(params);
   const [project, setProject] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [milestoneBusy, setMilestoneBusy] = useState<string | null>(null);
   const [coverageBusy, setCoverageBusy] = useState(false);
   const [externalFormOpen, setExternalFormOpen] = useState(false);
-  const [externalLabel, setExternalLabel] = useState("Contract handled outside Rive");
+  const [externalLabel, setExternalLabel] = useState("Agreement handled outside Rive");
   const [externalUrl, setExternalUrl] = useState("");
 
   useEffect(() => {
@@ -258,23 +260,24 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
             )}
           </div>
 
-          {/* Linked Contracts */}
+          {agreements && <>
+          {/* Linked Agreements */}
           <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2"><FileSignature className="h-5 w-5 text-blue-600" /> Contracts</h3>
+              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2"><FileSignature className="h-5 w-5 text-blue-600" /> Agreements</h3>
               <Link href="/workflow/contracts" className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">View all</Link>
             </div>
             {project.contracts.length === 0 ? project.contractCoverage === "external" ? (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                <div className="flex items-start gap-3"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{project.externalContractLabel || "Contract handled outside Rive"}</p><p className="mt-1 text-xs leading-5 text-emerald-800/80 dark:text-emerald-200/80">This project intentionally has no Rive contract. Milestones and invoices continue to work normally.</p>{project.externalContractUrl ? <a href={project.externalContractUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 underline dark:text-emerald-200">Open external record <ExternalLink className="h-3 w-3" /></a> : null}</div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div>
+                <div className="flex items-start gap-3"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{project.externalContractLabel || "Agreement handled outside Rive"}</p><p className="mt-1 text-xs leading-5 text-emerald-800/80 dark:text-emerald-200/80">This project intentionally has no Rive Agreement. Milestones and invoices continue to work normally.</p>{project.externalContractUrl ? <a href={project.externalContractUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 underline dark:text-emerald-200">Open external record <ExternalLink className="h-3 w-3" /></a> : null}</div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div>
               </div>
             ) : project.contractCoverage === "none" ? (
               <div className="rounded-xl border border-border bg-muted/40 p-4"><div className="flex items-start gap-3"><CircleSlash2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">No contract required</p><p className="mt-1 text-xs leading-5 text-muted-foreground">This is an intentional project decision, not a missing setup step.</p></div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div></div>
             ) : (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
-                <div className="flex items-start gap-3"><FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-amber-950 dark:text-amber-100">Contract coverage is undecided</p><p className="mt-1 text-xs leading-5 text-amber-900/80 dark:text-amber-200/80">A Rive contract is optional, but record how this engagement is covered so it does not look accidentally incomplete.</p></div></div>
-                <div className="mt-4 flex flex-wrap gap-2">{project.client ? <Link className={buttonVariants({ variant: "default", size: "sm" })} href={`/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client.id)}`}><FileSignature className="h-3.5 w-3.5" /> Create Rive contract</Link> : <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">Link a client before creating a Rive contract.</p>}<Button size="sm" variant="outline" disabled={coverageBusy} onClick={() => setExternalFormOpen((current) => !current)}><ExternalLink className="h-3.5 w-3.5" /> Handled elsewhere</Button><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("none")}><CircleSlash2 className="h-3.5 w-3.5" /> Not needed</Button></div>
-                {externalFormOpen ? <div className="mt-3 grid gap-2 rounded-xl border border-amber-300/70 bg-white/60 p-3 dark:border-amber-800 dark:bg-slate-950/30"><p className="text-xs font-bold text-amber-950 dark:text-amber-100">External contract reference</p><Input value={externalLabel} onChange={(event) => setExternalLabel(event.target.value)} maxLength={180} placeholder="Client MSA in Drive" /><Input type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} placeholder="Optional https:// link" /><div className="flex justify-end"><Button size="sm" disabled={coverageBusy} onClick={() => void updateContractCoverage("external")}>{coverageBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />} Save reference</Button></div></div> : null}
+                <div className="flex items-start gap-3"><FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-amber-950 dark:text-amber-100">Agreement coverage is undecided</p><p className="mt-1 text-xs leading-5 text-amber-900/80 dark:text-amber-200/80">A Rive Agreement is optional, but record how this engagement is covered so it does not look accidentally incomplete.</p></div></div>
+                <div className="mt-4 flex flex-wrap gap-2">{project.client ? <Link className={buttonVariants({ variant: "default", size: "sm" })} href={`/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client.id)}`}><FileSignature className="h-3.5 w-3.5" /> Create Rive Agreement</Link> : <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">Link a client before creating a Rive Agreement.</p>}<Button size="sm" variant="outline" disabled={coverageBusy} onClick={() => setExternalFormOpen((current) => !current)}><ExternalLink className="h-3.5 w-3.5" /> Handled elsewhere</Button><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("none")}><CircleSlash2 className="h-3.5 w-3.5" /> Not needed</Button></div>
+                {externalFormOpen ? <div className="mt-3 grid gap-2 rounded-xl border border-amber-300/70 bg-white/60 p-3 dark:border-amber-800 dark:bg-slate-950/30"><p className="text-xs font-bold text-amber-950 dark:text-amber-100">External Agreement reference</p><Input value={externalLabel} onChange={(event) => setExternalLabel(event.target.value)} maxLength={180} placeholder="Client MSA in Drive" /><Input type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} placeholder="Optional https:// link" /><div className="flex justify-end"><Button size="sm" disabled={coverageBusy} onClick={() => void updateContractCoverage("external")}>{coverageBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />} Save reference</Button></div></div> : null}
               </div>
             ) : (
               <div className="flex flex-col gap-3">
@@ -287,6 +290,8 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               </div>
             )}
           </div>
+
+          </>}
 
           {/* Linked Invoices */}
           <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">

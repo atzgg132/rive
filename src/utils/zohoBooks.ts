@@ -39,8 +39,8 @@ function config() {
   const clientSecret = process.env.ZOHO_BOOKS_CLIENT_SECRET;
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const accountsUrl = process.env.ZOHO_ACCOUNTS_URL || "https://accounts.zoho.in";
-  if (!connectorCredentialConfigured(clientId) || !connectorCredentialConfigured(clientSecret)) {
-    throw new Error("Zoho Books OAuth is not configured.");
+  if (!zohoBooksAvailable() || !connectorCredentialConfigured(clientId) || !connectorCredentialConfigured(clientSecret)) {
+    throw new Error("Zoho Books direct migration is not enabled for this deployment.");
   }
   const parsed = new URL(accountsUrl);
   if (parsed.protocol !== "https:" || !ZOHO_ACCOUNT_HOSTS.has(parsed.hostname)) {

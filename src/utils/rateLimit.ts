@@ -2,6 +2,10 @@ type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
+// This is a process-local fallback for the alpha. Production deployments should
+// replace it with a shared, durable limiter before public links are treated as
+// a security boundary across multiple instances.
+
 export function getRequestIp(request: Request): string {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||

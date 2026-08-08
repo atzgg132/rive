@@ -488,18 +488,18 @@ export function sendContractReviewEmail(input: {
   return deliver({
     to: input.to,
     type: "contract_review",
-    subject: `${input.ownerName} shared a contract for review`,
+    subject: `${input.ownerName} shared an Agreement for review`,
     html: baseTemplate({
-      eyebrow: "contract review",
-      title: `${safeOwner} shared a draft with you.`,
-      intro: `Please review “${safeTitle}” and leave comments or suggested edits before anyone signs.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">This is a review link, not a signature request. The agreement will not be executed until the parties review the final version and complete the separate signing step.</p>`,
-      action: "Review contract",
+      eyebrow: "Agreement review",
+      title: `${safeOwner} shared a draft Agreement with you.`,
+      intro: `Please review “${safeTitle}” and leave comments or suggested edits before anyone records acceptance.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">This is a review link, not an acceptance request. The Agreement will not be marked accepted until the parties review the final version and complete the separate recorded-acceptance step.</p>`,
+      action: "Review Agreement",
       actionUrl: input.reviewUrl,
-      aside: `This link expires on ${expiry} (IST). If you were not expecting this message, do not sign anything; contact ${safeOwner} through a trusted channel.`,
+      aside: `This link expires on ${expiry} (IST). If you were not expecting this message, do not record acceptance; contact ${safeOwner} through a trusted channel.`,
       recipient: input.to,
     }),
-    text: `${input.ownerName} shared “${input.contractTitle}” for review.\n\nReview it here: ${input.reviewUrl}\n\nThis link expires on ${expiry} IST. This is not a signature request.`,
+    text: `${input.ownerName} shared “${input.contractTitle}” for review.\n\nReview it here: ${input.reviewUrl}\n\nThis link expires on ${expiry} IST. This is not an acceptance request.`,
   });
 }
 
@@ -514,18 +514,18 @@ export function sendContractSigningEmail(input: {
   return deliver({
     to: input.to,
     type: "contract_signing",
-    subject: `Signature requested: ${input.contractTitle}`,
+    subject: `Recorded acceptance requested: ${input.contractTitle}`,
     html: baseTemplate({
-      eyebrow: "signature requested",
-      title: "A contract is ready for your signature.",
-      intro: `Please read the complete contract before signing “${escapeHtml(input.contractTitle)}”.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">The signing page will show the exact version, signer consent language, and the record that will be created when you sign. Only the named client and freelancer signatories are invited to sign.</p>`,
-      action: "Open signing page",
+      eyebrow: "recorded acceptance requested",
+      title: "An Agreement is ready for your review and acceptance.",
+      intro: `Please read the complete Agreement before recording acceptance of “${escapeHtml(input.contractTitle)}”.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">The acceptance page will show the exact version, the recorded-acceptance consent language, and the acceptance record created when you type your name and confirm. Only the named client and freelancer parties are invited to accept.</p>`,
+      action: "Open acceptance page",
       actionUrl: input.signUrl,
-      aside: `This link expires on ${expiry} (IST). Do not forward it. If the name or terms are incorrect, ask the sender to void and reissue the signing request.`,
+      aside: `This link expires on ${expiry} (IST). Do not forward it. If the name or terms are incorrect, ask the sender to void and reissue the acceptance request.`,
       recipient: input.to,
     }),
-    text: `Signature requested for “${input.contractTitle}”.\n\nOpen the signing page: ${input.signUrl}\n\nThis link expires on ${expiry} IST. Do not forward it.`,
+    text: `Recorded acceptance requested for “${input.contractTitle}”.\n\nOpen the acceptance page: ${input.signUrl}\n\nThis link expires on ${expiry} IST. Do not forward it.`,
   });
 }
 
@@ -538,18 +538,18 @@ export function sendContractExecutedEmail(input: {
   return deliver({
     to: input.to,
     type: "contract_executed",
-    subject: `Completed contract: ${input.contractTitle}`,
+    subject: `Agreement accepted: ${input.contractTitle}`,
     html: baseTemplate({
-      eyebrow: "contract completed",
-      title: "Both signatures are recorded.",
-      intro: `The completed version of “${escapeHtml(input.contractTitle)}” is ready to download and retain.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Keep the completed document and its signing evidence with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
-      action: "View completed contract",
+      eyebrow: "Agreement accepted",
+      title: "Both parties have recorded acceptance.",
+      intro: `The accepted version of “${escapeHtml(input.contractTitle)}” is ready to download and retain.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Keep the accepted Agreement and its acceptance record with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
+      action: "View accepted Agreement",
       actionUrl: input.artifactUrl,
       aside: "This message confirms the record created in rive.; it does not replace any legal, tax, identity, or regulatory requirement that applies to the transaction.",
       recipient: input.to,
     }),
-    text: `Both signatures are recorded for “${input.contractTitle}”.\n\nView the completed contract: ${input.artifactUrl}`,
+    text: `Both parties recorded acceptance for “${input.contractTitle}”.\n\nView the accepted Agreement: ${input.artifactUrl}`,
   });
 }
 

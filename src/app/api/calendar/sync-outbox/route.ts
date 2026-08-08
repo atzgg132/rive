@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { pushEventToGoogle } from "@/utils/googleCalendar";
+import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 export async function POST(req: NextRequest) {
   const authorization = req.headers.get("authorization");
   if (!process.env.CRON_SECRET || authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   }
+  if (!googleCalendarAvailable()) return NextResponse.json({ success: true, disabled: true, claimed: 0, processed: 0 });
   const jobs = await prisma.calendarSyncOutbox.findMany({
     where: { status: "pending", availableAt: { lte: new Date() }, attempts: { lt: 8 } },
     orderBy: { createdAt: "asc" },

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { sendContractReviewEmail } from "@/utils/email";
-import { assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken } from "@/utils/contracts";
+import { assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, transitionContractStatus } from "@/utils/contracts";
 
 function appUrl(): string {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -20,22 +20,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { id, userId: session.userId },
       include: { client: { select: { name: true, email: true } }, user: { select: { name: true, email: true } }, versions: { orderBy: { version: "desc" }, take: 1 } },
     });
-    if (!contract) return NextResponse.json({ success: false, message: "Contract not found." }, { status: 404 });
+    if (!contract) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
     if (!["draft", "in_review", "expired"].includes(contract.status)) return NextResponse.json({ success: false, message: "Save requested changes as a new editable version before sharing it for review." }, { status: 409 });
-    if (!contract.versions[0]) return NextResponse.json({ success: false, message: "Contract has no draft version." }, { status: 409 });
-    if (contract.versions[0].status === "final") return NextResponse.json({ success: false, message: "This version was already finalized for signing. Re-finalize an expired unsigned request, or save a new version before review." }, { status: 409 });
+    if (!contract.versions[0]) return NextResponse.json({ success: false, message: "Agreement has no draft version." }, { status: 409 });
+    if (contract.versions[0].status === "final") return NextResponse.json({ success: false, message: "This version was already finalized for recorded acceptance. Re-finalize an expired request, or save a new version before review." }, { status: 409 });
     if (body.sendEmail === true && !contract.client.email) return NextResponse.json({ success: false, message: "Add the client’s email before sending a review invitation." }, { status: 400 });
 
     const requestedDays = Number(body.expiresInDays ?? CONTRACT_TOKEN_TTL_DAYS);
     const days = Number.isInteger(requestedDays) ? Math.min(Math.max(requestedDays, 1), 30) : CONTRACT_TOKEN_TTL_DAYS;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
     const token = createAccessToken();
-    const status = contract.status === "draft" || contract.status === "expired" ? "in_review" : contract.status;
+    const status = "in_review" as const;
     await prisma.$transaction(async (tx) => {
       await tx.contractReviewLink.updateMany({ where: { contractId: id, type: "review", revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractReviewLink.create({ data: { contractId: id, versionId: contract.versions[0].id, tokenHash: hashAccessToken(token), type: "review", expiresAt } });
-      const shared = await tx.contract.updateMany({ where: { id, userId: session.userId, status: contract.status }, data: { status, reviewExpiresAt: expiresAt } });
-      if (shared.count !== 1) throw new Error("The contract changed while the review link was being created. Reload and try again.");
+      const shared = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: contract.status, to: status, data: { reviewExpiresAt: expiresAt } });
+      if (shared !== 1) throw new Error("The Agreement changed while the review link was being created. Reload and try again.");
       await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "review_link_created", metadata: { expiresAt: expiresAt.toISOString(), emailed: body.sendEmail === true } } });
     });
 

@@ -5,11 +5,15 @@ import { HelpCircle } from "lucide-react";
 const faqs = [
   {
     question: "What is rive.?",
-    answer: "Rive is an all-in-one operating workspace for digital service providers—from individual specialists to studios, agencies, consultancies, and small service teams. It connects client management, project delivery, finances, planning, and a public portfolio.",
+    answer: "Rive is an all-in-one operating workspace for digital service providers—from individual specialists to studios, agencies, consultancies, and small service teams. It connects client management, project delivery, Agreements, finances, planning, and a public portfolio.",
   },
   {
     question: "Can I use rive. today?",
     answer: "rive. is in early access. We admit users in manageable batches so we can maintain a reliable product and learn directly from the people using it.",
+  },
+  {
+    question: "What happens after a client accepts an Agreement?",
+    answer: "Rive keeps the accepted version and acceptance evidence connected to the client and project, then makes agreed payment terms available as deliberate invoice triggers. It does not claim regulated or legally binding signatures.",
   },
   {
     question: "How much does rive. cost?",
@@ -17,9 +21,13 @@ const faqs = [
   },
   {
     question: "What makes the workspace connected?",
-    answer: "The same records power every view. A client links to projects and invoices; project milestones and invoice due dates appear on your calendar; revenue and expenses update your business overview automatically.",
+    answer: "The same records power every view. A client links to projects, Agreements, and invoices; project milestones and invoice due dates appear on your calendar; revenue and expenses update your business overview automatically.",
   },
 ];
+
+const publicFaqs = faqs
+  .filter((faq) => !faq.question.includes("accepts an Agreement"))
+  .map((faq) => ({ ...faq, answer: faq.answer.replaceAll("Agreements, ", "") }));
 
 export default function Faq() {
   return (
@@ -49,7 +57,7 @@ export default function Faq() {
 
         {/* FAQ grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          {faqs.map((faq) => (
+          {publicFaqs.map((faq) => (
             <div
               key={faq.question}
               className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"

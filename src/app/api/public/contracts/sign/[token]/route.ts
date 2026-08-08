@@ -4,16 +4,20 @@ import { prisma } from "@/utils/db";
 import { sendContractExecutedEmail } from "@/utils/email";
 import {
   assertContractsEnabled,
+  classifyContractPublicLinkFailure,
   CONTRACT_CONSENT_TEXT,
   CONTRACT_CONSENT_TEXT_VERSION,
   createAccessToken,
   getConfiguredEsignProvider,
+  getRequestId,
   getRequestIp,
   hashAccessToken,
   hashRequestValue,
   isLocalEsignDemo,
+  logContractPublicLinkAccess,
   sha256,
   stableStringify,
+  transitionContractStatus,
 } from "@/utils/contracts";
 import { rateLimit } from "@/utils/rateLimit";
 import { createNotification } from "@/utils/contracts";
@@ -31,22 +35,27 @@ async function resolveLink(token: string) {
 }
 
 function invalidLink(link: Awaited<ReturnType<typeof resolveLink>>): string | null {
-  if (!link || link.type !== "sign") return "Signing link not found.";
-  if (link.revokedAt) return "This signing link has been revoked.";
-  if (link.expiresAt <= new Date()) return "This signing link has expired. Ask the sender to reissue it.";
-  if (!link.version || !link.signer) return "This signing link is incomplete.";
-  if (!["signing", "executed"].includes(link.contract.status)) return "This contract is not currently accepting signatures.";
+  if (!link || link.type !== "sign") return "Acceptance link not found.";
+  if (link.revokedAt) return "This acceptance link has been revoked.";
+  if (link.expiresAt <= new Date()) return "This acceptance link has expired. Ask the sender to reissue it.";
+  if (!link.version || !link.signer) return "This acceptance link is incomplete.";
+  if (!["signing", "executed"].includes(link.contract.status)) return "This Agreement is not currently accepting recorded acceptance.";
   return null;
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const requestId = getRequestId(req);
   try {
     assertContractsEnabled();
     const { token } = await params;
     const link = await resolveLink(token);
     const problem = invalidLink(link);
-    if (problem) return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    if (problem) {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
+      return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    }
     await prisma.contractReviewLink.update({ where: { id: link!.id }, data: { lastAccessedAt: new Date() } });
+    logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link!.contractId, versionId: link!.versionId, outcome: "allowed", revoked: false, expired: false, rateLimited: false });
     const priorUnfinished = await prisma.contractSigner.count({ where: { contractId: link!.contractId, sequence: { lt: link!.signer!.sequence }, status: { not: "signed" } } });
     const content = link!.version!.content as Record<string, unknown>;
     const contentGoverningLaw = typeof content.governingLaw === "string" ? content.governingLaw : link!.contract.governingLaw;
@@ -75,44 +84,52 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Public contract sign fetch error:", error);
-    return NextResponse.json({ success: false, message: "Unable to load this signing link." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Unable to load this acceptance link." }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const requestId = getRequestId(req);
   try {
     assertContractsEnabled();
     const provider = getConfiguredEsignProvider();
     const { token } = await params;
     const link = await resolveLink(token);
     const problem = invalidLink(link);
-    if (problem) return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    if (problem) {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
+      return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    }
     const ip = getRequestIp(req);
-    if (!rateLimit(`contract-sign:${link!.id}:${hashRequestValue(ip)}`, 5, 60 * 60 * 1000)) return NextResponse.json({ success: false, message: "Too many signing attempts. Try again later." }, { status: 429 });
+    if (!rateLimit(`contract-sign:${link!.id}:${hashRequestValue(ip)}`, 5, 60 * 60 * 1000)) {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link!.contractId, versionId: link!.versionId, outcome: "rate_limited", revoked: false, expired: false, rateLimited: true });
+      return NextResponse.json({ success: false, message: "Too many acceptance attempts. Try again later." }, { status: 429 });
+    }
     const body = await req.json().catch(() => null) as { action?: unknown; typedName?: unknown; consentAccepted?: unknown; reason?: unknown } | null;
     if (body?.action === "decline") {
       const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 2_000) : "";
-      if (reason.length < 5) return NextResponse.json({ success: false, message: "Briefly explain what needs to change before signing." }, { status: 400 });
+      if (reason.length < 5) return NextResponse.json({ success: false, message: "Briefly explain what needs to change before recording acceptance." }, { status: 400 });
       const declinedAt = new Date();
       await prisma.$transaction(async (tx) => {
         const signer = await tx.contractSigner.findUnique({ where: { id: link!.signer!.id } });
-        if (!signer || signer.contractId !== link!.contractId) throw new Error("Signer not found.");
-        if (signer.status === "signed") throw new Error("A recorded signature cannot be replaced by a decline response.");
+        if (!signer || signer.contractId !== link!.contractId) throw new Error("Acceptance party not found.");
+        if (signer.status === "signed") throw new Error("A recorded acceptance cannot be replaced by a change request.");
         if (signer.status === "declined") return;
-        if (signer.status !== "pending") throw new Error("This signer cannot decline the current request.");
-        const declined = await tx.contract.updateMany({ where: { id: link!.contractId, status: "signing" }, data: { status: "declined", reviewExpiresAt: null } });
-        if (declined.count !== 1) throw new Error("This signing request changed before the decline was recorded.");
+        if (signer.status !== "pending") throw new Error("This acceptance party cannot decline the current request.");
+        const declined = await transitionContractStatus(tx, { where: { id: link!.contractId }, from: "signing", to: "declined", data: { reviewExpiresAt: null } });
+        if (declined !== 1) throw new Error("This acceptance request changed before the decline was recorded.");
         await tx.contractSigner.update({ where: { id: signer.id }, data: { status: "declined", declinedAt } });
         await tx.contractReviewLink.updateMany({ where: { contractId: link!.contractId, type: "sign", revokedAt: null }, data: { revokedAt: declinedAt } });
         await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, eventType: "signer_declined", metadata: { signerId: signer.id, role: signer.role, reason }, ipHash: hashRequestValue(ip) } });
       });
-      await createNotification({ userId: link!.contract.userId, type: "contract_declined", title: "Signer requested changes", message: `${link!.signer!.name} declined ${link!.contract.title}: ${reason.slice(0, 180)}`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
-      return NextResponse.json({ success: true, declined: true, message: "The signing request was declined and the sender has been notified." });
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link!.contractId, versionId: link!.versionId, outcome: "declined", revoked: false, expired: false, rateLimited: false });
+      await createNotification({ userId: link!.contract.userId, type: "contract_declined", title: "Acceptance changes requested", message: `${link!.signer!.name} requested changes to ${link!.contract.title}: ${reason.slice(0, 180)}`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
+      return NextResponse.json({ success: true, declined: true, message: "The recorded-acceptance request was declined and the sender has been notified." });
     }
     const typedName = typeof body?.typedName === "string" ? body.typedName.trim().slice(0, 180) : "";
-    if (!typedName) return NextResponse.json({ success: false, message: "Type your full name to sign." }, { status: 400 });
-    if (typedName.toLocaleLowerCase() !== link!.signer!.name.trim().toLocaleLowerCase()) return NextResponse.json({ success: false, message: "The typed name must match the named signer. Ask the sender to correct the signer details if needed." }, { status: 400 });
-    if (body?.consentAccepted !== true) return NextResponse.json({ success: false, message: "You must confirm the electronic-signature consent before signing." }, { status: 400 });
+    if (!typedName) return NextResponse.json({ success: false, message: "Type your full name to record acceptance." }, { status: 400 });
+    if (typedName.toLocaleLowerCase() !== link!.signer!.name.trim().toLocaleLowerCase()) return NextResponse.json({ success: false, message: "The typed name must match the named party. Ask the sender to correct the party details if needed." }, { status: 400 });
+    if (body?.consentAccepted !== true) return NextResponse.json({ success: false, message: "You must confirm the recorded-acceptance consent before continuing." }, { status: 400 });
     const artifactToken = createAccessToken();
 
     type SignatureCompletion = {
@@ -125,14 +142,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     try {
       completion = await prisma.$transaction(async (tx) => {
       const signer = await tx.contractSigner.findUnique({ where: { id: link!.signer!.id } });
-      if (!signer || signer.contractId !== link!.contractId) throw new Error("Signer not found.");
+      if (!signer || signer.contractId !== link!.contractId) throw new Error("Acceptance party not found.");
       if (signer.status === "signed") {
         const currentContract = await tx.contract.findUnique({ where: { id: link!.contractId }, select: { status: true } });
         return { alreadySigned: true, completed: currentContract?.status === "executed", artifactHash: null as string | null, artifactToken: null as string | null };
       }
-      if (signer.status !== "pending") throw new Error("This signer is not allowed to sign.");
+      if (signer.status !== "pending") throw new Error("This acceptance party is not allowed to record acceptance.");
       const prior = await tx.contractSigner.count({ where: { contractId: link!.contractId, sequence: { lt: signer.sequence }, status: { not: "signed" } } });
-      if (prior > 0) throw new Error("The other signer must sign first. Use the client link before the owner link.");
+      if (prior > 0) throw new Error("The other party must record acceptance first. Use the client acceptance link before the owner link.");
       const signedAt = new Date();
       await tx.contractSignature.create({
         data: {
@@ -160,8 +177,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       if (remaining > 0) return { alreadySigned: false, completed: false, artifactHash: null as string | null, artifactToken: null as string | null };
 
       const executedAt = new Date();
-      const executed = await tx.contract.updateMany({ where: { id: link!.contractId, status: "signing" }, data: { status: "executed", executedAt, reviewExpiresAt: null } });
-      if (executed.count !== 1) throw new Error("This contract was changed or voided before the final signature was recorded.");
+      const executed = await transitionContractStatus(tx, { where: { id: link!.contractId }, from: "signing", to: "executed", data: { executedAt, reviewExpiresAt: null } });
+      if (executed !== 1) throw new Error("This Agreement was changed or voided before final acceptance was recorded.");
       const planItems = await tx.contractPaymentPlanItem.findMany({ where: { contractId: link!.contractId }, orderBy: { sequence: "asc" } });
       for (const item of planItems) {
         await tx.contractPaymentPlanItem.update({ where: { id: item.id }, data: { status: "active" } });
@@ -211,17 +228,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const executed = await prisma.contract.findUnique({ where: { id: link!.contractId }, include: { client: { select: { name: true, email: true } } } });
       if (executed) {
         await processContractBilling({ userId: executed.userId, contractId: executed.id, limit: 100 }).catch((billingError) => console.error("Immediate contract billing check failed:", billingError));
-        await createNotification({ userId: executed.userId, type: "contract_executed", title: "Contract executed", message: `${executed.title} has both signatures recorded.`, href: `/workflow/contracts/${executed.id}` }).catch(() => undefined);
+        await createNotification({ userId: executed.userId, type: "contract_executed", title: "Agreement accepted", message: `${executed.title} has both parties’ acceptance recorded.`, href: `/workflow/contracts/${executed.id}` }).catch(() => undefined);
         const artifactUrl = `${(process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")}/api/public/contracts/artifact/${encodeURIComponent(completion.artifactToken || "")}`;
         if (executed.client.email) await sendContractExecutedEmail({ to: executed.client.email, recipientName: executed.client.name, contractTitle: executed.title, artifactUrl }).catch(() => undefined);
         const owner = await prisma.user.findUnique({ where: { id: executed.userId }, select: { email: true } });
         if (owner) await sendContractExecutedEmail({ to: owner.email, recipientName: owner.email, contractTitle: executed.title, artifactUrl }).catch(() => undefined);
       }
     }
-    return NextResponse.json({ success: true, alreadySigned: completion.alreadySigned, completed: completion.completed, artifactHash: completion.artifactHash, downloadUrl: completion.completed ? completion.artifactToken ? `/api/public/contracts/artifact/${encodeURIComponent(completion.artifactToken)}` : `/api/public/contracts/sign/${encodeURIComponent(token)}/artifact` : null, message: completion.completed ? "Both signatures are recorded. The executed contract is ready." : completion.alreadySigned ? "This signer has already signed." : "Signature recorded. The next signer can now sign." });
+    logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link!.contractId, versionId: link!.versionId, outcome: completion.completed ? "accepted" : completion.alreadySigned ? "already_accepted" : "acceptance_recorded", revoked: false, expired: false, rateLimited: false });
+    return NextResponse.json({ success: true, alreadySigned: completion.alreadySigned, completed: completion.completed, artifactHash: completion.artifactHash, downloadUrl: completion.completed ? completion.artifactToken ? `/api/public/contracts/artifact/${encodeURIComponent(completion.artifactToken)}` : `/api/public/contracts/sign/${encodeURIComponent(token)}/artifact` : null, message: completion.completed ? "Both parties have recorded acceptance. The accepted Agreement is ready." : completion.alreadySigned ? "This party has already recorded acceptance." : "Recorded acceptance saved. The next party can continue." });
   } catch (error) {
     console.error("Public contract sign error:", error);
-    const message = error instanceof Error ? error.message : "Unable to record signature.";
+    const message = error instanceof Error ? error.message : "Unable to record acceptance.";
     return NextResponse.json({ success: false, message }, { status: message.includes("production") ? 501 : message.includes("must sign first") ? 409 : 400 });
   }
 }
