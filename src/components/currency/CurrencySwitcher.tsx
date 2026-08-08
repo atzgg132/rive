@@ -20,7 +20,7 @@ export function CurrencySwitcher({ compact = false }: { compact?: boolean }) {
 
   return (
     <label
-      className="flex items-center gap-2 rounded-xl border border-border bg-background px-2.5 py-1.5 text-muted-foreground dark:bg-slate-950"
+      className="flex shrink-0 items-center gap-2 rounded-xl border border-border bg-background px-2.5 py-1.5 text-muted-foreground dark:bg-slate-950"
       title={ratesStatus === "ready" ? `Display currency · indicative rates dated ${ratesAsOf}` : "Display currency"}
     >
       {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe2 className="h-3.5 w-3.5" />}
@@ -30,7 +30,7 @@ export function CurrencySwitcher({ compact = false }: { compact?: boolean }) {
         value={displayCurrency}
         disabled={saving}
         onChange={(event) => void changeCurrency(event.target.value)}
-        className="h-7 min-w-[70px] border-0 bg-transparent px-1 text-xs font-black text-foreground shadow-none focus:ring-0"
+        className={`${compact ? "w-20 min-w-20" : "w-40 min-w-40"} h-7 shrink-0 border-0 bg-transparent py-0 pl-1 pr-7 text-xs font-black text-foreground shadow-none [color-scheme:light] focus:ring-0 dark:[color-scheme:dark]`}
       >
         {DISPLAY_CURRENCIES.map(({ code, label }) => <option key={code} value={code}>{code}{compact ? "" : ` · ${label}`}</option>)}
       </Select>
