@@ -101,6 +101,7 @@ async function mockWorkspace(
           display_currency: "INR",
           onboarding_status: "complete",
         },
+        featureAvailability: { agreements: true },
       });
     }
     if (url.pathname === "/api/rates") return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { INR: 83, EUR: 0.9, GBP: 0.8 } } });
