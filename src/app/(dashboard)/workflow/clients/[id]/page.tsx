@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
+import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
 type ClientProject = { id: string; name: string; dueDate: string | null; status: string };
 type ClientInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; currency: string; status: string };
@@ -25,6 +26,7 @@ type ClientDetails = { id: string; name: string; company: string | null; avatarC
 
 export default function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { displayCurrency, convert, format, formatConverted } = useCurrency();
+  const { agreements } = useFeatureAvailability();
   const { id } = use(params);
   const [client, setClient] = useState<ClientDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,10 +174,10 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 <div className="text-xs text-blue-200 mb-0.5 font-medium">Invoices</div>
                 <div className="text-xl font-bold">{client.invoices.length}</div>
               </div>
-              <div>
+              {agreements && <div>
                 <div className="text-xs text-blue-200 mb-0.5 font-medium">Contracts</div>
                 <div className="text-xl font-bold">{client.contracts.length}</div>
-              </div>
+              </div>}
             </div>
           </div>
           
@@ -237,6 +239,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
+          {agreements && <>
           {/* Linked Contracts */}
           <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
             <div className="flex items-center justify-between mb-6">
@@ -268,6 +271,8 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               </div>
             )}
           </div>
+
+          </>}
 
           {/* Recent Invoices */}
           <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">

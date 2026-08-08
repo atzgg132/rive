@@ -88,7 +88,7 @@ export async function processContractBilling(input: { userId?: string; contractI
             total: item.amount,
             issueDate: now,
             dueDate: addDays(eligibleAt, item.dueDays),
-            notes: `Draft generated from executed contract “${occurrence.contract.title}”. Review the contract and invoice before sending.`,
+            notes: `Draft generated from accepted Agreement “${occurrence.contract.title}”. Review the Agreement and invoice before sending.`,
           },
         });
         await tx.invoiceItem.create({ data: { invoiceId: created.id, description: item.invoiceDescription || item.label, quantity: 1, unitPrice: item.amount, amount: item.amount, sortOrder: 0 } });

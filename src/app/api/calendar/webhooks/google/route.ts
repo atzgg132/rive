@@ -1,8 +1,10 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { syncGoogleCalendar } from "@/utils/googleCalendar";
+import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 export async function POST(req: NextRequest) {
+  if (!googleCalendarAvailable()) return new NextResponse(null, { status: 404 });
   const channelId = req.headers.get("x-goog-channel-id") || "";
   const channelToken = req.headers.get("x-goog-channel-token") || "";
   const resourceId = req.headers.get("x-goog-resource-id") || "";

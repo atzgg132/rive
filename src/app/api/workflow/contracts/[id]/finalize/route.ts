@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { assertContractsEnabled } from "@/utils/contracts";
+import { assertContractsEnabled, transitionContractStatus } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -25,18 +25,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         paymentPlanItems: { select: { label: true, currency: true, triggerType: true, triggerDate: true } },
       },
     });
-    if (!contract) return NextResponse.json({ success: false, message: "Contract not found." }, { status: 404 });
-    if (contract.status === "ready_to_sign" || contract.status === "signing") return NextResponse.json({ success: true, message: "Contract is already finalized.", status: contract.status });
+    if (!contract) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
+    if (contract.status === "ready_to_sign" || contract.status === "signing") return NextResponse.json({ success: true, message: "Agreement is already finalized for recorded acceptance.", status: contract.status });
     if (!["draft", "in_review", "expired"].includes(contract.status)) {
-      return NextResponse.json({ success: false, message: `A contract in ${contract.status} cannot be finalized.` }, { status: 409 });
+      return NextResponse.json({ success: false, message: `An Agreement in ${contract.status} cannot be finalized.` }, { status: 409 });
     }
-    if (!contract.client.email) return NextResponse.json({ success: false, message: "Add the client’s email before finalizing the signing version." }, { status: 400 });
-    if (!contract.versions[0]) return NextResponse.json({ success: false, message: "Contract has no draft version." }, { status: 409 });
+    if (!contract.client.email) return NextResponse.json({ success: false, message: "Add the client’s email before finalizing the acceptance version." }, { status: 400 });
+    if (!contract.versions[0]) return NextResponse.json({ success: false, message: "Agreement has no draft version." }, { status: 409 });
     if (contract.versions[0].signatures.length > 0) {
-      return NextResponse.json({ success: false, message: "This exact version already has a signature. Save the requested changes as a new version before finalizing again." }, { status: 409 });
+      return NextResponse.json({ success: false, message: "This exact version already has an acceptance record. Save the requested changes as a new version before finalizing again." }, { status: 409 });
     }
     if (contract.paymentPlanItems.some((item) => item.currency !== contract.currency)) {
-      return NextResponse.json({ success: false, message: "Every payment must use the contract currency. Save a corrected version before finalizing." }, { status: 409 });
+      return NextResponse.json({ success: false, message: "Every payment must use the Agreement currency. Save a corrected version before finalizing." }, { status: 409 });
     }
     const unsnapshottedDueTrigger = contract.paymentPlanItems.find((item) => item.triggerType === "milestone_due" && !item.triggerDate);
     if (unsnapshottedDueTrigger) {
@@ -56,14 +56,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const clientSigner = contract.signers.find((signer) => signer.role === "client");
     const ownerSigner = contract.signers.find((signer) => signer.role === "owner");
     if (contract.signers.length !== 2 || !clientSigner || !ownerSigner) {
-      return NextResponse.json({ success: false, message: "A contract must have exactly the client and owner as signers." }, { status: 409 });
+      return NextResponse.json({ success: false, message: "An Agreement must have exactly the client and owner as acceptance parties." }, { status: 409 });
     }
     const ownerName = contract.user.name || contract.user.email;
     if (clientSigner.name.trim() !== contract.client.name.trim() || clientSigner.email.trim().toLowerCase() !== contract.client.email.trim().toLowerCase()) {
-      return NextResponse.json({ success: false, message: "The client details changed after this draft was created. Save a new contract version before finalizing." }, { status: 409 });
+      return NextResponse.json({ success: false, message: "The client details changed after this draft was created. Save a new Agreement version before finalizing." }, { status: 409 });
     }
     if (ownerSigner.name.trim() !== ownerName.trim() || ownerSigner.email.trim().toLowerCase() !== contract.user.email.trim().toLowerCase()) {
-      return NextResponse.json({ success: false, message: "The owner details changed after this draft was created. Save a new contract version before finalizing." }, { status: 409 });
+      return NextResponse.json({ success: false, message: "The owner details changed after this draft was created. Save a new Agreement version before finalizing." }, { status: 409 });
     }
 
     if (contract.status === "expired" && contract.providerEnvelopeId) {
@@ -71,20 +71,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         await getEsignProvider().voidEnvelope(contract.providerEnvelopeId);
       } catch (error) {
         console.error("Expired contract envelope cleanup error:", error);
-        return NextResponse.json({ success: false, message: "The previous signing request could not be closed with the e-sign provider. Retry after the provider is available." }, { status: 502 });
+        return NextResponse.json({ success: false, message: "The previous recorded-acceptance request could not be closed with the configured provider. Retry after the provider is available." }, { status: 502 });
       }
     }
 
     await prisma.$transaction(async (tx) => {
-      const finalized = await tx.contract.updateMany({ where: { id, userId: session.userId, status: contract.status }, data: { status: "ready_to_sign", finalizedAt: new Date(), reviewExpiresAt: null, ...(contract.status === "expired" ? { providerEnvelopeId: null } : {}) } });
-      if (finalized.count !== 1) throw new Error("The contract changed while it was being finalized. Reload and try again.");
+      const finalized = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: contract.status, to: "ready_to_sign", data: { finalizedAt: new Date(), reviewExpiresAt: null, ...(contract.status === "expired" ? { providerEnvelopeId: null } : {}) } });
+      if (finalized !== 1) throw new Error("The Agreement changed while it was being finalized. Reload and try again.");
       await tx.contractVersion.update({ where: { id: contract.versions[0].id }, data: { status: "final", finalizedAt: new Date() } });
       await tx.contractReviewLink.updateMany({ where: { contractId: id, type: "review", revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "contract_finalized", metadata: { version: contract.versions[0].version, openCommentsAcknowledged: openCommentCount } } });
     });
-    return NextResponse.json({ success: true, status: "ready_to_sign", version: contract.versions[0].version, message: "Contract version finalized. Start signing when you are ready." });
+    return NextResponse.json({ success: true, status: "ready_to_sign", version: contract.versions[0].version, message: "Agreement version finalized. Start recorded acceptance when you are ready." });
   } catch (error) {
     console.error("Contract finalize error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to finalize contract." }, { status: 500 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to finalize Agreement." }, { status: 500 });
   }
 }

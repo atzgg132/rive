@@ -4,8 +4,10 @@ import { getSessionUser } from "@/utils/userAuth";
 import { ensureDefaultCalendar, getCalendarEvents, isDateOnly, isValidTimeZone } from "@/utils/calendar";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { pushEventToGoogle } from "@/utils/googleCalendar";
+import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 async function syncCalendarMutation(userId: string, eventId: string, operation: "create" | "update" | "delete") {
+  if (!googleCalendarAvailable()) return false;
   const job = await prisma.calendarSyncOutbox.create({
     data: { userId, eventId, operation, provider: "google" },
   });

@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { discoverGoogleCalendars, syncGoogleConnection } from "@/utils/googleCalendar";
+import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 export async function POST(req: NextRequest) {
   const session = getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+  if (!googleCalendarAvailable()) return NextResponse.json({ success: false, message: "Google Calendar is not available." }, { status: 503 });
   const body = await req.json().catch(() => ({}));
   const connection = await prisma.calendarConnection.findFirst({
     where: {

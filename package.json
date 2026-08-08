@@ -12,6 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:domain": "node --experimental-strip-types --test tests/domain/*.test.mjs",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

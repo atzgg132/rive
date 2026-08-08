@@ -3,25 +3,20 @@ import "server-only";
 import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
+import { buildContractStatusUpdate, type ContractStatus } from "@/utils/contractStatus";
 
-export const CONTRACT_CONSENT_TEXT_VERSION = "2026-07-31-v1";
-export const CONTRACT_CONSENT_TEXT = "I consent to use an electronic signature, confirm that I have read and approve this exact contract version, and confirm that I am authorised to sign for myself or the named organisation. I intend my signature to create a binding signature record.";
+export {
+  assertValidStatusTransition,
+  CONTRACT_STATUSES,
+  CONTRACT_STATUS_TRANSITIONS,
+} from "@/utils/contractStatus";
+export type { ContractStatus } from "@/utils/contractStatus";
+
+export const CONTRACT_CONSENT_TEXT_VERSION = "2026-08-03-v2";
+export const CONTRACT_CONSENT_TEXT = "I confirm that I have read and approve this exact Agreement version, and that I am authorised to act for myself or the named organisation. I consent to Rive recording my typed-name acceptance, the displayed timestamp, and the associated acceptance evidence. I understand that this record describes the method used and is not an OTP or identity-verification result.";
 export const CONTRACT_TOKEN_TTL_DAYS = 14;
 export const CONTRACT_MAX_COMMENT_LENGTH = 4_000;
 export const CONTRACT_MAX_TITLE_LENGTH = 180;
-
-export const CONTRACT_STATUSES = [
-  "draft",
-  "in_review",
-  "ready_to_sign",
-  "signing",
-  "executed",
-  "declined",
-  "void",
-  "expired",
-] as const;
-
-export type ContractStatus = (typeof CONTRACT_STATUSES)[number];
 
 export const PAYMENT_TRIGGER_TYPES = [
   "on_signing",
@@ -142,10 +137,10 @@ export const DEFAULT_CONTRACT_SECTIONS: ContractSection[] = [
   },
   {
     key: "electronic-signatures",
-    title: "11. Electronic signatures and counterparts",
+    title: "11. Acceptance record and electronic records",
     required: true,
     enabled: true,
-    body: "The parties consent to sign this contract electronically. A signature applied through the signing process is intended to identify the signer, evidence the signer’s approval of this specific version, and have the same contractual effect as a handwritten signature to the extent permitted by applicable law. The parties agree that electronic records, timestamps, authentication records, and the completed contract may be retained and presented as evidence. Each signer confirms that they have authority to sign for themselves or the named organisation.",
+    body: "The parties consent to Rive recording their typed-name acceptance of this specific Agreement version, together with the displayed timestamp, consent text, and associated acceptance evidence. This record describes the acceptance method and is not an OTP or identity-verification result. Each party confirms that they have authority to act for themselves or the named organisation. The parties may retain and present the Agreement and its electronic records as evidence, subject to applicable law and any required formalities.",
   },
 ];
 
@@ -216,7 +211,7 @@ export function sha256(value: string): string {
 }
 
 export function hashAccessToken(token: string): string {
-  return sha256(`${process.env.SESSION_SECRET || "rive-contract-token-salt"}:${token}`);
+  return sha256(`${getContractHashSecret()}:${token}`);
 }
 
 export function createAccessToken(): string {
@@ -224,7 +219,14 @@ export function createAccessToken(): string {
 }
 
 export function hashRequestValue(value: string): string {
-  return sha256(`${process.env.SESSION_SECRET || "rive-request-salt"}:${value}`);
+  return sha256(`${getContractHashSecret()}:${value}`);
+}
+
+function getContractHashSecret(): string {
+  const secret = process.env.SESSION_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET is required for Contract links and telemetry in production.");
+  return "rive-contract-development-only-salt";
 }
 
 export function getRequestIp(request: Request): string {
@@ -235,8 +237,53 @@ export function getRequestIp(request: Request): string {
   );
 }
 
+export function getRequestId(request: Request): string {
+  const candidate = request.headers.get("x-request-id")?.trim() || "";
+  return /^[A-Za-z0-9._:-]{1,128}$/.test(candidate) ? candidate : crypto.randomUUID();
+}
+
+export type ContractPublicLinkPurpose = "review" | "acceptance" | "artifact";
+
+export function classifyContractPublicLinkFailure(message: string | null): string {
+  if (!message) return "allowed";
+  if (message.includes("not found")) return "not_found";
+  if (message.includes("revoked")) return "revoked";
+  if (message.includes("expired")) return "expired";
+  if (message.includes("voided")) return "voided";
+  return "invalid";
+}
+
+export function logContractPublicLinkAccess(input: {
+  request: Request;
+  requestId: string;
+  purpose: ContractPublicLinkPurpose;
+  contractId: string | null;
+  versionId: string | null;
+  outcome: string;
+  revoked: boolean | null;
+  expired: boolean | null;
+  rateLimited: boolean;
+}): void {
+  const userAgent = input.request.headers.get("user-agent") || "unknown";
+  console.info("contract_public_link_access", JSON.stringify({
+    requestId: input.requestId,
+    purpose: input.purpose,
+    contractId: input.contractId,
+    versionId: input.versionId,
+    outcome: input.outcome,
+    revoked: input.revoked,
+    expired: input.expired,
+    rateLimited: input.rateLimited,
+    ipHash: hashRequestValue(getRequestIp(input.request)),
+    userAgentHash: hashRequestValue(userAgent),
+    at: new Date().toISOString(),
+  }));
+}
+
 export const LOCAL_ESIGN_PROVIDER = "local";
 export const RIVE_ESIGN_PROVIDER = "rive";
+export const CONTRACTS_RECORDED_ACCEPTANCE_FLAG = "CONTRACTS_RECORDED_ACCEPTANCE_ENABLED";
+export const CONTRACTS_ALLOW_LOCAL_PROVIDER_FLAG = "CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION";
 
 export function getConfiguredEsignProvider(): string {
   const configured = (process.env.ESIGN_PROVIDER || "").trim().toLowerCase();
@@ -252,6 +299,10 @@ export function isRiveEsignProvider(): boolean {
   return getConfiguredEsignProvider() === RIVE_ESIGN_PROVIDER;
 }
 
+export function isRecordedAcceptanceEnabled(): boolean {
+  return process.env[CONTRACTS_RECORDED_ACCEPTANCE_FLAG] === "true";
+}
+
 export function assertContractsEnabled(): void {
   if (process.env.CONTRACTS_ENABLED === "false") {
     throw new Error("Contracts are disabled for this environment.");
@@ -260,25 +311,52 @@ export function assertContractsEnabled(): void {
   if (![LOCAL_ESIGN_PROVIDER, RIVE_ESIGN_PROVIDER].includes(provider)) {
     throw new Error("Contract signing provider is not configured.");
   }
-  if (process.env.NODE_ENV === "production" && provider === LOCAL_ESIGN_PROVIDER) {
-    throw new Error("The local e-sign provider is disabled in production.");
+  if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET?.trim()) {
+    throw new Error("SESSION_SECRET is required before Contracts can run in production.");
+  }
+  if (process.env.NODE_ENV === "production" && provider === LOCAL_ESIGN_PROVIDER && process.env[CONTRACTS_ALLOW_LOCAL_PROVIDER_FLAG] !== "true") {
+    throw new Error("The local/demo Contract provider is disabled in production unless explicitly enabled.");
+  }
+  if (process.env.NODE_ENV === "production" && provider === RIVE_ESIGN_PROVIDER && !isRecordedAcceptanceEnabled()) {
+    throw new Error("The recorded-acceptance adapter is disabled in production until its feature flag is explicitly enabled.");
   }
 }
 
-export function assertValidStatusTransition(current: string, next: ContractStatus): void {
-  const allowed: Record<string, ContractStatus[]> = {
-    draft: ["in_review", "void"],
-    in_review: ["draft", "ready_to_sign", "void"],
-    ready_to_sign: ["in_review", "signing", "void", "expired"],
-    signing: ["void", "expired"],
-    executed: ["void"],
-    declined: ["in_review", "void"],
-    void: [],
-    expired: ["in_review", "void"],
-  };
-  if (!allowed[current]?.includes(next)) {
-    throw new Error(`Contract cannot move from ${current} to ${next}.`);
+export function contractsAvailable(): boolean {
+  try {
+    assertContractsEnabled();
+    return true;
+  } catch {
+    return false;
   }
+}
+
+type ContractStatusWriteClient = {
+  contract: {
+    updateMany(args: Prisma.ContractUpdateManyArgs): Promise<{ count: number }>;
+  };
+};
+
+export async function transitionContractStatus(
+  db: ContractStatusWriteClient,
+  input: {
+    where: Prisma.ContractWhereInput;
+    from: string;
+    to: ContractStatus;
+    data?: Omit<Prisma.ContractUpdateManyMutationInput, "status">;
+  },
+): Promise<number> {
+  const update = buildContractStatusUpdate({
+    where: input.where,
+    from: input.from,
+    to: input.to,
+    data: input.data,
+  });
+  const result = await db.contract.updateMany({
+    where: update.where,
+    data: update.data,
+  });
+  return result.count;
 }
 
 export function addDays(date: Date, days: number): Date {

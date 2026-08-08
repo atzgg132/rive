@@ -71,6 +71,7 @@ function serializeListContract(contract: {
 
 export async function GET(req: NextRequest) {
   try {
+    assertContractsEnabled();
     const session = getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 
@@ -104,7 +105,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, contracts: contracts.map(serializeListContract) });
   } catch (error) {
     console.error("Contracts fetch error:", error);
-    return NextResponse.json({ success: false, message: "Unable to load contracts." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Unable to load Agreements." }, { status: 500 });
   }
 }
 
@@ -120,8 +121,8 @@ export async function POST(req: NextRequest) {
     const title = clean(body.title, CONTRACT_MAX_TITLE_LENGTH);
     const clientId = clean(body.clientId ?? body.client_id, 80);
     const projectId = clean(body.projectId ?? body.project_id, 80) || null;
-    if (!title) return NextResponse.json({ success: false, message: "Contract title is required." }, { status: 400 });
-    if (!clientId) return NextResponse.json({ success: false, message: "Choose a client before creating a contract." }, { status: 400 });
+    if (!title) return NextResponse.json({ success: false, message: "Agreement title is required." }, { status: 400 });
+    if (!clientId) return NextResponse.json({ success: false, message: "Choose a client before creating an Agreement." }, { status: 400 });
 
     const [owner, client] = await Promise.all([
       prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, name: true, email: true, currency: true } }),
@@ -138,17 +139,17 @@ export async function POST(req: NextRequest) {
     }
 
     const currency = clean(body.currency ?? project?.currency ?? owner.currency ?? "USD", 3).toUpperCase();
-    if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ success: false, message: "Use a valid 3-letter contract currency." }, { status: 400 });
+    if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ success: false, message: "Use a valid 3-letter Agreement currency." }, { status: 400 });
 
     const sections = normalizeSections(body.sections, {
       ownerName: owner.name || owner.email,
       clientName: client.name,
     });
     const rawPlan = Array.isArray(body.paymentPlan) ? body.paymentPlan : [];
-    if (rawPlan.length > 25) return NextResponse.json({ success: false, message: "A contract can have at most 25 payment plan items." }, { status: 400 });
+    if (rawPlan.length > 25) return NextResponse.json({ success: false, message: "An Agreement can have at most 25 payment plan items." }, { status: 400 });
     const plan = rawPlan.map((item, index) => validatePaymentPlanItem(item, index));
     if (plan.some((item) => item.currency !== currency)) {
-      return NextResponse.json({ success: false, message: "Every payment must use the contract currency." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Every payment must use the Agreement currency." }, { status: 400 });
     }
 
     const milestoneIds = [...new Set(plan.map((item) => item.milestoneId).filter((id): id is string => Boolean(id)))];
@@ -268,9 +269,9 @@ export async function POST(req: NextRequest) {
       return { contractId: contract.id, versionId: version.id };
     });
 
-    return NextResponse.json({ success: true, contractId: created.contractId, versionId: created.versionId, message: "Contract draft created." }, { status: 201 });
+    return NextResponse.json({ success: true, contractId: created.contractId, versionId: created.versionId, message: "Agreement draft created." }, { status: 201 });
   } catch (error) {
     console.error("Contract create error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to create contract." }, { status: 400 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to create Agreement." }, { status: 400 });
   }
 }

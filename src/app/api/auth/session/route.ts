@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { contractsAvailable } from "@/utils/contracts";
 
 export async function GET(req: NextRequest) {
   try {
@@ -51,7 +52,10 @@ export async function GET(req: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      user: formattedUser
+      user: formattedUser,
+      featureAvailability: {
+        agreements: contractsAvailable(),
+      },
     });
     response.headers.set("Cache-Control", "no-store, max-age=0");
     return response;

@@ -98,10 +98,12 @@ async function mockWorkspace(
           email: "owner@rive.test",
           plan: "free",
           currency: "INR",
+          display_currency: "INR",
           onboarding_status: "complete",
         },
       });
     }
+    if (url.pathname === "/api/rates") return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { INR: 83, EUR: 0.9, GBP: 0.8 } } });
     if (url.pathname === "/api/notifications") return json(route, { success: true, notifications: [] });
     if (url.pathname === "/api/workflow/contracts/template") return json(route, { success: true, template });
     if (url.pathname === "/api/workflow/contracts" && method === "GET") return json(route, { success: true, contracts: [] });
@@ -154,7 +156,7 @@ test.describe("contracts UX", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Contract title" })).toHaveValue(template.title);
+    await expect(page.getByRole("textbox", { name: "Agreement title" })).toHaveValue(template.title);
 
     const continueButton = page.getByRole("button", { name: "Continue" });
     const primaryStyle = await continueButton.evaluate((button) => {
@@ -199,7 +201,7 @@ test.describe("contracts UX", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Contract title" })).toHaveValue(template.title);
+    await expect(page.getByRole("textbox", { name: "Agreement title" })).toHaveValue(template.title);
     const dimensions = await dialog.evaluate((element) => {
       const bounds = element.getBoundingClientRect();
       return {
@@ -261,7 +263,8 @@ test.describe("contracts UX", () => {
     await mockWorkspace(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/workflow/contracts", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Contracts" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Agreements" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel("Display currency").last()).toHaveValue("INR");
     await expect(page.getByText("Development signing mode")).toHaveCount(0);
 
     const shell = await page.evaluate(() => {
