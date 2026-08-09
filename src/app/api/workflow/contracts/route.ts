@@ -5,7 +5,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import {
   buildContractContent,
   type ContractContent,
-  assertContractsEnabled,
+  contractsAvailable,
   CONTRACT_MAX_TITLE_LENGTH,
   getConfiguredEsignProvider,
   normalizeSections,
@@ -71,9 +71,11 @@ function serializeListContract(contract: {
 
 export async function GET(req: NextRequest) {
   try {
-    assertContractsEnabled();
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    if (!contractsAvailable()) {
+      return NextResponse.json({ success: false, message: "Agreements are not available in this environment." }, { status: 503 });
+    }
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search")?.trim() || "";
@@ -111,9 +113,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    assertContractsEnabled();
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    if (!contractsAvailable()) {
+      return NextResponse.json({ success: false, message: "Agreements are not available in this environment." }, { status: 503 });
+    }
 
     const body = await req.json().catch(() => null) as Record<string, unknown> | null;
     if (!body) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
