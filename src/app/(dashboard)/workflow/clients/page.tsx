@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Textarea, Select } from "@/components/ui";
+import { Button, EmptyState, Input, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -209,8 +209,10 @@ export default function ClientsPage() {
           <p className="text-sm text-muted-foreground dark:text-slate-400">Keep every relationship, project, invoice, and important detail in context.</p>
         </div>
         <Button
+          variant="default"
+          size="default"
           onClick={openCreate}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 font-semibold text-xs transition-all shadow-[0_4px_10px_rgba(29,78,216,0.1)] dark:shadow-none self-start sm:self-auto"
+          className="self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           <span>Add new client</span>
@@ -226,7 +228,7 @@ export default function ClientsPage() {
             placeholder="Search by name, email, company..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-400 transition-all"
+            className="pl-9"
           />
         </div>
 
@@ -235,7 +237,7 @@ export default function ClientsPage() {
           <Select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="px-2.5 py-1.5 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs font-semibold text-foreground dark:text-slate-200 focus:outline-none"
+            className="sm:w-auto"
           >
             <option value="all">All clients</option>
             <option value="active">Active</option>
@@ -250,17 +252,12 @@ export default function ClientsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : clients.length === 0 ? (
-        <div className="glass p-12 text-center flex flex-col items-center justify-center bg-white/70 dark:bg-slate-900/70 border-dashed dark:border-slate-800">
-          <Users className="h-10 w-10 text-slate-400 dark:text-slate-500 mb-3" />
-          <h3 className="font-bold text-sm text-foreground dark:text-slate-200 mb-1">No clients found</h3>
-          <p className="text-xs text-muted-foreground dark:text-slate-400 mb-4">Create your first client to start linking projects and tracking invoices.</p>
-          <Button
-            onClick={openCreate}
-            className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-accent dark:bg-blue-900/30 text-primary dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 hover:bg-[#E2EAF4] dark:hover:bg-blue-900/50 transition-all"
-          >
-            add client
-          </Button>
-        </div>
+        <EmptyState
+          icon={<Users className="h-6 w-6" />}
+          title="No clients found"
+          description="Create your first client to start linking projects and tracking invoices."
+          action={<Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {clients.map((c) => (
@@ -278,7 +275,11 @@ export default function ClientsPage() {
                       setOpenDropdownId(c.id);
                     }
                   }}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-all"
+                  aria-label={`Actions for ${c.name}`}
+                  title={`Actions for ${c.name}`}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -290,13 +291,13 @@ export default function ClientsPage() {
                         onClick={(e) => { e.stopPropagation(); openEdit(c); setOpenDropdownId(null); }}
                         className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
                       >
-                        <Edit2 className="h-3.5 w-3.5" /> edit
+                        <Edit2 className="h-3.5 w-3.5" /> Edit
                       </Button>
                       <Button
                         onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); setOpenDropdownId(null); }}
                         className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
                       >
-                        <Trash2 className="h-3.5 w-3.5" /> delete
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
                       </Button>
                     </div>
                   </DropdownPortal>
@@ -385,12 +386,16 @@ export default function ClientsPage() {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "edit client profile" : "create new client"}</h3>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">{editingId ? "update client details and information." : "setup direct client details for project coordination."}</p>
+                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit client profile" : "Create new client"}</h3>
+                    <p className="text-xs text-muted-foreground dark:text-slate-400">{editingId ? "Update client details and information." : "Set up direct client details for project coordination."}</p>
                   </div>
                   <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setDrawerOpen(false)}
-                    className="p-1.5 rounded-lg text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                    aria-label="Close client editor"
+                    title="Close client editor"
+                    className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
                   >
                     <X className="h-5 w-5" />
                   </Button>
@@ -398,7 +403,7 @@ export default function ClientsPage() {
 
                 <form onSubmit={handleSave} className="flex flex-col gap-4 max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Client name *</label>
+                    <label className="text-xs font-bold text-foreground">Client name *</label>
                     <Input
                       type="text"
                       required
@@ -410,7 +415,7 @@ export default function ClientsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Company name</label>
+                    <label className="text-xs font-bold text-foreground">Company name</label>
                     <Input
                       type="text"
                       placeholder="E.g. acme industries"
@@ -422,7 +427,7 @@ export default function ClientsPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Email</label>
+                      <label className="text-xs font-bold text-foreground">Email</label>
                       <Input
                         type="email"
                         placeholder="client@domain.com"
@@ -432,7 +437,7 @@ export default function ClientsPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Phone</label>
+                      <label className="text-xs font-bold text-foreground">Phone</label>
                       <Input
                         type="text"
                         placeholder="+1 (555) 000-0000"
@@ -444,7 +449,7 @@ export default function ClientsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Website</label>
+                    <label className="text-xs font-bold text-foreground">Website</label>
                     <Input
                       type="text"
                       placeholder="Www.clientwebsite.com"
@@ -455,7 +460,7 @@ export default function ClientsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Address</label>
+                    <label className="text-xs font-bold text-foreground">Address</label>
                     <Textarea
                       rows={2}
                       placeholder="Billing or office address..."
@@ -466,7 +471,7 @@ export default function ClientsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Tags (comma separated)</label>
+                    <label className="text-xs font-bold text-foreground">Tags (comma separated)</label>
                     <Input
                       type="text"
                       placeholder="Vip, monthly, design"
@@ -477,7 +482,7 @@ export default function ClientsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Private notes</label>
+                    <label className="text-xs font-bold text-foreground">Private notes</label>
                     <Textarea
                       rows={3}
                       placeholder="Private client instructions, milestones..."
@@ -493,17 +498,21 @@ export default function ClientsPage() {
                 <Button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="w-1/3 py-2 border border-border dark:border-slate-700 rounded-xl text-xs font-semibold text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 transition-all"
+                  variant="outline"
+                  size="default"
+                  className="w-1/3"
                 >
-                  cancel
+                  Cancel
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-2/3 py-2 bg-primary dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 shadow-md disabled:opacity-70"
+                  variant="default"
+                  size="default"
+                  className="w-2/3"
                 >
                   {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                  <span>{editingId ? "update client" : "save client"}</span>
+                  <span>{editingId ? "Update client" : "Save client"}</span>
                 </Button>
               </div>
             </div>

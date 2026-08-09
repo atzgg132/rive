@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Textarea, Select } from "@/components/ui";
+import { Button, EmptyState, Input, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -388,8 +388,10 @@ export default function RevenuePage() {
           <p className="text-sm text-muted-foreground dark:text-slate-400">Create invoices, follow collections, and compare every invoice in {displayCurrency} without changing its original terms.</p>
         </div>
         <Button
+          variant="default"
+          size="default"
           onClick={openCreate}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 font-semibold text-xs transition-all shadow-[0_4px_10px_rgba(29,78,216,0.1)] dark:shadow-none self-start sm:self-auto"
+          className="self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           <span>Create new invoice</span>
@@ -416,7 +418,7 @@ export default function RevenuePage() {
             placeholder="Search by invoice number, client..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-400 transition-all"
+            className="pl-9"
           />
         </div>
 
@@ -425,7 +427,7 @@ export default function RevenuePage() {
           <Select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="px-2.5 py-1.5 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs font-semibold text-foreground dark:text-slate-200 focus:outline-none"
+            className="sm:w-auto"
           >
             <option value="all">All invoices</option>
             <option value="sent">Sent</option>
@@ -442,17 +444,12 @@ export default function RevenuePage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : invoices.length === 0 ? (
-        <div className="glass p-12 text-center flex flex-col items-center justify-center bg-white/70 dark:bg-slate-900/70 border-dashed dark:border-slate-800">
-          <FileText className="h-10 w-10 text-slate-400 dark:text-slate-500 mb-3" />
-          <h3 className="font-bold text-sm text-foreground dark:text-slate-200 mb-1">No invoices found</h3>
-          <p className="text-xs text-muted-foreground dark:text-slate-400 mb-4">Generate an invoice to start charging clients for your project services.</p>
-          <Button
-            onClick={openCreate}
-            className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-accent dark:bg-blue-900/30 text-primary dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 hover:bg-[#E2EAF4] dark:hover:bg-blue-900/50 transition-all"
-          >
-            build invoice
-          </Button>
-        </div>
+        <EmptyState
+          icon={<FileText className="h-6 w-6" />}
+          title="No invoices found"
+          description="Generate an invoice to start charging clients for your project services."
+          action={<Button variant="secondary" size="sm" onClick={openCreate}>Build invoice</Button>}
+        />
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border dark:border-slate-800 overflow-visible shadow-sm">
           <div className="overflow-x-auto overflow-y-visible pb-12">
@@ -500,7 +497,11 @@ export default function RevenuePage() {
                             setOpenDropdownId(inv.id);
                           }
                         }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                        aria-label={`Actions for invoice ${inv.invoice_number}`}
+                        title={`Actions for invoice ${inv.invoice_number}`}
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
@@ -513,7 +514,7 @@ export default function RevenuePage() {
                                 onClick={() => handleSendInvoice(inv.id, inv.invoice_number)}
                                 className="w-full text-left px-3 py-2 text-xs font-medium text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 flex items-center gap-2 transition-colors"
                               >
-                                <Send className="h-3.5 w-3.5" /> review & send
+                                <Send className="h-3.5 w-3.5" /> Review and send
                               </Button>
                             )}
                             {!['paid', 'cancelled', 'sending'].includes(inv.status) && (
@@ -521,7 +522,7 @@ export default function RevenuePage() {
                                 onClick={() => { handleMarkPaid(inv.id, inv.invoice_number); setOpenDropdownId(null); }}
                                 className="w-full text-left px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors"
                               >
-                                <CheckCircle className="h-3.5 w-3.5" /> mark paid
+                                <CheckCircle className="h-3.5 w-3.5" /> Mark paid
                               </Button>
                             )}
                             <Button
@@ -532,19 +533,19 @@ export default function RevenuePage() {
                               }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
                             >
-                              <FileText className="h-3.5 w-3.5" /> download pdf
+                              <FileText className="h-3.5 w-3.5" /> Download PDF
                             </Button>
                             {["draft", "overdue"].includes(inv.status) ? <Button
                               onClick={() => { openEdit(inv); setOpenDropdownId(null); }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
                             >
-                              <Edit2 className="h-3.5 w-3.5" /> edit
+                              <Edit2 className="h-3.5 w-3.5" /> Edit
                             </Button> : null}
                             {!inv.contract_id && !["sent", "paid"].includes(inv.status) ? <Button
                               onClick={() => { handleDelete(inv.id, inv.invoice_number); setOpenDropdownId(null); }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
                             >
-                              <Trash2 className="h-3.5 w-3.5" /> delete
+                              <Trash2 className="h-3.5 w-3.5" /> Delete
                             </Button> : null}
                           </div>
                         </DropdownPortal>
@@ -566,12 +567,16 @@ export default function RevenuePage() {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "edit invoice" : "generate new invoice"}</h3>
+                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit invoice" : "Generate new invoice"}</h3>
                     <p className="text-xs text-muted-foreground dark:text-slate-400">{editingInvoice?.contract_id ? "Generated from the signed payment plan. Confirm every detail before sending." : "Compile itemized work and apply any required tax adjustments."}</p>
                   </div>
                   <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setDrawerOpen(false)}
-                    className="p-1.5 rounded-lg text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                    aria-label="Close invoice editor"
+                    title="Close invoice editor"
+                    className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
                   >
                     <X className="h-5 w-5" />
                   </Button>
@@ -581,7 +586,7 @@ export default function RevenuePage() {
                   {editingInvoice?.contract_id ? <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100"><p className="font-bold">Contract-generated draft — not sent</p><p className="mt-0.5 text-blue-900/80 dark:text-blue-200/80">The amount and trigger came from {editingInvoice.contract_title || "the executed contract"}. Your edits affect this invoice only; the signed contract record stays unchanged.</p><Link href={`/workflow/contracts/${editingInvoice.contract_id}`} className="mt-1 inline-flex font-bold underline">Open source contract</Link></div> : null}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Invoice number *</label>
+                      <label className="text-xs font-bold text-foreground">Invoice number *</label>
                       <Input
                         type="text"
                         required
@@ -591,7 +596,7 @@ export default function RevenuePage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Issue date</label>
+                      <label className="text-xs font-bold text-foreground">Issue date</label>
                       <Input
                         type="date"
                         value={issueDate}
@@ -603,7 +608,7 @@ export default function RevenuePage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Due date</label>
+                      <label className="text-xs font-bold text-foreground">Due date</label>
                       <Input
                         type="date"
                         value={dueDate}
@@ -615,7 +620,7 @@ export default function RevenuePage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Recipient client</label>
+                      <label className="text-xs font-bold text-foreground">Recipient client</label>
                       <Select
                         value={clientId}
                         onChange={(e) => { setClientId(e.target.value); setProjectId(""); }}
@@ -629,7 +634,7 @@ export default function RevenuePage() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Link project</label>
+                      <label className="text-xs font-bold text-foreground">Link project</label>
                       <Select
                         value={projectId}
                         onChange={(e) => { const value = e.target.value; setProjectId(value); const project = projects.find((item) => item.id === value); if (project?.currency) setCurrency(project.currency); }}
@@ -645,14 +650,14 @@ export default function RevenuePage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Currency</label>
+                    <label className="text-xs font-bold text-foreground">Currency</label>
                     <Input type="text" maxLength={3} value={currency} disabled={Boolean(editingInvoice?.contract_id)} onChange={(e) => setCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))} placeholder="USD" />
                   </div>
 
                   {/* Line Items List */}
                   <div className="flex flex-col gap-3.5 border-t border-b border-dashed border-border dark:border-slate-800 py-4 my-2">
                     <div className="flex justify-between items-center px-1">
-                      <span className="text-[10px] font-extrabold text-foreground dark:text-slate-200 uppercase tracking-wider">Invoice line items</span>
+                      <span className="text-xs font-bold text-foreground">Invoice line items</span>
                       <Button
                         type="button"
                         onClick={handleAddItem}
@@ -708,7 +713,7 @@ export default function RevenuePage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Tax rate (%)</label>
+                      <label className="text-xs font-bold text-foreground">Tax rate (%)</label>
                       <Input
                         type="number"
                         placeholder="E.g. 5"
@@ -730,7 +735,7 @@ export default function RevenuePage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Payment notes</label>
+                    <label className="text-xs font-bold text-foreground">Payment notes</label>
                     <Textarea
                       rows={2}
                       placeholder="Add bank transfer instructions, terms..."
@@ -746,17 +751,21 @@ export default function RevenuePage() {
                 <Button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="w-1/3 py-2 border border-border dark:border-slate-700 rounded-xl text-xs font-semibold text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 transition-all"
+                  variant="outline"
+                  size="default"
+                  className="w-1/3"
                 >
-                  cancel
+                  Cancel
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-2/3 py-2 bg-primary dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 shadow-md disabled:opacity-70"
+                  variant="default"
+                  size="default"
+                  className="w-2/3"
                 >
                   {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                  <span>{editingId ? "save reviewed draft" : "generate invoice"}</span>
+                  <span>{editingId ? "Save reviewed draft" : "Generate invoice"}</span>
                 </Button>
               </div>
             </div>

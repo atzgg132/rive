@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Select } from "@/components/ui";
+import { Button, EmptyState, Input, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -247,8 +247,10 @@ export default function ExpensesPage() {
           <p className="text-sm text-muted-foreground dark:text-slate-400">Understand every cost in {displayCurrency} while preserving what you actually paid.</p>
         </div>
         <Button
+          variant="default"
+          size="default"
           onClick={openCreate}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 font-semibold text-xs transition-all shadow-[0_4px_10px_rgba(29,78,216,0.1)] dark:shadow-none self-start sm:self-auto"
+          className="self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           <span>Log new expense</span>
@@ -275,7 +277,7 @@ export default function ExpensesPage() {
             placeholder="Search by description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-border dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-400 transition-all"
+            className="pl-9"
           />
         </div>
 
@@ -284,7 +286,7 @@ export default function ExpensesPage() {
           <Select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="px-2.5 py-1.5 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs font-semibold text-foreground dark:text-slate-200 focus:outline-none"
+            className="sm:w-auto"
           >
             <option value="all">All categories</option>
             <option value="software">Software</option>
@@ -304,17 +306,12 @@ export default function ExpensesPage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : expenses.length === 0 ? (
-        <div className="glass p-12 text-center flex flex-col items-center justify-center bg-white/70 dark:bg-slate-900/70 border-dashed dark:border-slate-800">
-          <Receipt className="h-10 w-10 text-slate-400 dark:text-slate-500 mb-3" />
-          <h3 className="font-bold text-sm text-foreground dark:text-slate-200 mb-1">No expenses logged</h3>
-          <p className="text-xs text-muted-foreground dark:text-slate-400 mb-4">Log operating or project costs to keep accurate profitability margins.</p>
-          <Button
-            onClick={openCreate}
-            className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-accent dark:bg-blue-900/30 text-primary dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 hover:bg-[#E2EAF4] dark:hover:bg-blue-900/50 transition-all"
-          >
-            log expense
-          </Button>
-        </div>
+        <EmptyState
+          icon={<Receipt className="h-6 w-6" />}
+          title="No expenses logged"
+          description="Log operating or project costs to keep accurate profitability margins."
+          action={<Button variant="secondary" size="sm" onClick={openCreate}>Log expense</Button>}
+        />
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border dark:border-slate-800 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
@@ -363,7 +360,11 @@ export default function ExpensesPage() {
                             setOpenDropdownId(exp.id);
                           }
                         }}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        aria-label={`Actions for ${exp.description}`}
+                        title={`Actions for ${exp.description}`}
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 focus:opacity-100"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
@@ -375,13 +376,13 @@ export default function ExpensesPage() {
                               onClick={() => { openEdit(exp); setOpenDropdownId(null); }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
                             >
-                              <Edit2 className="h-3.5 w-3.5" /> edit
+                              <Edit2 className="h-3.5 w-3.5" /> Edit
                             </Button>
                             <Button
                               onClick={() => { handleDelete(exp.id, exp.description); setOpenDropdownId(null); }}
                               className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
                             >
-                              <Trash2 className="h-3.5 w-3.5" /> delete
+                              <Trash2 className="h-3.5 w-3.5" /> Delete
                             </Button>
                           </div>
                         </DropdownPortal>
@@ -403,12 +404,16 @@ export default function ExpensesPage() {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "edit operating cost" : "log operating cost"}</h3>
+                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit operating cost" : "Log operating cost"}</h3>
                     <p className="text-xs text-muted-foreground dark:text-slate-400">Save receipt parameters and category classifications.</p>
                   </div>
                   <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setDrawerOpen(false)}
-                    className="p-1.5 rounded-lg text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                    aria-label="Close expense editor"
+                    title="Close expense editor"
+                    className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
                   >
                     <X className="h-5 w-5" />
                   </Button>
@@ -416,7 +421,7 @@ export default function ExpensesPage() {
 
                 <form onSubmit={handleSave} className="flex flex-col gap-4 max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Cost description *</label>
+                    <label className="text-xs font-bold text-foreground">Cost description *</label>
                     <Input
                       type="text"
                       required
@@ -429,7 +434,7 @@ export default function ExpensesPage() {
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Category</label>
+                      <label className="text-xs font-bold text-foreground">Category</label>
                       <Select
                         value={categoryInput}
                         onChange={(e) => setCategoryInput(e.target.value)}
@@ -445,7 +450,7 @@ export default function ExpensesPage() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Amount *</label>
+                      <label className="text-xs font-bold text-foreground">Amount *</label>
                       <Input
                         type="number"
                         required
@@ -457,7 +462,7 @@ export default function ExpensesPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Currency</label>
+                      <label className="text-xs font-bold text-foreground">Currency</label>
                       <Select value={currencyInput} onChange={(event) => setCurrencyInput(event.target.value)} className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs font-bold text-foreground dark:text-slate-200">
                         {DISPLAY_CURRENCIES.map(({ code, label }) => <option key={code} value={code}>{code} · {label}</option>)}
                       </Select>
@@ -466,7 +471,7 @@ export default function ExpensesPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Date</label>
+                      <label className="text-xs font-bold text-foreground">Date</label>
                       <Input
                         type="date"
                         value={date}
@@ -475,7 +480,7 @@ export default function ExpensesPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-foreground dark:text-slate-200 uppercase tracking-wider">Link project</label>
+                      <label className="text-xs font-bold text-foreground">Link project</label>
                       <Select
                         value={projectId}
                         onChange={(e) => setProjectId(e.target.value)}
@@ -509,17 +514,21 @@ export default function ExpensesPage() {
                 <Button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="w-1/3 py-2 border border-border dark:border-slate-700 rounded-xl text-xs font-semibold text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 transition-all"
+                  variant="outline"
+                  size="default"
+                  className="w-1/3"
                 >
-                  cancel
+                  Cancel
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-2/3 py-2 bg-primary dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 shadow-md disabled:opacity-70"
+                  variant="default"
+                  size="default"
+                  className="w-2/3"
                 >
                   {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                  <span>{editingId ? "update expense" : "log expense"}</span>
+                  <span>{editingId ? "Update expense" : "Log expense"}</span>
                 </Button>
               </div>
             </div>

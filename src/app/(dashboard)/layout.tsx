@@ -204,7 +204,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {!sidebarCollapsed && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-primary dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 uppercase">
               {user?.plan}
             </span>}
-            <Button onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"}`}>
+            <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"}`}>
               {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </Button>
           </div>
@@ -244,9 +244,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <Button
+            variant="ghost"
+            size="default"
             onClick={handleLogout}
             title={sidebarCollapsed ? "Sign out" : undefined}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 ${sidebarCollapsed ? "justify-center" : ""}`}
+            className={`w-full justify-start px-3 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300 ${sidebarCollapsed ? "justify-center" : ""}`}
           >
             <LogOut className="h-5 w-5" />
             {!sidebarCollapsed && <span>Sign out</span>}
@@ -263,7 +265,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-1">
             <CurrencySwitcher compact />
             <ThemeToggle />
-            <Button onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
+            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
               <Menu className="h-5 w-5" />
             </Button>
           </div>
@@ -273,8 +275,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="sticky top-0 z-30 hidden h-16 shrink-0 items-center justify-between border-b border-border bg-white px-8 dark:border-slate-800 dark:bg-slate-900 md:flex">
           <div className="flex items-center gap-3 max-w-md w-full">
             <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCommandPaletteOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border dark:border-slate-800 bg-background dark:bg-slate-950 text-xs text-muted-foreground dark:text-slate-400 hover:border-blue-200 dark:hover:border-blue-800/50 w-72 justify-between transition-all shrink-0"
+              className="w-72 justify-between text-muted-foreground dark:text-slate-400 hover:border-blue-200 dark:hover:border-blue-800/50"
             >
               <span className="flex items-center gap-2 overflow-hidden">
                 <Search className="h-3.5 w-3.5 shrink-0" />
@@ -297,8 +301,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ThemeToggle />
             <div className="relative">
               <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={toggleNotifications}
-                className="p-1.5 rounded-lg text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 hover:text-foreground dark:hover:text-slate-200 relative"
+                aria-label="Open notifications"
+                className="relative text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 hover:text-foreground dark:hover:text-slate-200"
               >
                 <Bell className="h-5 w-5" />
                 {notifications.some(n => !n.read) && (
@@ -336,8 +343,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <RiveLogo className="h-6 w-auto text-slate-900 dark:text-white" />
                 </Link>
                 <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                  aria-label="Close navigation"
+                  className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
                 >
                   <X className="h-6 w-6" />
                 </Button>
@@ -376,11 +386,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                 </div>
                 <Button
+                  variant="ghost"
+                  size="default"
                   onClick={() => {
                     setMobileMenuOpen(false);
                     handleLogout();
                   }}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                  className="w-full justify-start px-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                 >
                   <LogOut className="h-5 w-5" />
                   <span>Sign out</span>
