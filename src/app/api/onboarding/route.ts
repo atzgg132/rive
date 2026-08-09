@@ -3,13 +3,12 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
-import { mergePortfolioContent } from "@/utils/portfolio";
+import { isValidOnboardingAvatarUrl, mergePortfolioContent } from "@/utils/portfolio";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
-const IMAGE = /^(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s<>]+|\/api\/public\/assets\/portfolio\/[0-9a-f-]+\/[0-9a-f-]+\.(?:jpg|png|webp|gif))$/i;
 const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
 const STARTING_SOURCES = ["spreadsheets", "zoho_books", "quickbooks", "xero", "freshbooks", "google_calendar", "project_tool", "starting_fresh"];
@@ -113,7 +112,7 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof body.avatarUrl === "string") {
     const avatarUrl = body.avatarUrl.trim();
-    if (avatarUrl && (avatarUrl.length > 2_500_000 || !IMAGE.test(avatarUrl))) {
+    if (avatarUrl && !isValidOnboardingAvatarUrl(avatarUrl)) {
       return NextResponse.json({ success: false, message: "Profile photo must be a supported upload or HTTPS URL under 1.8 MB." }, { status: 400 });
     }
     data.avatarUrl = avatarUrl || null;

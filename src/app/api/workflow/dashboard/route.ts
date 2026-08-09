@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { mergePortfolioContent } from "@/utils/portfolio";
+import { normalizeCurrency } from "@/lib/currency";
+import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRates";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +13,20 @@ export async function GET(req: NextRequest) {
     }
 
     const userId = session.userId;
+    const [currencyOwner, exchangeRates] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { displayCurrency: true, name: true, profession: true, businessType: true, businessTypes: true } }),
+      getExchangeRateSnapshot(),
+    ]);
+    const displayCurrency = normalizeCurrency(currencyOwner?.displayCurrency);
+    let financialsAvailable = true;
+    const convertAmount = (amount: number, currency: string) => {
+      const converted = convertFromSnapshot(amount, currency, displayCurrency, exchangeRates);
+      if (converted === null) {
+        financialsAvailable = false;
+        return 0;
+      }
+      return converted;
+    };
 
     // Run aggregations in parallel
     const [
@@ -25,7 +41,7 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       // Revenue aggregations
       prisma.invoice.groupBy({
-        by: ["status"],
+        by: ["status", "currency"],
         where: { userId },
         _sum: { total: true }
       }),
@@ -34,7 +50,8 @@ export async function GET(req: NextRequest) {
         where: { userId, status: "active" }
       }),
       // Total Expenses
-      prisma.expense.aggregate({
+      prisma.expense.groupBy({
+        by: ["currency"],
         where: { userId },
         _sum: { amount: true }
       }),
@@ -44,7 +61,7 @@ export async function GET(req: NextRequest) {
         include: {
           invoices: {
             where: { status: "paid" },
-            select: { total: true }
+            select: { total: true, currency: true }
           }
         }
       }),
@@ -82,7 +99,7 @@ export async function GET(req: NextRequest) {
     let totalPaid = 0;
     let totalPending = 0;
     invoicesAggregate.forEach((grp) => {
-      const sum = Number(grp._sum.total || 0);
+      const sum = convertAmount(Number(grp._sum.total || 0), grp.currency);
       if (grp.status === "paid") {
         totalPaid += sum;
       } else if (grp.status === "sent" || grp.status === "viewed") {
@@ -90,13 +107,13 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const totalExpenses = Number(expensesAggregate._sum.amount || 0);
+    const totalExpenses = expensesAggregate.reduce((sum, group) => sum + convertAmount(Number(group._sum.amount || 0), group.currency), 0);
     const netEarnings = totalPaid - totalExpenses;
 
     // Format top clients and sort by revenue
     const topClients = clientsWithPaidInvoices
       .map((c) => {
-        const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+        const total_revenue = c.invoices.reduce((sum, inv) => sum + convertAmount(Number(inv.total), inv.currency), 0);
         return {
           id: c.id,
           name: c.name,
@@ -139,11 +156,11 @@ export async function GET(req: NextRequest) {
     const [recent6mInvoices, recent6mExpenses] = await Promise.all([
       prisma.invoice.findMany({
         where: { userId, issueDate: { gte: sixMonthsAgo }, status: "paid" },
-        select: { total: true, issueDate: true }
+        select: { total: true, currency: true, issueDate: true }
       }),
       prisma.expense.findMany({
         where: { userId, date: { gte: sixMonthsAgo } },
-        select: { amount: true, date: true }
+        select: { amount: true, currency: true, date: true }
       })
     ]);
 
@@ -161,13 +178,13 @@ export async function GET(req: NextRequest) {
     recent6mInvoices.forEach((inv) => {
       const d = new Date(inv.issueDate);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
-      if (monthlyChartData[key]) monthlyChartData[key].revenue += Number(inv.total);
+      if (monthlyChartData[key]) monthlyChartData[key].revenue += convertAmount(Number(inv.total), inv.currency);
     });
 
     recent6mExpenses.forEach((exp) => {
       const d = new Date(exp.date);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
-      if (monthlyChartData[key]) monthlyChartData[key].expenses += Number(exp.amount);
+      if (monthlyChartData[key]) monthlyChartData[key].expenses += convertAmount(Number(exp.amount), exp.currency);
     });
 
     const now = new Date();
@@ -181,7 +198,6 @@ export async function GET(req: NextRequest) {
       overdueInvoices,
       upcomingProjects,
       expenseCategories,
-      workspaceUser,
       calendarConnectionCount,
       portfolio,
       unresolvedImportIssues,
@@ -190,10 +206,9 @@ export async function GET(req: NextRequest) {
       prisma.project.count({ where: { userId } }),
       prisma.invoice.count({ where: { userId } }),
       prisma.expense.count({ where: { userId } }),
-      prisma.invoice.aggregate({
+      prisma.invoice.findMany({
         where: { userId, dueDate: { lt: now }, status: { in: ["sent", "viewed", "overdue"] } },
-        _count: { _all: true },
-        _sum: { total: true },
+        select: { total: true, currency: true },
       }),
       prisma.project.findMany({
         where: { userId, dueDate: { gte: now, lte: upcomingCutoff }, status: { notIn: ["completed", "cancelled"] } },
@@ -202,11 +217,9 @@ export async function GET(req: NextRequest) {
         take: 3,
       }),
       prisma.expense.groupBy({
-        by: ["category"],
+        by: ["category", "currency"],
         where: { userId },
         _sum: { amount: true },
-        orderBy: { _sum: { amount: "desc" } },
-        take: 1,
       }),
       prisma.user.findUnique({
         where: { id: userId },
@@ -261,8 +274,20 @@ export async function GET(req: NextRequest) {
       next: activationSteps.find((step) => !step.complete) || null,
     };
 
+    const expenseCategoryTotals = new Map<string, number>();
+    for (const group of expenseCategories) {
+      expenseCategoryTotals.set(group.category, (expenseCategoryTotals.get(group.category) || 0) + convertAmount(Number(group._sum.amount || 0), group.currency));
+    }
+    const topExpenseCategory = [...expenseCategoryTotals.entries()].sort((a, b) => b[1] - a[1])[0] || null;
+    const overdueAmount = overdueInvoices.reduce((sum, invoice) => sum + convertAmount(Number(invoice.total), invoice.currency), 0);
+
     return NextResponse.json({
       success: true,
+      currency: {
+        displayCurrency,
+        ratesAsOf: exchangeRates?.asOf || null,
+        conversionAvailable: financialsAvailable,
+      },
       stats: {
         totalPaid,
         totalPending,
@@ -278,10 +303,10 @@ export async function GET(req: NextRequest) {
       insights: {
         collectionRate,
         profitMargin,
-        overdueCount: overdueInvoices._count._all,
-        overdueAmount: Number(overdueInvoices._sum.total || 0),
-        topExpenseCategory: expenseCategories[0]?.category || null,
-        topExpenseAmount: Number(expenseCategories[0]?._sum.amount || 0),
+        overdueCount: overdueInvoices.length,
+        overdueAmount,
+        topExpenseCategory: topExpenseCategory?.[0] || null,
+        topExpenseAmount: topExpenseCategory?.[1] || 0,
         upcomingProjects: upcomingProjects.map((project) => ({
           id: project.id,
           title: project.title,

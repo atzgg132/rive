@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         },
         invoices: {
           where: { status: "paid" },
-          select: { total: true }
+          select: { total: true, currency: true }
         },
         contracts: {
           select: { id: true }
@@ -56,6 +56,10 @@ export async function GET(req: NextRequest) {
     const formattedClients = clients.map((c) => {
       const project_count = c.projects.length;
       const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+      const revenue_by_currency = c.invoices.reduce<Record<string, number>>((totals, invoice) => {
+        totals[invoice.currency] = (totals[invoice.currency] || 0) + Number(invoice.total);
+        return totals;
+      }, {});
       
       return {
         id: c.id,
@@ -74,6 +78,7 @@ export async function GET(req: NextRequest) {
         updated_at: c.updatedAt,
         project_count,
         total_revenue,
+        revenue_by_currency,
         contract_count: c.contracts.length,
       };
     });

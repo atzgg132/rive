@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { ChartData } from "@/components/dashboard/AnalyticsCharts";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
 
 interface Stats {
   totalPaid: number;
@@ -70,6 +71,12 @@ interface Insights {
   upcomingProjects: { id: string; title: string; dueDate: string | null }[];
 }
 
+interface CurrencyMeta {
+  displayCurrency: string;
+  ratesAsOf: string | null;
+  conversionAvailable: boolean;
+}
+
 const metricsGridClassName =
   "grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 xl:grid-cols-4";
 
@@ -81,6 +88,7 @@ const AnalyticsCharts = dynamic(() => import("@/components/dashboard/AnalyticsCh
 });
 
 export default function DashboardOverview() {
+  const { displayCurrency, format } = useCurrency();
   const [stats, setStats] = useState<Stats>({
     totalPaid: 0,
     totalPending: 0,
@@ -95,6 +103,7 @@ export default function DashboardOverview() {
   const [profileReadiness, setProfileReadiness] = useState<ProfileReadiness | null>(null);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currencyMeta, setCurrencyMeta] = useState<CurrencyMeta | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -110,6 +119,7 @@ export default function DashboardOverview() {
             setActivation(data.activation || null);
             setProfileReadiness(data.profileReadiness || null);
             setInsights(data.insights || null);
+            setCurrencyMeta(data.currency || null);
           }
         }
       } catch (err) {
@@ -119,15 +129,10 @@ export default function DashboardOverview() {
       }
     }
     loadData();
-  }, []);
+  }, [displayCurrency]);
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2
-    }).format(val);
-  };
+  const dashboardCurrency = currencyMeta?.displayCurrency || displayCurrency;
+  const formatCurrency = (val: number) => format(val, dashboardCurrency);
 
   if (loading) {
     return (
@@ -170,6 +175,12 @@ export default function DashboardOverview() {
           </>
         ) : null}
       />
+
+      {currencyMeta && !currencyMeta.conversionAvailable && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+          Exchange rates are temporarily unavailable, so mixed-currency financial totals are hidden to avoid showing a misleading sum.
+        </div>
+      )}
 
       {isFirstRun && activation && (
         <section className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-600/10 sm:p-8">
@@ -227,7 +238,7 @@ export default function DashboardOverview() {
                 </span>
               </div>
               <div className="mt-auto">
-                <h3 className="mb-1 text-2xl font-black text-foreground">{c.value}</h3>
+                <h3 className="mb-1 text-2xl font-black text-foreground">{currencyMeta?.conversionAvailable === false && idx !== 1 ? "—" : c.value}</h3>
                 <p className="text-xs text-muted-foreground">{c.sub}</p>
               </div>
             </Card>
@@ -235,7 +246,7 @@ export default function DashboardOverview() {
         })}
       </div>}
 
-      {!isFirstRun && insights && (
+      {!isFirstRun && insights && currencyMeta?.conversionAvailable !== false && (
         <section className={metricsGridClassName}>
           <Card className={insightCardClassName}>
             <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Collection health</p>
@@ -269,7 +280,7 @@ export default function DashboardOverview() {
       )}
 
       {/* Analytics Chart */}
-      {!isFirstRun && <AnalyticsCharts data={chartData} />}
+      {!isFirstRun && currencyMeta?.conversionAvailable !== false && <AnalyticsCharts data={chartData} currency={dashboardCurrency} />}
 
       {/* Detail grids */}
       {!isFirstRun && <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -328,7 +339,9 @@ export default function DashboardOverview() {
           </div>
 
           <div className="flex flex-col gap-4">
-            {topClients.length === 0 ? (
+            {currencyMeta?.conversionAvailable === false ? (
+              <div className="py-12 text-center text-xs text-muted-foreground">Client rankings will return when exchange rates are available.</div>
+            ) : topClients.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground dark:text-slate-500 text-xs">
                 No revenue metrics yet. Mark an invoice as paid to build this ranking.
               </div>

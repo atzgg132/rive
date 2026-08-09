@@ -29,6 +29,8 @@ import RiveLogo from "@/components/RiveLogo";
 import Portal from "@/components/ui/Portal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import CommandPalette from "@/components/dashboard/CommandPalette";
+import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
+import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 
 interface UserProfile {
   id: string;
@@ -37,6 +39,7 @@ interface UserProfile {
   plan: string;
   avatar_url?: string;
   onboarding_status?: string;
+  display_currency?: string;
 }
 
 interface WorkspaceNotification {
@@ -188,6 +191,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <CurrencyProvider initialCurrency={user?.display_currency}>
     <div className="flex h-screen min-h-0 overflow-hidden bg-background dark:bg-slate-950">
       <Toaster position="bottom-right" theme="system" />
       {/* ── Desktop Sidebar ── */}
@@ -257,6 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <RiveLogo className="h-5 w-auto text-slate-900 dark:text-white" />
           </Link>
           <div className="flex items-center gap-1">
+            <CurrencySwitcher compact />
             <ThemeToggle />
             <Button onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
               <Menu className="h-5 w-5" />
@@ -288,6 +293,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-3">
+            <CurrencySwitcher />
             <ThemeToggle />
             <div className="relative">
               <Button
@@ -388,5 +394,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Command Palette Wrapper ── */}
       <CommandPalette open={commandPaletteOpen} setOpen={setCommandPaletteOpen} />
     </div>
+    </CurrencyProvider>
   );
 }
