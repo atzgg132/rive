@@ -4,8 +4,9 @@ import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 
 const ROLLBACKABLE = new Set(["completed", "completed_with_issues"]);
+type ImportJobRouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(req: NextRequest, context: RouteContext<"/api/onboarding/import/jobs/[id]">) {
+export async function GET(req: NextRequest, context: ImportJobRouteContext) {
   const session = await getSessionUser(req);
   if (!session) {
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest, context: RouteContext<"/api/onboardi
   return NextResponse.json({ success: true, job });
 }
 
-export async function DELETE(req: NextRequest, context: RouteContext<"/api/onboarding/import/jobs/[id]">) {
+export async function DELETE(req: NextRequest, context: ImportJobRouteContext) {
   const session = await getSessionUser(req);
   if (!session) {
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
