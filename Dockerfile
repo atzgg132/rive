@@ -21,19 +21,21 @@ COPY --from=build-dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:24-alpine AS migrator-dependencies
+FROM --platform=$BUILDPLATFORM node:24-alpine AS migrator-dependencies
 WORKDIR /app
+ARG TARGETOS TARGETARCH
 RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
-RUN npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --os=$TARGETOS --cpu=$TARGETARCH --libc=musl
 
-FROM node:24-alpine AS runtime-dependencies
+FROM --platform=$BUILDPLATFORM node:24-alpine AS runtime-dependencies
 WORKDIR /app
+ARG TARGETOS TARGETARCH
 RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund --os=$TARGETOS --cpu=$TARGETARCH --libc=musl
 
 FROM node:24-alpine AS migrator
 WORKDIR /app
