@@ -3,6 +3,8 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getPublicPortfolioContent, isPortfolioPublished } from "@/utils/portfolio";
 
+export const dynamic = "force-dynamic";
+
 function deviceFromUserAgent(userAgent: string): string {
   if (/mobile|android|iphone|ipad/i.test(userAgent)) return "mobile";
   if (/tablet/i.test(userAgent)) return "tablet";

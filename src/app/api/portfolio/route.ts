@@ -5,6 +5,12 @@ import { mergePortfolioContent, normalizeSlug, validatePortfolioContent, validat
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
+class PortfolioConflictError extends Error {
+  constructor() {
+    super("PORTFOLIO_CONFLICT");
+  }
+}
+
 function unauthorized() {
   return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 }
@@ -89,16 +95,21 @@ export async function PATCH(req: NextRequest) {
       data.publishedAt = body.status === "published" ? new Date() : null;
     }
 
-    const portfolio = await prisma.$transaction(async (transaction) => {
-      const updatedPortfolio = await transaction.portfolio.update({ where: { userId: session.userId }, data });
+    await prisma.$transaction(async (transaction) => {
+      const updateResult = await transaction.portfolio.updateMany({
+        where: { userId: session.userId, revision: current.revision },
+        data,
+      });
+      if (updateResult.count !== 1) throw new PortfolioConflictError();
       if (syncedProfileImage !== undefined) {
         await transaction.user.update({
           where: { id: session.userId },
           data: { avatarUrl: syncedProfileImage || null },
         });
       }
-      return updatedPortfolio;
     });
+    const portfolio = await prisma.portfolio.findUnique({ where: { userId: session.userId } });
+    if (!portfolio) throw new Error("Portfolio disappeared after save.");
     if (body.content !== undefined) {
       const savedContent = mergePortfolioContent(portfolio.content);
       const coreSignals = [
@@ -119,6 +130,9 @@ export async function PATCH(req: NextRequest) {
     }
     return NextResponse.json({ success: true, portfolio });
   } catch (error) {
+    if (error instanceof PortfolioConflictError) {
+      return NextResponse.json({ success: false, message: "This portfolio changed in another tab. Reload before saving.", conflict: true }, { status: 409 });
+    }
     console.error("Portfolio update error:", error);
     return NextResponse.json({ success: false, message: "Could not save portfolio." }, { status: 500 });
   }

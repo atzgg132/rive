@@ -10,6 +10,8 @@ import { isPortfolioPublished, mergePortfolioContent, DEFAULT_PORTFOLIO_THEME, t
 
 type Props = { params: Promise<{ slug: string }> };
 
+export const dynamic = "force-dynamic";
+
 const loadPortfolio = cache(async (slug: string) => {
   const portfolio = await prisma.portfolio.findUnique({ where: { slug } });
   if (!portfolio || !isPortfolioPublished(portfolio.status)) return null;

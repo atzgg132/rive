@@ -37,6 +37,7 @@ export async function recordActivationEvent(
     });
   } catch (error) {
     // Activation telemetry must never make a valid business mutation fail.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return;
     console.error("Activation event could not be recorded:", error);
   }
 }

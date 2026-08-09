@@ -1,6 +1,6 @@
 # Alpha stability sprint
 
-Status: implementation complete; database-backed fresh-user verification is covered by the release-critical Playwright suite and remains environment-gated on this workstation.
+Status: implementation complete; database-backed fresh-user verification passed against the AWS development environment on 2026-08-10.
 
 ## Implementation checklist
 
@@ -11,7 +11,7 @@ Status: implementation complete; database-backed fresh-user verification is cove
 - [x] Simplify selected-work entry and clarify cover/gallery media.
 - [x] Add the smallest historical testimonial model and controlled appearance options.
 - [x] Run lint, typecheck, build, and browser regression checks.
-- [ ] Run the full database-backed fresh-account journey in an environment with Postgres, invite/email configuration, and an E2E user.
+- [x] Run the full database-backed fresh-account journey against AWS development infrastructure with a disposable E2E user.
 
 ## P0 findings and fixes
 
@@ -55,7 +55,7 @@ Obvious waitlist capitalization/grammar and the contract-completion “created i
 ## Remaining issues
 
 - A completed upload that is never associated with a saved portfolio can be orphaned. Add an asset registry/reconciliation policy before private media or high-volume use.
-- `tests/e2e/release-critical.spec.ts` covers portfolio persistence/publication and private-content boundaries, revision conflicts, expense ownership, onboarding multi-select, idempotent activation, password-reset session revocation, the client-to-invoice path, and explicit dashboard/editor failures. It runs against the migrated CI PostgreSQL service; this workstation skips it because its local provider is unavailable.
+- `tests/e2e/release-critical.spec.ts` covers portfolio persistence/publication and private-content boundaries, revision conflicts, S3 upload authorization and delivery, expense ownership, calendar/client/project ownership, onboarding multi-select, idempotent activation, password-reset session revocation, the client-to-invoice path, and explicit dashboard/editor failures. The suite passed 9/9 against the migrated AWS development PostgreSQL service; the full Playwright suite passed 91/91 with email intentionally disabled for dev.
 - Availability remains free text pending a domain decision; no rigid database enum was introduced.
 
 ## Database/API compatibility

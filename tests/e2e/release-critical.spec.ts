@@ -1,13 +1,15 @@
 import { loadEnvConfig } from "@next/env";
+import { DeleteObjectCommand, HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { createHash, createHmac, randomBytes, randomUUID, scryptSync } from "node:crypto";
+import { checkServerIdentity } from "node:tls";
 import { expect, test, type APIRequestContext, type BrowserContext } from "@playwright/test";
 import { Pool } from "pg";
 
 loadEnvConfig(process.cwd());
 
-const releaseChecksEnabled = Boolean(process.env.DATABASE_URL && process.env.E2E_USER_EMAIL);
+const releaseChecksEnabled = Boolean(process.env.DATABASE_URL);
 
 type TestDb = {
   prisma: PrismaClient;
@@ -40,9 +42,13 @@ function generateUserToken(userId: string, email: string, plan: string, sessionV
 }
 
 function sslConfig() {
+  const sslServerName = process.env.DATABASE_SSL_SERVERNAME || "";
   return process.env.DATABASE_SSL === "disable" || process.env.DATABASE_URL?.includes("sslmode=disable")
     ? false
-    : { rejectUnauthorized: false };
+    : {
+        rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+        ...(sslServerName ? { checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) => checkServerIdentity(sslServerName, certificate) } : {}),
+      };
 }
 
 async function json(response: Awaited<ReturnType<APIRequestContext["get"]>>): Promise<JsonObject> {
@@ -61,6 +67,13 @@ function headers(token: string, extra: Record<string, string> = {}) {
 
 function tokenFor(user: TestUser) {
   return generateUserToken(user.id, user.email, user.plan, user.sessionVersion);
+}
+
+function assetKeyFromUrl(assetUrl: string, baseURL: string) {
+  const pathname = new URL(assetUrl, baseURL).pathname;
+  const prefix = "/api/public/assets/";
+  if (!pathname.startsWith(prefix)) throw new Error(`Unexpected managed asset URL: ${assetUrl}`);
+  return pathname.slice(prefix.length).split("/").map(decodeURIComponent).join("/");
 }
 
 async function createTestUser(label: string): Promise<TestUser> {
@@ -192,7 +205,9 @@ test.describe("release-critical persistence, isolation, and activation", () => {
 
   test.beforeAll(async () => {
     if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for release-critical tests.");
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: sslConfig() });
+    const parsedConnectionString = new URL(process.env.DATABASE_URL);
+    for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) parsedConnectionString.searchParams.delete(parameter);
+    const pool = new Pool({ connectionString: parsedConnectionString.toString(), ssl: sslConfig() });
     db = { pool, prisma: new PrismaClient({ adapter: new PrismaPg(pool) }) };
     await db.prisma.$queryRaw`SELECT 1`;
   });
@@ -246,14 +261,34 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       expect(publicPage?.status()).toBe(200);
       await expect(page.getByText("Alpha RC Freelancer").first()).toBeVisible();
 
-      const nextSlug = `${slug}-updated`;
+      const collisionUser = await createTestUser("portfolio-collision");
+      try {
+        const collisionAuth = headers(tokenFor(collisionUser));
+        const collisionCreatedResponse = await request.post("/api/portfolio", { headers: collisionAuth, data: {} });
+        const collisionCreated = await json(collisionCreatedResponse);
+        const collisionPortfolio = collisionCreated.portfolio as JsonObject;
+        const collisionResponse = await request.patch("/api/portfolio", {
+          headers: collisionAuth,
+          data: { revision: Number(collisionPortfolio.revision), slug },
+        });
+        expect(collisionResponse.status()).toBe(409);
+      } finally {
+        await deleteTestUser(collisionUser.id);
+      }
+
+      const nextSlug = `${slug.slice(0, 50 - "-updated".length)}-updated`;
       const renamedResponse = await request.patch("/api/portfolio", {
         headers: auth,
         data: { revision: Number(savedPortfolio.revision), slug: nextSlug, status: "published" },
       });
       expect(renamedResponse.status()).toBe(200);
+      const renamed = await json(renamedResponse);
+      const persistedRename = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { slug: true } });
+      expect(persistedRename?.slug).toBe(nextSlug);
+      expect((renamed.portfolio as JsonObject).slug).toBe(nextSlug);
       expect((await request.get(`/api/public/portfolio/${slug}`)).status()).toBe(404);
       expect((await request.get(`/api/public/portfolio/${nextSlug}`)).status()).toBe(200);
+      expect((await page.goto(`/p/${slug}`, { waitUntil: "domcontentloaded" }))?.status()).toBe(404);
     } finally {
       await deleteTestUser(user.id);
     }
@@ -281,6 +316,101 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       expect(conflictBody.conflict).toBe(true);
     } finally {
       await deleteTestUser(user.id);
+    }
+  });
+
+  test("portfolio uploads require auth, use an owner-scoped S3 key, and deliver the saved asset", async ({ request, baseURL }) => {
+    expect(process.env.ASSET_BUCKET).toBeTruthy();
+    expect(process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION).toBeTruthy();
+    const owner = await createTestUser("upload-owner");
+    const other = await createTestUser("upload-other");
+    const ownerAuth = headers(tokenFor(owner));
+    const otherAuth = headers(tokenFor(other));
+    const s3 = new S3Client({ region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION });
+    const image = Buffer.from("rive-alpha-upload-check", "utf8");
+    let assetKey: string | undefined;
+    try {
+      const unauthorized = await request.post("/api/uploads/presign", {
+        data: { filename: "release.png", contentType: "image/png", size: image.length, purpose: "portfolio" },
+      });
+      expect(unauthorized.status()).toBe(401);
+
+      const invalidType = await request.post("/api/uploads/presign", {
+        headers: ownerAuth,
+        data: { filename: "release.pdf", contentType: "application/pdf", size: image.length, purpose: "portfolio" },
+      });
+      expect(invalidType.status()).toBe(400);
+
+      const oversized = await request.post("/api/uploads/presign", {
+        headers: ownerAuth,
+        data: { filename: "release.png", contentType: "image/png", size: 10 * 1024 * 1024 + 1, purpose: "portfolio" },
+      });
+      expect(oversized.status()).toBe(400);
+
+      const presignResponse = await request.post("/api/uploads/presign", {
+        headers: ownerAuth,
+        data: { filename: "release.png", contentType: "image/png", size: image.length, purpose: "portfolio" },
+      });
+      expect(presignResponse.status()).toBe(200);
+      const presigned = await json(presignResponse);
+      const uploadUrl = String(presigned.uploadUrl);
+      const assetUrl = String(presigned.assetUrl);
+      assetKey = assetKeyFromUrl(assetUrl, baseURL!);
+      expect(assetKey).toMatch(new RegExp(`^portfolio/${owner.id}/[0-9a-f-]+\\.png$`));
+
+      const upload = await request.put(uploadUrl, {
+        headers: (presigned.headers || {}) as Record<string, string>,
+        data: image,
+      });
+      expect(upload.status()).toBe(200);
+
+      const stored = await s3.send(new HeadObjectCommand({ Bucket: process.env.ASSET_BUCKET, Key: assetKey }));
+      expect(stored.ContentType).toBe("image/png");
+      expect(stored.Metadata).toMatchObject({ owner: owner.id, purpose: "portfolio" });
+
+      const delivered = await request.get(assetUrl);
+      expect(delivered.status()).toBe(200);
+      expect(delivered.headers()["content-type"]).toContain("image/png");
+      expect(await delivered.body()).toEqual(image);
+
+      const createdResponse = await request.post("/api/portfolio", { headers: ownerAuth, data: {} });
+      const created = await json(createdResponse);
+      const createdPortfolio = created.portfolio as JsonObject;
+      const content = portfolioContent();
+      content.projects[0]!.imageUrl = assetUrl;
+      const savedResponse = await request.patch("/api/portfolio", {
+        headers: ownerAuth,
+        data: { revision: Number(createdPortfolio.revision), content },
+      });
+      expect(savedResponse.status()).toBe(200);
+      const saved = await json(savedResponse);
+      expect(JSON.stringify((saved.portfolio as JsonObject).content)).toContain(assetUrl);
+      const publicPortfolio = await request.get(`/api/public/portfolio/${String(createdPortfolio.slug)}`);
+      expect(publicPortfolio.status()).toBe(404);
+      const publishedResponse = await request.patch("/api/portfolio", {
+        headers: ownerAuth,
+        data: { revision: Number((saved.portfolio as JsonObject).revision), status: "published" },
+      });
+      expect(publishedResponse.status()).toBe(200);
+      const publishedPublicPortfolio = await request.get(`/api/public/portfolio/${String(createdPortfolio.slug)}`);
+      expect(publishedPublicPortfolio.status()).toBe(200);
+      expect(JSON.stringify(await json(publishedPublicPortfolio))).toContain(assetUrl);
+
+      const otherPresignResponse = await request.post("/api/uploads/presign", {
+        headers: otherAuth,
+        data: { filename: "other.png", contentType: "image/png", size: image.length, purpose: "portfolio" },
+      });
+      expect(otherPresignResponse.status()).toBe(200);
+      const otherPresigned = await json(otherPresignResponse);
+      const otherKey = assetKeyFromUrl(String(otherPresigned.assetUrl), baseURL!);
+      expect(otherKey).toMatch(new RegExp(`^portfolio/${other.id}/[0-9a-f-]+\\.png$`));
+      expect(otherKey).not.toContain(`/${owner.id}/`);
+    } finally {
+      if (assetKey) {
+        await s3.send(new DeleteObjectCommand({ Bucket: process.env.ASSET_BUCKET, Key: assetKey }));
+      }
+      await deleteTestUser(owner.id);
+      await deleteTestUser(other.id);
     }
   });
 
@@ -314,6 +444,54 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       const unchanged = await db.prisma.expense.findUnique({ where: { id: expenseId }, select: { userId: true, projectId: true, amount: true } });
       expect(unchanged).toMatchObject({ userId: owner.id, projectId: ownerProject.id });
       expect(unchanged?.amount.toString()).toBe("25");
+    } finally {
+      await deleteTestUser(owner.id);
+      await deleteTestUser(other.id);
+    }
+  });
+
+  test("calendar and project/client associations enforce same-user ownership", async ({ request }) => {
+    const owner = await createTestUser("calendar-owner");
+    const other = await createTestUser("calendar-other");
+    const otherClient = await db.prisma.client.create({ data: { userId: other.id, name: "Other client", tags: [] } });
+    const otherProject = await db.prisma.project.create({
+      data: { userId: other.id, clientId: otherClient.id, title: "Other project", tags: [], currency: "USD" },
+    });
+    const ownerAuth = headers(tokenFor(owner));
+    try {
+      const clients = await request.get("/api/workflow/clients", { headers: ownerAuth });
+      expect(clients.status()).toBe(200);
+      expect(JSON.stringify(await json(clients))).not.toContain(otherClient.id);
+
+      const projects = await request.get(`/api/workflow/projects?clientId=${otherClient.id}`, { headers: ownerAuth });
+      expect(projects.status()).toBe(200);
+      expect(JSON.stringify(await json(projects))).not.toContain(otherProject.id);
+
+      const projectResponse = await request.post("/api/workflow/projects", {
+        headers: ownerAuth,
+        data: { title: "Cross-user project", client_id: otherClient.id, currency: "USD", tags: [], milestones: [] },
+      });
+      expect(projectResponse.status()).toBe(404);
+
+      const clientResponse = await request.put("/api/workflow/clients", {
+        headers: ownerAuth,
+        data: { id: otherClient.id, name: "Must not mutate" },
+      });
+      expect(clientResponse.status()).toBe(404);
+
+      const calendarResponse = await request.post("/api/calendar/events", {
+        headers: ownerAuth,
+        data: {
+          title: "Cross-user calendar attempt",
+          startAt: "2030-01-01T10:00:00.000Z",
+          endAt: "2030-01-01T11:00:00.000Z",
+          timeZone: "UTC",
+          clientId: otherClient.id,
+          projectId: otherProject.id,
+        },
+      });
+      expect(calendarResponse.status()).toBe(404);
+      expect(await db.prisma.calendarEvent.count({ where: { userId: owner.id, title: "Cross-user calendar attempt" } })).toBe(0);
     } finally {
       await deleteTestUser(owner.id);
       await deleteTestUser(other.id);
@@ -420,31 +598,34 @@ test.describe("release-critical persistence, isolation, and activation", () => {
   });
 
   test("portfolio and dashboard load failures remain visible instead of becoming empty state", async ({ context, page, baseURL }) => {
-    const email = process.env.E2E_USER_EMAIL!.trim().toLowerCase();
-    const user = await db.prisma.user.findUnique({ where: { email }, select: { id: true, email: true, plan: true, sessionVersion: true } });
-    expect(user).not.toBeNull();
-    await authenticateBrowser(context, baseURL!, generateUserToken(user!.id, user!.email, user!.plan, user!.sessionVersion));
+    const user = await createTestUser("visible-errors");
+    await db.prisma.user.update({ where: { id: user.id }, data: { onboardingStatus: "complete", onboardingStep: 7 } });
+    await authenticateBrowser(context, baseURL!, tokenFor(user));
 
-    let portfolioPostCalls = 0;
-    await page.route("**/api/portfolio", async (route) => {
-      if (route.request().method() === "GET") {
+    try {
+      let portfolioPostCalls = 0;
+      await page.route("**/api/portfolio", async (route) => {
+        if (route.request().method() === "GET") {
+          await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ success: false, message: "Database unavailable" }) });
+        } else {
+          portfolioPostCalls += 1;
+          await route.continue();
+        }
+      });
+      await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { name: "Your portfolio could not be loaded" })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
+      expect(portfolioPostCalls).toBe(0);
+
+      await page.unroute("**/api/portfolio");
+      await page.route("**/api/workflow/dashboard", async (route) => {
         await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ success: false, message: "Database unavailable" }) });
-      } else {
-        portfolioPostCalls += 1;
-        await route.continue();
-      }
-    });
-    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Your portfolio could not be loaded" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Save/ })).toHaveCount(0);
-    expect(portfolioPostCalls).toBe(0);
-
-    await page.unroute("**/api/portfolio");
-    await page.route("**/api/workflow/dashboard", async (route) => {
-      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ success: false, message: "Database unavailable" }) });
-    });
-    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Your workspace could not be loaded" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retry dashboard" })).toBeVisible();
+      });
+      await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { name: "Your workspace could not be loaded" })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("button", { name: "Retry dashboard" })).toBeVisible({ timeout: 15_000 });
+    } finally {
+      await deleteTestUser(user.id);
+    }
   });
 });

@@ -1,4 +1,6 @@
+import { createHmac } from "node:crypto";
 import { loadEnvConfig } from "@next/env";
+import { checkServerIdentity } from "node:tls";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
@@ -24,13 +26,19 @@ async function getSessionToken() {
       const email = process.env.E2E_USER_EMAIL?.trim().toLowerCase();
       if (!email) throw new Error("E2E_USER_EMAIL is required for authenticated workspace tests.");
 
-      const { generateUserToken } = await import("../../src/utils/userAuth");
       const ssl =
         process.env.DATABASE_SSL === "disable" ||
         process.env.DATABASE_URL?.includes("sslmode=disable")
           ? false
-          : { rejectUnauthorized: false };
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
+          : {
+              rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+              ...(process.env.DATABASE_SSL_SERVERNAME ? { checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) => checkServerIdentity(process.env.DATABASE_SSL_SERVERNAME!, certificate) } : {}),
+            };
+      const databaseUrl = process.env.DATABASE_URL;
+      if (!databaseUrl) throw new Error("DATABASE_URL is required for authenticated workspace tests");
+      const parsedConnectionString = new URL(databaseUrl);
+      for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) parsedConnectionString.searchParams.delete(parameter);
+      const pool = new Pool({ connectionString: parsedConnectionString.toString(), ssl });
       const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
       try {
@@ -39,7 +47,11 @@ async function getSessionToken() {
           select: { id: true, email: true, plan: true, sessionVersion: true },
         });
         if (!user) throw new Error(`No test user exists for ${email}.`);
-        return generateUserToken(user.id, user.email, user.plan, user.sessionVersion);
+        const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        const payload = JSON.stringify({ userId: user.id, email: user.email, plan: user.plan, sessionVersion: user.sessionVersion, expiry });
+        const secret = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-local-development-session-secret";
+        const signature = createHmac("sha256", secret).update(payload).digest("hex");
+        return Buffer.from(`${payload}.${signature}`).toString("base64");
       } finally {
         await prisma.$disconnect();
         await pool.end();
@@ -70,6 +82,9 @@ function captureRuntimeErrors(page: Page) {
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 500) errors.push(`HTTP ${response.status()} ${response.url()}`);
   });
   return errors;
 }

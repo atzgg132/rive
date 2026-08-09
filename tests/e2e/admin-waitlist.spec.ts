@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { checkServerIdentity } from "node:tls";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { expect, test } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
@@ -15,9 +16,17 @@ test.describe("admin waitlist operations", () => {
 
   test.beforeAll(async () => {
     const { generateToken } = await import("../../src/utils/auth");
+    const sslServerName = process.env.DATABASE_SSL_SERVERNAME || "";
+    const parsedConnectionString = new URL(process.env.DATABASE_URL!);
+    for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) parsedConnectionString.searchParams.delete(parameter);
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: false,
+      connectionString: parsedConnectionString.toString(),
+      ssl: process.env.DATABASE_SSL === "disable" || process.env.DATABASE_URL?.includes("sslmode=disable")
+        ? false
+        : {
+            rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+            ...(sslServerName ? { checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) => checkServerIdentity(sslServerName, certificate) } : {}),
+          },
     });
     prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
     adminToken = generateToken();
