@@ -52,9 +52,9 @@ class LocalEsignProvider implements EsignProvider {
 }
 
 /**
- * Rive's first-party signing provider. The application owns the signing
- * ceremony, evidence record, and completed artifact; only the two named
- * contract signers participate.
+ * Rive's first-party recorded-acceptance provider. The application owns the
+ * acceptance flow, evidence record, and accepted artifact; only the two named
+ * Agreement parties participate.
  */
 class RiveEsignProvider implements EsignProvider {
   readonly name = RIVE_ESIGN_PROVIDER;

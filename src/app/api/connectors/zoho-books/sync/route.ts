@@ -3,10 +3,12 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { verifyZohoConnection } from "@/utils/zohoBooks";
+import { zohoBooksAvailable } from "@/utils/connectorConfig";
 
 export async function POST(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+  if (!zohoBooksAvailable()) return NextResponse.json({ success: false, message: "Zoho Books direct migration is not available." }, { status: 503 });
   if (!rateLimit(`zoho-sync:${session.userId}:${getRequestIp(req)}`, 12, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many synchronization attempts." }, { status: 429 });
   }

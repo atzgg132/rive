@@ -31,6 +31,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import CommandPalette from "@/components/dashboard/CommandPalette";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
+import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
 
 interface UserProfile {
   id: string;
@@ -54,6 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
 
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [agreementsEnabled, setAgreementsEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -120,6 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               return;
             }
             setUser(data.user);
+            setAgreementsEnabled(data.featureAvailability?.agreements === true);
             setLoading(false);
             return;
           }
@@ -172,7 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/calendar", label: "Calendar", icon: CalendarDays },
     { href: "/workflow/projects", label: "Projects", icon: Briefcase },
-    { href: "/workflow/contracts", label: "Contracts", icon: FileSignature },
+    ...(agreementsEnabled ? [{ href: "/workflow/contracts", label: "Agreements", icon: FileSignature }] : []),
     { href: "/workflow/clients", label: "Clients", icon: Users },
     { href: "/workflow/revenue", label: "Revenue & invoices", icon: DollarSign },
     { href: "/workflow/expenses", label: "Expenses", icon: Receipt },
@@ -191,6 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency}>
     <div className="flex h-screen min-h-0 overflow-hidden bg-background dark:bg-slate-950">
       <Toaster position="bottom-right" theme="system" />
@@ -404,8 +408,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* ── Command Palette Wrapper ── */}
-      <CommandPalette open={commandPaletteOpen} setOpen={setCommandPaletteOpen} />
+      <CommandPalette open={commandPaletteOpen} setOpen={setCommandPaletteOpen} agreementsEnabled={agreementsEnabled} />
     </div>
     </CurrencyProvider>
+    </FeatureAvailabilityProvider>
   );
 }

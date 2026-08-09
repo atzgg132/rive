@@ -7,7 +7,7 @@ import { Search, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, La
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 
-export default function CommandPalette({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void }) {
+export default function CommandPalette({ open, setOpen, agreementsEnabled = false }: { open: boolean, setOpen: (open: boolean) => void; agreementsEnabled?: boolean }) {
   const router = useRouter();
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -72,12 +72,12 @@ export default function CommandPalette({ open, setOpen }: { open: boolean, setOp
               >
                 <Briefcase className="h-4 w-4" /> Go to Projects
               </Command.Item>
-              <Command.Item
+              {agreementsEnabled && <Command.Item
                 onSelect={() => runCommand(() => router.push("/workflow/contracts"))}
                 className="flex items-center gap-2 px-3 py-2.5 mt-1 rounded-lg text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 aria-selected:bg-blue-50 aria-selected:text-blue-700 dark:aria-selected:bg-blue-900/30 dark:aria-selected:text-blue-400"
               >
-                <FileSignature className="h-4 w-4" /> Go to Contracts
-              </Command.Item>
+                <FileSignature className="h-4 w-4" /> Go to Agreements
+              </Command.Item>}
               <Command.Item
                 onSelect={() => runCommand(() => router.push("/workflow/clients"))}
                 className="flex items-center gap-2 px-3 py-2.5 mt-1 rounded-lg text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 aria-selected:bg-blue-50 aria-selected:text-blue-700 dark:aria-selected:bg-blue-900/30 dark:aria-selected:text-blue-400"

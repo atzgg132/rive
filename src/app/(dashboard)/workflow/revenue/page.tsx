@@ -21,6 +21,7 @@ import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
+import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
 interface InvoiceItemForm {
   description: string;
@@ -65,6 +66,7 @@ interface Project {
 
 export default function RevenuePage() {
   const { displayCurrency, convert, format, formatConverted, ratesAsOf, ratesStatus } = useCurrency();
+  const { agreements } = useFeatureAvailability();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -199,13 +201,13 @@ export default function RevenuePage() {
       // This consumes an external navigation intent once after async hydration.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       openEdit(requestedInvoice);
-      toast.info(requestedInvoice.contract_id ? "Review the contract-generated draft before sending it." : "Invoice opened for review.");
+      toast.info(requestedInvoice.contract_id && agreements ? "Review the Agreement-generated draft before sending it." : "Invoice opened for review.");
     } else {
       toast.error("That invoice is unavailable or no longer matches this workspace.");
     }
     url.searchParams.delete("invoiceId");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [invoices, loading]);
+  }, [agreements, invoices, loading]);
 
   const handleAddItem = () => {
     setItems([...items, { description: "", quantity: "1", unit_price: "0" }]);
@@ -471,7 +473,7 @@ export default function RevenuePage() {
                   <tr key={inv.id} className={`transition-colors group ${highlightedInvoiceId === inv.id ? "bg-blue-50/80 ring-1 ring-inset ring-primary/20 dark:bg-blue-950/25" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"}`}>
                     <td className="py-4 px-6 font-bold text-primary dark:text-blue-400">{inv.invoice_number}</td>
                     <td className="py-4 px-6 font-semibold">{inv.client_name || "private client"}</td>
-                    <td className="py-4 px-6 text-muted-foreground dark:text-slate-400"><span>{inv.project_title || "none"}</span>{inv.contract_id && inv.contract_title ? <Link href={`/workflow/contracts/${inv.contract_id}`} className="mt-1 block max-w-[220px] truncate text-[10px] font-semibold text-primary hover:underline">Contract: {inv.contract_title}</Link> : null}</td>
+                    <td className="py-4 px-6 text-muted-foreground dark:text-slate-400"><span>{inv.project_title || "none"}</span>{agreements && inv.contract_id && inv.contract_title ? <Link href={`/workflow/contracts/${inv.contract_id}`} className="mt-1 block max-w-[220px] truncate text-[10px] font-semibold text-primary hover:underline">Agreement: {inv.contract_title}</Link> : null}</td>
                     <td className="py-4 px-6">{new Date(inv.issue_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                     <td className="py-4 px-6">
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "immediate"}
@@ -568,7 +570,7 @@ export default function RevenuePage() {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit invoice" : "Generate new invoice"}</h3>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">{editingInvoice?.contract_id ? "Generated from the signed payment plan. Confirm every detail before sending." : "Compile itemized work and apply any required tax adjustments."}</p>
+                    <p className="text-xs text-muted-foreground dark:text-slate-400">{agreements && editingInvoice?.contract_id ? "Generated from the accepted Agreement payment plan. Confirm every detail before sending." : "Compile itemized work and apply any required tax adjustments."}</p>
                   </div>
                   <Button
                     variant="ghost"
@@ -583,7 +585,7 @@ export default function RevenuePage() {
                 </div>
 
                 <form onSubmit={handleSave} className="flex flex-col gap-4 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
-                  {editingInvoice?.contract_id ? <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100"><p className="font-bold">Contract-generated draft — not sent</p><p className="mt-0.5 text-blue-900/80 dark:text-blue-200/80">The amount and trigger came from {editingInvoice.contract_title || "the executed contract"}. Your edits affect this invoice only; the signed contract record stays unchanged.</p><Link href={`/workflow/contracts/${editingInvoice.contract_id}`} className="mt-1 inline-flex font-bold underline">Open source contract</Link></div> : null}
+                  {agreements && editingInvoice?.contract_id ? <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100"><p className="font-bold">Agreement-generated draft — not sent</p><p className="mt-0.5 text-blue-900/80 dark:text-blue-200/80">The amount and trigger came from {editingInvoice.contract_title || "the accepted Agreement"}. Your edits affect this invoice only; the accepted Agreement record stays unchanged.</p><Link href={`/workflow/contracts/${editingInvoice.contract_id}`} className="mt-1 inline-flex font-bold underline">Open source Agreement</Link></div> : null}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-bold text-foreground">Invoice number *</label>

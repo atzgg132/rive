@@ -29,8 +29,12 @@ locals {
       "${environment}/CRON_SECRET"                      = random_password.cron[environment].result
       "${environment}/CONTRACTS_ENABLED"             = "true"
       "${environment}/ESIGN_PROVIDER"                = "rive"
+      "${environment}/CONTRACTS_RECORDED_ACCEPTANCE_ENABLED" = "false"
+      "${environment}/CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION" = "false"
+      "${environment}/GOOGLE_CALENDAR_ENABLED"       = "false"
       "${environment}/GOOGLE_CALENDAR_CLIENT_ID"     = var.google_calendar_client_id
       "${environment}/GOOGLE_CALENDAR_CLIENT_SECRET" = var.google_calendar_client_secret
+      "${environment}/ZOHO_BOOKS_ENABLED"            = "false"
       "${environment}/ZOHO_BOOKS_CLIENT_ID"          = var.zoho_books_client_id
       "${environment}/ZOHO_BOOKS_CLIENT_SECRET"      = var.zoho_books_client_secret
       "${environment}/ZOHO_ACCOUNTS_URL"             = "https://accounts.zoho.in"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -21,7 +22,11 @@ export async function GET(req: NextRequest) {
     },
     orderBy: { createdAt: "asc" },
   });
-  return NextResponse.json({ success: true, connections });
+  return NextResponse.json({
+    success: true,
+    connections,
+    connectorAvailability: { googleCalendar: googleCalendarAvailable() },
+  });
 }
 
 export async function PATCH(req: NextRequest) {

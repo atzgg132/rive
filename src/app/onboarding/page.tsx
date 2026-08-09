@@ -219,15 +219,18 @@ export default function OnboardingPage() {
       );
       setAvatarUrl(data.user.avatarUrl || "");
       setGoal(data.user.onboardingData?.goal || "organize");
+      const connectorAvailability = data.connectorAvailability || {};
+      const nextGoogleAvailable = connectorAvailability.googleCalendar === true;
+      const nextZohoAvailable = connectorAvailability.zohoBooks === true;
       setSources(
         Array.isArray(data.user.onboardingData?.sources)
-          ? data.user.onboardingData.sources
+          ? data.user.onboardingData.sources.filter((source: unknown) => source !== "google_calendar" || nextGoogleAvailable)
           : [],
       );
       setConnections(data.connections || []);
       setBusinessConnections(data.businessConnections || []);
-      setGoogleAvailable(data.connectorAvailability?.googleCalendar === true);
-      setZohoAvailable(data.connectorAvailability?.zohoBooks === true);
+      setGoogleAvailable(nextGoogleAvailable);
+      setZohoAvailable(nextZohoAvailable);
       const jobsResponse = await fetch("/api/onboarding/import/jobs");
       if (jobsResponse.ok) {
         const jobsData = await jobsResponse.json();
@@ -265,10 +268,10 @@ export default function OnboardingPage() {
     [step],
   );
   const googleConnection = connections.find(
-    (connection) => connection.provider === "google",
+    (connection) => googleAvailable && connection.provider === "google",
   );
   const zohoConnection = businessConnections.find(
-    (connection) => connection.provider === "zoho_books",
+    (connection) => zohoAvailable && connection.provider === "zoho_books",
   );
 
   async function saveProfile() {
@@ -776,11 +779,11 @@ export default function OnboardingPage() {
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {[
                     ["spreadsheets", "Spreadsheets / CSV"],
-                    ["zoho_books", "Zoho Books"],
-                    ["quickbooks", "QuickBooks"],
-                    ["xero", "Xero"],
-                    ["freshbooks", "FreshBooks"],
-                    ["google_calendar", "Google Calendar"],
+                    ["zoho_books", "Zoho Books export"],
+                    ["quickbooks", "QuickBooks export"],
+                    ["xero", "Xero export"],
+                    ["freshbooks", "FreshBooks export"],
+                    ...(googleAvailable ? [["google_calendar", "Google Calendar"]] : []),
                     ["project_tool", "Project tool"],
                     ["starting_fresh", "Mostly starting fresh"],
                   ].map(([id, label]) => (
@@ -800,7 +803,7 @@ export default function OnboardingPage() {
                   ))}
                 </div>
               </div>
-              {(googleAvailable || googleConnection) && (
+              {googleAvailable && (
                 <div
                   className={`mt-7 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${googleConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-blue-200 bg-blue-50/60 dark:border-blue-900 dark:bg-blue-950/20"}`}
                 >
@@ -818,17 +821,13 @@ export default function OnboardingPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black">Google Calendar</p>
                         <span className="rounded-full border border-current/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                          {googleAvailable || googleConnection
-                            ? "Live connector"
-                            : "Setup pending"}
+                          Live connector
                         </span>
                       </div>
                       <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
                         {googleConnection?.status === "connected"
                           ? `${googleConnection.accountEmail || "Google account"} connected · events and updates sync both ways.`
-                          : googleAvailable
-                            ? "Import existing calendars and events now. New Rive events can sync back to Google."
-                            : "Direct calendar import is ready in Rive and activates when the Google OAuth application is configured."}
+                            : "Import existing calendars and events now. New Rive events can sync back to Google."}
                       </p>
                     </div>
                   </div>
@@ -847,14 +846,10 @@ export default function OnboardingPage() {
                       <Link2 className="h-3.5 w-3.5" />
                       Connect Google
                     </a>
-                  ) : (
-                    <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black text-slate-400 dark:border-slate-700">
-                      Awaiting OAuth setup
-                    </span>
-                  )}
+                  ) : null}
                 </div>
               )}
-              {(sources.includes("zoho_books") || zohoConnection) && (
+              {zohoAvailable && (
                 <div
                   className={`mt-4 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${zohoConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-violet-200 bg-violet-50/60 dark:border-violet-900 dark:bg-violet-950/20"}`}
                 >
@@ -872,19 +867,13 @@ export default function OnboardingPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black">Zoho Books</p>
                         <span className="rounded-full border border-current/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">
-                          {zohoConnection
-                            ? "Connected"
-                            : zohoAvailable
-                              ? "OAuth ready"
-                              : "Setup required"}
+                          {zohoConnection ? "Connected" : "OAuth ready"}
                         </span>
                       </div>
                       <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
                         {zohoConnection
                           ? `${zohoConnection.accountLabel || "Zoho organization"} is connected. Rive will ask for confirmation before importing financial records.`
-                          : zohoAvailable
-                            ? "Connect securely to discover your organization and prepare a reversible migration."
-                            : "Create a Zoho Books server-based OAuth application to activate direct migration."}
+                            : "Connect securely to verify your organization. Record import stays disabled until the import review flow is production-ready."}
                       </p>
                     </div>
                   </div>
@@ -900,11 +889,7 @@ export default function OnboardingPage() {
                       <Link2 className="h-3.5 w-3.5" />
                       Connect Zoho
                     </a>
-                  ) : (
-                    <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black text-slate-400 dark:border-slate-700">
-                      Awaiting OAuth setup
-                    </span>
-                  )}
+                  ) : null}
                 </div>
               )}
               <div className="mt-7">

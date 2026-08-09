@@ -3,6 +3,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { verifyCalendarOAuthState } from "@/utils/calendarCrypto";
 import { discoverGoogleCalendars, exchangeGoogleCode, saveGoogleConnection, syncGoogleConnection, watchGoogleCalendar } from "@/utils/googleCalendar";
 import { prisma } from "@/utils/db";
+import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -10,6 +11,9 @@ export async function GET(req: NextRequest) {
   const state = verifyCalendarOAuthState(req.nextUrl.searchParams.get("state") || "");
   if (!session || !state || state.userId !== session.userId || !code) {
     return NextResponse.redirect(new URL("/calendar?connectionError=invalid_google_callback", req.url));
+  }
+  if (!googleCalendarAvailable()) {
+    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=google_not_available`, req.url));
   }
   try {
     const credentials = await exchangeGoogleCode(code);

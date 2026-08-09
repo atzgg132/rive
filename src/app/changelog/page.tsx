@@ -4,7 +4,7 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const timeline = [
-  { date: "July 2026", title: "connected onboarding and workspace migration", desc: "New accounts can connect Google Calendar during setup, preview and import operational CSV data, build a connected first workflow, and receive an automatically prefilled portfolio instead of opening an empty workspace.", badge: "latest" },
+  { date: "July 2026", title: "connected onboarding and workspace migration", desc: "New accounts can preview and import operational CSV data, build a connected first workflow, and receive an automatically prefilled portfolio instead of opening an empty workspace.", badge: "latest" },
   { date: "July 2026", title: "portfolio studio shipped", desc: "create one polished, public portfolio from the work already in your workspace. choose from six starting templates, edit your identity and case studies, customize the visual system, and publish a shareable link.", badge: null },
   { date: "July 2026", title: "portfolio analytics shipped", desc: "understand how your public work is performing with total views, unique visitors, daily reach, peak days, referral sources, and device breakdowns.", badge: null },
   { date: "June 2026", title: "case studies and media uploads", desc: "portfolio projects now support challenge, approach, outcome, tools, deliverables, galleries, direct image uploads, and HTTPS image URLs — with dedicated public case-study pages.", badge: null },

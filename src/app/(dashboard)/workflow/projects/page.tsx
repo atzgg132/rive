@@ -29,6 +29,7 @@ import { CSS } from "@dnd-kit/utilities";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
 interface Project {
   id: string;
@@ -61,6 +62,7 @@ interface Client {
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { agreements } = useFeatureAvailability();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
@@ -248,7 +250,7 @@ export default function ProjectsPage() {
         toast.success(data.message || `Project ${editingId ? 'updated' : 'created'} successfully!`, { id: loadingToast });
         setDrawerOpen(false);
         await loadProjects();
-        if (!editingId && data.project?.id) {
+        if (agreements && !editingId && data.project?.id) {
           const selectedClient = clients.find((client) => client.id === clientId);
           setContractPrompt({
             id: data.project.id,
@@ -694,6 +696,7 @@ function DraggableProjectCard({
   getProgressPercent
 }: { project: Project; openDropdownId: string | null; setOpenDropdownId: (id: string | null) => void; openEdit: (project: Project) => void; handleDelete: (id: string, name: string) => void; getPriorityColor: (priority: string) => string; getProgressPercent: (project: Project) => number }) {
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
+  const { agreements } = useFeatureAvailability();
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
@@ -810,7 +813,7 @@ function DraggableProjectCard({
         </div>
       </div>
 
-      <div className="ml-6 flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-[10px]">
+      {agreements && <div className="ml-6 flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-[10px]">
         {project.contract_coverage === "rive" && project.latest_contract ? (
           <>
             <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300"><FileSignature className="h-3.5 w-3.5 shrink-0" /><span className="truncate">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span></span>
@@ -831,7 +834,7 @@ function DraggableProjectCard({
             </Link>
           </>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

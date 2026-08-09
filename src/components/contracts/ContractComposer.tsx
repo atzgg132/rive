@@ -242,7 +242,7 @@ export function ContractComposer({
       const payload = await response.json();
       if (!response.ok || !payload.success) throw new Error(payload.message || "Unable to load clauses.");
       const content = payload.contract?.versions?.[0]?.content;
-      if (!Array.isArray(content?.sections)) throw new Error("That contract has no reusable clauses.");
+      if (!Array.isArray(content?.sections)) throw new Error("That Agreement has no reusable clauses.");
       setSections(content.sections);
       if (typeof content.governingLaw === "string") setGoverningLaw(content.governingLaw);
       if (typeof content.jurisdiction === "string") setJurisdiction(content.jurisdiction);
@@ -278,13 +278,13 @@ export function ContractComposer({
 
   const stepProblem = useMemo(() => {
     if (step === 0) {
-      if (!clientId) return "Choose the client who will be the other signing party.";
-      if (!title.trim()) return "Add a clear contract title.";
+      if (!clientId) return "Choose the client who will be the other acceptance party.";
+      if (!title.trim()) return "Add a clear Agreement title.";
       if (!/^[A-Z]{3}$/.test(currency)) return "Use a valid three-letter currency code.";
       if (!governingLaw.trim()) return "Confirm the governing law before continuing.";
     }
     if (step === 1) {
-      if (!enabledSections.length) return "Keep at least one contract clause enabled.";
+      if (!enabledSections.length) return "Keep at least one Agreement clause enabled.";
       const incomplete = enabledSections.find((section) => !section.title.trim() || !section.body.trim());
       if (incomplete) return "Every enabled clause needs a title and complete wording.";
     }
@@ -340,12 +340,12 @@ export function ContractComposer({
         }),
       });
       const payload = await response.json();
-      if (!response.ok || !payload.success) throw new Error(payload.message || "Unable to create the contract draft.");
-      toast.success("Contract draft created. Review it before sharing.");
+      if (!response.ok || !payload.success) throw new Error(payload.message || "Unable to create the Agreement draft.");
+      toast.success("Agreement draft created. Review it before sharing.");
       onOpenChange(false);
       onCreated(payload.contractId);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to create the contract draft.");
+      toast.error(error instanceof Error ? error.message : "Unable to create the Agreement draft.");
     } finally {
       setSaving(false);
     }
@@ -358,12 +358,12 @@ export function ContractComposer({
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><FileSignature className="h-5 w-5" /></div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Contract composer</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Agreement composer</p>
               <DialogTitle className="mt-0.5 text-xl font-extrabold">Create a reviewable first draft</DialogTitle>
               <DialogDescription className="mt-1 text-sm text-muted-foreground">Rive pre-fills what it already knows. You control every legal and payment term before anything is shared.</DialogDescription>
             </div>
           </div>
-          <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Contract creation progress">
+          <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Agreement creation progress">
             {stepLabels.map((label, index) => (
               <li key={label} className="min-w-0">
                 <div className={`h-1 rounded-full ${index <= step ? "bg-primary" : "bg-muted"}`} />
@@ -389,7 +389,7 @@ export function ContractComposer({
                     {availableProjects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
                   </Select>
                 </FormField>
-                <FormField className="sm:col-span-2" label="Contract title" required>
+                <FormField className="sm:col-span-2" label="Agreement title" required>
                   <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Design services agreement — Acme" maxLength={180} disabled={templateLoading} />
                 </FormField>
                 <FormField label="Currency" required hint="All automated invoices use this currency.">
@@ -408,7 +408,7 @@ export function ContractComposer({
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">Only clause wording and venue are copied. Parties, project details, and payments stay specific to this engagement.</p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <Select value={sourceId} onChange={(event) => setSourceId(event.target.value)} className="min-w-0 flex-1">
-                        <option value="">Choose an earlier contract</option>
+                        <option value="">Choose an earlier Agreement</option>
                         {sourceContracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.title} · {contract.client.name}</option>)}
                       </Select>
                       <Button type="button" variant="outline" disabled={!sourceId || sourceLoading} onClick={() => void reuseClauses()}>{sourceLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Reuse clauses</Button>
@@ -430,7 +430,7 @@ export function ContractComposer({
                 {template?.readiness.notices?.length ? (
                   <Alert variant="warning" className="text-xs">
                     <AlertTriangle className="h-4 w-4" />
-                    <div><p className="font-bold">Before this reaches signing</p><ul className="mt-1.5 list-disc space-y-1 pl-4 text-muted-foreground">{template.readiness.notices.map((notice) => <li key={notice}>{notice}</li>)}</ul></div>
+                    <div><p className="font-bold">Before this reaches recorded acceptance</p><ul className="mt-1.5 list-disc space-y-1 pl-4 text-muted-foreground">{template.readiness.notices.map((notice) => <li key={notice}>{notice}</li>)}</ul></div>
                   </Alert>
                 ) : null}
               </aside>
@@ -494,7 +494,7 @@ export function ContractComposer({
                         <div className="grid gap-3 sm:grid-cols-2">
                           <FormField label="Label" required><Input value={payment.label} onChange={(event) => updatePayment(index, { label: event.target.value })} placeholder="Kickoff deposit" maxLength={160} /></FormField>
                           <FormField label={`Amount (${currency})`} required><Input type="number" min="0.01" max="1000000000" step="0.01" value={payment.amount} onChange={(event) => updatePayment(index, { amount: event.target.value })} placeholder="0.00" /></FormField>
-                          <FormField label="Generate draft invoice"><Select value={payment.triggerType} onChange={(event) => updatePayment(index, { triggerType: event.target.value as PaymentDraft["triggerType"], milestoneId: "", triggerDate: "" })}><option value="on_signing">When both parties sign</option><option value="milestone_completed">When a milestone completes</option><option value="milestone_due">When a milestone becomes due</option><option value="fixed_date">On a fixed date</option></Select></FormField>
+                          <FormField label="Generate draft invoice"><Select value={payment.triggerType} onChange={(event) => updatePayment(index, { triggerType: event.target.value as PaymentDraft["triggerType"], milestoneId: "", triggerDate: "" })}><option value="on_signing">When both parties record acceptance</option><option value="milestone_completed">When a milestone completes</option><option value="milestone_due">When a milestone becomes due</option><option value="fixed_date">On a fixed date</option></Select></FormField>
                           {payment.triggerType === "fixed_date" ? <FormField label="Trigger date" required><Input type="date" value={payment.triggerDate} onChange={(event) => updatePayment(index, { triggerDate: event.target.value })} /></FormField> : payment.triggerType.startsWith("milestone") ? <FormField label="Milestone" required><Select value={payment.milestoneId} onChange={(event) => { const milestone = selectedProject?.milestones.find((item) => item.id === event.target.value); updatePayment(index, { milestoneId: event.target.value, ...(!payment.label && milestone ? { label: milestone.title, invoiceDescription: milestone.title } : {}) }); }}><option value="">Choose milestone</option>{selectedProject?.milestones.map((milestone) => <option key={milestone.id} value={milestone.id} disabled={payment.triggerType === "milestone_due" && !milestone.dueDate}>{milestone.title}{milestone.completed ? " · completed" : ""}{payment.triggerType === "milestone_due" && !milestone.dueDate ? " · add a due date first" : ""}</option>)}</Select></FormField> : <FormField label="Invoice due" htmlFor={`payment-${index}-due-days`}><div className="flex items-center gap-2"><Input id={`payment-${index}-due-days`} type="number" min="0" max="365" value={payment.dueDays} onChange={(event) => updatePayment(index, { dueDays: event.target.value })} /><span className="shrink-0 text-xs text-muted-foreground">days</span></div></FormField>}
                           {payment.triggerType !== "on_signing" ? <FormField label="Invoice due" htmlFor={`payment-${index}-due-days`}><div className="flex items-center gap-2"><Input id={`payment-${index}-due-days`} type="number" min="0" max="365" value={payment.dueDays} onChange={(event) => updatePayment(index, { dueDays: event.target.value })} /><span className="shrink-0 text-xs text-muted-foreground">days</span></div></FormField> : null}
                           <FormField className={payment.triggerType === "on_signing" ? "sm:col-span-2" : ""} label="Invoice line description" hint="Optional"><Input value={payment.invoiceDescription} onChange={(event) => updatePayment(index, { invoiceDescription: event.target.value })} placeholder={payment.label || "Work covered by this payment"} maxLength={240} /></FormField>
@@ -512,14 +512,14 @@ export function ContractComposer({
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Parties</dt><dd className="text-right font-semibold">You + {selectedClient?.name || "client"}</dd></div>
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Clauses</dt><dd className="font-semibold">{enabledSections.length} included</dd></div>
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Payments</dt><dd className="font-semibold">{payments.length}</dd></div>
-                    <div className="flex justify-between gap-3 border-t border-border pt-2"><dt className="font-semibold">Contract total</dt><dd className="font-extrabold">{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd></div>
+                    <div className="flex justify-between gap-3 border-t border-border pt-2"><dt className="font-semibold">Agreement total</dt><dd className="font-extrabold">{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd></div>
                     {projectBudget > 0 ? <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Project budget</dt><dd className="font-semibold">{currency} {projectBudget.toLocaleString()}</dd></div> : null}
                   </dl>
                   {projectBudget > 0 && Math.abs(budgetDelta) >= 0.01 ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">The payment schedule is {currency} {Math.abs(budgetDelta).toLocaleString(undefined, { minimumFractionDigits: 2 })} {budgetDelta > 0 ? "above" : "below"} the project budget. That can be intentional—confirm it before saving.</p> : null}
                 </div>
                 <Alert variant="info" className="text-xs">
                   <CheckCircle2 className="h-4 w-4" />
-                  <div><p className="font-bold">Nothing is sent yet</p><p className="mt-1 leading-5 text-muted-foreground">Saving creates an editable version. Review sharing, finalization, signing, and every generated invoice remain separate deliberate actions.</p></div>
+                  <div><p className="font-bold">Nothing is sent yet</p><p className="mt-1 leading-5 text-muted-foreground">Saving creates an editable version. Review sharing, finalization, recorded acceptance, and every generated invoice remain separate deliberate actions.</p></div>
                 </Alert>
               </aside>
             </div>
@@ -528,7 +528,7 @@ export function ContractComposer({
 
         <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:px-7">
           <div className="min-h-5 flex-1 text-xs" aria-live="polite">
-            {attemptedStep && stepProblem ? <span className="inline-flex items-center gap-1.5 font-semibold text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> {stepProblem}</span> : step === 2 && !selectedClient?.email ? <span className="text-amber-700 dark:text-amber-300">You can save this draft, but add the client email before review or signing.</span> : <span className="text-muted-foreground">Step {step + 1} of 3</span>}
+            {attemptedStep && stepProblem ? <span className="inline-flex items-center gap-1.5 font-semibold text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> {stepProblem}</span> : step === 2 && !selectedClient?.email ? <span className="text-amber-700 dark:text-amber-300">You can save this draft, but add the client email before review or recorded acceptance.</span> : <span className="text-muted-foreground">Step {step + 1} of 3</span>}
           </div>
           <div className="flex items-center justify-end gap-2">
             {step > 0 ? <Button type="button" variant="outline" disabled={saving} onClick={() => { setStep((current) => current - 1); setAttemptedStep(false); }}><ArrowLeft className="h-4 w-4" /> Back</Button> : <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>Cancel</Button>}

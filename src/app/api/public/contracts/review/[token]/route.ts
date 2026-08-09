@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { assertContractsEnabled, createNotification, getRequestIp, hashAccessToken, hashRequestValue, CONTRACT_MAX_COMMENT_LENGTH } from "@/utils/contracts";
+import { assertContractsEnabled, classifyContractPublicLinkFailure, createNotification, getRequestId, getRequestIp, hashAccessToken, hashRequestValue, logContractPublicLinkAccess, CONTRACT_MAX_COMMENT_LENGTH } from "@/utils/contracts";
 import { rateLimit } from "@/utils/rateLimit";
 
 async function resolveLink(token: string) {
@@ -17,19 +17,24 @@ function invalidLink(link: Awaited<ReturnType<typeof resolveLink>>): string | nu
   if (!link || link.type !== "review") return "Review link not found.";
   if (link.revokedAt) return "This review link has been revoked. Ask the sender for a new link.";
   if (link.expiresAt <= new Date()) return "This review link has expired. Ask the sender for a new link.";
-  if (!link.version) return "This review link is missing its contract version.";
-  if (link.contract.status === "void") return "This contract has been voided.";
+  if (!link.version) return "This review link is missing its Agreement version.";
+  if (link.contract.status === "void") return "This Agreement has been voided.";
   return null;
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const requestId = getRequestId(req);
   try {
     assertContractsEnabled();
     const { token } = await params;
     const link = await resolveLink(token);
     const problem = invalidLink(link);
-    if (problem) return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    if (problem) {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
+      return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    }
     await prisma.contractReviewLink.update({ where: { id: link!.id }, data: { lastAccessedAt: new Date() } });
+    logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "allowed", revoked: false, expired: false, rateLimited: false });
 
     const content = link!.version!.content as { title?: string; ownerName?: string; ownerEmail?: string; clientName?: string; clientEmail?: string | null; clientCompany?: string | null; clientAddress?: string | null; projectTitle?: string | null; projectDescription?: string | null; governingLaw?: string; jurisdiction?: string | null; sections?: unknown; paymentPlan?: unknown };
     const comments = await prisma.contractComment.findMany({
@@ -62,15 +67,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const requestId = getRequestId(req);
   try {
     assertContractsEnabled();
     const { token } = await params;
     const link = await resolveLink(token);
     const problem = invalidLink(link);
-    if (problem) return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
-    if (link!.contract.status === "ready_to_sign" || link!.contract.status === "executed" || link!.version!.status === "approved") return NextResponse.json({ success: false, message: "This version is no longer accepting review comments." }, { status: 409 });
+    if (problem) {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
+      return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    }
+    if (link!.contract.status === "ready_to_sign" || link!.contract.status === "executed" || link!.version!.status === "approved") {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "read_only_mutation_rejected", revoked: false, expired: false, rateLimited: false });
+      return NextResponse.json({ success: false, message: "This version is no longer accepting review comments." }, { status: 409 });
+    }
     const ip = getRequestIp(req);
-    if (!rateLimit(`contract-review:${link!.id}:${hashRequestValue(ip)}`, 20, 60 * 60 * 1000)) return NextResponse.json({ success: false, message: "Too many comments from this link. Try again later." }, { status: 429 });
+    if (!rateLimit(`contract-review:${link!.id}:${hashRequestValue(ip)}`, 20, 60 * 60 * 1000)) {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "rate_limited", revoked: false, expired: false, rateLimited: true });
+      return NextResponse.json({ success: false, message: "Too many comments from this link. Try again later." }, { status: 429 });
+    }
     const body = await req.json().catch(() => null) as { action?: unknown; authorName?: unknown; authorEmail?: unknown; sectionKey?: unknown; body?: unknown } | null;
     const authorName = typeof body?.authorName === "string" ? body.authorName.trim().slice(0, 120) : "";
     const authorEmail = typeof body?.authorEmail === "string" ? body.authorEmail.trim().slice(0, 254).toLowerCase() : "";
@@ -81,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
           where: { id: link!.version!.id, contractId: link!.contractId, status: { in: ["draft", "approved"] } },
           data: { status: "approved" },
         });
-        if (approved.count !== 1) throw new Error("This contract version changed while approval was being recorded.");
+        if (approved.count !== 1) throw new Error("This Agreement version changed while approval was being recorded.");
         await tx.contractEvent.create({
           data: {
             contractId: link!.contractId,
@@ -92,8 +107,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
           },
         });
       });
-      await createNotification({ userId: link!.contract.userId, type: "contract_review_approved", title: "Contract review approved", message: `${reviewerName} marked ${link!.contract.title} ready for finalization.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
-      return NextResponse.json({ success: true, approved: true, message: "The sender has been told this draft is ready for finalization." });
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "approval_recorded", revoked: false, expired: false, rateLimited: false });
+      await createNotification({ userId: link!.contract.userId, type: "contract_review_approved", title: "Agreement review approved", message: `${reviewerName} marked ${link!.contract.title} ready for finalization.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
+      return NextResponse.json({ success: true, approved: true, message: "The sender has been told this Agreement version is ready for finalization and recorded acceptance." });
     }
     const commentBody = typeof body?.body === "string" ? body.body.trim().slice(0, CONTRACT_MAX_COMMENT_LENGTH) : "";
     const sectionKey = typeof body?.sectionKey === "string" ? body.sectionKey.trim().slice(0, 80) : null;
@@ -105,7 +121,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.versionId, eventType: "client_comment_added", metadata: { commentId: created.id, sectionKey: sectionKey || null }, ipHash: hashRequestValue(ip) } });
       return created;
     });
-    await createNotification({ userId: link!.contract.userId, type: "contract_comment", title: "Client commented on a contract", message: `${authorName} commented on ${link!.contract.title}.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
+    logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "comment_recorded", revoked: false, expired: false, rateLimited: false });
+    await createNotification({ userId: link!.contract.userId, type: "contract_comment", title: "Client commented on an Agreement", message: `${authorName} commented on ${link!.contract.title}.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
     return NextResponse.json({ success: true, comment: { id: comment.id, authorRole: comment.authorRole, authorName: comment.authorName, sectionKey: comment.sectionKey, body: comment.body, status: comment.status, createdAt: comment.createdAt }, message: "Comment added." }, { status: 201 });
   } catch (error) {
     console.error("Public contract comment error:", error);

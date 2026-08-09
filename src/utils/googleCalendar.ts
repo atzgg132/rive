@@ -47,8 +47,8 @@ function googleConfig() {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
-  if (!connectorCredentialConfigured(clientId) || !connectorCredentialConfigured(clientSecret)) {
-    throw new Error("Google Calendar OAuth is not configured.");
+  if (!googleCalendarAvailable() || !connectorCredentialConfigured(clientId) || !connectorCredentialConfigured(clientSecret)) {
+    throw new Error("Google Calendar is not enabled for this deployment.");
   }
   return {
     clientId,

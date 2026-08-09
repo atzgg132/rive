@@ -117,7 +117,7 @@ export async function PATCH(req: NextRequest) {
       ...onboardingData,
       ...(body.goal && GOALS.includes(body.goal) ? { goal: body.goal } : {}),
       ...(Array.isArray(body.sources)
-        ? { sources: body.sources.filter((source: unknown): source is string => typeof source === "string" && STARTING_SOURCES.includes(source)).slice(0, 8) }
+        ? { sources: body.sources.filter((source: unknown): source is string => typeof source === "string" && STARTING_SOURCES.includes(source) && (source !== "google_calendar" || googleCalendarAvailable())).slice(0, 8) }
         : {}),
     };
   }

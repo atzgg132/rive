@@ -24,7 +24,7 @@ export async function POST(
     const { id } = await params;
     const body = await request.json().catch(() => null) as { role?: unknown; sendEmail?: unknown } | null;
     const role = body?.role === "client" ? "client" : body?.role === "owner" ? "owner" : "";
-    if (!role) return NextResponse.json({ success: false, message: "Choose the client or owner signing link." }, { status: 400 });
+    if (!role) return NextResponse.json({ success: false, message: "Choose the client or owner acceptance link." }, { status: 400 });
 
     const contract = await prisma.contract.findFirst({
       where: { id, userId: session.userId },
@@ -33,14 +33,14 @@ export async function POST(
         signers: { where: { role }, take: 1 },
       },
     });
-    if (!contract) return NextResponse.json({ success: false, message: "Contract not found." }, { status: 404 });
-    if (contract.status !== "signing") return NextResponse.json({ success: false, message: "Signing links can only be reissued while signatures are being collected." }, { status: 409 });
+    if (!contract) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
+    if (contract.status !== "signing") return NextResponse.json({ success: false, message: "Acceptance links can only be reissued while acceptance is being collected." }, { status: 409 });
     const version = contract.versions[0];
     const signer = contract.signers[0];
-    if (!version || !signer) return NextResponse.json({ success: false, message: "The signing party or version is missing." }, { status: 409 });
-    if (signer.status === "signed") return NextResponse.json({ success: false, message: `${signer.name} has already signed this version.` }, { status: 409 });
-    if (signer.status !== "pending") return NextResponse.json({ success: false, message: "This signer is not awaiting a signature." }, { status: 409 });
-    if (!signer.email) return NextResponse.json({ success: false, message: "The signer needs an email address before a link can be issued." }, { status: 400 });
+    if (!version || !signer) return NextResponse.json({ success: false, message: "The acceptance party or version is missing." }, { status: 409 });
+    if (signer.status === "signed") return NextResponse.json({ success: false, message: `${signer.name} has already recorded acceptance on this version.` }, { status: 409 });
+    if (signer.status !== "pending") return NextResponse.json({ success: false, message: "This acceptance party is not awaiting recorded acceptance." }, { status: 409 });
+    if (!signer.email) return NextResponse.json({ success: false, message: "The acceptance party needs an email address before a link can be issued." }, { status: 400 });
 
     const token = createAccessToken();
     const expiresAt = new Date(Date.now() + CONTRACT_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
@@ -64,7 +64,7 @@ export async function POST(
         where: { id, userId: session.userId, status: "signing" },
         data: { reviewExpiresAt: expiresAt },
       });
-      if (refreshedContract.count !== 1) throw new Error("This signing request changed before the new link was issued.");
+      if (refreshedContract.count !== 1) throw new Error("This acceptance request changed before the new link was issued.");
       await tx.contractEvent.create({
         data: {
           contractId: id,
@@ -89,12 +89,12 @@ export async function POST(
       email: email ? { sent: email.sent, reason: email.reason } : null,
       message: email
         ? email.sent
-          ? `${role === "client" ? "Client" : "Owner"} signing link reissued and emailed.`
-          : `Signing link reissued, but email delivery failed${email.reason ? `: ${email.reason}` : "."}`
-        : `${role === "client" ? "Client" : "Owner"} signing link reissued.`,
+          ? `${role === "client" ? "Client" : "Owner"} acceptance link reissued and emailed.`
+          : `Acceptance link reissued, but email delivery failed${email.reason ? `: ${email.reason}` : "."}`
+        : `${role === "client" ? "Client" : "Owner"} acceptance link reissued.`,
     });
   } catch (error) {
     console.error("Signing link reissue error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to reissue the signing link." }, { status: 500 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to reissue the acceptance link." }, { status: 500 });
   }
 }

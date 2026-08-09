@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processContractBilling } from "@/utils/contractBilling";
 import { prisma } from "@/utils/db";
-import { createNotification } from "@/utils/contracts";
+import { assertContractsEnabled, createNotification, transitionContractStatus } from "@/utils/contracts";
 
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get("authorization");
   if (!process.env.CRON_SECRET || authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+  }
+  try {
+    assertContractsEnabled();
+  } catch {
+    return NextResponse.json({ success: true, disabled: true, expiredContracts: 0, overdueInvoices: 0, billing: null });
   }
   try {
     const now = new Date();
@@ -19,18 +24,19 @@ export async function POST(request: NextRequest) {
     let expired = 0;
     for (const contract of expiredCandidates) {
       const changed = await prisma.$transaction(async (tx) => {
-        const update = await tx.contract.updateMany({
-          where: { id: contract.id, status: contract.status, reviewExpiresAt: { lte: now } },
-          data: { status: "expired" },
+        const count = await transitionContractStatus(tx, {
+          where: { id: contract.id, reviewExpiresAt: { lte: now } },
+          from: contract.status,
+          to: "expired",
         });
-        if (update.count !== 1) return false;
+        if (count !== 1) return false;
         await tx.contractReviewLink.updateMany({ where: { contractId: contract.id, revokedAt: null, expiresAt: { lte: now } }, data: { revokedAt: now } });
         await tx.contractEvent.create({ data: { contractId: contract.id, eventType: "contract_request_expired", metadata: { previousStatus: contract.status, expiredAt: now.toISOString() } } });
         return true;
       });
       if (!changed) continue;
       expired += 1;
-      await createNotification({ userId: contract.userId, type: "contract_expired", title: "Contract request expired", message: `${contract.title} needs a fresh ${contract.status === "signing" ? "signing" : "review"} request.`, href: `/workflow/contracts/${contract.id}` }).catch(() => undefined);
+      await createNotification({ userId: contract.userId, type: "contract_expired", title: "Agreement request expired", message: `${contract.title} needs a fresh ${contract.status === "signing" ? "acceptance" : "review"} request.`, href: `/workflow/contracts/${contract.id}` }).catch(() => undefined);
     }
 
     const overdue = await prisma.invoice.updateMany({

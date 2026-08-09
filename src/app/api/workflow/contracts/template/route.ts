@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { createDefaultContractSections } from "@/utils/contracts";
+import { assertContractsEnabled, createDefaultContractSections } from "@/utils/contracts";
 import { getSessionUser } from "@/utils/userAuth";
 
 export async function GET(request: NextRequest) {
   try {
+    assertContractsEnabled();
     const session = await getSessionUser(request);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const clientId = searchParams.get("clientId")?.trim() || "";
     const projectId = searchParams.get("projectId")?.trim() || "";
     if (!clientId) {
-      return NextResponse.json({ success: false, message: "Choose a client to prepare the contract draft." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Choose a client to prepare the Agreement draft." }, { status: 400 });
     }
 
     const [owner, client, project] = await Promise.all([
@@ -96,8 +97,8 @@ export async function GET(request: NextRequest) {
           can_share_for_review: Boolean(client.email),
           can_start_signing: Boolean(client.email),
           notices: [
-            ...(!client.email ? ["Add the client email before sharing or signing."] : []),
-            ...(!client.company ? ["Client company or legal entity is not recorded; confirm the named party before signing."] : []),
+            ...(!client.email ? ["Add the client email before sharing or recorded acceptance."] : []),
+            ...(!client.company ? ["Client company or legal entity is not recorded; confirm the named party before recorded acceptance."] : []),
             ...(!client.address ? ["Client address is not recorded; add it if the agreement or local law requires one."] : []),
             "Confirm governing law, jurisdiction, signer authority, taxes, and any transaction-specific formalities before finalizing.",
           ],
@@ -106,6 +107,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Contract template error:", error);
-    return NextResponse.json({ success: false, message: "Unable to prepare the contract draft." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Unable to prepare the Agreement draft." }, { status: 500 });
   }
 }
