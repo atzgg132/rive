@@ -189,6 +189,21 @@ textarea {
   line-height: 1.35;
 }
 
+/* Alpha surfaces use compact metadata, but primary navigation, labels, and
+   helper copy should remain readable at the default browser zoom. Keep the
+   adjustment scoped to product workspaces instead of changing marketing pages. */
+.dashboard-overview [class~="text-[10px]"],
+.portfolio-editor-panels [class~="text-[10px]"] {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.dashboard-overview [class~="text-[9px]"],
+.portfolio-editor-panels [class~="text-[9px]"] {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   line-height: 1.15;

@@ -103,6 +103,12 @@ const BUSINESS_TYPES = [
     icon: BriefcaseBusiness,
   },
   {
+    id: "contractor",
+    label: "Contractor",
+    detail: "I deliver work through contracts or engagements.",
+    icon: BriefcaseBusiness,
+  },
+  {
     id: "creator",
     label: "Creator",
     detail: "Content, partnerships, and gigs.",
@@ -155,7 +161,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [profession, setProfession] = useState("");
-  const [businessType, setBusinessType] = useState("freelancer");
+  const [businessTypes, setBusinessTypes] = useState<string[]>(["freelancer"]);
   const [currency, setCurrency] = useState("INR");
   const [timeZone, setTimeZone] = useState("Asia/Calcutta");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -193,7 +199,13 @@ export default function OnboardingPage() {
       }
       setName(data.user.name || "");
       setProfession(data.user.profession || "");
-      setBusinessType(data.user.businessType || "freelancer");
+      setBusinessTypes(
+        Array.isArray(data.user.businessTypes) && data.user.businessTypes.length
+          ? data.user.businessTypes
+          : data.user.businessType
+            ? [data.user.businessType]
+            : ["freelancer"],
+      );
       setCurrency(
         data.user.currency === "USD" &&
           Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
@@ -260,8 +272,8 @@ export default function OnboardingPage() {
   );
 
   async function saveProfile() {
-    if (!name.trim() || !profession.trim())
-      return toast.error("Add your name and what you do.");
+    if (!name.trim() || !profession.trim() || businessTypes.length === 0)
+      return toast.error("Add your name, what you do, and at least one work type.");
     setSaving(true);
     try {
       const response = await fetch("/api/onboarding", {
@@ -270,7 +282,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           name,
           profession,
-          businessType,
+          businessTypes,
           currency,
           timeZone,
           avatarUrl,
@@ -648,7 +660,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mt-7">
                 <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  How do you work?
+                  How do you work? Choose all that apply.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                   {BUSINESS_TYPES.map((item) => {
@@ -656,14 +668,16 @@ export default function OnboardingPage() {
                     return (
                       <Button
                         key={item.id}
-                        onClick={() => setBusinessType(item.id)}
-                        className={`flex min-w-0 flex-col items-start rounded-xl border p-3 text-left whitespace-normal ${businessType === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
+                        type="button"
+                        aria-pressed={businessTypes.includes(item.id)}
+                        onClick={() => setBusinessTypes((current) => current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id])}
+                        className={`flex min-h-28 min-w-0 items-start gap-2 rounded-xl border p-3 text-left whitespace-normal ${businessTypes.includes(item.id) ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
                       >
                         <Icon className="h-4 w-4 shrink-0 text-blue-600" />
-                        <p className="mt-2 min-w-0 text-xs font-black leading-4">{item.label}</p>
-                        <p className="mt-1 min-w-0 text-[9px] leading-4 text-slate-400">
-                          {item.detail}
-                        </p>
+                        <span className="min-w-0">
+                          <p className="text-xs font-black leading-4">{item.label}</p>
+                          <p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">{item.detail}</p>
+                        </span>
                       </Button>
                     );
                   })}

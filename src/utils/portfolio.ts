@@ -33,6 +33,10 @@ export type PortfolioTestimonial = {
   quote: string;
   name: string;
   company: string;
+  role?: string;
+  projectId?: string;
+  source?: string;
+  visibility?: "public" | "private";
 };
 
 export type PortfolioContent = {
@@ -57,12 +61,12 @@ export type PortfolioTheme = {
 };
 
 export const PORTFOLIO_TEMPLATES = [
-  { key: "minimal-pro", name: "minimal pro", description: "A crisp, editorial portfolio for any independent professional.", accent: "#2563EB" },
-  { key: "visual-studio", name: "visual studio", description: "Media-first storytelling for photographers, filmmakers, and designers.", accent: "#DB2777" },
-  { key: "digital-builder", name: "digital builder", description: "Case-study focused for developers, product designers, and makers.", accent: "#7C3AED" },
-  { key: "expert-profile", name: "expert profile", description: "Trust-first presentation for consultants, CAs, coaches, and advisors.", accent: "#059669" },
-  { key: "creator", name: "creator", description: "A bold home for creators, YouTubers, and independent media brands.", accent: "#EA580C" },
-  { key: "agency", name: "studio / agency", description: "Structured service and case-study pages for small teams.", accent: "#0891B2" },
+  { key: "minimal-pro", name: "Minimal pro", description: "A crisp, editorial portfolio for any independent professional.", accent: "#2563EB" },
+  { key: "visual-studio", name: "Visual studio", description: "Media-first storytelling for photographers, filmmakers, and designers.", accent: "#DB2777" },
+  { key: "digital-builder", name: "Digital builder", description: "Case-study focused for developers, product designers, and makers.", accent: "#7C3AED" },
+  { key: "expert-profile", name: "Expert profile", description: "Trust-first presentation for consultants, CAs, coaches, and advisors.", accent: "#059669" },
+  { key: "creator", name: "Creator", description: "A bold home for creators, YouTubers, and independent media brands.", accent: "#EA580C" },
+  { key: "agency", name: "Studio / agency", description: "Structured service and case-study pages for small teams.", accent: "#0891B2" },
 ] as const;
 
 export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
@@ -214,7 +218,7 @@ const MAX_INLINE_IMAGE_LENGTH = 7_000_000;
 const MAX_TEXT_LENGTH = 5_000;
 const HTTP_URL = /^https?:\/\/[^\s<>]+$/i;
 const INLINE_IMAGE = /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
-const MANAGED_IMAGE = /^\/api\/public\/assets\/portfolio\/[a-z0-9%/-]+\.(?:jpg|png|webp|gif)$/i;
+const MANAGED_IMAGE = /^\/api\/public\/assets\/portfolio\/[0-9a-f-]+\/[0-9a-f-]+\.(?:jpg|png|webp|gif)$/i;
 
 function isSafePortfolioUrl(value: unknown): boolean {
   return typeof value === "string" && value.length <= 2_000 && HTTP_URL.test(value);
@@ -261,7 +265,35 @@ export function validatePortfolioContent(value: unknown): string | null {
       if (!social || typeof social !== "object" || !isSafePortfolioUrl((social as { url?: unknown }).url)) return "Social links must use HTTPS URLs.";
     }
   }
+  if (input.testimonials !== undefined) {
+    if (!Array.isArray(input.testimonials) || input.testimonials.length > 20) return "Add up to 20 testimonials.";
+    for (const testimonial of input.testimonials) {
+      if (!testimonial || typeof testimonial !== "object") return "Each testimonial must be valid.";
+      const item = testimonial as Partial<PortfolioTestimonial>;
+      if (typeof item.id !== "string" || !item.id.trim() || item.id.length > 120) return "Each testimonial needs a valid identifier.";
+      if (typeof item.quote !== "string" || !item.quote.trim() || item.quote.length > 2_000) return "Testimonials need a quote under 2,000 characters.";
+      if (typeof item.name !== "string" || !item.name.trim() || item.name.length > 160) return "Testimonials need the client or person’s name.";
+      for (const field of ["company", "role", "source"] as const) {
+        const fieldValue = item[field];
+        if (fieldValue !== undefined && (typeof fieldValue !== "string" || fieldValue.length > 240)) return `Testimonial ${field} is too long.`;
+      }
+      if (item.projectId !== undefined && (typeof item.projectId !== "string" || item.projectId.length > 120)) return "Testimonial project links are invalid.";
+      if (item.visibility !== undefined && item.visibility !== "public" && item.visibility !== "private") return "Testimonial visibility is invalid.";
+    }
+  }
   if (input.contactEmail !== undefined && (typeof input.contactEmail !== "string" || input.contactEmail.length > 320 || (input.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.contactEmail)))) return "Enter a valid contact email.";
+  return null;
+}
+
+/** Drafts may be incomplete; publishing needs the small set of fields that
+ * makes a public page understandable and contactable. Optional case-study,
+ * media, SEO, and social fields remain optional. */
+export function validatePortfolioForPublish(value: unknown): string | null {
+  const content = mergePortfolioContent(value);
+  if (!content.name.trim()) return "Add your display name before publishing.";
+  if (!content.headline.trim()) return "Add a headline before publishing.";
+  if (!content.bio.trim()) return "Add a short introduction before publishing.";
+  if (!content.contactEmail.trim()) return "Add a contact email before publishing.";
   return null;
 }
 

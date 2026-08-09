@@ -7,9 +7,10 @@ import { mergePortfolioContent } from "@/utils/portfolio";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
+import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
-const IMAGE = /^(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s<>]+)$/i;
-const BUSINESS_TYPES = ["freelancer", "studio", "consultant", "creator", "small_business"];
+const IMAGE = /^(?:data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+|https:\/\/[^\s<>]+|\/api\/public\/assets\/portfolio\/[0-9a-f-]+\/[0-9a-f-]+\.(?:jpg|png|webp|gif))$/i;
+const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
 const STARTING_SOURCES = ["spreadsheets", "zoho_books", "quickbooks", "xero", "freshbooks", "google_calendar", "project_tool", "starting_fresh"];
 
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
         currency: true,
         timeZone: true,
         onboardingData: true,
+        businessTypes: true,
       },
     }),
     prisma.client.count({ where: { userId: session.userId } }),
@@ -77,7 +79,16 @@ export async function PATCH(req: NextRequest) {
   const data: Record<string, unknown> = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim().slice(0, 120);
   if (typeof body.profession === "string") data.profession = body.profession.trim().slice(0, 120) || null;
-  if (BUSINESS_TYPES.includes(body.businessType)) data.businessType = body.businessType;
+  const businessTypes = Array.isArray(body.businessTypes)
+    ? body.businessTypes.filter((value: unknown): value is string => typeof value === "string" && BUSINESS_TYPES.includes(value)).slice(0, BUSINESS_TYPES.length)
+    : null;
+  if (businessTypes) {
+    data.businessTypes = Array.from(new Set(businessTypes));
+    data.businessType = businessTypes[0] || null;
+  } else if (BUSINESS_TYPES.includes(body.businessType)) {
+    data.businessType = body.businessType;
+    data.businessTypes = [body.businessType];
+  }
   if (typeof body.currency === "string" && /^[A-Z]{3}$/.test(body.currency)) data.currency = body.currency;
   if (typeof body.timeZone === "string" && isValidTimeZone(body.timeZone)) data.timeZone = body.timeZone;
   if (Number.isInteger(body.step) && body.step >= 0 && body.step <= 5) data.onboardingStep = body.step;
@@ -118,6 +129,7 @@ export async function PATCH(req: NextRequest) {
         onboardingStatus: true,
         onboardingStep: true,
         businessType: true,
+        businessTypes: true,
         profession: true,
         currency: true,
         timeZone: true,
@@ -143,6 +155,9 @@ export async function PATCH(req: NextRequest) {
       ensureDefaultCalendar(session.userId, user.timeZone),
       ensurePrefilledPortfolio(session.userId),
     ]);
+  }
+  if (body.step > 0 || body.status === "in_progress") {
+    await recordActivationEvent(session.userId, ACTIVATION_EVENTS.onboardingStarted, { step: Number(body.step) || 0 });
   }
   return NextResponse.json({ success: true, user });
 }
@@ -224,6 +239,8 @@ export async function POST(req: NextRequest) {
   await Promise.all([
     ensureDefaultCalendar(session.userId),
     ensurePrefilledPortfolio(session.userId),
+    recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstClientCreated, { clientId: result.client.id }),
+    recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstProjectCreated, { projectId: result.project.id }),
   ]);
 
   return NextResponse.json({ success: true, result }, { status: 201 });

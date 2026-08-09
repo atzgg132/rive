@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
 // GET /api/workflow/clients
 export async function GET(req: NextRequest) {
@@ -119,6 +120,7 @@ export async function POST(req: NextRequest) {
         status: "active"
       }
     });
+    await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstClientCreated, { clientId: client.id });
 
     // Formatting for frontend compatibility
     const formattedClient = {

@@ -1,8 +1,13 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-// Keep the existing DATABASE_URL fallback so currently issued sessions remain valid.
-const SECRET_KEY = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-user-secret-salt-9876";
+// Keep the existing DATABASE_URL fallback so currently issued sessions remain valid,
+// but never allow a predictable development key in production.
+const configuredSecret = process.env.SESSION_SECRET || process.env.DATABASE_URL;
+if (process.env.NODE_ENV === "production" && !configuredSecret) {
+  throw new Error("SESSION_SECRET must be configured in production.");
+}
+const SECRET_KEY = configuredSecret || "rive-local-development-session-secret";
 const TOKEN_COOKIE_NAME = "rive_session";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -83,17 +88,12 @@ export function verifyUserToken(token: string | null): UserSession | null {
   }
 }
 
-// Get session from headers (passed by middleware) or cookies
+// Get the authenticated session from the signed, httpOnly cookie.
 export function getSessionUser(req: NextRequest): UserSession | null {
-  // 1. Try header injected by middleware
-  const headerUser = req.headers.get("x-user-session");
-  if (headerUser) {
-    try {
-      return JSON.parse(headerUser);
-    } catch {}
-  }
-  
-  // 2. Try directly from cookie
+  // The session cookie is the only browser-controlled credential we trust.
+  // A plain JSON identity header can be forged by any caller and this app has
+  // no verified proxy that injects one. Keeping this boundary in one helper
+  // prevents every protected route from accidentally becoming an IDOR.
   const cookie = req.cookies.get(TOKEN_COOKIE_NAME)?.value;
   return verifyUserToken(cookie || null);
 }

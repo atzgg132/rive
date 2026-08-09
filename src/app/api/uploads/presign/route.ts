@@ -3,6 +3,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/utils/userAuth";
+import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 
 const allowedTypes = new Map([
   ["image/jpeg", "jpg"],
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest) {
   const session = getSessionUser(request);
   if (!session) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+  }
+  if (!rateLimit(`asset-presign:${session.userId}:${getRequestIp(request)}`, 60, 15 * 60 * 1000)) {
+    return NextResponse.json({ message: "Too many upload attempts. Please wait and try again." }, { status: 429 });
   }
 
   const bucket = process.env.ASSET_BUCKET;
@@ -31,7 +35,10 @@ export async function POST(request: NextRequest) {
   const size = Number(body?.size);
   const purpose = body?.purpose === "portfolio" ? "portfolio" : null;
   const extension = allowedTypes.get(contentType);
-  const maxBytes = Number(process.env.MAX_UPLOAD_BYTES || 10 * 1024 * 1024);
+  const configuredMax = Number(process.env.MAX_UPLOAD_BYTES);
+  const maxBytes = Number.isSafeInteger(configuredMax) && configuredMax > 0
+    ? configuredMax
+    : 10 * 1024 * 1024;
 
   if (!purpose || !extension || !Number.isSafeInteger(size) || size <= 0 || size > maxBytes) {
     return NextResponse.json(
@@ -49,6 +56,7 @@ export async function POST(request: NextRequest) {
       Key: key,
       ContentType: contentType,
       ContentLength: size,
+      CacheControl: "public, max-age=31536000, immutable",
       Metadata: {
         owner: session.userId,
         purpose,

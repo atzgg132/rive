@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   CalendarDays,
   Target,
-  Upload
+  Upload,
+  CheckCircle2,
 } from "lucide-react";
 import type { ChartData } from "@/components/dashboard/AnalyticsCharts";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
@@ -51,6 +52,14 @@ interface Activation {
   steps: { id: string; label: string; complete: boolean; href: string }[];
 }
 
+interface ProfileReadiness {
+  completed: number;
+  total: number;
+  percentage: number;
+  substantial: boolean;
+  signals: { id: string; label: string; complete: boolean; href: string }[];
+}
+
 interface Insights {
   collectionRate: number;
   profitMargin: number;
@@ -83,6 +92,7 @@ export default function DashboardOverview() {
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [activation, setActivation] = useState<Activation | null>(null);
+  const [profileReadiness, setProfileReadiness] = useState<ProfileReadiness | null>(null);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,6 +108,7 @@ export default function DashboardOverview() {
             setActivities(data.recentActivity);
             setChartData(data.chartData || []);
             setActivation(data.activation || null);
+            setProfileReadiness(data.profileReadiness || null);
             setInsights(data.insights || null);
           }
         }
@@ -132,13 +143,21 @@ export default function DashboardOverview() {
     { title: "Expenses logged", value: formatCurrency(stats.totalExpenses), sub: "All categorized business costs", icon: Receipt, color: "text-[#DC2626] dark:text-red-300 bg-[#FEF2F2] dark:bg-red-950/60 ring-1 ring-red-100 dark:ring-red-800/60" },
     { title: "Net earnings", value: formatCurrency(stats.netEarnings), sub: "Collected revenue minus expenses", icon: TrendingUp, color: "text-[#7C3AED] dark:text-violet-300 bg-[#F5F3FF] dark:bg-violet-950/60 ring-1 ring-violet-100 dark:ring-violet-800/60" },
   ];
+  const isFirstRun = Boolean(
+    activation &&
+    activation.counts.clients === 0 &&
+    activation.counts.projects === 0 &&
+    activation.counts.invoices === 0 &&
+    activation.counts.expenses === 0 &&
+    activities.length === 0,
+  );
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in">
+    <div className="dashboard-overview flex flex-col gap-8 animate-fade-in">
       <PageHeader
         title="Your workspace overview"
         description="See the financial health, delivery status, and activity that need your attention."
-        actions={
+        actions={!isFirstRun ? (
           <>
           <Link href="/workflow/projects" className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-border dark:border-slate-700 hover:bg-background dark:hover:bg-slate-700 text-foreground dark:text-white transition-all">
             <Plus className="h-3.5 w-3.5" />
@@ -149,10 +168,36 @@ export default function DashboardOverview() {
             <span>New invoice</span>
           </Link>
           </>
-        }
+        ) : null}
       />
 
-      {activation && activation.completed < activation.total && (
+      {isFirstRun && activation && (
+        <section className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-600/10 sm:p-8">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Your first steps</div>
+            <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Welcome to Rive. Get your workspace ready.</h2>
+            <p className="mt-2 text-sm leading-6 text-blue-100">Start with the few pieces that make Rive useful: your profile, one client, and one piece of work. You can come back to the rest later.</p>
+          </div>
+          {profileReadiness && (
+            <div className="mt-6 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+              <div className="flex items-center justify-between gap-3 text-xs font-bold"><span>Profile readiness</span><span>{profileReadiness.percentage}%</span></div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-white transition-[width]" style={{ width: `${profileReadiness.percentage}%` }} /></div>
+              <p className="mt-2 text-xs text-blue-100">{profileReadiness.completed} of {profileReadiness.total} useful signals complete. Optional details can wait.</p>
+            </div>
+          )}
+          <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {activation.steps.map((item) => (
+              <Link key={item.id} href={item.href} className="flex min-h-14 items-center justify-between gap-3 rounded-xl bg-white/10 px-3.5 py-3 text-xs font-bold ring-1 ring-white/15 transition hover:bg-white/15">
+                <span className="flex min-w-0 items-center gap-2">{item.complete ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-200" /> : <span className="h-4 w-4 shrink-0 rounded-full border border-white/50" />}<span className="truncate">{item.label}</span></span>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-blue-100" />
+              </Link>
+            ))}
+          </div>
+          <Link href={activation.next?.href || "/onboarding?restart=1"} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-xs font-black text-blue-700">{activation.next ? `Next: ${activation.next.label}` : "Review setup"}<ChevronRight className="h-3.5 w-3.5" /></Link>
+        </section>
+      )}
+
+      {!isFirstRun && activation && activation.completed < activation.total && (
         <section className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-600/10 sm:p-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-xl">
@@ -170,7 +215,7 @@ export default function DashboardOverview() {
       )}
 
       {/* Metrics Row */}
-      <div className={metricsGridClassName}>
+      {!isFirstRun && <div className={metricsGridClassName}>
         {statCards.map((c, idx) => {
           const Icon = c.icon;
           return (
@@ -188,9 +233,9 @@ export default function DashboardOverview() {
             </Card>
           );
         })}
-      </div>
+      </div>}
 
-      {insights && (
+      {!isFirstRun && insights && (
         <section className={metricsGridClassName}>
           <Card className={insightCardClassName}>
             <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Collection health</p>
@@ -224,10 +269,10 @@ export default function DashboardOverview() {
       )}
 
       {/* Analytics Chart */}
-      <AnalyticsCharts data={chartData} />
+      {!isFirstRun && <AnalyticsCharts data={chartData} />}
 
       {/* Detail grids */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {!isFirstRun && <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent activity stream */}
         <div className="lg:col-span-2 glass bg-white/95 dark:bg-slate-800/95 p-6 flex flex-col gap-5">
           <div className="flex items-center justify-between">
@@ -310,7 +355,7 @@ export default function DashboardOverview() {
             )}
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

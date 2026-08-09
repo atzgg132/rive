@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { mergePortfolioContent, normalizeSlug, validatePortfolioContent } from "@/utils/portfolio";
+import { mergePortfolioContent, normalizeSlug, validatePortfolioContent, validatePortfolioForPublish } from "@/utils/portfolio";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
+import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
 function unauthorized() {
   return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -59,12 +60,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     const data: Record<string, unknown> = { revision: current.revision + 1 };
+    let contentForStatus: unknown = current.content;
     let syncedProfileImage: string | undefined;
     if (body.content !== undefined) {
       const contentError = validatePortfolioContent(body.content);
       if (contentError) return NextResponse.json({ success: false, message: contentError }, { status: 400 });
       const mergedContent = mergePortfolioContent(body.content);
       data.content = mergedContent;
+      contentForStatus = mergedContent;
       syncedProfileImage = mergedContent.profileImageUrl;
     }
     if (body.theme !== undefined) data.theme = { ...current.theme as object, ...body.theme };
@@ -78,6 +81,10 @@ export async function PATCH(req: NextRequest) {
       data.slug = slug;
     }
     if (body.status === "published" || body.status === "draft") {
+      if (body.status === "published") {
+        const publishError = validatePortfolioForPublish(contentForStatus);
+        if (publishError) return NextResponse.json({ success: false, message: publishError }, { status: 400 });
+      }
       data.status = body.status;
       data.publishedAt = body.status === "published" ? new Date() : null;
     }
@@ -92,6 +99,24 @@ export async function PATCH(req: NextRequest) {
       }
       return updatedPortfolio;
     });
+    if (body.content !== undefined) {
+      const savedContent = mergePortfolioContent(portfolio.content);
+      const coreSignals = [
+        Boolean(savedContent.name.trim()),
+        Boolean(savedContent.headline.trim() && savedContent.bio.trim()),
+        savedContent.services.some((service) => Boolean(service.title.trim())),
+        savedContent.projects.some((project) => project.visibility !== "private" && Boolean(project.title.trim())),
+        Boolean(savedContent.contactEmail.trim() || savedContent.location.trim()),
+      ];
+      if (coreSignals.filter(Boolean).length >= 4) {
+        await recordActivationEvent(session.userId, ACTIVATION_EVENTS.profileSubstantiallyCompleted, {
+          completedSignals: coreSignals.filter(Boolean).length,
+        });
+      }
+    }
+    if (body.status === "published") {
+      await recordActivationEvent(session.userId, ACTIVATION_EVENTS.portfolioPublished, { portfolioId: portfolio.id });
+    }
     return NextResponse.json({ success: true, portfolio });
   } catch (error) {
     console.error("Portfolio update error:", error);

@@ -275,26 +275,26 @@ export function sendWaitlistJoinedEmail(to: string, type: string): Promise<Email
   const title = remit ? "You’re on the Remit early-access list." : "Your place is saved.";
   const intro = remit
     ? "Thanks for raising your hand for Remit. We’ll write when early access is ready for you."
-    : "Thanks for joining rive. We’ll review early-access requests in small batches.";
+    : "Thanks for joining Rive. We’ll review early-access requests in small batches.";
   const body = remit
     ? `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Remit is being designed to make cross-border payments less painful for independent professionals. We are still building it, so we will only email you when there is a meaningful product update or an invitation to try it.</p>`
-    : `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">rive. brings the operational side of independent work together: clients, projects, invoices, expenses, and a public portfolio. If your access is approved, you’ll receive a secure, personal registration link from us.</p>`;
+    : `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Rive brings the operational side of independent work together: clients, projects, invoices, expenses, and a public portfolio. If your access is approved, you’ll receive a secure, personal registration link from us.</p>`;
 
   return deliver({
     to,
     type: "waitlist_joined",
-    subject: remit ? "Your Remit early-access spot is saved" : "You’re on the rive. early-access list",
+    subject: remit ? "Your Remit early-access spot is saved" : "You’re on the Rive early-access list",
     html: baseTemplate({
       eyebrow: "early access",
       title,
       intro,
       body,
-      action: "Explore rive.",
+      action: "Explore Rive",
       actionUrl: appUrl,
       aside: "You do not need to do anything else. We will never ask for your password over email.",
       recipient: to,
     }),
-    text: `${title}\n\n${intro}\n\nExplore rive.: ${appUrl}\n\nQuestions? hello@rive.work`,
+    text: `${title}\n\n${intro}\n\nExplore Rive: ${appUrl}\n\nQuestions? hello@rive.work`,
   });
 }
 
@@ -483,7 +483,6 @@ export function sendContractReviewEmail(input: {
   expiresAt: Date;
 }): Promise<EmailResult> {
   const safeOwner = escapeHtml(input.ownerName);
-  const safeTitle = escapeHtml(input.contractTitle);
   const expiry = input.expiresAt.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
   return deliver({
     to: input.to,
@@ -491,8 +490,8 @@ export function sendContractReviewEmail(input: {
     subject: `${input.ownerName} shared a contract for review`,
     html: baseTemplate({
       eyebrow: "contract review",
-      title: `${safeOwner} shared a draft with you.`,
-      intro: `Please review “${safeTitle}” and leave comments or suggested edits before anyone signs.`,
+      title: `${input.ownerName} shared a draft with you.`,
+      intro: `Please review “${input.contractTitle}” and leave comments or suggested edits before anyone signs.`,
       body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">This is a review link, not a signature request. The agreement will not be executed until the parties review the final version and complete the separate signing step.</p>`,
       action: "Review contract",
       actionUrl: input.reviewUrl,
@@ -518,7 +517,7 @@ export function sendContractSigningEmail(input: {
     html: baseTemplate({
       eyebrow: "signature requested",
       title: "A contract is ready for your signature.",
-      intro: `Please read the complete contract before signing “${escapeHtml(input.contractTitle)}”.`,
+      intro: `Please read the complete contract before signing “${input.contractTitle}”.`,
       body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">The signing page will show the exact version, signer consent language, and the record that will be created when you sign. Only the named client and freelancer signatories are invited to sign.</p>`,
       action: "Open signing page",
       actionUrl: input.signUrl,
@@ -542,11 +541,11 @@ export function sendContractExecutedEmail(input: {
     html: baseTemplate({
       eyebrow: "contract completed",
       title: "Both signatures are recorded.",
-      intro: `The completed version of “${escapeHtml(input.contractTitle)}” is ready to download and retain.`,
+      intro: `The completed version of “${input.contractTitle}” is ready to download and retain.`,
       body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Keep the completed document and its signing evidence with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
       action: "View completed contract",
       actionUrl: input.artifactUrl,
-      aside: "This message confirms the record created in rive.; it does not replace any legal, tax, identity, or regulatory requirement that applies to the transaction.",
+      aside: "This message confirms the record created in Rive; it does not replace any legal, tax, identity, or regulatory requirement that applies to the transaction.",
       recipient: input.to,
     }),
     text: `Both signatures are recorded for “${input.contractTitle}”.\n\nView the completed contract: ${input.artifactUrl}`,
@@ -570,8 +569,8 @@ export function sendInvoiceReadyEmail(input: {
     subject: `Invoice ${input.invoiceNumber} is ready to review`,
     html: baseTemplate({
       eyebrow: "invoice ready",
-      title: `Invoice ${escapeHtml(input.invoiceNumber)} is ready.`,
-      intro: `A milestone-linked draft invoice for ${escapeHtml(input.clientName)} has been generated for review.`,
+      title: `Invoice ${input.invoiceNumber} is ready.`,
+      intro: `A milestone-linked draft invoice for ${input.clientName} has been generated for review.`,
       body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Amount: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
       action: "Open revenue workspace",
       actionUrl: `${appUrl}/workflow/revenue`,
@@ -601,7 +600,7 @@ export function sendInvoiceSentEmail(input: {
     html: baseTemplate({
       eyebrow: "invoice",
       title: `Invoice ${escapeHtml(input.invoiceNumber)}`,
-      intro: `${escapeHtml(input.senderName)} sent an invoice for your review and payment.`,
+      intro: `${input.senderName} sent an invoice for your review and payment.`,
       body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Amount due: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
       aside: "The invoice email is a delivery notice. Please verify the sender and payment details using a trusted channel before paying.",
       recipient: input.to,

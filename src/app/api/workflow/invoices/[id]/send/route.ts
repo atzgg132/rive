@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { sendInvoiceSentEmail } from "@/utils/email";
+import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     await prisma.invoice.update({ where: { id: invoice.id }, data: { status: "sent", sentAt: new Date(), reviewedAt: new Date() } });
+    await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { invoiceId: invoice.id });
     return NextResponse.json({ success: true, delivered: true, message: "Invoice sent and delivery recorded." });
   } catch (error) {
     console.error("Invoice send error:", error);

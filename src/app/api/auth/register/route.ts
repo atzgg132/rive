@@ -4,6 +4,7 @@ import { hashPassword, generateUserToken, setSessionCookie } from "@/utils/userA
 import { findValidAuthToken } from "@/utils/authTokens";
 import { sendRegistrationCompleteEmail } from "@/utils/email";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
       });
     });
 
+    await recordActivationEvent(user.id, ACTIVATION_EVENTS.registered);
     const sessionToken = generateUserToken(user.id, user.email, user.plan);
     const emailResult = await sendRegistrationCompleteEmail(user.email, user.name || normalizedName);
     const response = NextResponse.json(

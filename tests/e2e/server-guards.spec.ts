@@ -62,3 +62,13 @@ test("login validates missing credentials on the server", async ({ request }) =>
   expect(response.status()).toBe(400);
   await expect(response.json()).resolves.toMatchObject({ success: false });
 });
+
+test("a spoofed identity header cannot authenticate a request", async ({ request }) => {
+  const response = await request.get("/api/auth/session", {
+    headers: {
+      "x-user-session": JSON.stringify({ userId: "another-user", email: "attacker@example.com", plan: "pro", expiry: Date.now() + 60_000 }),
+    },
+  });
+
+  expect(response.status()).toBe(401);
+});

@@ -281,6 +281,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
   const profile = TEMPLATE_PROFILES[templateKey] || TEMPLATE_PROFILES["minimal-pro"];
   const dark = theme.mode === "dark";
   const publicProjects = content.projects.filter((project) => project.visibility !== "private");
+  const publicTestimonials = content.testimonials.filter((testimonial) => testimonial.visibility !== "private");
   const featuredProject = publicProjects.find((project) => project.imageUrl) || publicProjects[0];
   const visible = (key: PortfolioContent["sections"][number]["key"]) =>
     content.sections.find((section) => section.key === key)?.visible ?? true;
@@ -457,17 +458,17 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
             </section>
           )}
 
-          {visible("testimonials") && content.testimonials.length > 0 && (
+          {visible("testimonials") && publicTestimonials.length > 0 && (
             <section className="border-t border-[var(--portfolio-border)] py-20 sm:py-28">
               <SectionHeading eyebrow="Client perspective" title="The work matters. So does the experience." />
               <div className="grid gap-5 md:grid-cols-2">
-                {content.testimonials.map((testimonial) => (
+                {publicTestimonials.map((testimonial) => (
                   <blockquote key={testimonial.id} className="rounded-[var(--portfolio-radius)] border border-[var(--portfolio-border)] bg-[var(--portfolio-card)] p-6 sm:p-8">
                     <Quote className="h-7 w-7 text-[var(--portfolio-accent)]" />
                     <p className="mt-6 text-lg font-semibold leading-8 text-[var(--portfolio-ink)]">“{testimonial.quote}”</p>
                     <footer className="mt-7 border-t border-[var(--portfolio-border)] pt-5">
                       <p className="text-sm font-extrabold text-[var(--portfolio-ink)]">{testimonial.name}</p>
-                      {testimonial.company && <p className="mt-1 text-xs text-[var(--portfolio-muted)]">{testimonial.company}</p>}
+                      {(testimonial.role || testimonial.company) && <p className="mt-1 text-xs text-[var(--portfolio-muted)]">{testimonial.role || testimonial.company}</p>}
                     </footer>
                   </blockquote>
                 ))}

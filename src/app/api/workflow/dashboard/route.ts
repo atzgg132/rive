@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { mergePortfolioContent } from "@/utils/portfolio";
 
 export async function GET(req: NextRequest) {
   try {
@@ -209,10 +210,10 @@ export async function GET(req: NextRequest) {
       }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, profession: true, businessType: true },
+        select: { name: true, profession: true, businessType: true, businessTypes: true },
       }),
       prisma.calendarConnection.count({ where: { userId, status: "connected" } }),
-      prisma.portfolio.findUnique({ where: { userId }, select: { status: true, publishedAt: true } }),
+      prisma.portfolio.findUnique({ where: { userId }, select: { id: true, status: true, publishedAt: true, content: true } }),
       prisma.importIssue.count({
         where: { importJob: { userId }, resolvedAt: null, severity: { in: ["warning", "blocking"] } },
       }),
@@ -221,8 +222,30 @@ export async function GET(req: NextRequest) {
     const receivableBase = totalPaid + totalPending;
     const collectionRate = receivableBase > 0 ? Math.round((totalPaid / receivableBase) * 100) : 0;
     const profitMargin = totalPaid > 0 ? Math.round((netEarnings / totalPaid) * 100) : 0;
+    const portfolioContent = portfolio ? mergePortfolioContent(portfolio.content) : null;
+    const businessTypes = workspaceUser?.businessTypes?.length
+      ? workspaceUser.businessTypes
+      : workspaceUser?.businessType
+        ? [workspaceUser.businessType]
+        : [];
+    const profileSignals = [
+      { id: "identity", label: "Identity", complete: Boolean(workspaceUser?.name && workspaceUser.profession && businessTypes.length > 0), href: "/onboarding?restart=1" },
+      { id: "story", label: "Headline & introduction", complete: Boolean(portfolioContent?.headline.trim() && portfolioContent.bio.trim()), href: "/portfolio" },
+      { id: "service", label: "At least one service", complete: Boolean(portfolioContent?.services.some((service) => service.title.trim())), href: "/portfolio" },
+      { id: "work", label: "At least one selected project", complete: Boolean(portfolioContent?.projects.some((project) => project.visibility !== "private" && project.title.trim())), href: "/portfolio" },
+      { id: "contact", label: "Contact details", complete: Boolean(portfolioContent?.contactEmail.trim() || portfolioContent?.location.trim()), href: "/portfolio" },
+      { id: "published", label: "Portfolio published", complete: portfolio?.status === "published" || Boolean(portfolio?.publishedAt), href: "/portfolio" },
+    ];
+    const profileCoreCompleted = profileSignals.slice(0, 5).filter((signal) => signal.complete).length;
+    const profileReadiness = {
+      completed: profileSignals.filter((signal) => signal.complete).length,
+      total: profileSignals.length,
+      percentage: Math.round((profileSignals.filter((signal) => signal.complete).length / profileSignals.length) * 100),
+      substantial: profileCoreCompleted >= 4,
+      signals: profileSignals,
+    };
     const activationSteps = [
-      { id: "profile", label: "Business profile", complete: Boolean(workspaceUser?.name && workspaceUser.profession && workspaceUser.businessType), href: "/onboarding?restart=1" },
+      { id: "profile", label: "Profile ready", complete: profileReadiness.substantial, href: "/portfolio" },
       { id: "client", label: "First client", complete: clientCount > 0, href: "/workflow/clients" },
       { id: "project", label: "Active work", complete: projectCount > 0, href: "/workflow/projects" },
       { id: "financial", label: "Financial context", complete: invoiceCount > 0 || expenseCount > 0, href: invoiceCount > 0 ? "/workflow/revenue" : "/workflow/expenses" },
@@ -251,6 +274,7 @@ export async function GET(req: NextRequest) {
       recentActivity,
       chartData: Object.values(monthlyChartData),
       activation,
+      profileReadiness,
       insights: {
         collectionRate,
         profitMargin,

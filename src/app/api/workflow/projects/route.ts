@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
 const PROJECT_STATUSES = new Set(["active", "paused", "completed", "archived"]);
 const PROJECT_PRIORITIES = new Set(["low", "medium", "high", "urgent"]);
@@ -237,6 +238,7 @@ export async function POST(req: NextRequest) {
 
       return proj;
     });
+    await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstProjectCreated, { projectId: project.id });
 
     const formattedProject = {
       ...project,

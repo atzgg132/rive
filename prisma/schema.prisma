@@ -38,6 +38,7 @@ model User {
   onboardingStatus      String                 @default("complete") @map("onboarding_status")
   onboardingStep        Int                    @default(0) @map("onboarding_step")
   businessType          String?                @map("business_type")
+  businessTypes         String[]               @default([]) @map("business_types")
   profession            String?
   currency              String                 @default("USD")
   timeZone              String                 @default("UTC") @map("time_zone")

@@ -80,3 +80,11 @@ test("registration password visibility control works for invited users", async (
   await showPassword.click();
   await expect(page.locator('input[type="text"]')).toHaveCount(2);
 });
+
+test("an unpublished or unknown portfolio URL explains why it is unavailable", async ({ page }) => {
+  test.skip(!process.env.DATABASE_URL, "Requires a database-backed public portfolio lookup.");
+  const response = await page.goto("/p/alpha-missing-portfolio", { waitUntil: "domcontentloaded" });
+
+  expect(response?.status()).toBe(404);
+  await expect(page.getByText("This portfolio is not available.")).toBeVisible();
+});

@@ -14,10 +14,11 @@ if (globalForPrisma.prisma) {
 } else {
   let connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    if (process.env.NEXT_PHASE === "phase-production-build") {
-      // Route modules are evaluated while Next.js builds, but dynamic handlers
-      // do not query the database. Keep credentials out of image build args;
-      // runtime still fails closed when DATABASE_URL is absent.
+    if (process.env.NEXT_PHASE === "phase-production-build" || process.env.NODE_ENV !== "production") {
+      // Route modules are evaluated during builds and local public/auth checks
+      // should still be able to return a useful 401/404 when a developer has
+      // not started Postgres. Authenticated database operations will fail with
+      // a visible server error until DATABASE_URL is configured.
       connectionString = "postgresql://build:build@127.0.0.1:5432/build";
     } else {
       throw new Error("DATABASE_URL environment variable is missing.");

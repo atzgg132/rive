@@ -14,7 +14,12 @@ export async function GET(
   }
 
   const { key: segments } = await context.params;
-  const key = segments.map(decodeURIComponent).join("/");
+  let key: string;
+  try {
+    key = segments.map(decodeURIComponent).join("/");
+  } catch {
+    return NextResponse.json({ message: "Asset not found." }, { status: 404 });
+  }
   if (!/^portfolio\/[0-9a-f-]+\/[0-9a-f-]+\.(?:jpg|png|webp|gif)$/i.test(key)) {
     return NextResponse.json({ message: "Asset not found." }, { status: 404 });
   }
@@ -25,10 +30,19 @@ export async function GET(
     );
     if (!result.Body) throw new Error("Asset has no body.");
 
+    const extension = key.split(".").at(-1)?.toLowerCase();
+    const contentType = extension === "jpg"
+      ? "image/jpeg"
+      : extension === "png"
+        ? "image/png"
+        : extension === "webp"
+          ? "image/webp"
+          : "image/gif";
     return new NextResponse(result.Body.transformToWebStream(), {
       headers: {
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-        "Content-Type": result.ContentType || "application/octet-stream",
+        "Content-Type": contentType,
+        "Content-Disposition": "inline",
         "Content-Length": String(result.ContentLength || ""),
         ETag: result.ETag || "",
         "X-Content-Type-Options": "nosniff",
