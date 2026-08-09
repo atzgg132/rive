@@ -1,6 +1,6 @@
 # Alpha stability sprint
 
-Status: implementation complete; database-backed fresh-user verification remains environment-gated.
+Status: implementation complete; database-backed fresh-user verification is covered by the release-critical Playwright suite and remains environment-gated on this workstation.
 
 ## Implementation checklist
 
@@ -55,10 +55,9 @@ Obvious waitlist capitalization/grammar and the contract-completion “created i
 ## Remaining issues
 
 - A completed upload that is never associated with a saved portfolio can be orphaned. Add an asset registry/reconciliation policy before private media or high-volume use.
-- No database-backed automated test currently covers editor save/reload, API failure recovery, slug change/publication, or two-user asset isolation. The code paths were audited and unauthenticated/route/responsive browser checks passed, but the full journey needs a configured environment.
+- `tests/e2e/release-critical.spec.ts` covers portfolio persistence/publication and private-content boundaries, revision conflicts, expense ownership, onboarding multi-select, idempotent activation, password-reset session revocation, the client-to-invoice path, and explicit dashboard/editor failures. It runs against the migrated CI PostgreSQL service; this workstation skips it because its local provider is unavailable.
 - Availability remains free text pending a domain decision; no rigid database enum was introduced.
 
 ## Database/API compatibility
 
-Migration `20260809120000_add_user_business_types` adds `users.business_types TEXT[] NOT NULL DEFAULT []` and backfills the existing nullable `business_type` into a one-element array. The legacy column remains populated with the first selected value for existing consumers. Portfolio APIs now reject invalid content and incomplete publication, expose explicit status errors, and emit the readiness/activation fields described above. No new table or activation migration was needed because `AuditEvent` already exists.
-
+Migration `20260809120000_add_user_business_types` adds `users.business_types TEXT[] NOT NULL DEFAULT []` and backfills the existing nullable `business_type` into a one-element array. Migration `20260809150000_harden_sessions_and_activation_events` adds `users.session_version` for password-reset session revocation, removes duplicate per-user activation rows, and adds the per-user/action uniqueness constraint used by idempotent activation writes. The legacy `business_type` column remains populated with the first selected value for existing consumers. Portfolio APIs now reject invalid content and incomplete publication, expose explicit status errors, filter private content from public JSON, and emit the readiness/activation fields described above.

@@ -24,7 +24,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = getSessionUser(request);
+    const session = await getSessionUser(request);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }

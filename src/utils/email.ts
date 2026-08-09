@@ -534,6 +534,7 @@ export function sendContractExecutedEmail(input: {
   contractTitle: string;
   artifactUrl: string;
 }): Promise<EmailResult> {
+  const safeRecipientName = escapeHtml(input.recipientName);
   return deliver({
     to: input.to,
     type: "contract_executed",
@@ -542,7 +543,7 @@ export function sendContractExecutedEmail(input: {
       eyebrow: "contract completed",
       title: "Both signatures are recorded.",
       intro: `The completed version of “${input.contractTitle}” is ready to download and retain.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Keep the completed document and its signing evidence with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeRecipientName}, keep the completed document and its signing evidence with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
       action: "View completed contract",
       actionUrl: input.artifactUrl,
       aside: "This message confirms the record created in Rive; it does not replace any legal, tax, identity, or regulatory requirement that applies to the transaction.",
@@ -593,15 +594,17 @@ export function sendInvoiceSentEmail(input: {
   const due = input.dueDate
     ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
     : "not specified";
+  const safeClientName = escapeHtml(input.clientName);
+  const safeSenderName = escapeHtml(input.senderName);
   return deliver({
     to: input.to,
     type: "invoice_sent",
     subject: `Invoice ${input.invoiceNumber} from ${input.senderName}`,
     html: baseTemplate({
       eyebrow: "invoice",
-      title: `Invoice ${escapeHtml(input.invoiceNumber)}`,
+      title: `Invoice ${input.invoiceNumber}`,
       intro: `${input.senderName} sent an invoice for your review and payment.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Amount due: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeClientName}, ${safeSenderName} sent this invoice for your review and payment.<br><br>Amount due: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
       aside: "The invoice email is a delivery notice. Please verify the sender and payment details using a trusted channel before paying.",
       recipient: input.to,
     }),

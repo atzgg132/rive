@@ -5,7 +5,7 @@ import { getSessionUser } from "@/utils/userAuth";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = getSessionUser(request);
+    const session = await getSessionUser(request);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }

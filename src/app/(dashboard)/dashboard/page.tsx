@@ -103,33 +103,36 @@ export default function DashboardOverview() {
   const [profileReadiness, setProfileReadiness] = useState<ProfileReadiness | null>(null);
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [currencyMeta, setCurrencyMeta] = useState<CurrencyMeta | null>(null);
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true);
+      setLoadError("");
       try {
         const res = await fetch("/api/workflow/dashboard");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            setStats(data.stats);
-            setTopClients(data.topClients);
-            setActivities(data.recentActivity);
-            setChartData(data.chartData || []);
-            setActivation(data.activation || null);
-            setProfileReadiness(data.profileReadiness || null);
-            setInsights(data.insights || null);
-            setCurrencyMeta(data.currency || null);
-          }
-        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) throw new Error(data.message || "Could not load dashboard data.");
+        setStats(data.stats);
+        setTopClients(data.topClients || []);
+        setActivities(data.recentActivity || []);
+        setChartData(data.chartData || []);
+        setActivation(data.activation || null);
+        setProfileReadiness(data.profileReadiness || null);
+        setInsights(data.insights || null);
+        setCurrencyMeta(data.currency || null);
       } catch (err) {
+        const message = err instanceof Error ? err.message : "Could not load dashboard data.";
         console.error("Failed to load dashboard data:", err);
+        setLoadError(message);
       } finally {
         setLoading(false);
       }
     }
     loadData();
-  }, [displayCurrency]);
+  }, [displayCurrency, reloadKey]);
 
   const dashboardCurrency = currencyMeta?.displayCurrency || displayCurrency;
   const formatCurrency = (val: number) => format(val, dashboardCurrency);
@@ -138,6 +141,19 @@ export default function DashboardOverview() {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading metrics...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-80 items-center justify-center px-4">
+        <section role="alert" className="w-full max-w-lg rounded-3xl border border-red-200 bg-red-50 p-6 text-center text-red-900 shadow-sm dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
+          <h1 className="text-lg font-black">Your workspace could not be loaded</h1>
+          <p className="mt-2 text-sm leading-6 text-red-800 dark:text-red-200">Rive could not retrieve your dashboard data. Your account has not been treated as empty.</p>
+          <p className="mt-3 break-words text-xs text-red-700/80 dark:text-red-200/80">{loadError}</p>
+          <button type="button" onClick={() => setReloadKey((value) => value + 1)} className="mt-5 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-800">Retry dashboard</button>
+        </section>
       </div>
     );
   }

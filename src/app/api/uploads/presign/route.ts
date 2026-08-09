@@ -13,7 +13,7 @@ const allowedTypes = new Map([
 ]);
 
 export async function POST(request: NextRequest) {
-  const session = getSessionUser(request);
+  const session = await getSessionUser(request);
   if (!session) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }

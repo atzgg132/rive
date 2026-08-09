@@ -18,6 +18,7 @@ import {
 import { rateLimit } from "@/utils/rateLimit";
 import { createNotification } from "@/utils/contracts";
 import { processContractBilling } from "@/utils/contractBilling";
+import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
 async function resolveLink(token: string) {
   return prisma.contractReviewLink.findUnique({
@@ -210,6 +211,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     if (completion.completed && completion.artifactToken) {
       const executed = await prisma.contract.findUnique({ where: { id: link!.contractId }, include: { client: { select: { name: true, email: true } } } });
       if (executed) {
+        await recordActivationEvent(executed.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { contractId: executed.id, workflow: "contract_executed" });
         await processContractBilling({ userId: executed.userId, contractId: executed.id, limit: 100 }).catch((billingError) => console.error("Immediate contract billing check failed:", billingError));
         await createNotification({ userId: executed.userId, type: "contract_executed", title: "Contract executed", message: `${executed.title} has both signatures recorded.`, href: `/workflow/contracts/${executed.id}` }).catch(() => undefined);
         const artifactUrl = `${(process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")}/api/public/contracts/artifact/${encodeURIComponent(completion.artifactToken || "")}`;

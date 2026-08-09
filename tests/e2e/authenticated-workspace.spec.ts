@@ -36,10 +36,10 @@ async function getSessionToken() {
       try {
         const user = await prisma.user.findUnique({
           where: { email },
-          select: { id: true, email: true, plan: true },
+          select: { id: true, email: true, plan: true, sessionVersion: true },
         });
         if (!user) throw new Error(`No test user exists for ${email}.`);
-        return generateUserToken(user.id, user.email, user.plan);
+        return generateUserToken(user.id, user.email, user.plan, user.sessionVersion);
       } finally {
         await prisma.$disconnect();
         await pool.end();

@@ -34,6 +34,7 @@ model User {
   name                  String?
   avatarUrl             String?                @map("avatar_url")
   passwordHash          String                 @map("password_hash")
+  sessionVersion        Int                    @default(0) @map("session_version")
   plan                  String                 @default("free")
   onboardingStatus      String                 @default("complete") @map("onboarding_status")
   onboardingStep        Int                    @default(0) @map("onboarding_step")
@@ -622,6 +623,7 @@ model AuditEvent {
 
   @@index([userId, createdAt])
   @@index([action, createdAt])
+  @@unique([userId, action])
   @@map("audit_events")
 }
 

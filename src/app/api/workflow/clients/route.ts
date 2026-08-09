@@ -7,7 +7,7 @@ import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 // GET /api/workflow/clients
 export async function GET(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
 // POST /api/workflow/clients
 export async function POST(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
 // PUT /api/workflow/clients
 export async function PUT(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -189,7 +189,7 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/workflow/clients
 export async function DELETE(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }

@@ -5,7 +5,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { hashSubscriptionToken } from "@/utils/calendar";
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const subscription = await prisma.calendarSubscription.findFirst({
     where: { userId: session.userId, revokedAt: null },
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const token = crypto.randomBytes(32).toString("base64url");
   await prisma.$transaction([
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   await prisma.calendarSubscription.updateMany({
     where: { userId: session.userId, revokedAt: null },

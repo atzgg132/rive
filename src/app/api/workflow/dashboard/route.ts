@@ -7,7 +7,7 @@ import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRa
 
 export async function GET(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -198,6 +198,7 @@ export async function GET(req: NextRequest) {
       overdueInvoices,
       upcomingProjects,
       expenseCategories,
+      workspaceUser,
       calendarConnectionCount,
       portfolio,
       unresolvedImportIssues,

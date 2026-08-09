@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/utils/db";
 
 // Keep the existing DATABASE_URL fallback so currently issued sessions remain valid,
 // but never allow a predictable development key in production.
@@ -44,12 +45,13 @@ export interface UserSession {
   userId: string;
   email: string;
   plan: string;
+  sessionVersion: number;
   expiry: number;
 }
 
-export function generateUserToken(userId: string, email: string, plan: string): string {
+export function generateUserToken(userId: string, email: string, plan: string, sessionVersion = 0): string {
   const expiry = Date.now() + SESSION_TTL_MS;
-  const payload = JSON.stringify({ userId, email, plan, expiry });
+  const payload = JSON.stringify({ userId, email, plan, sessionVersion, expiry });
   const signature = crypto
     .createHmac("sha256", SECRET_KEY)
     .update(payload)
@@ -77,7 +79,15 @@ export function verifyUserToken(token: string | null): UserSession | null {
     const expectedSignatureBuffer = Buffer.from(expectedSignature, "hex");
     if (providedSignature.length !== expectedSignatureBuffer.length || !crypto.timingSafeEqual(providedSignature, expectedSignatureBuffer)) return null;
     
-    const session: UserSession = JSON.parse(payloadStr);
+    const parsed = JSON.parse(payloadStr) as Partial<UserSession>;
+    const session: UserSession = {
+      userId: typeof parsed.userId === "string" ? parsed.userId : "",
+      email: typeof parsed.email === "string" ? parsed.email : "",
+      plan: typeof parsed.plan === "string" ? parsed.plan : "free",
+      sessionVersion: Number.isInteger(parsed.sessionVersion) ? parsed.sessionVersion as number : 0,
+      expiry: typeof parsed.expiry === "number" ? parsed.expiry : 0,
+    };
+    if (!session.userId || !session.email || !session.expiry) return null;
     if (Date.now() > session.expiry) {
       return null; // Expired
     }
@@ -89,13 +99,24 @@ export function verifyUserToken(token: string | null): UserSession | null {
 }
 
 // Get the authenticated session from the signed, httpOnly cookie.
-export function getSessionUser(req: NextRequest): UserSession | null {
+export async function getSessionUser(req: NextRequest): Promise<UserSession | null> {
   // The session cookie is the only browser-controlled credential we trust.
   // A plain JSON identity header can be forged by any caller and this app has
   // no verified proxy that injects one. Keeping this boundary in one helper
   // prevents every protected route from accidentally becoming an IDOR.
   const cookie = req.cookies.get(TOKEN_COOKIE_NAME)?.value;
-  return verifyUserToken(cookie || null);
+  const session = verifyUserToken(cookie || null);
+  if (!session) return null;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { email: true, plan: true, sessionVersion: true },
+    });
+    if (!user || user.sessionVersion !== session.sessionVersion) return null;
+    return { ...session, email: user.email, plan: user.plan };
+  } catch {
+    return null;
+  }
 }
 
 export function setSessionCookie(response: NextResponse, token: string): void {

@@ -21,12 +21,19 @@ COPY --from=build-dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:24-alpine AS runtime-dependencies
+FROM node:24-alpine AS migrator-dependencies
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm ci
+
+FROM node:24-alpine AS runtime-dependencies
+WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
+RUN npm ci --omit=dev --ignore-scripts
 
 FROM node:24-alpine AS migrator
 WORKDIR /app
@@ -34,7 +41,7 @@ RUN apk add --no-cache libc6-compat openssl
 ENV NODE_ENV=production
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/aws-rds-global-bundle.pem
 ADD --chmod=0444 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/certs/aws-rds-global-bundle.pem
-COPY --from=runtime-dependencies /app/node_modules ./node_modules
+COPY --from=migrator-dependencies /app/node_modules ./node_modules
 COPY package.json prisma.config.ts ./
 COPY prisma ./prisma
 CMD ["npx", "prisma", "migrate", "deploy"]
@@ -54,7 +61,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=runtime-dependencies --chown=nextjs:nodejs /app/node_modules/sharp ./node_modules/sharp
 COPY --from=runtime-dependencies --chown=nextjs:nodejs /app/node_modules/@img ./node_modules/@img
-COPY --from=runtime-dependencies --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=runtime-dependencies --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 USER nextjs
 EXPOSE 3000

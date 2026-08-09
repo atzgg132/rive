@@ -62,7 +62,7 @@ function parseEventInput(body: Record<string, unknown>) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const range = parseRange(req);
   if (!range) return NextResponse.json({ success: false, message: "A valid date range of at most one year is required." }, { status: 400 });
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   if (!rateLimit(`calendar-create:${session.userId}:${getRequestIp(req)}`, 120, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many calendar changes. Please try again shortly." }, { status: 429 });
@@ -83,6 +83,14 @@ export async function POST(req: NextRequest) {
   const calendarId = typeof body.calendarId === "string" ? body.calendarId : fallback.id;
   const calendar = await prisma.calendar.findFirst({ where: { id: calendarId, userId: session.userId } });
   if (!calendar) return NextResponse.json({ success: false, message: "Calendar not found." }, { status: 404 });
+  const clientId = typeof body.clientId === "string" ? body.clientId.trim() || null : null;
+  const projectId = typeof body.projectId === "string" ? body.projectId.trim() || null : null;
+  const [client, project] = await Promise.all([
+    clientId ? prisma.client.findFirst({ where: { id: clientId, userId: session.userId }, select: { id: true } }) : null,
+    projectId ? prisma.project.findFirst({ where: { id: projectId, userId: session.userId }, select: { id: true } }) : null,
+  ]);
+  if (clientId && !client) return NextResponse.json({ success: false, message: "Client not found or unauthorized." }, { status: 404 });
+  if (projectId && !project) return NextResponse.json({ success: false, message: "Project not found or unauthorized." }, { status: 404 });
 
   const event = await prisma.calendarEvent.create({
     data: {
@@ -93,8 +101,8 @@ export async function POST(req: NextRequest) {
       location: typeof body.location === "string" ? body.location.trim() || null : null,
       meetingUrl: typeof body.meetingUrl === "string" ? body.meetingUrl.trim() || null : null,
       availability: body.availability === "free" ? "free" : "busy",
-      clientId: typeof body.clientId === "string" ? body.clientId : null,
-      projectId: typeof body.projectId === "string" ? body.projectId : null,
+      clientId: client?.id || null,
+      projectId: project?.id || null,
       source: "native",
     },
   });
@@ -103,7 +111,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const body = (await req.json()) as Record<string, unknown>;
   const id = typeof body.id === "string" ? body.id : "";
@@ -127,7 +135,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id") || "";
   const existing = await prisma.calendarEvent.findFirst({ where: { id, userId: session.userId, deletedAt: null } });

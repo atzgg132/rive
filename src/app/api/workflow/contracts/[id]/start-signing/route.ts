@@ -11,7 +11,7 @@ function appUrl(): string {
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     await prisma.contract.updateMany({ where: { id, userId: session.userId, status: "starting", updatedAt: { lt: new Date(Date.now() - 15 * 60 * 1000) } }, data: { status: "ready_to_sign" } });

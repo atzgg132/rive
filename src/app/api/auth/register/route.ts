@@ -75,12 +75,13 @@ export async function POST(req: NextRequest) {
           email: true,
           name: true,
           plan: true,
+          sessionVersion: true,
         },
       });
     });
 
     await recordActivationEvent(user.id, ACTIVATION_EVENTS.registered);
-    const sessionToken = generateUserToken(user.id, user.email, user.plan);
+    const sessionToken = generateUserToken(user.id, user.email, user.plan, user.sessionVersion);
     const emailResult = await sendRegistrationCompleteEmail(user.email, user.name || normalizedName);
     const response = NextResponse.json(
       {

@@ -2,7 +2,7 @@
 
 import { Button, Input, Textarea, Select } from "@/components/ui";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, Eye, ExternalLink, Globe2, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Monitor, Smartphone, Tablet, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_PORTFOLIO_CONTENT, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioProject, type PortfolioTheme } from "@/utils/portfolio";
@@ -44,12 +44,14 @@ type PortfolioDraftSnapshot = {
   seo: { title: string; description: string; indexable: boolean };
 };
 
+type PortfolioDraftOverrides = Partial<Pick<PortfolioDraftSnapshot, "content" | "theme" | "templateKey" | "slug" | "seo">>;
+
 const inputClass = "w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:ring-blue-950";
 const labelClass = "text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground dark:text-slate-400";
 
 function id(prefix: string) { return `${prefix}-${Math.random().toString(36).slice(2, 9)}`; }
 
-export function CaseStudyFields({ project, onChange }: { project: PortfolioProject; onChange: (update: Partial<PortfolioProject>) => void }) {
+function CaseStudyFields({ project, onChange }: { project: PortfolioProject; onChange: (update: Partial<PortfolioProject>) => void }) {
   void project;
   void onChange;
 
@@ -80,6 +82,8 @@ export function CaseStudyFields({ project, onChange }: { project: PortfolioProje
   */
 }
 
+void CaseStudyFields;
+
 function getPortfolioReadiness(content: PortfolioContent, seo: { title: string; description: string }, status: string) {
   const publicProjects = content.projects.filter((project) => project.visibility !== "private");
   const checks = [
@@ -104,10 +108,12 @@ export default function PortfolioDashboardPage() {
   const [seo, setSeo] = useState({ title: "", description: "", indexable: true });
   const [tab, setTab] = useState<"edit" | "preview" | "analytics">("edit");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("loading");
   const [saveError, setSaveError] = useState("");
+  const [conflictState, setConflictState] = useState(false);
   const [recoveryDraft, setRecoveryDraft] = useState<PortfolioDraftSnapshot | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [copied, setCopied] = useState(false);
@@ -136,24 +142,35 @@ export default function PortfolioDashboardPage() {
     seoRef.current = seo;
   }, [content, seo, slug, templateKey, theme]);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        let response = await fetch("/api/portfolio");
-        let data = await response.json();
-        if (!data.portfolio) {
-          response = await fetch("/api/portfolio", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-          data = await response.json();
+  const loadPortfolio = useCallback(async ({ preserveRecovery = true }: { preserveRecovery?: boolean } = {}) => {
+    setLoading(true);
+    setLoadError("");
+    setSaveError("");
+    try {
+      let response = await fetch("/api/portfolio");
+      let data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success === false) {
+        throw new Error(data.message || "Could not load your portfolio.");
+      }
+      if (!data.portfolio) {
+        response = await fetch("/api/portfolio", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success === false) {
+          throw new Error(data.message || "Could not create your portfolio.");
         }
-        if (!data.success || !data.portfolio) throw new Error(data.message || "could not load portfolio");
-        const record = data.portfolio as PortfolioRecord;
-        setPortfolio(record);
-        setContent(mergePortfolioContent(record.content));
-        setTheme({ ...DEFAULT_PORTFOLIO_THEME, ...(record.theme || {}) });
-        setTemplateKey(record.templateKey);
-        setSlug(record.slug);
-        setSeo({ title: record.seo?.title || "", description: record.seo?.description || "", indexable: record.seo?.indexable !== false });
-        draftHydratedRef.current = true;
+      }
+      if (!data.portfolio) throw new Error("Rive did not return a portfolio record.");
+      const record = data.portfolio as PortfolioRecord;
+      setPortfolio(record);
+      setContent(mergePortfolioContent(record.content));
+      setTheme({ ...DEFAULT_PORTFOLIO_THEME, ...(record.theme || {}) });
+      setTemplateKey(record.templateKey);
+      setSlug(record.slug);
+      setSeo({ title: record.seo?.title || "", description: record.seo?.description || "", indexable: record.seo?.indexable !== false });
+      setDirty(false);
+      setConflictState(false);
+      draftHydratedRef.current = true;
+      if (preserveRecovery) {
         try {
           const stored = window.localStorage.getItem(`rive:portfolio-draft:${record.id}`);
           if (stored) {
@@ -163,18 +180,29 @@ export default function PortfolioDashboardPage() {
             }
           }
         } catch {
-          window.localStorage.removeItem(`rive:portfolio-draft:${record.id}`);
+          // Keep a recovery copy even if it cannot be parsed right now.
         }
-        setSaveState("saved");
-      } catch (error) {
-        setSaveState("error");
-        toast.error(error instanceof Error ? error.message : "could not load portfolio");
-      } finally {
-        setLoading(false);
+      } else {
+        window.localStorage.removeItem(`rive:portfolio-draft:${record.id}`);
+        setRecoveryDraft(null);
       }
+      setSaveState("saved");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not load your portfolio.";
+      setSaveState("error");
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => {
+      void loadPortfolio();
+    }, 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [loadPortfolio]);
 
   useEffect(() => {
     if (tab !== "analytics" || analytics) return;
@@ -201,6 +229,23 @@ export default function PortfolioDashboardPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [dirty]);
 
+  const flushDraftSnapshot = useCallback((overrides: PortfolioDraftOverrides = {}) => {
+    if (!portfolio || !draftHydratedRef.current) return;
+    try {
+      const snapshot: PortfolioDraftSnapshot = {
+        revision: portfolio.revision,
+        content: overrides.content ?? contentRef.current,
+        theme: overrides.theme ?? themeRef.current,
+        templateKey: overrides.templateKey ?? templateKeyRef.current,
+        slug: overrides.slug ?? slugRef.current,
+        seo: overrides.seo ?? seoRef.current,
+      };
+      window.localStorage.setItem(`rive:portfolio-draft:${portfolio.id}`, JSON.stringify(snapshot));
+    } catch {
+      // Local recovery is best-effort; the server remains the source of truth.
+    }
+  }, [portfolio]);
+
   useEffect(() => {
     if (!portfolio || !draftHydratedRef.current) return;
     const storageKey = `rive:portfolio-draft:${portfolio.id}`;
@@ -213,26 +258,55 @@ export default function PortfolioDashboardPage() {
       return;
     }
     const timer = window.setTimeout(() => {
-      try {
-        const snapshot: PortfolioDraftSnapshot = { revision: portfolio.revision, content, theme, templateKey, slug, seo };
-        window.localStorage.setItem(storageKey, JSON.stringify(snapshot));
-      } catch {
-        // Local recovery is best-effort; the server remains the source of truth.
-      }
+      flushDraftSnapshot();
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [content, dirty, portfolio, recoveryDraft, seo, slug, templateKey, theme]);
+  }, [content, dirty, flushDraftSnapshot, portfolio, recoveryDraft, seo, slug, templateKey, theme]);
 
-  const markDirty = () => {
+  const markDirty = (overrides: PortfolioDraftOverrides = {}) => {
     editVersionRef.current += 1;
     setDirty(true);
     setSaveState("dirty");
     setSaveError("");
+    setConflictState(false);
+    flushDraftSnapshot(overrides);
+  };
+
+  const updateSlug = (value: string) => {
+    const nextSlug = normalizeSlug(value);
+    slugRef.current = nextSlug;
+    setSlug(nextSlug);
+    markDirty({ slug: nextSlug });
+  };
+
+  const updateTheme = (update: Partial<PortfolioTheme>) => {
+    const nextTheme = { ...themeRef.current, ...update };
+    themeRef.current = nextTheme;
+    setTheme(nextTheme);
+    markDirty({ theme: nextTheme });
+  };
+
+  const updateSeo = (update: Partial<typeof seo>) => {
+    const nextSeo = { ...seoRef.current, ...update };
+    seoRef.current = nextSeo;
+    setSeo(nextSeo);
+    markDirty({ seo: nextSeo });
+  };
+
+  const chooseTemplate = (nextTemplateKey: string, accent: string) => {
+    const nextTheme = { ...themeRef.current, accent };
+    templateKeyRef.current = nextTemplateKey;
+    themeRef.current = nextTheme;
+    setTemplateKey(nextTemplateKey);
+    setTheme(nextTheme);
+    markDirty({ templateKey: nextTemplateKey, theme: nextTheme });
   };
 
   const updateContent = (update: Partial<PortfolioContent>) => {
-    setContent((current) => ({ ...current, ...update }));
-    markDirty();
+    const nextContent = { ...contentRef.current, ...update };
+    contentRef.current = nextContent;
+    setContent(nextContent);
+    markDirty({ content: nextContent });
   };
 
   const handleImageUpload = async (projectId: string, file: File | undefined) => {
@@ -247,8 +321,10 @@ export default function PortfolioDashboardPage() {
     }
     try {
       const imageUrl = await uploadImage(file);
-      setContent((current) => ({ ...current, projects: current.projects.map((item) => item.id === projectId ? { ...item, imageUrl } : item) }));
-      markDirty();
+      const nextContent = { ...contentRef.current, projects: contentRef.current.projects.map((item) => item.id === projectId ? { ...item, imageUrl } : item) };
+      contentRef.current = nextContent;
+      setContent(nextContent);
+      markDirty({ content: nextContent });
       toast.success("image added");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "could not upload image");
@@ -273,7 +349,14 @@ export default function PortfolioDashboardPage() {
         body: JSON.stringify({ revision: portfolio.revision, content: submittedContent, theme: themeRef.current, templateKey: templateKeyRef.current, slug: slugRef.current, seo: seoRef.current, status: nextStatus }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || "could not save portfolio");
+      if (!response.ok) {
+        if (response.status === 409 && data.conflict) {
+          setConflictState(true);
+          throw new Error("This portfolio changed in another tab. Reload the latest version or keep your local draft.");
+        }
+        setConflictState(false);
+        throw new Error(data.message || "could not save portfolio");
+      }
       setPortfolio(data.portfolio);
       if (submittedEditVersion === editVersionRef.current) {
         setContent(mergePortfolioContent(data.portfolio.content));
@@ -284,6 +367,7 @@ export default function PortfolioDashboardPage() {
         setDirty(false);
         setSaveState("saved");
         setRecoveryDraft(null);
+        setConflictState(false);
         window.localStorage.removeItem(`rive:portfolio-draft:${data.portfolio.id}`);
       } else {
         setSaveState("dirty");
@@ -298,11 +382,40 @@ export default function PortfolioDashboardPage() {
     }
   }
 
+  const reloadLatestPortfolio = async () => {
+    if (portfolio) window.localStorage.removeItem(`rive:portfolio-draft:${portfolio.id}`);
+    setRecoveryDraft(null);
+    setDirty(false);
+    await loadPortfolio({ preserveRecovery: false });
+  };
+
+  const reloadAndKeepLocalDraft = async () => {
+    flushDraftSnapshot();
+    await loadPortfolio({ preserveRecovery: true });
+  };
+
+  const restoreRecoveryDraft = () => {
+    if (!recoveryDraft) return;
+    const restoredContent = mergePortfolioContent(recoveryDraft.content);
+    contentRef.current = restoredContent;
+    themeRef.current = recoveryDraft.theme;
+    templateKeyRef.current = recoveryDraft.templateKey;
+    slugRef.current = recoveryDraft.slug;
+    seoRef.current = recoveryDraft.seo;
+    setContent(restoredContent);
+    setTheme(recoveryDraft.theme);
+    setTemplateKey(recoveryDraft.templateKey);
+    setSlug(recoveryDraft.slug);
+    setSeo(recoveryDraft.seo);
+    setRecoveryDraft(null);
+    markDirty(recoveryDraft);
+  };
+
   const persistProfileImage = (profileImageUrl: string, message: string) => {
     const nextContent = { ...contentRef.current, profileImageUrl };
     contentRef.current = nextContent;
     setContent(nextContent);
-    markDirty();
+    markDirty({ content: nextContent });
     void save(undefined, nextContent, message);
   };
 
@@ -332,6 +445,19 @@ export default function PortfolioDashboardPage() {
 
   if (loading) return <div className="flex min-h-80 items-center justify-center text-sm text-muted-foreground dark:text-slate-400">Loading portfolio studio...</div>;
 
+  if (loadError || !portfolio) {
+    return (
+      <div className="flex min-h-80 items-center justify-center px-4">
+        <section role="alert" className="w-full max-w-lg rounded-3xl border border-red-200 bg-red-50 p-6 text-center text-red-900 shadow-sm dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
+          <h1 className="text-lg font-black">Your portfolio could not be loaded</h1>
+          <p className="mt-2 text-sm leading-6 text-red-800 dark:text-red-200">Rive has not opened the editor because your saved portfolio is unavailable. Retry when your connection is ready. Any local recovery copy will remain untouched.</p>
+          {loadError && <p className="mt-3 break-words text-xs text-red-700/80 dark:text-red-200/80">{loadError}</p>}
+          <Button onClick={() => void loadPortfolio()} disabled={loading} className="mt-5 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-60">Retry loading portfolio</Button>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="portfolio-editor-panels flex flex-col gap-5 pb-10">
       <div className="sticky top-0 z-20 flex flex-col gap-4 border-b border-border bg-background/95 py-4 backdrop-blur sm:flex-row sm:items-end sm:justify-between dark:border-slate-800">
@@ -349,8 +475,8 @@ export default function PortfolioDashboardPage() {
         <div className="flex max-w-full flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span className={`h-2 w-2 rounded-full ${portfolio?.status === "published" ? "bg-emerald-500" : "bg-amber-500"}`} /> {portfolio?.status === "published" ? "Published" : "Draft — publish when you are ready"}{dirty && <span className="font-semibold text-amber-700 dark:text-amber-300">· Unsaved changes</span>}{savedPublicUrl && <><span className="hidden truncate sm:inline">· {savedPublicUrl}</span><Button onClick={copyUrl} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Copy live portfolio URL" aria-label="Copy live portfolio URL">{copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}</Button></>}</div>
       </div>
 
-      {recoveryDraft && !dirty && <div role="status" className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold">We found unsaved changes from before this page was reloaded.</p><p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/80">Restore them to continue editing, or discard this local recovery copy.</p></div><div className="flex shrink-0 gap-2"><Button onClick={() => { const draft = recoveryDraft; setContent(mergePortfolioContent(draft.content)); setTheme(draft.theme); setTemplateKey(draft.templateKey); setSlug(draft.slug); setSeo(draft.seo); setRecoveryDraft(null); markDirty(); }} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white">Restore changes</Button><Button onClick={() => { window.localStorage.removeItem(`rive:portfolio-draft:${portfolio?.id}`); setRecoveryDraft(null); }} className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-800 dark:border-amber-800 dark:text-amber-100">Discard</Button></div></div>}
-      {saveError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>Could not save your changes.</strong> {saveError}</span><Button onClick={() => save()} disabled={saving || !dirty} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button></div>}
+      {recoveryDraft && !dirty && <div role="status" className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold">We found unsaved changes from before this page was reloaded.</p><p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/80">Restore them to continue editing, or discard this local recovery copy.</p></div><div className="flex shrink-0 gap-2"><Button onClick={restoreRecoveryDraft} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white">Restore changes</Button><Button onClick={() => { window.localStorage.removeItem(`rive:portfolio-draft:${portfolio?.id}`); setRecoveryDraft(null); }} className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-800 dark:border-amber-800 dark:text-amber-100">Discard</Button></div></div>}
+      {saveError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Keep my draft</Button></div> : <Button onClick={() => save()} disabled={saving || !dirty} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button>}</div>}
 
       {tab === "edit" && <div className="grid min-h-[680px] overflow-hidden rounded-xl border border-border bg-white dark:border-slate-800 dark:bg-slate-900 lg:grid-cols-[190px_minmax(0,1fr)]">
         <aside className="border-b border-border bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40 lg:border-b-0 lg:border-r">
@@ -390,7 +516,7 @@ export default function PortfolioDashboardPage() {
               </div>
             </div>
           </section>
-          <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "design" ? "" : "hidden"}`}><div className="mb-5"><h2 className="font-bold text-foreground dark:text-white">Choose your starting point</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Changing templates keeps your content and is always reversible.</p></div><div className="grid gap-3 sm:grid-cols-2">{PORTFOLIO_TEMPLATES.map((template) => <Button key={template.key} onClick={() => { setTemplateKey(template.key); setTheme((current) => ({ ...current, accent: template.accent })); markDirty(); }} className={`h-full min-h-32 min-w-0 items-start rounded-xl border p-4 text-left !whitespace-normal transition ${templateKey === template.key ? "border-blue-500 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/30" : "border-slate-200 hover:border-blue-300 dark:border-slate-700 dark:hover:border-blue-700"}`}><div className="mb-3 h-10 w-full rounded-lg" style={{ background: `linear-gradient(135deg, ${template.accent}, #0C1E36)` }} /><div className="text-sm font-bold text-foreground dark:text-slate-100">{template.name}</div><div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{template.description}</div></Button>)}</div></section>
+          <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "design" ? "" : "hidden"}`}><div className="mb-5"><h2 className="font-bold text-foreground dark:text-white">Choose your starting point</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Changing templates keeps your content and is always reversible.</p></div><div className="grid gap-3 sm:grid-cols-2">{PORTFOLIO_TEMPLATES.map((template) => <Button key={template.key} onClick={() => chooseTemplate(template.key, template.accent)} className={`h-full min-h-32 min-w-0 items-start rounded-xl border p-4 text-left !whitespace-normal transition ${templateKey === template.key ? "border-blue-500 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/30" : "border-slate-200 hover:border-blue-300 dark:border-slate-700 dark:hover:border-blue-700"}`}><div className="mb-3 h-10 w-full rounded-lg" style={{ background: `linear-gradient(135deg, ${template.accent}, #0C1E36)` }} /><div className="text-sm font-bold text-foreground dark:text-slate-100">{template.name}</div><div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{template.description}</div></Button>)}</div></section>
 
           <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "profile" ? "" : "hidden"}`}>
             <div className="mb-5"><h2 className="font-bold text-foreground dark:text-white">Basic profile</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">Required to publish: display name, headline, short introduction, and contact email. Location and availability are optional.</p></div>
@@ -410,7 +536,7 @@ export default function PortfolioDashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2"><label className="flex flex-col gap-2"><span className={labelClass}>Display name</span><Input className={inputClass} value={content.name || ""} placeholder="Your name" onChange={(event) => updateContent({ name: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Public URL</span><div className="flex items-center"><span className="rounded-l-xl border border-r-0 border-border bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800">/p/</span><Input className={`${inputClass} rounded-l-none`} value={slug} placeholder="your-name" onChange={(event) => { setSlug(normalizeSlug(event.target.value)); markDirty(); }} /></div></label><label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>Headline</span><Input className={inputClass} value={content.headline || ""} placeholder="e.g. product designer and developer building clear, useful products" onChange={(event) => updateContent({ headline: event.target.value })} /></label><label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>About</span><Textarea rows={4} className={inputClass} value={content.bio || ""} placeholder="Tell people what you do, who you help, and what makes your work different." onChange={(event) => updateContent({ bio: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Location</span><Input className={inputClass} value={content.location || ""} placeholder="e.g. Bengaluru, India · working worldwide" onChange={(event) => updateContent({ location: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Availability</span><Input className={inputClass} value={content.availability || ""} placeholder="e.g. available for select projects" onChange={(event) => updateContent({ availability: event.target.value })} /></label><label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>Contact email</span><Input type="email" className={inputClass} value={content.contactEmail || ""} onChange={(event) => updateContent({ contactEmail: event.target.value })} placeholder="you@example.com" /></label></div>
+            <div className="grid gap-4 sm:grid-cols-2"><label className="flex flex-col gap-2"><span className={labelClass}>Display name</span><Input className={inputClass} value={content.name || ""} placeholder="Your name" onChange={(event) => updateContent({ name: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Public URL</span><div className="flex items-center"><span className="rounded-l-xl border border-r-0 border-border bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800">/p/</span><Input className={`${inputClass} rounded-l-none`} value={slug} placeholder="your-name" onChange={(event) => updateSlug(event.target.value)} /></div></label><label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>Headline</span><Input className={inputClass} value={content.headline || ""} placeholder="e.g. product designer and developer building clear, useful products" onChange={(event) => updateContent({ headline: event.target.value })} /></label><label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>About</span><Textarea rows={4} className={inputClass} value={content.bio || ""} placeholder="Tell people what you do, who you help, and what makes your work different." onChange={(event) => updateContent({ bio: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Location</span><Input className={inputClass} value={content.location || ""} placeholder="e.g. Bengaluru, India · working worldwide" onChange={(event) => updateContent({ location: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Availability</span><Input className={inputClass} value={content.availability || ""} placeholder="e.g. available for select projects" onChange={(event) => updateContent({ availability: event.target.value })} /></label><label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>Contact email</span><Input type="email" className={inputClass} value={content.contactEmail || ""} onChange={(event) => updateContent({ contactEmail: event.target.value })} placeholder="you@example.com" /></label></div>
           </section>
 
           <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "work" ? "" : "hidden"}`}>
@@ -425,7 +551,7 @@ export default function PortfolioDashboardPage() {
 
           <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "services" ? "" : "hidden"}`}><div className="mb-5 flex items-center justify-between"><div><h2 className="font-bold text-foreground dark:text-white">Services</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Turn your capabilities into clear client outcomes.</p></div><Button type="button" onClick={() => updateContent({ services: [...content.services, { id: id("service"), title: "", description: "" }] })} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-2 text-xs font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"><Plus className="h-3.5 w-3.5" /> Add service</Button></div><div className="grid gap-3 sm:grid-cols-2">{content.services.map((service) => <div key={service.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div className="mb-3 flex justify-end"><Button type="button" onClick={() => updateContent({ services: content.services.filter((item) => item.id !== service.id) })} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button></div><Input className={`${inputClass} mb-3`} value={service.title || ""} placeholder="Service name" onChange={(event) => updateContent({ services: content.services.map((item) => item.id === service.id ? { ...item, title: event.target.value } : item) })} /><Textarea className={inputClass} rows={3} value={service.description || ""} placeholder="Describe the outcome clients can expect" onChange={(event) => updateContent({ services: content.services.map((item) => item.id === service.id ? { ...item, description: event.target.value } : item) })} /></div>)}</div></section>
 
-          <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "design" ? "" : "hidden"}`}><h2 className="mb-5 font-bold text-foreground dark:text-white">Appearance & visibility</h2><div className="grid gap-4 sm:grid-cols-3"><label className="flex flex-col gap-2"><span className={labelClass}>Accent</span><Input type="color" className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent dark:border-slate-700" value={theme.accent} onChange={(event) => { setTheme({ ...theme, accent: event.target.value }); markDirty(); }} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Site mode</span><Select className={inputClass} value={theme.mode} onChange={(event) => { setTheme({ ...theme, mode: event.target.value as PortfolioTheme["mode"] }); markDirty(); }}><option value="light">Light</option><option value="dark">Dark</option></Select></label><label className="flex flex-col gap-2"><span className={labelClass}>Corners</span><Select className={inputClass} value={theme.radius} onChange={(event) => { setTheme({ ...theme, radius: event.target.value as PortfolioTheme["radius"] }); markDirty(); }}><option value="soft">Soft</option><option value="sharp">Sharp</option></Select></label></div><div className="mt-6 border-t border-border pt-6"><h3 className="text-sm font-bold text-foreground dark:text-white">Search preview</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Give search engines a useful title and description for your public portfolio.</p><div className="mt-4 grid gap-4"><label className="flex flex-col gap-2"><span className={labelClass}>Page title</span><Input className={inputClass} value={seo.title} maxLength={60} placeholder={content.name ? `${content.name} — your work and services` : "Your name — your work and services"} onChange={(event) => { setSeo({ ...seo, title: event.target.value }); markDirty(); }} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Description</span><Textarea className={inputClass} rows={3} value={seo.description} maxLength={160} placeholder="A concise description of what you do, who you help, and where to find your work." onChange={(event) => { setSeo({ ...seo, description: event.target.value }); markDirty(); }} /></label></div></div><div className="mt-5 flex items-center gap-3"><Input id="about-visible" type="checkbox" checked={content.sections.find((section) => section.key === "about")?.visible ?? true} onChange={(event) => updateContent({ sections: content.sections.map((section) => section.key === "about" ? { ...section, visible: event.target.checked } : section) })} /><label htmlFor="about-visible" className="text-sm text-slate-600 dark:text-slate-300">Show about section publicly</label></div><div className="mt-3 flex items-center gap-3"><Input id="indexable" type="checkbox" checked={seo.indexable} onChange={(event) => { setSeo({ ...seo, indexable: event.target.checked }); markDirty(); }} /><label htmlFor="indexable" className="text-sm text-slate-600 dark:text-slate-300">Allow search engines to index my portfolio</label></div></section>
+          <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "design" ? "" : "hidden"}`}><h2 className="mb-5 font-bold text-foreground dark:text-white">Appearance & visibility</h2><div className="grid gap-4 sm:grid-cols-3"><label className="flex flex-col gap-2"><span className={labelClass}>Accent</span><Input type="color" className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent dark:border-slate-700" value={theme.accent} onChange={(event) => updateTheme({ accent: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Site mode</span><Select className={inputClass} value={theme.mode} onChange={(event) => updateTheme({ mode: event.target.value as PortfolioTheme["mode"] })}><option value="light">Light</option><option value="dark">Dark</option></Select></label><label className="flex flex-col gap-2"><span className={labelClass}>Corners</span><Select className={inputClass} value={theme.radius} onChange={(event) => updateTheme({ radius: event.target.value as PortfolioTheme["radius"] })}><option value="soft">Soft</option><option value="sharp">Sharp</option></Select></label></div><div className="mt-6 border-t border-border pt-6"><h3 className="text-sm font-bold text-foreground dark:text-white">Search preview</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Give search engines a useful title and description for your public portfolio.</p><div className="mt-4 grid gap-4"><label className="flex flex-col gap-2"><span className={labelClass}>Page title</span><Input className={inputClass} value={seo.title} maxLength={60} placeholder={content.name ? `${content.name} — your work and services` : "Your name — your work and services"} onChange={(event) => updateSeo({ title: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Description</span><Textarea className={inputClass} rows={3} value={seo.description} maxLength={160} placeholder="A concise description of what you do, who you help, and where to find your work." onChange={(event) => updateSeo({ description: event.target.value })} /></label></div></div><div className="mt-5 flex items-center gap-3"><Input id="about-visible" type="checkbox" checked={content.sections.find((section) => section.key === "about")?.visible ?? true} onChange={(event) => updateContent({ sections: content.sections.map((section) => section.key === "about" ? { ...section, visible: event.target.checked } : section) })} /><label htmlFor="about-visible" className="text-sm text-slate-600 dark:text-slate-300">Show about section publicly</label></div><div className="mt-3 flex items-center gap-3"><Input id="indexable" type="checkbox" checked={seo.indexable} onChange={(event) => updateSeo({ indexable: event.target.checked })} /><label htmlFor="indexable" className="text-sm text-slate-600 dark:text-slate-300">Allow search engines to index my portfolio</label></div></section>
         </div>
       </div>}
 

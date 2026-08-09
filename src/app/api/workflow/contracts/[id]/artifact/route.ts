@@ -8,7 +8,7 @@ import type { ContractContent } from "@/utils/contracts";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     assertContractsEnabled();
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const contract = await prisma.contract.findFirst({ where: { id, userId: session.userId }, include: { versions: { orderBy: { version: "desc" }, take: 1 }, artifacts: { orderBy: { generatedAt: "desc" }, take: 1 } } });

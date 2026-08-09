@@ -3,10 +3,28 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
+type ProjectValidation =
+  | { ok: true; projectId: string | null }
+  | { ok: false; response: NextResponse };
+
+async function validateOwnedProject(userId: string, value: unknown): Promise<ProjectValidation> {
+  if (value === undefined || value === null || value === "") return { ok: true, projectId: null };
+  if (typeof value !== "string") {
+    return { ok: false, response: NextResponse.json({ success: false, message: "Project ID must be a string." }, { status: 400 }) };
+  }
+  const projectId = value.trim();
+  if (!projectId) return { ok: true, projectId: null };
+  const project = await prisma.project.findFirst({ where: { id: projectId, userId }, select: { id: true } });
+  if (!project) {
+    return { ok: false, response: NextResponse.json({ success: false, message: "Project not found or unauthorized." }, { status: 404 }) };
+  }
+  return { ok: true, projectId: project.id };
+}
+
 // GET /api/workflow/expenses
 export async function GET(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -73,7 +91,7 @@ export async function GET(req: NextRequest) {
 // POST /api/workflow/expenses
 export async function POST(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -83,10 +101,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Description and amount are required." }, { status: 400 });
     }
 
+    const project = await validateOwnedProject(session.userId, project_id);
+    if (!project.ok) return project.response;
+
     const expense = await prisma.expense.create({
       data: {
         userId: session.userId,
-        projectId: project_id || null,
+        projectId: project.projectId,
         category: category || "other",
         description,
         amount: Number(amount),
@@ -124,7 +145,7 @@ export async function POST(req: NextRequest) {
 // PUT /api/workflow/expenses
 export async function PUT(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -139,10 +160,13 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Expense not found or unauthorized." }, { status: 404 });
     }
 
+    const project = await validateOwnedProject(session.userId, project_id);
+    if (!project.ok) return project.response;
+
     const expense = await prisma.expense.update({
       where: { id },
       data: {
-        projectId: project_id || null,
+        projectId: project.projectId,
         category: category || "other",
         description,
         amount: Number(amount),
@@ -164,7 +188,7 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/workflow/expenses?id=xxx
 export async function DELETE(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }

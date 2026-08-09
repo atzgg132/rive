@@ -5,7 +5,7 @@ import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const tasks = await prisma.task.findMany({
     where: { userId: session.userId, status: { notIn: ["done", "cancelled"] } },
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   if (!rateLimit(`calendar-task-create:${session.userId}:${getRequestIp(req)}`, 120, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many tasks created. Please try again later." }, { status: 429 });
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ success: false, message: "A valid request body is required." }, { status: 400 });

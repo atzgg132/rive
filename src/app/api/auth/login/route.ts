@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     await sendLoginSuccessEmail(user.email);
 
-    const token = generateUserToken(user.id, user.email, user.plan);
+    const token = generateUserToken(user.id, user.email, user.plan, user.sessionVersion);
 
     const response = NextResponse.json({
       success: true,

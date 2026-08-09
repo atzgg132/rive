@@ -4,7 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { discoverGoogleCalendars, syncGoogleConnection } from "@/utils/googleCalendar";
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const connection = await prisma.calendarConnection.findFirst({

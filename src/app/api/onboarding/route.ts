@@ -18,7 +18,7 @@ function unauthorized() {
 }
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return unauthorized();
 
   const [user, clients, projects, invoices, expenses, connections, businessConnections] = await Promise.all([
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return unauthorized();
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") {
@@ -78,13 +78,24 @@ export async function PATCH(req: NextRequest) {
   const data: Record<string, unknown> = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim().slice(0, 120);
   if (typeof body.profession === "string") data.profession = body.profession.trim().slice(0, 120) || null;
-  const businessTypes = Array.isArray(body.businessTypes)
-    ? body.businessTypes.filter((value: unknown): value is string => typeof value === "string" && BUSINESS_TYPES.includes(value)).slice(0, BUSINESS_TYPES.length)
-    : null;
-  if (businessTypes) {
-    data.businessTypes = Array.from(new Set(businessTypes));
-    data.businessType = businessTypes[0] || null;
-  } else if (BUSINESS_TYPES.includes(body.businessType)) {
+  if (Object.prototype.hasOwnProperty.call(body, "businessTypes")) {
+    if (!Array.isArray(body.businessTypes) || body.businessTypes.length === 0 || body.businessTypes.length > BUSINESS_TYPES.length) {
+      return NextResponse.json({ success: false, message: "Choose at least one valid business type." }, { status: 400 });
+    }
+    const requestedBusinessTypes = body.businessTypes as unknown[];
+    if (requestedBusinessTypes.some((value) => typeof value !== "string" || !BUSINESS_TYPES.includes(value))) {
+      return NextResponse.json({ success: false, message: "Choose only supported business types." }, { status: 400 });
+    }
+    const businessTypes = Array.from(new Set(requestedBusinessTypes as string[]));
+    if (businessTypes.length === 0) {
+      return NextResponse.json({ success: false, message: "Choose at least one valid business type." }, { status: 400 });
+    }
+    data.businessTypes = businessTypes;
+    data.businessType = businessTypes[0];
+  } else if (Object.prototype.hasOwnProperty.call(body, "businessType")) {
+    if (typeof body.businessType !== "string" || !BUSINESS_TYPES.includes(body.businessType)) {
+      return NextResponse.json({ success: false, message: "Choose a supported business type." }, { status: 400 });
+    }
     data.businessType = body.businessType;
     data.businessTypes = [body.businessType];
   }
@@ -162,7 +173,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return unauthorized();
   if (!rateLimit(`onboarding-quickstart:${session.userId}:${getRequestIp(req)}`, 10, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many attempts. Please try again later." }, { status: 429 });

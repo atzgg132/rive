@@ -114,7 +114,7 @@ function safeStatus(input: string, allowed: string[], fallback: string): string 
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   if (!rateLimit(`onboarding-import:${session.userId}:${getRequestIp(req)}`, 30, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many import attempts. Please try again later." }, { status: 429 });

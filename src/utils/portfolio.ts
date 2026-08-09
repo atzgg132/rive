@@ -214,6 +214,16 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
   };
 }
 
+/** Return only content that is intentionally visible on a published portfolio. */
+export function getPublicPortfolioContent(value: unknown): PortfolioContent {
+  const content = mergePortfolioContent(value);
+  return {
+    ...content,
+    projects: content.projects.filter((project) => project.visibility !== "private"),
+    testimonials: content.testimonials.filter((testimonial) => testimonial.visibility !== "private"),
+  };
+}
+
 const MAX_INLINE_IMAGE_LENGTH = 7_000_000;
 const MAX_TEXT_LENGTH = 5_000;
 const HTTP_URL = /^https?:\/\/[^\s<>]+$/i;
@@ -287,6 +297,9 @@ export function validatePortfolioContent(value: unknown): string | null {
       if (!social || typeof social !== "object" || !isSafePortfolioUrl((social as { url?: unknown }).url)) return "Social links must use HTTPS URLs.";
     }
   }
+  const projectIds = Array.isArray(input.projects)
+    ? new Set(input.projects.filter((project): project is PortfolioProject => Boolean(project && typeof project === "object" && typeof project.id === "string")).map((project) => project.id))
+    : null;
   if (input.testimonials !== undefined) {
     if (!Array.isArray(input.testimonials) || input.testimonials.length > 20) return "Add up to 20 testimonials.";
     for (const testimonial of input.testimonials) {
@@ -300,6 +313,7 @@ export function validatePortfolioContent(value: unknown): string | null {
         if (fieldValue !== undefined && (typeof fieldValue !== "string" || fieldValue.length > 240)) return `Testimonial ${field} is too long.`;
       }
       if (item.projectId !== undefined && (typeof item.projectId !== "string" || item.projectId.length > 120)) return "Testimonial project links are invalid.";
+      if (item.projectId && projectIds && !projectIds.has(item.projectId)) return "Testimonial project links must reference a project in this portfolio.";
       if (item.visibility !== undefined && item.visibility !== "public" && item.visibility !== "private") return "Testimonial visibility is invalid.";
     }
   }

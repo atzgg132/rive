@@ -6,7 +6,7 @@ const PROVIDER = /^[a-z0-9_-]{2,40}$/;
 const ENTITY = new Set(["clients", "projects", "invoices", "expenses", "payments", "tasks"]);
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const provider = req.nextUrl.searchParams.get("provider");
   const mappings = await prisma.importMapping.findMany({
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const body = await req.json().catch(() => null);
   const provider = typeof body?.provider === "string" ? body.provider.trim().toLowerCase() : "";
@@ -43,7 +43,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ success: false, message: "Mapping ID is required." }, { status: 400 });

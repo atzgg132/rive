@@ -10,7 +10,7 @@ function unauthorized() {
 }
 
 async function getOwner(req: NextRequest) {
-  return getSessionUser(req);
+  return await getSessionUser(req);
 }
 
 export async function GET(req: NextRequest) {

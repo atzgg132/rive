@@ -4,7 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { searchParams } = new URL(req.url);
     const unreadOnly = searchParams.get("unread") === "true";
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const parsedBody = await req.json().catch(() => ({}));
     const body = parsedBody && typeof parsedBody === "object" && !Array.isArray(parsedBody) ? parsedBody as { id?: unknown; all?: unknown } : {};

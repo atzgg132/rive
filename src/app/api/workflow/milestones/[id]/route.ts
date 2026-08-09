@@ -5,7 +5,7 @@ import { processContractBilling } from "@/utils/contractBilling";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const body = await req.json().catch(() => null) as { title?: unknown; dueDate?: unknown; completed?: unknown; acknowledgeContractSnapshot?: unknown } | null;

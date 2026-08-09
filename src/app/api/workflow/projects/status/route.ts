@@ -4,7 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }

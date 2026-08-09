@@ -5,7 +5,7 @@ import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { verifyZohoConnection } from "@/utils/zohoBooks";
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   if (!rateLimit(`zoho-sync:${session.userId}:${getRequestIp(req)}`, 12, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many synchronization attempts." }, { status: 429 });

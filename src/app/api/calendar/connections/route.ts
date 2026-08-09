@@ -3,7 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const connections = await prisma.calendarConnection.findMany({
     where: { userId: session.userId },
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const body = await req.json();
   const externalCalendarId = typeof body.externalCalendarId === "string" ? body.externalCalendarId : "";
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id") || "";
   const connection = await prisma.calendarConnection.findFirst({

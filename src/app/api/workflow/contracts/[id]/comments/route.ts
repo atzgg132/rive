@@ -5,7 +5,7 @@ import { CONTRACT_MAX_COMMENT_LENGTH } from "@/utils/contracts";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const body = await req.json().catch(() => null) as { body?: unknown; sectionKey?: unknown } | null;
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const body = await req.json().catch(() => null) as { commentId?: unknown; status?: unknown } | null;

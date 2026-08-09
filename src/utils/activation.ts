@@ -26,14 +26,10 @@ export async function recordActivationEvent(
   metadata?: ActivationMetadata,
 ): Promise<void> {
   try {
-    const existing = await prisma.auditEvent.findFirst({
-      where: { userId, action },
-      select: { id: true },
-    });
-    if (existing) return;
-
-    await prisma.auditEvent.create({
-      data: {
+    await prisma.auditEvent.upsert({
+      where: { userId_action: { userId, action } },
+      update: {},
+      create: {
         userId,
         action,
         metadata: metadata ? (metadata as Prisma.InputJsonObject) : undefined,

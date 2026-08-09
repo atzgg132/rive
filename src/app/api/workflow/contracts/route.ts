@@ -71,7 +71,7 @@ function serializeListContract(contract: {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     assertContractsEnabled();
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 
     const body = await req.json().catch(() => null) as Record<string, unknown> | null;

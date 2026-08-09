@@ -4,7 +4,7 @@ import { createConnectorOAuthState } from "@/utils/connectorSecurity";
 import { zohoAuthorizationUrl } from "@/utils/zohoBooks";
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.redirect(new URL("/login?next=/onboarding", req.url));
   try {
     const returnTo = req.nextUrl.searchParams.get("from") === "dashboard" ? "/dashboard" : "/onboarding";

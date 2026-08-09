@@ -6,7 +6,7 @@ import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 const ROLLBACKABLE = new Set(["completed", "completed_with_issues"]);
 
 export async function GET(req: NextRequest, context: RouteContext<"/api/onboarding/import/jobs/[id]">) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) {
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   }
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, context: RouteContext<"/api/onboardi
 }
 
 export async function DELETE(req: NextRequest, context: RouteContext<"/api/onboarding/import/jobs/[id]">) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) {
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   }

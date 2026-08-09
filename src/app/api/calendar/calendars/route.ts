@@ -4,7 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { ensureDefaultCalendar, isValidTimeZone } from "@/utils/calendar";
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   await ensureDefaultCalendar(session.userId);
   const calendars = await prisma.calendar.findMany({
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const body = await req.json();
   const name = typeof body.name === "string" ? body.name.trim() : "";

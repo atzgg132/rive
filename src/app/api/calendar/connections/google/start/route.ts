@@ -4,7 +4,7 @@ import { createCalendarOAuthState } from "@/utils/calendarCrypto";
 import { googleAuthorizationUrl } from "@/utils/googleCalendar";
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.redirect(new URL("/login?next=/calendar", req.url));
   try {
     const returnTo = req.nextUrl.searchParams.get("from") === "onboarding" ? "/onboarding" : "/calendar";

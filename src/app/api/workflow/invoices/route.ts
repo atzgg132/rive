@@ -52,7 +52,7 @@ function parseTaxRate(value: unknown, fallback = 0): number | "invalid" {
 // GET /api/workflow/invoices
 export async function GET(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -140,7 +140,7 @@ export async function GET(req: NextRequest) {
 // POST /api/workflow/invoices
 export async function POST(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -251,7 +251,7 @@ export async function POST(req: NextRequest) {
 // PUT /api/workflow/invoices
 export async function PUT(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
@@ -411,7 +411,7 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/workflow/invoices
 export async function DELETE(req: NextRequest) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }

@@ -50,6 +50,8 @@ jobs:
       - run: npm ci
       - run: npm run db:migrate
       - run: node scripts/seed-e2e-user.mjs
+      - run: npm run test:unit
+      - run: npx tsc --noEmit --incremental false
       - run: npm run lint
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e

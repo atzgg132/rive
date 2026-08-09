@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { isPortfolioPublished, mergePortfolioContent } from "@/utils/portfolio";
+import { getPublicPortfolioContent, isPortfolioPublished } from "@/utils/portfolio";
 
 function deviceFromUserAgent(userAgent: string): string {
   if (/mobile|android|iphone|ipad/i.test(userAgent)) return "mobile";
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       portfolio: {
         slug: portfolio.slug,
         templateKey: portfolio.templateKey,
-        content: mergePortfolioContent(portfolio.content),
+        content: getPublicPortfolioContent(portfolio.content),
         theme: portfolio.theme,
         seo: portfolio.seo,
       },

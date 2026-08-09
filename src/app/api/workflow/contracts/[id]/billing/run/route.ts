@@ -5,7 +5,7 @@ import { processContractBilling } from "@/utils/contractBilling";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const contract = await prisma.contract.findFirst({ where: { id, userId: session.userId }, select: { id: true } });

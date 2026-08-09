@@ -19,7 +19,7 @@ export async function POST(
 ) {
   try {
     assertContractsEnabled();
-    const session = getSessionUser(request);
+    const session = await getSessionUser(request);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const body = await request.json().catch(() => null) as { role?: unknown; sendEmail?: unknown } | null;

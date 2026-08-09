@@ -6,7 +6,7 @@ import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = getSessionUser(req);
+    const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const parsedBody = await req.json().catch(() => ({}));

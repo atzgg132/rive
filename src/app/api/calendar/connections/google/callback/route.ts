@@ -5,7 +5,7 @@ import { discoverGoogleCalendars, exchangeGoogleCode, saveGoogleConnection, sync
 import { prisma } from "@/utils/db";
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   const code = req.nextUrl.searchParams.get("code");
   const state = verifyCalendarOAuthState(req.nextUrl.searchParams.get("state") || "");
   if (!session || !state || state.userId !== session.userId || !code) {

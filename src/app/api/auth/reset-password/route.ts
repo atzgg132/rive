@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
       await transaction.user.update({
         where: { id: resetToken.userId! },
-        data: { passwordHash: hashPassword(password) },
+        data: { passwordHash: hashPassword(password), sessionVersion: { increment: 1 } },
       });
       await transaction.authToken.updateMany({
         where: { userId: resetToken.userId, type: "password_reset", usedAt: null },
