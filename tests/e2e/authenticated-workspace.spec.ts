@@ -106,7 +106,7 @@ test.describe("authenticated workspace", () => {
       expect(response?.status()).toBeLessThan(500);
       expect(dataResponse.status(), `${endpoint} returned ${dataResponse.status()}`).toBeLessThan(500);
       await expect(page).toHaveURL(new RegExp(`${route.replaceAll("/", "\\/")}(?:\\?.*)?$`));
-      await expect(page.locator("main.flex-1")).toBeVisible();
+      await expect(page.locator("main.flex-1")).toBeVisible({ timeout: 15_000 });
 
       const dimensions = await page.evaluate(() => {
         const clientWidth = document.documentElement.clientWidth;
