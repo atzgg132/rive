@@ -204,7 +204,7 @@ export default function ClientsPage() {
     <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
       <PageHeader
         title="Clients"
-        description="Keep every relationship, project, invoice, and important detail in context."
+        description="Keep contact details, projects, invoices, and relationship history together."
         actions={<Button onClick={openCreate}><Plus /> Add client</Button>}
       />
 

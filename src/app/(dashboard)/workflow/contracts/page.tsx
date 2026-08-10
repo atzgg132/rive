@@ -184,7 +184,7 @@ export default function ContractsPage() {
     <div className="workspace-page max-w-7xl animate-fade-in">
       <PageHeader
         title="Agreements"
-        description="Move from draft to review, recorded acceptance, and milestone billing without re-entering client or project data."
+        description="Draft, review, accept, and bill from one agreement using the client and project details already in Rive."
         actions={<Button onClick={() => openComposer()}><Plus className="h-4 w-4" /> New Agreement</Button>}
       />
 

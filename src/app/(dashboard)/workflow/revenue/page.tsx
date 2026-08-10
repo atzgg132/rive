@@ -385,7 +385,7 @@ export default function RevenuePage() {
     <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
       <PageHeader
         title="Revenue & invoices"
-        description={<>Create invoices, follow collections, and compare every invoice in {displayCurrency} without changing its original terms.</>}
+        description={<>Send invoices, track what is paid or overdue, and review totals in {displayCurrency} while preserving each invoice&apos;s original currency.</>}
         actions={<Button onClick={openCreate}><Plus /> Create invoice</Button>}
       />
 

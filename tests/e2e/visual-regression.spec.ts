@@ -1,8 +1,8 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 const majorPages = [
-  { name: "overview", path: "/dashboard", heading: "Your workspace overview" },
-  { name: "calendar", path: "/calendar", heading: "Every commitment, in one calendar" },
+  { name: "overview", path: "/dashboard", heading: "Your business, at a glance" },
+  { name: "calendar", path: "/calendar", heading: "Your work, on one timeline" },
   { name: "projects", path: "/workflow/projects", heading: "Projects" },
   { name: "clients", path: "/workflow/clients", heading: "Clients" },
   { name: "revenue", path: "/workflow/revenue", heading: "Revenue & invoices" },
@@ -82,7 +82,33 @@ async function mockVisualWorkspace(page: Page) {
     if (pathname === "/api/workflow/invoices") return json(route, { success: true, invoices: [] });
     if (pathname === "/api/workflow/expenses") return json(route, { success: true, expenses: [] });
     if (pathname === "/api/workflow/contracts") return json(route, { success: true, contracts: [] });
-    if (pathname === "/api/calendar/events") return json(route, { success: true, events: [] });
+    if (pathname === "/api/calendar/events") {
+      return json(route, {
+        success: true,
+        events: [{
+          id: "visual-calendar-event",
+          calendarId: "rive-calendar",
+          title: "Review portfolio typography",
+          description: "Final design review",
+          location: null,
+          meetingUrl: null,
+          startAt: "2026-08-10T07:30:00",
+          endAt: "2026-08-10T09:00:00",
+          startDate: null,
+          endDate: null,
+          allDay: false,
+          timeZone: "UTC",
+          availability: "busy",
+          source: "rive",
+          color: "#14B8A6",
+          clientId: null,
+          projectId: null,
+          taskId: null,
+          invoiceId: null,
+          readOnly: false,
+        }],
+      });
+    }
     if (pathname === "/api/calendar/calendars") return json(route, { success: true, calendars: [{ id: "rive-calendar", name: "Rive", color: "#2563EB", isDefault: true, isVisible: true, externalCalendars: [] }] });
     if (pathname === "/api/calendar/tasks") return json(route, { success: true, tasks: [] });
     if (pathname === "/api/calendar/connections") return json(route, { success: true, connections: [], connectorAvailability: { googleCalendar: false } });
@@ -147,7 +173,7 @@ for (const { width, height } of [{ width: 1280, height: 800 }, { width: 1024, he
     test(`overview ${theme} ${width}x${height} visual`, async ({ page }) => {
       await prepareVisualPage(page, theme, { width, height });
       await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-      await expect(page.getByRole("heading", { name: "Your workspace overview" })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole("heading", { name: "Your business, at a glance" })).toBeVisible({ timeout: 20_000 });
       await page.evaluate(() => document.fonts.ready);
       await expectDesktopVisualInvariants(page, theme);
       await expect(page).toHaveScreenshot(`overview-${theme}-${width}x${height}.png`, {
@@ -159,10 +185,56 @@ for (const { width, height } of [{ width: 1280, height: 800 }, { width: 1024, he
 }
 
 for (const theme of ["light", "dark"] as const) {
+  test(`calendar week ${theme} 1024x768 visual`, async ({ page }) => {
+    await prepareVisualPage(page, theme, { width: 1024, height: 768 });
+    await page.goto("/calendar", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Your work, on one timeline" })).toBeVisible({ timeout: 20_000 });
+    const dismissGuide = page.getByRole("button", { name: /got it, hide this/i });
+    if (await dismissGuide.isVisible()) await dismissGuide.click();
+    await page.getByRole("button", { name: /^week$/i }).click();
+    await expect(page.locator('[data-calendar-hour-label="7"]')).toBeVisible();
+    const calendarGeometry = await page.evaluate(() => {
+      const header = document.querySelector("[data-calendar-week-header]")?.getBoundingClientRect();
+      const body = document.querySelector("[data-calendar-week-body]")?.getBoundingClientRect();
+      const firstLabel = document.querySelector('[data-calendar-hour-label="7"]')?.getBoundingClientRect();
+      return {
+        headerBottom: header?.bottom || 0,
+        bodyTop: body?.top || 0,
+        labelTop: firstLabel?.top || 0,
+      };
+    });
+    expect(calendarGeometry.bodyTop).toBeGreaterThanOrEqual(calendarGeometry.headerBottom - 1);
+    expect(calendarGeometry.labelTop).toBeGreaterThan(calendarGeometry.bodyTop + 4);
+    await page.locator("[data-calendar-week-header]").scrollIntoViewIfNeeded();
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page).toHaveScreenshot(`calendar-week-${theme}-1024x768.png`, { fullPage: false, maxDiffPixelRatio: 0.12 });
+  });
+
+  test(`portfolio editor ${theme} 1024x768 visual`, async ({ page }) => {
+    await prepareVisualPage(page, theme, { width: 1024, height: 768 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+    const sectionGeometry = await page.locator("[data-portfolio-section]").evaluateAll((buttons) => buttons.map((button) => {
+      const buttonRect = button.getBoundingClientRect();
+      const copyRect = button.querySelector("span")?.getBoundingClientRect();
+      return { left: buttonRect.left, width: buttonRect.width, copyLeft: copyRect?.left || 0 };
+    }));
+    const lefts = sectionGeometry.map((item) => item.left);
+    const widths = sectionGeometry.map((item) => item.width);
+    const copyLefts = sectionGeometry.map((item) => item.copyLeft);
+    expect(Math.max(...lefts) - Math.min(...lefts)).toBeLessThanOrEqual(1);
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+    expect(Math.max(...copyLefts) - Math.min(...copyLefts)).toBeLessThanOrEqual(1);
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page).toHaveScreenshot(`portfolio-editor-${theme}-1024x768.png`, { fullPage: false, maxDiffPixelRatio: 0.12 });
+  });
+}
+
+for (const theme of ["light", "dark"] as const) {
   test(`mobile shell and onboarding ${theme} visual`, async ({ page }) => {
     await prepareVisualPage(page, theme, { width: 390, height: 844 });
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Your workspace overview" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Your business, at a glance" })).toBeVisible({ timeout: 20_000 });
     await expect(page.locator("aside")).toBeHidden();
     await expect(page).toHaveScreenshot(`overview-${theme}-390x844.png`, { fullPage: false });
 

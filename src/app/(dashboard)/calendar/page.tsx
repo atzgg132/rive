@@ -559,8 +559,9 @@ export default function CalendarPage() {
   return (
     <div className="calendar-shell workspace-page max-w-[100rem]">
       <PageHeader
-        title={<span className="flex flex-wrap items-center gap-2"><CalendarDays className="h-6 w-6 text-primary" /> Every commitment, in one calendar <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2.5 py-1 text-xs font-semibold tracking-normal text-primary">Smart calendar</span></span>}
-        description="Plan client work, protect focus time, and see projects, milestones, invoice dates, tasks, and meetings on one live timeline."
+        className="sm:flex-col xl:flex-row"
+        title={<span className="flex flex-wrap items-center gap-2"><CalendarDays className="h-6 w-6 text-primary" /> Your work, on one timeline <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2.5 py-1 text-xs font-semibold tracking-normal text-primary">Connected</span></span>}
+        description="Plan meetings and focus time alongside project deadlines, tasks, milestones, and invoice due dates."
         actions={<>
           {guideReady && !showGuide && <Button variant="ghost" onClick={() => setShowGuide(true)} className="hidden sm:inline-flex"><Info /> How it connects</Button>}
           <Button variant="outline" onClick={() => setConnectionsOpen(true)}><span className={`h-2 w-2 rounded-full ${visibleConnections.length ? "bg-success" : "bg-warning"}`} /><Link2 /> {visibleConnections.length ? `${connectedCalendars} synced` : "Calendar feeds"}</Button>
@@ -571,28 +572,28 @@ export default function CalendarPage() {
 
       {guideReady && showGuide && <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-          <div><p className="text-xs font-black text-slate-800 dark:text-white">How your workspace flows into the calendar</p><p className="mt-0.5 text-[10px] text-slate-400">These are live projections from your rive. records—not copies you need to maintain twice.</p></div>
+          <div><p className="text-xs font-black text-slate-800 dark:text-white">How work reaches your calendar</p><p className="mt-0.5 text-[10px] text-slate-400">Dates stay connected to their source records, so you only update them once.</p></div>
           <Button onClick={dismissGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[9px] font-bold text-slate-500 hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:text-slate-400"><X className="h-3 w-3" />Got it, hide this</Button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <ValueCard icon={<Briefcase className="h-4 w-4" />} tone="blue" value={`${deadlineCount} live deadlines`} title="Projects & milestones" description="Start dates and incomplete delivery deadlines update from project records." />
-          <ValueCard icon={<Timer className="h-4 w-4" />} tone="teal" value={`${Math.round(scheduledFocusMinutes / 60 * 10) / 10}h protected`} title="Tasks & focus time" description="Due tasks appear automatically; schedule and complete focus blocks here." />
-          <ValueCard icon={<CircleDollarSign className="h-4 w-4" />} tone="amber" value="Money dates included" title="Revenue & invoices" description="Every unpaid invoice due date stays beside the work that earns it." />
+          <ValueCard icon={<Briefcase className="h-4 w-4" />} tone="blue" value={`${deadlineCount} deadlines scheduled`} title="Projects & milestones" description="Project dates and unfinished milestones update here when the source record changes." />
+          <ValueCard icon={<Timer className="h-4 w-4" />} tone="teal" value={`${Math.round(scheduledFocusMinutes / 60 * 10) / 10}h protected`} title="Tasks & focus time" description="Turn due tasks into focus blocks, then complete them from the same plan." />
+          <ValueCard icon={<CircleDollarSign className="h-4 w-4" />} tone="amber" value="Invoice dates included" title="Revenue & invoices" description="Unpaid invoice due dates stay visible beside the work that generated them." />
           <ValueCard icon={<Cloud className="h-4 w-4" />} tone="violet" value={visibleConnections.length ? `${connectedCalendars} calendars active` : "Ready to connect"} title={googleCalendarAvailable ? "Google & Apple" : "Apple calendar"} description={googleCalendarAvailable ? "rive. events sync both ways with Google; Apple receives the combined feed." : "Apple can receive a private, read-only feed of rive. events and deadlines."} />
         </div>
         {!visibleConnections.length && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 dark:border-blue-900/60 dark:from-blue-950/30 dark:to-indigo-950/20">
-            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-600 text-white"><Sparkles className="h-4 w-4" /></span><div><p className="text-xs font-black text-slate-800 dark:text-white">Make this your single source of truth</p><p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{googleCalendarAvailable ? "Connect Google Calendar for continuous two-way sync, or add rive. to Apple Calendar with a private feed." : "Add rive. to Apple Calendar with a private feed."}</p></div></div>
-            <Button onClick={() => setConnectionsOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-blue-700">Finish setup <ArrowRight className="h-3.5 w-3.5" /></Button>
+            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-600 text-white"><Sparkles className="h-4 w-4" /></span><div><p className="text-xs font-black text-slate-800 dark:text-white">See Rive alongside your other calendars</p><p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{googleCalendarAvailable ? "Connect Google Calendar for two-way sync, or add a private Rive feed to Apple Calendar." : "Add a private Rive feed to Apple Calendar."}</p></div></div>
+            <Button onClick={() => setConnectionsOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-blue-700">Connect calendar <ArrowRight className="h-3.5 w-3.5" /></Button>
           </div>
         )}
-        <p className="mt-3 text-[9px] text-slate-400">Clients provide context through their projects and invoices. Expenses and portfolio publishing do not create calendar items yet.</p>
+        <p className="mt-3 text-xs leading-5 text-slate-400">Client details provide context through projects and invoices. Expenses and portfolio publishing stay out of the calendar.</p>
       </section>}
 
       <div className="grid min-h-[calc(100vh-300px)] 2xl:grid-cols-[210px_minmax(0,1fr)_270px]">
         <aside className="hidden border-r border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900 2xl:block">
           <Button onClick={() => setCursor(new Date())} className="mb-5 w-full rounded-xl border border-slate-200 py-2 text-xs font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200">Today</Button>
-          <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">My calendars</p>
+          <p className="mb-2 px-1 text-xs font-bold text-slate-500 dark:text-slate-300">My calendars</p>
           <div className="space-y-1">
             {calendars.map((calendar) => (
               <label key={calendar.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -608,8 +609,8 @@ export default function CalendarPage() {
             ))}
           </div>
           <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900/60 dark:bg-blue-950/20">
-            <p className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">Live, not copied</p>
-            <p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">Linked deadlines update when their original project, task, or invoice changes.</p>
+            <p className="text-xs font-bold text-blue-700 dark:text-blue-300">Always up to date</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Project deadlines, tasks, and invoice dates stay in sync with their source records.</p>
           </div>
         </aside>
 
@@ -631,8 +632,8 @@ export default function CalendarPage() {
             </div>
           </div>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
-            <span>Double-click any day or time to create an event.</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-teal-500" />Tasks become focus blocks when scheduled.</span>
+            <span>Double-click a day or time slot to add an event.</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-teal-500" />Scheduled tasks appear as focus blocks.</span>
           </div>
 
           {loading ? (
@@ -816,7 +817,65 @@ function MonthView({ rangeStart, groupedEvents, onCreate, onSelect }: { rangeSta
 
 function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date; events: CalendarEvent[]; onCreate: (date: Date, hour: number) => void; onSelect: (event: CalendarEvent) => void }) {
   const days = Array.from({ length: 7 }, (_, index) => addDays(rangeStart, index));
-  return <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="min-w-[780px]"><div className="grid grid-cols-[54px_repeat(7,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-800"><div /><>{days.map((day) => { const today = dateKey(day) === dateKey(new Date()); return <div key={day.toISOString()} className="border-l border-slate-100 px-2 py-3 text-center dark:border-slate-800"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{WEEK_DAYS[(day.getDay() + 6) % 7]}</p><p className={`mx-auto mt-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black ${today ? "bg-blue-600 text-white" : "text-slate-700 dark:text-slate-200"}`}>{day.getDate()}</p></div>; })}</></div><div className="grid grid-cols-[54px_repeat(7,minmax(0,1fr))]"><div>{HOURS.map((hour) => <div key={hour} className="h-16 -translate-y-2 pr-2 text-right text-[9px] text-slate-400">{hour === 12 ? "12 pm" : hour > 12 ? `${hour - 12} pm` : `${hour} am`}</div>)}</div>{days.map((day) => { const key = dateKey(day); const dayEvents = events.filter((event) => eventDateKey(event) === key); const timed = layoutOverlappingEvents(dayEvents.filter((event) => !event.allDay && event.startAt && event.endAt)); const allDay = sortCalendarEvents(dayEvents.filter((event) => event.allDay)); return <div key={key} className="relative min-w-0 border-l border-slate-100 dark:border-slate-800"><div className="absolute left-1 right-1 top-1 z-10 space-y-1">{allDay.slice(0, 2).map((event) => <Button key={event.id} onClick={() => onSelect(event)} className="block w-full min-w-0 truncate rounded-md px-1.5 py-1 text-left text-[8px] font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.title}</Button>)}</div>{HOURS.map((hour) => <Button key={hour} onDoubleClick={() => onCreate(day, hour)} className="block h-16 w-full border-b border-slate-100 text-left hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10" aria-label={`Create event ${key} at ${hour}:00`} />)}{timed.map(({ event, lane, laneCount }) => { const start = new Date(event.startAt!); const end = new Date(event.endAt!); const top = Math.max(0, ((start.getHours() * 60 + start.getMinutes()) - 420) / 60 * 64); const height = Math.max(24, (end.getTime() - start.getTime()) / 3600000 * 64); return <Button key={event.id} onClick={() => onSelect(event)} title={`${formatTime(event.startAt)} · ${event.title}`} className="absolute z-20 min-w-0 overflow-hidden rounded-lg border-l-[3px] px-1.5 py-1 text-left shadow-sm" style={{ top, height, left: `calc(${lane * (100 / laneCount)}% + 3px)`, width: `calc(${100 / laneCount}% - 5px)`, background: `${event.color}1C`, borderColor: event.color, color: event.color }}><span className="block truncate text-[9px] font-black">{event.title}</span><span className="block truncate text-[8px] opacity-80">{formatTime(event.startAt)}</span></Button>; })}</div>; })}</div></div></div>;
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="min-w-[640px]">
+        <div data-calendar-week-header className="grid grid-cols-[58px_repeat(7,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-800">
+          <div aria-hidden="true" />
+          {days.map((day) => {
+            const today = dateKey(day) === dateKey(new Date());
+            return (
+              <div key={day.toISOString()} className="border-l border-slate-100 px-2 py-3 text-center dark:border-slate-800">
+                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{WEEK_DAYS[(day.getDay() + 6) % 7]}</p>
+                <p className={`mx-auto mt-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black ${today ? "bg-blue-600 text-white" : "text-slate-700 dark:text-slate-200"}`}>{day.getDate()}</p>
+              </div>
+            );
+          })}
+        </div>
+        <div data-calendar-week-body className="grid grid-cols-[58px_repeat(7,minmax(0,1fr))]">
+          <div className="bg-slate-50/55 dark:bg-slate-950/25">
+            {HOURS.map((hour) => (
+              <div key={hour} className="h-16 pr-3 pt-2 text-right">
+                <span data-calendar-hour-label={hour} className="inline-block text-[10px] font-medium leading-none text-slate-400">
+                  {hour === 12 ? "12 pm" : hour > 12 ? `${hour - 12} pm` : `${hour} am`}
+                </span>
+              </div>
+            ))}
+          </div>
+          {days.map((day) => {
+            const key = dateKey(day);
+            const dayEvents = events.filter((event) => eventDateKey(event) === key);
+            const timed = layoutOverlappingEvents(dayEvents.filter((event) => !event.allDay && event.startAt && event.endAt));
+            const allDay = sortCalendarEvents(dayEvents.filter((event) => event.allDay));
+            return (
+              <div key={key} className="relative min-w-0 border-l border-slate-100 dark:border-slate-800">
+                <div className="absolute left-1 right-1 top-1 z-10 space-y-1">
+                  {allDay.slice(0, 2).map((event) => (
+                    <Button key={event.id} onClick={() => onSelect(event)} className="block w-full min-w-0 truncate rounded-md px-1.5 py-1 text-left text-[8px] font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.title}</Button>
+                  ))}
+                </div>
+                {HOURS.map((hour) => (
+                  <Button key={hour} onDoubleClick={() => onCreate(day, hour)} className="block h-16 w-full rounded-none border-b border-slate-100 text-left hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10" aria-label={`Create event ${key} at ${hour}:00`} />
+                ))}
+                {timed.map(({ event, lane, laneCount }) => {
+                  const start = new Date(event.startAt!);
+                  const end = new Date(event.endAt!);
+                  const top = Math.max(0, ((start.getHours() * 60 + start.getMinutes()) - 420) / 60 * 64);
+                  const height = Math.max(24, (end.getTime() - start.getTime()) / 3600000 * 64);
+                  return (
+                    <Button key={event.id} onClick={() => onSelect(event)} title={`${formatTime(event.startAt)} · ${event.title}`} className="absolute z-20 min-w-0 overflow-hidden rounded-lg border-l-[3px] px-1.5 py-1 text-left shadow-sm" style={{ top, height, left: `calc(${lane * (100 / laneCount)}% + 3px)`, width: `calc(${100 / laneCount}% - 5px)`, background: `${event.color}1C`, borderColor: event.color, color: event.color }}>
+                      <span className="block truncate text-[9px] font-black">{event.title}</span>
+                      <span className="block truncate text-[8px] opacity-80">{formatTime(event.startAt)}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AgendaView({ events, onSelect }: { events: CalendarEvent[]; onSelect: (event: CalendarEvent) => void }) {

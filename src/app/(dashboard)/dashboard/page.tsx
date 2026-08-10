@@ -176,8 +176,8 @@ export default function DashboardOverview() {
   return (
     <div className="dashboard-overview workspace-page gap-7 animate-fade-in">
       <PageHeader
-        title="Your workspace overview"
-        description="See the financial health, delivery status, and activity that need your attention."
+        title="Your business, at a glance"
+        description="See what is moving, what is due, and where your attention will make the biggest difference."
         actions={!isFirstRun ? (
           <>
           <Link href="/workflow/projects" className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-border dark:border-slate-700 hover:bg-background dark:hover:bg-slate-700 text-foreground dark:text-white transition-all">
@@ -201,9 +201,9 @@ export default function DashboardOverview() {
       {isFirstRun && activation && (
         <section className="overflow-hidden rounded-2xl border border-blue-400/40 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg shadow-blue-600/10 sm:p-8">
           <div className="max-w-2xl">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Your first steps</div>
-            <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Welcome to Rive. Get your workspace ready.</h2>
-            <p className="mt-2 text-sm leading-6 text-blue-100">Start with the few pieces that make Rive useful: your profile, one client, and one piece of work. You can come back to the rest later.</p>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Workspace setup</div>
+            <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Start with the essentials.</h2>
+            <p className="mt-2 text-sm leading-6 text-blue-100">Add your profile, first client, and first project so Rive can give you a useful view of the work. Everything else can wait.</p>
           </div>
           {profileReadiness && (
             <div className="mt-6 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
@@ -228,9 +228,9 @@ export default function DashboardOverview() {
         <section className="overflow-hidden rounded-2xl border border-blue-400/40 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg shadow-blue-600/10 sm:p-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-xl">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Activation center</div>
-              <h2 className="mt-2 text-2xl font-black tracking-tight">{activation.completed === 0 ? "Bring your business into focus." : "Your operating system is taking shape."}</h2>
-              <p className="mt-2 text-sm leading-6 text-blue-100">Complete the connected loop once—identity, clients, active work, money, schedule, and proof—and Rive can turn records into useful decisions.</p>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Workspace setup</div>
+              <h2 className="mt-2 text-2xl font-black tracking-tight">{activation.completed === 0 ? "Set up the basics that make Rive useful." : "A few setup steps are still worth finishing."}</h2>
+              <p className="mt-2 text-sm leading-6 text-blue-100">Connect your profile, clients, projects, finances, calendar, and portfolio once. Rive will keep the context together from there.</p>
               {activation.unresolvedImportIssues > 0 && <Link href="/onboarding?restart=1" className="mt-3 inline-flex rounded-full bg-amber-300/20 px-3 py-1 text-[10px] font-black text-amber-100 ring-1 ring-amber-200/30">{activation.unresolvedImportIssues} imported relationship{activation.unresolvedImportIssues === 1 ? "" : "s"} need review</Link>}
             </div>
             <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:w-[460px]">
@@ -265,10 +265,10 @@ export default function DashboardOverview() {
       {!isFirstRun && insights && currencyMeta?.conversionAvailable !== false && (
         <section className={metricsGridClassName}>
           <Card className={insightCardClassName}>
-            <p className="text-xs font-semibold text-muted-foreground">Collection health</p>
+            <p className="text-xs font-semibold text-muted-foreground">Collection rate</p>
             <div className="mt-auto pt-2">
               <p className="text-xl font-black text-foreground">{insights.collectionRate}%</p>
-              <p className="mt-1 text-xs text-muted-foreground">Of issued value collected</p>
+              <p className="mt-1 text-xs text-muted-foreground">Share of invoiced value collected</p>
             </div>
           </Card>
           <Card className={insightCardClassName}>
@@ -305,10 +305,10 @@ export default function DashboardOverview() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-primary" />
-              <h3 className="font-bold text-base text-foreground dark:text-white">Recent activities</h3>
+              <h3 className="font-bold text-base text-foreground dark:text-white">Recent activity</h3>
             </div>
-            <Badge className="uppercase">
-              Live activity
+            <Badge>
+              Updates automatically
             </Badge>
           </div>
 
@@ -317,7 +317,7 @@ export default function DashboardOverview() {
               <EmptyState
                 icon={<Activity className="h-4 w-4" />}
                 title="No activity yet"
-                description="Add a client, create a project, or issue an invoice to begin building your timeline."
+                description="Add a client, create a project, or send an invoice. New updates will appear here automatically."
               />
             ) : (
               activities.map((a, idx) => {

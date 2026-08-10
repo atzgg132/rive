@@ -242,7 +242,7 @@ export default function ExpensesPage() {
     <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
       <PageHeader
         title="Expenses"
-        description={<>Understand every cost in {displayCurrency} while preserving what you actually paid.</>}
+        description={<>Track operating and project costs in {displayCurrency} while preserving each expense&apos;s original currency.</>}
         actions={<Button onClick={openCreate}><Plus /> Log expense</Button>}
       />
 

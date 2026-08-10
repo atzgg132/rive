@@ -357,7 +357,7 @@ export default function ProjectsPage() {
     <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
       <PageHeader
         title="Projects"
-        description="Plan delivery, connect milestones and tasks, and keep budgets and deadlines visible."
+        description="Keep delivery moving with clear milestones, budgets, tasks, and deadlines."
         actions={<Button onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button>}
       />
 
