@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, EmptyState, Input, Select } from "@/components/ui";
+import { Button, EmptyState, Input, PageHeader, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -239,23 +239,12 @@ export default function ExpensesPage() {
   const linkedSpend = sumExpenses(expenses.filter((expense) => expense.project_id));
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in relative min-h-[calc(100vh-8rem)]">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-slate-50 sm:text-3xl">Expenses</h1>
-          <p className="text-sm text-muted-foreground dark:text-slate-400">Understand every cost in {displayCurrency} while preserving what you actually paid.</p>
-        </div>
-        <Button
-          variant="default"
-          size="default"
-          onClick={openCreate}
-          className="self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Log new expense</span>
-        </Button>
-      </div>
+    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
+      <PageHeader
+        title="Expenses"
+        description={<>Understand every cost in {displayCurrency} while preserving what you actually paid.</>}
+        actions={<Button onClick={openCreate}><Plus /> Log expense</Button>}
+      />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -263,13 +252,13 @@ export default function ExpensesPage() {
           ["billable, unreimbursed", formatSummary(billableOutstanding), "recoverable from clients"],
           ["largest category", topCategory?.[0] || "—", topCategory ? formatCurrency(topCategory[1]) : "categorize costs to reveal spend"],
           ["linked to projects", formatSummary(linkedSpend), "available for project profitability"],
-        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className="mt-2 truncate text-xl font-black capitalize text-foreground dark:text-white">{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
+        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-card"><p className="text-xs font-semibold capitalize text-muted-foreground">{label}</p><p className="mt-2 truncate text-xl font-extrabold capitalize text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>)}
       </section>
 
       <p className="-mt-3 text-[11px] text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
 
       {/* Filter and Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800">
+      <div className="workspace-toolbar">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
           <Input
@@ -282,7 +271,7 @@ export default function ExpensesPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs text-muted-foreground dark:text-slate-400">Category:</span>
+          <span className="text-xs font-medium text-muted-foreground">Category</span>
           <Select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -313,11 +302,11 @@ export default function ExpensesPage() {
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Log expense</Button>}
         />
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border dark:border-slate-800 overflow-hidden shadow-sm">
+        <div className="workspace-table">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-border dark:border-slate-800 text-[10px] font-bold text-muted-foreground dark:text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-border text-xs font-semibold text-muted-foreground">
                   <th className="py-4 px-6">Date</th>
                   <th className="py-4 px-6">Description</th>
                   <th className="py-4 px-6">Category</th>
@@ -327,25 +316,25 @@ export default function ExpensesPage() {
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2EAF4] dark:divide-slate-800 text-xs text-foreground dark:text-slate-200">
+              <tbody className="divide-y divide-border text-sm text-foreground">
                 {expenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                  <tr key={exp.id} className="group transition-colors hover:bg-muted/35">
                     <td className="py-4 px-6">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                     <td className="py-4 px-6 font-bold">{exp.description}</td>
                     <td className="py-4 px-6">
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase ${getCategoryColor(exp.category)}`}>
+                      <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${getCategoryColor(exp.category)}`}>
                         {exp.category}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-muted-foreground dark:text-slate-400">{exp.project_title || "none"}</td>
+                    <td className="py-4 px-6 text-muted-foreground">{exp.project_title || "None"}</td>
                     <td className="py-4 px-6">
                       {exp.is_billable ? (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50 uppercase">Yes</span>
+                        <span className="rounded-md border border-success/20 bg-success/10 px-2 py-1 text-[11px] font-semibold text-success">Yes</span>
                       ) : (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase">No</span>
+                        <span className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground">No</span>
                       )}
                     </td>
-                    <td className="py-4 px-6 font-extrabold text-[#EF4444] dark:text-red-400">
+                    <td className="py-4 px-6 font-bold text-destructive">
                       <span className="block">{formatConverted(parseFloat(exp.amount), exp.currency) || formatCurrency(parseFloat(exp.amount), exp.currency)}</span>
                       {exp.currency !== displayCurrency && <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
                     </td>

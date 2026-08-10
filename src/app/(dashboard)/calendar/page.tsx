@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Textarea, Select } from "@/components/ui";
+import { Button, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -557,27 +557,19 @@ export default function CalendarPage() {
     : cursor.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
   return (
-    <div className="calendar-shell min-h-full bg-background dark:bg-slate-950">
-      <header className="border-b border-border bg-white px-5 py-5 dark:border-slate-800 dark:bg-slate-900 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-xl font-black tracking-tight text-foreground dark:text-white">Every commitment, in one calendar</h1>
-              <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">Smart calendar</span>
-            </div>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">Plan client work, protect focus time, and see projects, milestones, invoice dates, tasks, and meetings on one live timeline.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {guideReady && !showGuide && <Button onClick={() => setShowGuide(true)} className="hidden items-center gap-1.5 rounded-xl px-2.5 py-2 text-[10px] font-bold text-slate-400 hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-slate-800 sm:inline-flex"><Info className="h-3.5 w-3.5" />How it connects</Button>}
-            <Button onClick={() => setConnectionsOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"><span className={`h-2 w-2 rounded-full ${visibleConnections.length ? "bg-emerald-500" : "bg-amber-400"}`} /><Link2 className="h-4 w-4" />{visibleConnections.length ? `${connectedCalendars} synced` : "Calendar feeds"}</Button>
-            <Button onClick={openTaskComposer} className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-teal-300 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:inline-flex"><ListTodo className="h-4 w-4" />Add task</Button>
-            <Button onClick={() => openCreate()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700"><Plus className="h-4 w-4" />New event</Button>
-          </div>
-        </div>
-      </header>
+    <div className="calendar-shell workspace-page max-w-[100rem]">
+      <PageHeader
+        title={<span className="flex flex-wrap items-center gap-2"><CalendarDays className="h-6 w-6 text-primary" /> Every commitment, in one calendar <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2.5 py-1 text-xs font-semibold tracking-normal text-primary">Smart calendar</span></span>}
+        description="Plan client work, protect focus time, and see projects, milestones, invoice dates, tasks, and meetings on one live timeline."
+        actions={<>
+          {guideReady && !showGuide && <Button variant="ghost" onClick={() => setShowGuide(true)} className="hidden sm:inline-flex"><Info /> How it connects</Button>}
+          <Button variant="outline" onClick={() => setConnectionsOpen(true)}><span className={`h-2 w-2 rounded-full ${visibleConnections.length ? "bg-success" : "bg-warning"}`} /><Link2 /> {visibleConnections.length ? `${connectedCalendars} synced` : "Calendar feeds"}</Button>
+          <Button variant="outline" onClick={openTaskComposer} className="hidden sm:inline-flex"><ListTodo /> Add task</Button>
+          <Button onClick={() => openCreate()}><Plus /> New event</Button>
+        </>}
+      />
 
-      {guideReady && showGuide && <section className="border-b border-border bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900 lg:px-8">
+      {guideReady && showGuide && <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div><p className="text-xs font-black text-slate-800 dark:text-white">How your workspace flows into the calendar</p><p className="mt-0.5 text-[10px] text-slate-400">These are live projections from your rive. records—not copies you need to maintain twice.</p></div>
           <Button onClick={dismissGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[9px] font-bold text-slate-500 hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:text-slate-400"><X className="h-3 w-3" />Got it, hide this</Button>

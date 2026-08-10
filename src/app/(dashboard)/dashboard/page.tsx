@@ -174,7 +174,7 @@ export default function DashboardOverview() {
   );
 
   return (
-    <div className="dashboard-overview flex flex-col gap-8 animate-fade-in">
+    <div className="dashboard-overview workspace-page gap-7 animate-fade-in">
       <PageHeader
         title="Your workspace overview"
         description="See the financial health, delivery status, and activity that need your attention."
@@ -199,7 +199,7 @@ export default function DashboardOverview() {
       )}
 
       {isFirstRun && activation && (
-        <section className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-600/10 sm:p-8">
+        <section className="overflow-hidden rounded-2xl border border-blue-400/40 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg shadow-blue-600/10 sm:p-8">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Your first steps</div>
             <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Welcome to Rive. Get your workspace ready.</h2>
@@ -225,7 +225,7 @@ export default function DashboardOverview() {
       )}
 
       {!isFirstRun && activation && activation.completed < activation.total && (
-        <section className="overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-600/10 sm:p-7">
+        <section className="overflow-hidden rounded-2xl border border-blue-400/40 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg shadow-blue-600/10 sm:p-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-xl">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100"><Target className="h-4 w-4" /> Activation center</div>
@@ -246,9 +246,9 @@ export default function DashboardOverview() {
         {statCards.map((c, idx) => {
           const Icon = c.icon;
           return (
-            <Card key={idx} className="glass flex min-h-36 flex-col bg-card p-6 shadow-card">
+            <Card key={idx} className="flex min-h-36 flex-col p-6">
               <div className="mb-4 flex items-start justify-between gap-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{c.title}</span>
+                <span className="text-xs font-semibold text-muted-foreground">{c.title}</span>
                 <span className={`p-2 rounded-lg ${c.color}`}>
                   <Icon className="h-4 w-4" />
                 </span>
@@ -265,28 +265,28 @@ export default function DashboardOverview() {
       {!isFirstRun && insights && currencyMeta?.conversionAvailable !== false && (
         <section className={metricsGridClassName}>
           <Card className={insightCardClassName}>
-            <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Collection health</p>
+            <p className="text-xs font-semibold text-muted-foreground">Collection health</p>
             <div className="mt-auto pt-2">
               <p className="text-xl font-black text-foreground">{insights.collectionRate}%</p>
               <p className="mt-1 text-xs text-muted-foreground">Of issued value collected</p>
             </div>
           </Card>
           <Card className={insightCardClassName}>
-            <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Profit margin</p>
+            <p className="text-xs font-semibold text-muted-foreground">Profit margin</p>
             <div className="mt-auto pt-2">
               <p className={`text-xl font-black ${insights.profitMargin < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>{insights.profitMargin}%</p>
               <p className="mt-1 text-xs text-muted-foreground">After logged expenses</p>
             </div>
           </Card>
           <Link href="/workflow/revenue" className={`${insightCardClassName} hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg dark:hover:border-amber-700`}>
-            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground"><AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> Overdue</p>
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><AlertTriangle className="h-3.5 w-3.5 text-warning" /> Overdue</p>
             <div className="mt-auto pt-2">
               <p className="text-xl font-black text-foreground">{formatCurrency(insights.overdueAmount)}</p>
               <p className="mt-1 text-xs text-muted-foreground">{insights.overdueCount} invoice{insights.overdueCount === 1 ? "" : "s"} {insights.overdueCount === 1 ? "needs" : "need"} attention</p>
             </div>
           </Link>
           <Link href="/calendar" className={`${insightCardClassName} hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg dark:hover:border-blue-700`}>
-            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground"><CalendarDays className="h-3.5 w-3.5 text-blue-500" /> Next 14 days</p>
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><CalendarDays className="h-3.5 w-3.5 text-primary" /> Next 14 days</p>
             <div className="mt-auto min-w-0 pt-2">
               <p className="truncate text-sm font-black text-foreground">{insights.upcomingProjects[0]?.title || "No project deadlines"}</p>
               <p className="mt-1 text-xs text-muted-foreground">{insights.upcomingProjects.length ? `${insights.upcomingProjects.length} upcoming project${insights.upcomingProjects.length === 1 ? "" : "s"}` : "Calendar is clear"}</p>
@@ -301,7 +301,7 @@ export default function DashboardOverview() {
       {/* Detail grids */}
       {!isFirstRun && <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent activity stream */}
-        <div className="lg:col-span-2 glass bg-white/95 dark:bg-slate-800/95 p-6 flex flex-col gap-5">
+        <div className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-card lg:col-span-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-primary" />
@@ -345,7 +345,7 @@ export default function DashboardOverview() {
         </div>
 
         {/* Top Clients Ranking */}
-        <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 flex flex-col gap-5">
+        <div className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-card">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-base text-foreground dark:text-white">Top clients</h3>
             <Link href="/workflow/clients" className="text-xs text-primary dark:text-blue-400 font-bold hover:underline flex items-center">

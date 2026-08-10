@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, EmptyState, Input, Textarea, Select } from "@/components/ui";
+import { Button, EmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -382,23 +382,12 @@ export default function RevenuePage() {
   const editingInvoice = editingId ? invoices.find((invoice) => invoice.id === editingId) || null : null;
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in relative min-h-[calc(100vh-8rem)]">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-slate-50 sm:text-3xl">Revenue & invoices</h1>
-          <p className="text-sm text-muted-foreground dark:text-slate-400">Create invoices, follow collections, and compare every invoice in {displayCurrency} without changing its original terms.</p>
-        </div>
-        <Button
-          variant="default"
-          size="default"
-          onClick={openCreate}
-          className="self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create new invoice</span>
-        </Button>
-      </div>
+    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
+      <PageHeader
+        title="Revenue & invoices"
+        description={<>Create invoices, follow collections, and compare every invoice in {displayCurrency} without changing its original terms.</>}
+        actions={<Button onClick={openCreate}><Plus /> Create invoice</Button>}
+      />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -406,13 +395,13 @@ export default function RevenuePage() {
           ["outstanding", summaryValue(outstandingRevenue), "sent and awaiting payment"],
           ["overdue", summaryValue(overdueRevenue), `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} need follow-up`],
           ["collection rate", collectionRate === null ? "—" : `${collectionRate}%`, "of issued value collected"],
-        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className={`mt-2 text-xl font-black ${label === "overdue" && overdueRevenue !== null && overdueRevenue > 0 ? "text-red-600 dark:text-red-400" : "text-foreground dark:text-white"}`}>{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
+        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-card"><p className="text-xs font-semibold capitalize text-muted-foreground">{label}</p><p className={`mt-2 text-xl font-extrabold ${label === "overdue" && overdueRevenue !== null && overdueRevenue > 0 ? "text-destructive" : "text-foreground"}`}>{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>)}
       </section>
 
       <p className="-mt-3 text-[11px] text-muted-foreground">Original invoice currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native invoice amounts remain visible."}</p>
 
       {/* Filter and Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800">
+      <div className="workspace-toolbar">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
           <Input
@@ -425,7 +414,7 @@ export default function RevenuePage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs text-muted-foreground dark:text-slate-400">Invoice state:</span>
+          <span className="text-xs font-medium text-muted-foreground">Status</span>
           <Select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -453,11 +442,11 @@ export default function RevenuePage() {
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Build invoice</Button>}
         />
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border dark:border-slate-800 overflow-visible shadow-sm">
+        <div className="workspace-table overflow-visible">
           <div className="overflow-x-auto overflow-y-visible pb-12">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-border dark:border-slate-800 text-[10px] font-bold text-muted-foreground dark:text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-border text-xs font-semibold text-muted-foreground">
                   <th className="py-4 px-6">Invoice number</th>
                   <th className="py-4 px-6">Client</th>
                   <th className="py-4 px-6">Linked project</th>
@@ -468,12 +457,12 @@ export default function RevenuePage() {
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2EAF4] dark:divide-slate-800 text-xs text-foreground dark:text-slate-200">
+              <tbody className="divide-y divide-border text-sm text-foreground">
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className={`transition-colors group ${highlightedInvoiceId === inv.id ? "bg-blue-50/80 ring-1 ring-inset ring-primary/20 dark:bg-blue-950/25" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"}`}>
+                  <tr key={inv.id} className={`group transition-colors ${highlightedInvoiceId === inv.id ? "bg-primary/[0.06] ring-1 ring-inset ring-primary/20" : "hover:bg-muted/35"}`}>
                     <td className="py-4 px-6 font-bold text-primary dark:text-blue-400">{inv.invoice_number}</td>
                     <td className="py-4 px-6 font-semibold">{inv.client_name || "private client"}</td>
-                    <td className="py-4 px-6 text-muted-foreground dark:text-slate-400"><span>{inv.project_title || "none"}</span>{agreements && inv.contract_id && inv.contract_title ? <Link href={`/workflow/contracts/${inv.contract_id}`} className="mt-1 block max-w-[220px] truncate text-[10px] font-semibold text-primary hover:underline">Agreement: {inv.contract_title}</Link> : null}</td>
+                    <td className="py-4 px-6 text-muted-foreground"><span>{inv.project_title || "None"}</span>{agreements && inv.contract_id && inv.contract_title ? <Link href={`/workflow/contracts/${inv.contract_id}`} className="mt-1 block max-w-[220px] truncate text-xs font-semibold text-primary hover:underline">Agreement: {inv.contract_title}</Link> : null}</td>
                     <td className="py-4 px-6">{new Date(inv.issue_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                     <td className="py-4 px-6">
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "immediate"}
@@ -483,7 +472,7 @@ export default function RevenuePage() {
                       {inv.currency !== displayCurrency && <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(inv.total), inv.currency)}</span>}
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase ${getStatusBadge(inv.status)}`}>
+                      <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${getStatusBadge(inv.status)}`}>
                         {inv.status}
                       </span>
                     </td>

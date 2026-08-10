@@ -16,16 +16,18 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return <div className="w-9 h-9" />; // placeholder to prevent layout shift
+    return <div className="h-9 w-9" />; // placeholder to prevent layout shift
   }
 
   return (
     <Button
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-300 flex items-center justify-center border border-transparent dark:border-slate-700"
+      variant="ghost"
+      size="icon-sm"
+      className="rounded-xl border border-border bg-card text-muted-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
       aria-label="Toggle theme"
     >
-      {resolvedTheme === "dark" ? <Sun size={18} strokeWidth={2.5} /> : <Moon size={18} strokeWidth={2.5} />}
+      {resolvedTheme === "dark" ? <Sun /> : <Moon />}
     </Button>
   );
 }

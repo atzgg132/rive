@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, Input, Textarea, Select } from "@/components/ui";
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
@@ -354,26 +354,15 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in relative min-h-[calc(100vh-8rem)]">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-slate-50 sm:text-3xl">Projects</h1>
-          <p className="text-sm text-muted-foreground dark:text-slate-400">Plan delivery, connect milestones and tasks, and keep budgets and deadlines visible.</p>
-        </div>
-        <Button
-          variant="default"
-          size="default"
-          onClick={openCreate}
-          className="self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create new project</span>
-        </Button>
-      </div>
+    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
+      <PageHeader
+        title="Projects"
+        description="Plan delivery, connect milestones and tasks, and keep budgets and deadlines visible."
+        actions={<Button onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button>}
+      />
 
       {/* Filter and Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800">
+      <div className="workspace-toolbar">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
           <Input
@@ -386,7 +375,7 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs text-muted-foreground dark:text-slate-400">Status:</span>
+          <span className="text-xs font-medium text-muted-foreground">Status</span>
           <Select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -669,13 +658,13 @@ export default function ProjectsPage() {
 function DroppableColumn({ id, title, color, count, children }: { id: string; title: string; color: string; count: number; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={`flex flex-col gap-4 p-4 rounded-2xl border min-h-[450px] transition-colors ${isOver ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/50' : 'bg-slate-50/50 dark:bg-slate-800/30 border-border dark:border-slate-800'}`}>
+    <div ref={setNodeRef} className={`flex min-h-[450px] flex-col gap-4 rounded-2xl border p-4 transition-colors ${isOver ? "border-primary/35 bg-primary/[0.06]" : "border-border bg-muted/30"}`}>
       <div className="flex justify-between items-center px-1">
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${color}`}></span>
-          <h3 className="text-sm font-bold text-foreground dark:text-slate-200">{title}</h3>
+          <h3 className="text-sm font-semibold capitalize text-foreground">{title}</h3>
         </div>
-        <span className="text-[10px] font-bold bg-white dark:bg-slate-800 border border-border dark:border-slate-700 px-1.5 py-0.5 rounded text-muted-foreground dark:text-slate-400">
+        <span className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-muted-foreground">
           {count}
         </span>
       </div>
@@ -712,7 +701,7 @@ function DraggableProjectCard({
   const pct = getProgressPercent(project);
 
   return (
-    <div ref={setNodeRef} style={style} className="glass bg-white dark:bg-slate-900 p-5 hover:shadow-md dark:hover:shadow-none hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col gap-4 group relative border border-border dark:border-slate-800 rounded-xl">
+    <div ref={setNodeRef} style={style} className="group relative flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-card">
       {/* Dropdown Actions */}
       <div className="absolute top-4 right-4 z-10">
         <Button
@@ -761,20 +750,20 @@ function DraggableProjectCard({
               <GripVertical className="h-4 w-4" />
             </div>
             <Link href={`/workflow/projects/${project.id}`}>
-              <h4 className="text-xs font-bold text-foreground dark:text-slate-200 line-clamp-1 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors hover:underline">{project.title}</h4>
+              <h4 className="line-clamp-1 text-sm font-semibold text-foreground transition-colors group-hover:text-primary hover:underline">{project.title}</h4>
             </Link>
           </div>
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ${getPriorityColor(project.priority)}`}>
+          <span className={`shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold capitalize ${getPriorityColor(project.priority)}`}>
             {project.priority}
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground dark:text-slate-400 line-clamp-2 leading-relaxed ml-6">{project.description || "no description provided."}</p>
+        <p className="ml-6 line-clamp-2 text-xs leading-5 text-muted-foreground">{project.description || "No description provided."}</p>
       </div>
 
       {/* Progress bar */}
       {project.milestone_count > 0 && (
         <div className="flex flex-col gap-1.5 ml-6">
-          <div className="flex justify-between text-[9px] font-bold text-muted-foreground dark:text-slate-400">
+          <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
             <span>Progress</span>
             <span>{pct}% ({project.completed_milestones}/{project.milestone_count})</span>
           </div>
@@ -788,7 +777,7 @@ function DraggableProjectCard({
       )}
 
       {/* Metadata */}
-      <div className="flex flex-col gap-1.5 border-t border-border dark:border-slate-800 pt-3 text-[10px] text-muted-foreground dark:text-slate-400 ml-6">
+      <div className="ml-6 flex flex-col gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
         {project.client_name && (
           <div className="flex items-center gap-1.5 truncate">
             <User className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
@@ -813,7 +802,7 @@ function DraggableProjectCard({
         </div>
       </div>
 
-      {agreements && <div className="ml-6 flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-[10px]">
+      {agreements && <div className="ml-6 flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-[11px]">
         {project.contract_coverage === "rive" && project.latest_contract ? (
           <>
             <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300"><FileSignature className="h-3.5 w-3.5 shrink-0" /><span className="truncate">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span></span>

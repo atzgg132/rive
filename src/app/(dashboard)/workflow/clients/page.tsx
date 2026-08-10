@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, EmptyState, Input, Textarea, Select } from "@/components/ui";
+import { Button, EmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -201,26 +201,15 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in relative min-h-[calc(100vh-8rem)]">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-slate-50 sm:text-3xl">Clients</h1>
-          <p className="text-sm text-muted-foreground dark:text-slate-400">Keep every relationship, project, invoice, and important detail in context.</p>
-        </div>
-        <Button
-          variant="default"
-          size="default"
-          onClick={openCreate}
-          className="self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add new client</span>
-        </Button>
-      </div>
+    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
+      <PageHeader
+        title="Clients"
+        description="Keep every relationship, project, invoice, and important detail in context."
+        actions={<Button onClick={openCreate}><Plus /> Add client</Button>}
+      />
 
       {/* Filter bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800">
+      <div className="workspace-toolbar">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
           <Input
@@ -233,7 +222,7 @@ export default function ClientsPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs text-muted-foreground dark:text-slate-400">Filter status:</span>
+          <span className="text-xs font-medium text-muted-foreground">Status</span>
           <Select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -259,9 +248,9 @@ export default function ClientsPage() {
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {clients.map((c) => (
-            <div key={c.id} className="glass bg-white/95 dark:bg-slate-900/95 p-6 flex flex-col justify-between hover:shadow-md dark:hover:shadow-none hover:border-blue-300 dark:hover:border-blue-700 transition-all group relative border-border dark:border-slate-800">
+            <div key={c.id} className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-card transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-lg">
 
               {/* Dropdown Actions */}
               <div className="absolute top-4 right-4 z-10">
@@ -315,10 +304,10 @@ export default function ClientsPage() {
                     </div>
                     <div className="flex flex-col min-w-0">
                       <Link href={`/workflow/clients/${c.id}`} className="text-sm font-bold text-foreground dark:text-slate-200 truncate hover:text-primary dark:hover:text-blue-400 hover:underline">{c.name}</Link>
-                      <span className="text-[10px] text-muted-foreground dark:text-slate-400 truncate">{c.company || "private client"}</span>
+                      <span className="truncate text-xs text-muted-foreground">{c.company || "Private client"}</span>
                     </div>
                   </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase ${
+                  <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${
                     c.status === "active" ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800" : "bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border-border dark:border-slate-700"
                   }`}>
                     {c.status}
@@ -329,7 +318,7 @@ export default function ClientsPage() {
                 {c.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {c.tags.map((t, idx) => (
-                      <span key={idx} className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border border-border dark:border-slate-700 flex items-center gap-1">
+                      <span key={idx} className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground">
                         <Tag className="h-2 w-2" />
                         <span>{t}</span>
                       </span>

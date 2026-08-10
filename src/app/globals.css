@@ -29,8 +29,10 @@
   --input: 203 213 225;
   --ring: 59 130 246;
   --radius: 0.75rem;
-  --shadow-card: 0 1px 2px rgb(12 30 54 / 0.03), 0 8px 28px rgb(12 30 54 / 0.055);
+  --shadow-card: 0 1px 2px rgb(12 30 54 / 0.035), 0 10px 30px rgb(12 30 54 / 0.045);
   --shadow-overlay: 0 24px 70px rgb(12 30 54 / 0.2);
+  --brand-wordmark: 12 30 54;
+  --brand-accent: 37 99 235;
 
   /* Rive light theme palette — blue & whitish, soothing */
   --bg-primary:        #F5F8FC;   /* Very soft ice-blue/white */
@@ -96,6 +98,8 @@ html {
   --ring: 96 165 250;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25), 0 16px 36px rgb(0 0 0 / 0.16);
   --shadow-overlay: 0 28px 80px rgb(0 0 0 / 0.55);
+  --brand-wordmark: 248 250 252;
+  --brand-accent: 96 165 250;
 
   --bg-primary:        #0B1120;
   --bg-secondary:      #111827;
@@ -114,7 +118,7 @@ body {
   color: hsl(var(--foreground));
   overflow-x: hidden;
   line-height: 1.6;
-  font-weight: 500;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -217,7 +221,31 @@ p {
   font-family: var(--font-body);
   line-height: 1.65;
   color: inherit;
-  font-weight: 500;
+  font-weight: 400;
+}
+
+@layer components {
+  .workspace-page {
+    @apply mx-auto flex w-full max-w-[90rem] flex-col gap-6 pb-6;
+  }
+
+  .workspace-toolbar {
+    @apply flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-card sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .workspace-table {
+    @apply overflow-hidden rounded-2xl border border-border bg-card shadow-card;
+  }
+
+  .workspace-table thead {
+    @apply bg-muted/55;
+  }
+
+  .workspace-table th {
+    font-size: 0.6875rem;
+    letter-spacing: 0.045em;
+    text-transform: none;
+  }
 }
 
 /* ─── Scrollbar ──────────────────────────────────── */

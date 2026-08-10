@@ -16,6 +16,7 @@
     "test": "npm run test:e2e",
     "test:unit": "node --test tests/domain/*.test.mjs",
     "test:e2e": "playwright test",
+    "test:visual": "playwright test tests/e2e/visual-regression.spec.ts",
     "test:integration": "playwright test tests/e2e/release-critical.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "check": "npm run lint && npm run test:e2e && npm run build",

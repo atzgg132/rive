@@ -503,19 +503,19 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-background dark:bg-slate-950">
-        <Loader2 className="h-7 w-7 animate-spin text-blue-600" />
+      <div className="grid min-h-screen place-items-center bg-background">
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground dark:bg-slate-950 dark:text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Toaster position="bottom-right" theme="system" />
-      <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-5 dark:border-slate-800 dark:bg-slate-900 sm:px-8">
-        <RiveLogo className="h-6 w-auto text-slate-900 dark:text-white" />
+      <header className="flex h-16 items-center justify-between border-b border-border bg-card px-5 sm:px-8">
+        <RiveLogo height={26} />
         <div className="flex items-center gap-3">
-          <span className="hidden text-[10px] font-bold text-slate-400 sm:block">
+          <span className="hidden text-xs font-medium text-muted-foreground sm:block">
             {progress}% workspace ready
           </span>
           <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 sm:block">
@@ -530,10 +530,10 @@ export default function OnboardingPage() {
 
       <main className="mx-auto grid min-h-[calc(100vh-64px)] max-w-6xl items-start gap-8 px-4 py-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8 lg:py-12">
         <aside className="hidden lg:block">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">
+          <p className="text-xs font-semibold text-primary">
             Workspace launch
           </p>
-          <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight">
+          <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-[-0.035em]">
             Start with momentum, not an empty dashboard.
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
@@ -562,7 +562,7 @@ export default function OnboardingPage() {
           </div>
         </aside>
 
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_80px_-40px_rgba(15,23,42,.25)] dark:border-slate-800 dark:bg-slate-900">
+        <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
           {step === 0 && (
             <div className="p-6 sm:p-9">
               <div className="max-w-2xl">

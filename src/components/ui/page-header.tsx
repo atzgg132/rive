@@ -24,16 +24,16 @@ export function PageHeader({
       {...props}
     >
       <div className="min-w-0">
-        <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-[-0.035em] text-foreground sm:text-[2rem]">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          <p className="mt-1.5 max-w-3xl text-sm leading-6 text-muted-foreground">
             {description}
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-0.5">{actions}</div> : null}
     </div>
   );
 }

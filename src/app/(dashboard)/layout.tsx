@@ -184,10 +184,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background dark:bg-slate-950">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-blue-500" />
-          <span className="text-sm font-semibold text-muted-foreground dark:text-slate-400">Loading your workspace...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-sm font-medium text-muted-foreground">Loading your workspace...</span>
         </div>
       </div>
     );
@@ -196,19 +196,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency}>
-    <div className="flex h-screen min-h-0 overflow-hidden bg-background dark:bg-slate-950">
+    <div className="flex h-screen min-h-0 overflow-hidden bg-background">
       <Toaster position="bottom-right" theme="system" />
       {/* ── Desktop Sidebar ── */}
-      <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col justify-between border-r border-border bg-white py-6 dark:border-slate-800 dark:bg-slate-900 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
-        <div className="flex flex-col gap-8">
+      <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col justify-between border-r border-border bg-card py-5 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
+        <div className="flex flex-col gap-7">
           <div className={`flex items-center ${sidebarCollapsed ? "flex-col gap-3" : "justify-between px-3"}`}>
             <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
-              <RiveLogo className="h-6 w-auto text-slate-900 dark:text-white" />
+              <RiveLogo height={26} />
             </Link>
-            {!sidebarCollapsed && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-primary dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 uppercase">
+            {!sidebarCollapsed && <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-[11px] font-semibold capitalize text-primary">
               {user?.plan}
             </span>}
-            <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"}`}>
+            <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-muted-foreground hover:bg-accent hover:text-foreground ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-border bg-card shadow-sm"}`}>
               {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </Button>
           </div>
@@ -222,13 +222,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   key={link.href}
                   href={link.href}
                   title={sidebarCollapsed ? link.label : undefined}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
                     isActive
-                      ? "bg-accent dark:bg-blue-900/20 text-primary dark:text-blue-400 shadow-[0_4px_12px_-4px_rgba(29,78,216,0.08)]"
-                      : "text-muted-foreground dark:text-slate-400 hover:text-foreground dark:hover:text-slate-200 hover:bg-background dark:hover:bg-slate-800/50"
+                      ? "bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary dark:text-blue-400" : "text-muted-foreground dark:text-slate-400"}`} />
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                   {!sidebarCollapsed && <span>{link.label}</span>}
                 </Link>
               );
@@ -236,14 +236,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-border dark:border-slate-800 pt-4">
+        <div className="flex flex-col gap-2 border-t border-border pt-4">
           <div className={`flex items-center gap-3 px-3 py-2 ${sidebarCollapsed ? "justify-center" : ""}`} title={sidebarCollapsed ? `${user?.name} · ${user?.email}` : undefined}>
-            <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold uppercase">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/15 bg-primary/10 font-bold uppercase text-primary">
               {user?.name?.substring(0, 2) || "U"}
             </div>
             {!sidebarCollapsed && <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold text-foreground dark:text-slate-200 truncate">{user?.name}</span>
-              <span className="text-xs text-muted-foreground dark:text-slate-400 truncate">{user?.email}</span>
+              <span className="truncate text-sm font-semibold text-foreground">{user?.name}</span>
+              <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
             </div>}
           </div>
 
@@ -262,9 +262,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Mobile Header ── */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-4 dark:border-slate-800 dark:bg-slate-900 md:hidden">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 md:hidden">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <RiveLogo className="h-5 w-auto text-slate-900 dark:text-white" />
+            <RiveLogo height={24} />
           </Link>
           <div className="flex items-center gap-1">
             <CurrencySwitcher compact />
@@ -276,19 +276,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* ── Desktop Top Bar ── */}
-        <div className="sticky top-0 z-30 hidden h-16 shrink-0 items-center justify-between border-b border-border bg-white px-8 dark:border-slate-800 dark:bg-slate-900 md:flex">
+        <div className="sticky top-0 z-30 hidden h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6 xl:px-8 md:flex">
           <div className="flex items-center gap-3 max-w-md w-full">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCommandPaletteOpen(true)}
-              className="w-72 justify-between text-muted-foreground dark:text-slate-400 hover:border-blue-200 dark:hover:border-blue-800/50"
+              className="w-80 justify-between text-muted-foreground hover:border-primary/30"
             >
               <span className="flex items-center gap-2 overflow-hidden">
                 <Search className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate whitespace-nowrap">Search workspace...</span>
               </span>
-              <span className="flex items-center gap-1 font-mono bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border dark:border-slate-700 text-[10px]">
+              <span className="flex items-center gap-1 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
                 {isMac ? (
                   <>
                     <Command className="h-2.5 w-2.5" /> K
@@ -309,7 +309,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 size="icon-sm"
                 onClick={toggleNotifications}
                 aria-label="Open notifications"
-                className="relative text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 hover:text-foreground dark:hover:text-slate-200"
+                className="relative text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 <Bell className="h-5 w-5" />
                 {notifications.some(n => !n.read) && (
@@ -317,22 +317,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               </Button>
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-border dark:border-slate-800 z-50 p-4 animate-fade-in-up">
-                  <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Notifications</h4>
+                <div className="absolute right-0 z-50 mt-2 w-72 animate-fade-in-up rounded-xl border border-border bg-popover p-4 shadow-overlay">
+                  <h4 className="mb-3 text-xs font-semibold text-foreground">Notifications</h4>
                   <div className="flex flex-col gap-2.5">
                     {notifications.map(n => (
-                      n.href ? <Link key={n.id} href={n.href} onClick={() => setNotificationsOpen(false)} className="block text-xs text-foreground dark:text-slate-300 border-b border-border dark:border-slate-800 pb-2.5 last:border-none last:pb-0 hover:text-primary">{n.text}</Link> : <div key={n.id} className="text-xs text-foreground dark:text-slate-300 border-b border-border dark:border-slate-800 pb-2.5 last:border-none last:pb-0">{n.text}</div>
+                      n.href ? <Link key={n.id} href={n.href} onClick={() => setNotificationsOpen(false)} className="block border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0 hover:text-primary">{n.text}</Link> : <div key={n.id} className="border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0">{n.text}</div>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-            <div className="h-8 w-px bg-[#E2EAF4] dark:bg-slate-800"></div>
+            <div className="h-7 w-px bg-border"></div>
           </div>
         </div>
 
         {/* ── Main Dashboard Workspace Content ── */}
-        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 text-foreground dark:text-slate-200 sm:p-4 md:p-6 xl:p-8">
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-background p-3 text-foreground sm:p-4 md:p-6 xl:p-8">
           {children}
         </main>
       </div>
@@ -341,10 +341,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {mobileMenuOpen && (
         <Portal>
           <div className="fixed inset-0 z-50 flex md:hidden bg-slate-900/40 backdrop-blur-sm">
-            <div className="relative flex flex-col w-full max-w-xs bg-white dark:bg-slate-900 py-6 px-4 shadow-xl animate-fade-in-up">
+            <div className="relative flex w-full max-w-xs animate-fade-in-up flex-col bg-card px-4 py-6 shadow-overlay">
               <div className="flex items-center justify-between mb-8">
                 <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                  <RiveLogo className="h-6 w-auto text-slate-900 dark:text-white" />
+                  <RiveLogo height={26} />
                 </Link>
                 <Button
                   variant="ghost"
