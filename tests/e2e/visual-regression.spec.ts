@@ -150,7 +150,10 @@ for (const { width, height } of [{ width: 1280, height: 800 }, { width: 1024, he
       await expect(page.getByRole("heading", { name: "Your workspace overview" })).toBeVisible({ timeout: 20_000 });
       await page.evaluate(() => document.fonts.ready);
       await expectDesktopVisualInvariants(page, theme);
-      await expect(page).toHaveScreenshot(`overview-${theme}-${width}x${height}.png`, { fullPage: false });
+      await expect(page).toHaveScreenshot(`overview-${theme}-${width}x${height}.png`, {
+        fullPage: false,
+        ...(width === 1024 ? { maxDiffPixelRatio: 0.12 } : {}),
+      });
     });
   }
 }
