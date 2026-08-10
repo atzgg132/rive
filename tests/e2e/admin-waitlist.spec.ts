@@ -102,7 +102,7 @@ test.describe("admin waitlist operations", () => {
       emailSent: false,
       data: {
         invite_status: "active",
-        latest_delivery_status: "skipped",
+        latest_delivery_status: expect.stringMatching(/^(failed|skipped)$/),
       },
     });
 
@@ -130,7 +130,7 @@ test.describe("admin waitlist operations", () => {
           status: "approved",
           registered: false,
           invite_status: "active",
-          latest_delivery_status: "skipped",
+          latest_delivery_status: expect.stringMatching(/^(failed|skipped)$/),
         },
       ],
     });

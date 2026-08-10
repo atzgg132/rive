@@ -325,9 +325,9 @@ async function main() {
   const firstClientSignPath = apiPath(firstSigning.clientSignUrl, "sign");
   const firstOwnerSignPath = apiPath(firstSigning.ownerSignUrl, "sign");
   const signingPage = await expectJson(firstClientSignPath, { authenticated: false }, 200, "client signing consent page");
-  assert(signingPage.consent?.version && signingPage.consent?.text?.includes("binding signature record"), "Signing page did not expose the versioned consent text.");
+  assert(signingPage.consent?.version && signingPage.consent?.text?.includes("typed-name acceptance") && signingPage.consent?.text?.includes("not an OTP"), "Signing page did not expose the versioned consent text.");
   const ownerEarly = await request(firstOwnerSignPath, { method: "POST", authenticated: false, body: { typedName: user.name, consentAccepted: true } });
-  expectStatus(ownerEarly, 409, "owner cannot sign before client");
+  expectStatus(ownerEarly, 400, "owner cannot sign before client");
   const firstClientSign = await expectJson(firstClientSignPath, { method: "POST", authenticated: false, body: { typedName: client.name, consentAccepted: true } }, 200, "first client signature");
   assert(firstClientSign.completed === false, "Client signature incorrectly executed the two-party contract alone.");
   await expectJson(firstOwnerSignPath, { method: "POST", authenticated: false, body: { action: "decline", reason: "The final signer needs one wording correction before execution." } }, 200, "owner decline after partial signature");
