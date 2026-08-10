@@ -114,6 +114,21 @@ export default function DashboardOverview() {
     loadData();
   }, [displayCurrency, reloadKey]);
 
+  useEffect(() => {
+    const onGuidanceChanged = (event: Event) => {
+      const status = (event as CustomEvent<{ status?: string }>).detail?.status;
+      if (status !== "dismissed" && status !== "completed") return;
+      setActivation((current) => current ? {
+        ...current,
+        guidanceDismissed: status === "dismissed" ? true : current.guidanceDismissed,
+        guidanceCompleted: status === "completed" ? true : current.guidanceCompleted,
+        automaticGuidanceStatus: status,
+      } : current);
+    };
+    window.addEventListener("rive:guidance-changed", onGuidanceChanged);
+    return () => window.removeEventListener("rive:guidance-changed", onGuidanceChanged);
+  }, []);
+
   const dashboardCurrency = currencyMeta?.displayCurrency || displayCurrency;
   const formatCurrency = (val: number) => format(val, dashboardCurrency);
 

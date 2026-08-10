@@ -57,3 +57,10 @@ test("unknown goals and navigation remain safe for legacy users", () => {
   assert.equal(normalizeActivationGoal("unknown"), "organize");
   assert.deepEqual(ACTIVATION_GOAL_NAV_PATHS.publish_portfolio, ["/portfolio", "/workflow/projects", "/workflow/clients"]);
 });
+
+test("guidance status distinguishes available, dismissed, and completed runs", () => {
+  const base = { ...emptyWorkspace, goal: "organize" };
+  assert.equal(buildActivationPlan(base).automaticGuidanceStatus, "available");
+  assert.equal(buildActivationPlan({ ...base, guidanceDismissed: true }).automaticGuidanceStatus, "dismissed");
+  assert.equal(buildActivationPlan({ ...base, guidanceCompleted: true }).automaticGuidanceStatus, "completed");
+});

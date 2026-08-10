@@ -125,7 +125,13 @@ export async function PATCH(req: NextRequest) {
       ...(typeof body.startingPath === "string" && ACTIVATION_STARTING_PATHS.includes(body.startingPath as typeof ACTIVATION_STARTING_PATHS[number]) ? { startingPath: body.startingPath } : {}),
       ...(typeof body.guidanceDismissed === "boolean" ? { guidanceDismissed: body.guidanceDismissed } : {}),
       ...(Array.isArray(body.sources)
-        ? { sources: body.sources.filter((source: unknown): source is string => typeof source === "string" && STARTING_SOURCES.includes(source) && (source !== "google_calendar" || googleCalendarAvailable())).slice(0, 8) }
+        ? (() => {
+            const sources = body.sources.filter((source: unknown): source is string => typeof source === "string" && STARTING_SOURCES.includes(source) && (source !== "google_calendar" || googleCalendarAvailable()));
+            const normalizedSources = sources.includes("starting_fresh")
+              ? ["starting_fresh"]
+              : Array.from(new Set(sources)).slice(0, 8);
+            return { sources: normalizedSources };
+          })()
         : {}),
     };
   }

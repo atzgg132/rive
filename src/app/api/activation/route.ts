@@ -3,6 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { mergePortfolioContent } from "@/utils/portfolio";
 import { buildActivationPlan } from "@/lib/activation-plan";
+import { normalizeActivationGoal } from "@/lib/activation";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -40,12 +41,18 @@ export async function GET(req: NextRequest) {
   const onboardingData = user.onboardingData && typeof user.onboardingData === "object" && !Array.isArray(user.onboardingData)
     ? user.onboardingData as Record<string, unknown>
     : {};
-  const isLegacyCompletedUser = user.onboardingStatus === "complete" && typeof onboardingData.goal !== "string";
+  const isLegacyCompletedUser = user.onboardingStatus === "complete" &&
+    typeof onboardingData.goal !== "string" &&
+    typeof onboardingData.startingPath !== "string" &&
+    onboardingData.guidanceDismissed !== true;
+  const requestedGoal = new URL(req.url).searchParams.get("goal");
+  const goal = requestedGoal ? normalizeActivationGoal(requestedGoal) : onboardingData.goal;
 
   const activation = buildActivationPlan({
-    goal: onboardingData.goal,
+    goal,
     startingPath: onboardingData.startingPath,
     guidanceDismissed: onboardingData.guidanceDismissed === true || isLegacyCompletedUser,
+    guidanceCompleted: onboardingData.guidanceCompleted === true,
     counts: { clients: clientCount, projects: projectCount, invoices: invoiceCount, expenses: expenseCount },
     profileReady,
     selectedPortfolioProject: Boolean(portfolioContent?.projects.some((project) => project.visibility !== "private" && project.title.trim())),

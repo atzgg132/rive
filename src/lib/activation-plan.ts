@@ -13,6 +13,7 @@ export type ActivationPlanInput = {
   goal?: unknown;
   startingPath?: unknown;
   guidanceDismissed?: unknown;
+  guidanceCompleted?: unknown;
   counts: { clients: number; projects: number; invoices: number; expenses: number };
   profileReady: boolean;
   selectedPortfolioProject: boolean;
@@ -45,6 +46,7 @@ export function buildActivationPlan(input: ActivationPlanInput): ActivationPlan 
   const goal = normalizeActivationGoal(input.goal);
   const startingPath = normalizeStartingPath(input.startingPath);
   const guidanceDismissed = input.guidanceDismissed === true;
+  const guidanceCompleted = input.guidanceCompleted === true;
   const { counts } = input;
   const hasFinancialContext = counts.invoices > 0 || counts.expenses > 0;
   const hasMeaningfulContext = Boolean(counts.clients > 0 || counts.projects > 0 || hasFinancialContext || input.calendarConnectionCount > 0 || input.publishedPortfolio);
@@ -130,6 +132,7 @@ export function buildActivationPlan(input: ActivationPlanInput): ActivationPlan 
   const total = milestones.length;
   const activationStage: ActivationStage = completed === total ? "activated" : goal === "migrate" && input.unresolvedImportIssues > 0 ? "review" : completed === 0 ? "start" : "build";
   const stageLabel = activationStage === "activated" ? "Ready to run" : activationStage === "review" ? "Review what came across" : activationStage === "start" ? "Start here" : "Build your next useful step";
+  const automaticGuidanceStatus = guidanceCompleted ? "completed" : guidanceDismissed ? "dismissed" : "available";
   const next = milestones.find((item) => !item.complete) || null;
   return {
     goal,
@@ -145,6 +148,8 @@ export function buildActivationPlan(input: ActivationPlanInput): ActivationPlan 
     total,
     percentage: total === 0 ? 100 : Math.round((completed / total) * 100),
     guidanceDismissed,
+    guidanceCompleted,
+    automaticGuidanceStatus,
     hasMeaningfulContext,
     unresolvedImportIssues: input.unresolvedImportIssues,
     counts,

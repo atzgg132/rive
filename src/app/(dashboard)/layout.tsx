@@ -24,6 +24,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
+  CircleHelp,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
@@ -34,6 +35,7 @@ import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
 import { ACTIVATION_GOAL_NAV_PATHS, type ActivationPlan } from "@/lib/activation";
+import { GuidedExperience, openHelpFromMobileShell } from "@/components/dashboard/GuidedExperience";
 
 interface UserProfile {
   id: string;
@@ -158,7 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [user]);
+  }, [pathname, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -194,7 +196,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/workflow/expenses", label: "Expenses", icon: Receipt },
     { href: "/portfolio", label: "Portfolio", icon: Globe2 },
   ];
-  const progressiveReveal = Boolean(activation && !activation.guidanceDismissed && activation.activationStage !== "activated");
+  const progressiveReveal = Boolean(activation && !activation.guidanceDismissed && activation.automaticGuidanceStatus !== "completed" && activation.activationStage !== "activated");
   const goalPaths = activation ? ACTIVATION_GOAL_NAV_PATHS[activation.goal] : [];
   const overviewLink = allNavLinks[0];
   const prioritizedLinks = allNavLinks.filter((link) => goalPaths.includes(link.href));
@@ -307,6 +309,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-1">
             <CurrencySwitcher compact />
             <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
+              <CircleHelp className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
               <Menu className="h-5 w-5" />
             </Button>
@@ -341,6 +346,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3">
             <CurrencySwitcher />
             <ThemeToggle />
+            <GuidedExperience activation={activation} pathname={pathname} onActivationChange={setActivation} />
             <div className="relative">
               <Button
                 variant="ghost"

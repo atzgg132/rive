@@ -367,7 +367,7 @@ export default function ProjectsPage() {
       <PageHeader
         title="Projects"
         description="Keep delivery moving with clear milestones, budgets, tasks, and deadlines."
-        actions={<Button onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button>}
+        actions={<Button data-guide-target="projects-create" onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button>}
       />
 
       {/* Filter and Search */}
@@ -739,6 +739,7 @@ function DraggableProjectCard({
           <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
             <div className="w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up">
               <Button
+                data-guide-target={!project.due_date ? "projects-deadline" : undefined}
                 onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
               >
@@ -803,7 +804,20 @@ function DraggableProjectCard({
               <span>due {new Date(project.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
             </span>
           ) : (
-            <span>No due date</span>
+            <span className="flex items-center gap-2">
+              <span>No due date</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-guide-target="projects-deadline"
+                aria-label={`Add deadline to ${project.title}`}
+                onClick={(e) => { e.stopPropagation(); openEdit(project); }}
+                className="h-7 px-2 text-[11px] font-bold text-primary hover:bg-primary/10"
+              >
+                Add deadline
+              </Button>
+            </span>
           )}
           {project.budget && (
             <span className="font-extrabold text-[#10B981] dark:text-emerald-400 flex items-center">

@@ -5,6 +5,7 @@ import { mergePortfolioContent } from "@/utils/portfolio";
 import { normalizeCurrency } from "@/lib/currency";
 import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRates";
 import { buildActivationPlan } from "@/lib/activation-plan";
+import { normalizeActivationGoal } from "@/lib/activation";
 
 export async function GET(req: NextRequest) {
   try {
@@ -269,11 +270,17 @@ export async function GET(req: NextRequest) {
     const onboardingData = rawOnboardingData && typeof rawOnboardingData === "object" && !Array.isArray(rawOnboardingData)
       ? rawOnboardingData as Record<string, unknown>
       : {};
-    const isLegacyCompletedUser = workspaceUser?.onboardingStatus === "complete" && typeof onboardingData.goal !== "string";
+    const isLegacyCompletedUser = workspaceUser?.onboardingStatus === "complete" &&
+      typeof onboardingData.goal !== "string" &&
+      typeof onboardingData.startingPath !== "string" &&
+      onboardingData.guidanceDismissed !== true;
+    const requestedGoal = new URL(req.url).searchParams.get("goal");
+    const goal = requestedGoal ? normalizeActivationGoal(requestedGoal) : onboardingData.goal;
     const activation = buildActivationPlan({
-      goal: onboardingData.goal,
+      goal,
       startingPath: onboardingData.startingPath,
       guidanceDismissed: onboardingData.guidanceDismissed === true || isLegacyCompletedUser,
+      guidanceCompleted: onboardingData.guidanceCompleted === true,
       counts: { clients: clientCount, projects: projectCount, invoices: invoiceCount, expenses: expenseCount },
       profileReady: profileReadiness.substantial,
       selectedPortfolioProject: Boolean(portfolioContent?.projects.some((project) => project.visibility !== "private" && project.title.trim())),

@@ -212,7 +212,7 @@ export default function ClientsPage() {
       <PageHeader
         title="Clients"
         description="Keep contact details, projects, invoices, and relationship history together."
-        actions={<Button onClick={openCreate}><Plus /> Add client</Button>}
+        actions={<Button data-guide-target="clients-create" onClick={openCreate}><Plus /> Add client</Button>}
       />
 
       {/* Filter bar */}

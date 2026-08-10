@@ -395,7 +395,7 @@ export default function RevenuePage() {
       <PageHeader
         title="Revenue & invoices"
         description={<>Send invoices, track what is paid or overdue, and review totals in {displayCurrency} while preserving each invoice&apos;s original currency.</>}
-        actions={<Button onClick={openCreate}><Plus /> Create invoice</Button>}
+        actions={<Button data-guide-target="revenue-create" onClick={openCreate}><Plus /> Create invoice</Button>}
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

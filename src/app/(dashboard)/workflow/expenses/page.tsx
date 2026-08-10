@@ -252,7 +252,7 @@ export default function ExpensesPage() {
       <PageHeader
         title="Expenses"
         description={<>Track operating and project costs in {displayCurrency} while preserving each expense&apos;s original currency.</>}
-        actions={<Button onClick={openCreate}><Plus /> Log expense</Button>}
+        actions={<Button data-guide-target="expenses-create" onClick={openCreate}><Plus /> Log expense</Button>}
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

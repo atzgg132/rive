@@ -64,6 +64,11 @@ test("login validates missing credentials on the server", async ({ request }) =>
   await expect(response.json()).resolves.toMatchObject({ success: false });
 });
 
+test("/api/guidance rejects unauthenticated access", async ({ request }) => {
+  const response = await request.post("/api/guidance", { data: { event: "started", mode: "automatic" } });
+  expect(response.status()).toBe(401);
+});
+
 test("a spoofed identity header cannot authenticate a request", async ({ request }) => {
   const response = await request.get("/api/auth/session", {
     headers: {

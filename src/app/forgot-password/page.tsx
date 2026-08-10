@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
                   <Input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@company.com" className="w-full rounded-xl border border-border bg-white/50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:focus:ring-blue-900" />
                 </span>
               </label>
-              <Button disabled={loading} className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-[0_4px_12px_rgba(29,78,216,0.18)] disabled:opacity-70">
+              <Button type="submit" disabled={loading} className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-[0_4px_12px_rgba(29,78,216,0.18)] disabled:opacity-70">
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Send secure reset link"}
               </Button>
             </form>

@@ -81,6 +81,12 @@ type ImportJobSummary = {
   files: { id: string; name: string; entity: string; rowCount: number }[];
 };
 
+function normalizeSourceSelection(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  const sources = values.filter((value): value is string => typeof value === "string");
+  return sources.includes("starting_fresh") ? ["starting_fresh"] : Array.from(new Set(sources));
+}
+
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-950";
 const BUSINESS_TYPES = [
@@ -222,11 +228,8 @@ export default function OnboardingPage() {
       const connectorAvailability = data.connectorAvailability || {};
       const nextGoogleAvailable = connectorAvailability.googleCalendar === true;
       const nextZohoAvailable = connectorAvailability.zohoBooks === true;
-      setSources(
-        Array.isArray(data.user.onboardingData?.sources)
-          ? data.user.onboardingData.sources.filter((source: unknown) => source !== "google_calendar" || nextGoogleAvailable)
-          : [],
-      );
+      const savedSources = normalizeSourceSelection(data.user.onboardingData?.sources);
+      setSources(savedSources.filter((source) => source !== "google_calendar" || nextGoogleAvailable));
       const savedPath = data.user.onboardingData?.startingPath;
       if (["import", "quickstart", "clean"].includes(savedPath)) setPath(savedPath as "import" | "quickstart" | "clean");
       setConnections(data.connections || []);
@@ -352,11 +355,14 @@ export default function OnboardingPage() {
   }
 
   function toggleSource(source: string) {
-    setSources((current) =>
-      current.includes(source)
+    setSources((current) => {
+      if (source === "starting_fresh") {
+        return current.includes(source) ? [] : [source];
+      }
+      return current.includes(source)
         ? current.filter((item) => item !== source)
-        : [...current, source],
-    );
+        : [...current.filter((item) => item !== "starting_fresh"), source];
+    });
   }
 
   async function handleAvatar(file?: File) {
@@ -765,8 +771,10 @@ export default function OnboardingPage() {
                   return (
                     <Button
                       key={item.id}
+                      type="button"
+                      aria-pressed={goal === item.id}
                       onClick={() => setGoal(item.id)}
-                      className={`flex gap-4 rounded-2xl border p-4 text-left ${goal === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 hover:border-blue-200 dark:border-slate-700"}`}
+                      className={`flex gap-4 rounded-2xl border p-4 text-left ${item.id === "migrate" ? "sm:col-span-2" : ""} ${goal === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 hover:border-blue-200 dark:border-slate-700"}`}
                     >
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-800">
                         <Icon className="h-5 w-5" />
@@ -811,13 +819,14 @@ export default function OnboardingPage() {
                 Start with context, not an empty workspace.
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Tell Rive where your work lives today. Choose as many as apply,
-                then use the fastest available path without losing source
-                context.
+                Tell Rive where your work lives today. Select one or more
+                existing sources, or choose Mostly starting fresh if you do
+                not have records to bring across. Then choose one way to
+                populate the workspace.
               </p>
               <div className="mt-7">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Where is your business information today?
+                  Where is your business information today? <span className="normal-case tracking-normal font-semibold">Select all existing sources, or choose one fresh start.</span>
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {[
@@ -833,6 +842,8 @@ export default function OnboardingPage() {
                     <Button
                       key={id}
                       type="button"
+                      aria-pressed={sources.includes(id)}
+                      aria-label={id === "starting_fresh" ? `${label} (choose instead of existing sources)` : label}
                       onClick={() => toggleSource(id)}
                       className={`flex items-center justify-between rounded-xl border px-3.5 py-3 text-left text-xs font-bold ${sources.includes(id) ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-950/30 dark:text-blue-200" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"}`}
                     >
@@ -937,7 +948,7 @@ export default function OnboardingPage() {
               )}
               <div className="mt-7">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Choose how to populate operational data
+                  Choose one way to populate operational data
                 </p>
                 <div className="mt-3 grid gap-4 md:grid-cols-3">
                   {[
@@ -970,6 +981,8 @@ export default function OnboardingPage() {
                     return (
                       <Button
                         key={item.id}
+                        type="button"
+                        aria-pressed={path === item.id}
                         onClick={() => choosePath(item.id)}
                         className={`relative flex min-h-40 min-w-0 flex-col items-start justify-start whitespace-normal rounded-2xl border p-5 text-left ${path === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
                       >
@@ -1268,6 +1281,7 @@ export default function OnboardingPage() {
                   Choose another path
                 </Button>
                 <Button
+                  type="submit"
                   disabled={saving}
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
                 >

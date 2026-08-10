@@ -22,10 +22,10 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
   async function dismissGuidance() {
     setSaving(true);
     try {
-      const response = await fetch("/api/onboarding", {
-        method: "PATCH",
+      const response = await fetch("/api/guidance", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guidanceDismissed: true }),
+        body: JSON.stringify({ event: "skipped", mode: "automatic", guideId: "getting_started" }),
       });
       if (!response.ok) throw new Error("Guidance could not be hidden.");
       setDismissed(true);
@@ -64,7 +64,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-100">Recommended next</p>
                 {recommended ? (
-                  <Link href={recommended.href} className="mt-1 block text-sm font-black text-white hover:underline">
+                  <Link href={recommended.href} data-guide-target="activation-primary" className="mt-1 block text-sm font-black text-white hover:underline">
                     {recommended.label}
                   </Link>
                 ) : (
@@ -74,7 +74,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
               </div>
             </div>
             {recommended && (
-              <Link href={recommended.href} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50">
+              <Link href={recommended.href} data-guide-target="activation-primary" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50">
                 {recommended.label}
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>

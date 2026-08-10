@@ -701,7 +701,7 @@ export default function CalendarPage() {
                 </div>
               </>
             )}
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><p className="text-[9px] text-slate-400">{taskMode === "schedule" ? "You can complete the task from the planning queue." : "You can schedule it immediately after saving."}</p><Button disabled={saving || (taskMode === "create" && !taskTitle.trim())} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{taskMode === "schedule" ? "protect this time" : "add to queue"}</Button></div>
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><p className="text-[9px] text-slate-400">{taskMode === "schedule" ? "You can complete the task from the planning queue." : "You can schedule it immediately after saving."}</p><Button type="submit" disabled={saving || (taskMode === "create" && !taskTitle.trim())} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{taskMode === "schedule" ? "protect this time" : "add to queue"}</Button></div>
           </form>
         </ModalShell></Portal>
       )}
@@ -717,7 +717,7 @@ export default function CalendarPage() {
             </div>
             <label className="block"><span className="mb-1.5 block text-[10px] font-bold text-slate-500">Location or meeting link</span><Input value={draftLocation} onChange={(event) => setDraftLocation(event.target.value)} placeholder="Optional" className={inputClass} /></label>
             <label className="block"><span className="mb-1.5 block text-[10px] font-bold text-slate-500">Notes</span><Textarea value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} rows={3} placeholder="Context, agenda, or preparation notes" className={inputClass} /></label>
-            <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"><Input type="checkbox" checked={draftAvailability === "free"} onChange={(event) => setDraftAvailability(event.target.checked ? "free" : "busy")} />Show as available</label><Button disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editingId ? "save changes" : "create event"}</Button></div>
+            <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"><Input type="checkbox" checked={draftAvailability === "free"} onChange={(event) => setDraftAvailability(event.target.checked ? "free" : "busy")} />Show as available</label><Button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editingId ? "save changes" : "create event"}</Button></div>
           </form>
         </ModalShell></Portal>
       )}

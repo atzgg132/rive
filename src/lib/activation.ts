@@ -17,6 +17,7 @@ export const ACTIVATION_STARTING_PATHS = [
 
 export type ActivationStartingPath = (typeof ACTIVATION_STARTING_PATHS)[number];
 export type ActivationStage = "start" | "build" | "review" | "activated";
+export type ActivationGuidanceStatus = "available" | "dismissed" | "completed";
 
 export type ActivationAction = {
   id: string;
@@ -46,6 +47,8 @@ export type ActivationPlan = {
   total: number;
   percentage: number;
   guidanceDismissed: boolean;
+  guidanceCompleted: boolean;
+  automaticGuidanceStatus: ActivationGuidanceStatus;
   hasMeaningfulContext: boolean;
   unresolvedImportIssues: number;
   counts: {
