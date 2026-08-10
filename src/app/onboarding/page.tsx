@@ -227,6 +227,8 @@ export default function OnboardingPage() {
           ? data.user.onboardingData.sources.filter((source: unknown) => source !== "google_calendar" || nextGoogleAvailable)
           : [],
       );
+      const savedPath = data.user.onboardingData?.startingPath;
+      if (["import", "quickstart", "clean"].includes(savedPath)) setPath(savedPath as "import" | "quickstart" | "clean");
       setConnections(data.connections || []);
       setBusinessConnections(data.businessConnections || []);
       setGoogleAvailable(nextGoogleAvailable);
@@ -250,6 +252,7 @@ export default function OnboardingPage() {
           "Google Calendar could not be connected. You can continue and try again later.",
         );
       const restarting = params.get("restart") === "1";
+      const focus = params.get("focus");
       if (
         !restarting &&
         ["complete", "skipped"].includes(data.user.onboardingStatus)
@@ -257,7 +260,11 @@ export default function OnboardingPage() {
         router.replace("/dashboard");
         return;
       }
-      setStep(restarting ? 0 : Math.min(data.user.onboardingStep || 0, 3));
+      if (focus === "goal") setStep(1);
+      else if (focus === "import") {
+        setPath("import");
+        setStep(3);
+      } else setStep(restarting ? 0 : Math.min(data.user.onboardingStep || 0, 3));
       setLoading(false);
     }
     void load();
@@ -324,7 +331,7 @@ export default function OnboardingPage() {
       const response = await fetch("/api/onboarding", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sources, step: 3, status: "in_progress" }),
+        body: JSON.stringify({ sources, startingPath: path, step: 3, status: "in_progress" }),
       });
       if (!response.ok)
         throw new Error("Your starting point could not be saved.");
@@ -494,11 +501,37 @@ export default function OnboardingPage() {
     const response = await fetch("/api/onboarding", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "skipped", step: 5 }),
+      body: JSON.stringify({ status: "complete", startingPath: "clean", step: 5 }),
     });
     setSaving(false);
     if (!response.ok) return toast.error("Setup could not be completed.");
     router.replace("/dashboard");
+  }
+
+  function choosePath(nextPath: "import" | "quickstart" | "clean") {
+    setPath(nextPath);
+    void fetch("/api/onboarding", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startingPath: nextPath, step: 2, status: "in_progress" }),
+    }).catch(() => undefined);
+  }
+
+  async function skipSetup() {
+    setSaving(true);
+    try {
+      const response = await fetch("/api/onboarding", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "complete", startingPath: "skipped", guidanceDismissed: true, step: 5 }),
+      });
+      if (!response.ok) throw new Error("Setup could not be skipped.");
+      router.replace("/dashboard");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Setup could not be skipped.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
@@ -513,17 +546,27 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Toaster position="bottom-right" theme="system" />
       <header className="flex h-16 items-center justify-between border-b border-border bg-card px-5 sm:px-8">
-        <RiveLogo height={26} />
-        <div className="flex items-center gap-3">
-          <span className="hidden text-xs font-medium text-muted-foreground sm:block">
-            {progress}% workspace ready
-          </span>
+          <RiveLogo height={26} />
+          <div className="flex items-center gap-3">
+            <span className="hidden text-xs font-medium text-muted-foreground sm:block">
+              {progress}% workspace ready
+            </span>
           <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 sm:block">
             <div
               className="h-full rounded-full bg-blue-600 transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void skipSetup()}
+            disabled={saving}
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            Skip setup
+          </Button>
           <ThemeToggle />
         </div>
       </header>
@@ -927,7 +970,7 @@ export default function OnboardingPage() {
                     return (
                       <Button
                         key={item.id}
-                        onClick={() => setPath(item.id)}
+                        onClick={() => choosePath(item.id)}
                         className={`relative flex min-h-40 min-w-0 flex-col items-start justify-start whitespace-normal rounded-2xl border p-5 text-left ${path === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
                       >
                         <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase text-blue-600 shadow-sm dark:bg-slate-800">

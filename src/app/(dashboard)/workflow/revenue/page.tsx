@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, EmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -160,6 +160,15 @@ export default function RevenuePage() {
     setDrawerOpen(true);
     setOpenDropdownId(null);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("new") !== "true") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    openCreate();
+    window.history.replaceState({}, "", window.location.pathname);
+    // The intent is consumed once on mount; re-running when the drawer callback changes would reopen it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openEdit = (invoice: Invoice) => {
     setEditingId(invoice.id);
@@ -435,10 +444,13 @@ export default function RevenuePage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : invoices.length === 0 ? (
-        <EmptyState
+        <ContextualEmptyState
           icon={<FileText className="h-6 w-6" />}
-          title="No invoices found"
-          description="Generate an invoice to start charging clients for your project services."
+          title="Turn completed work into revenue"
+          description="Invoices turn project work into a clear next step for collection."
+          why="Rive can reuse the client, project, currency, and due date you already entered."
+          next={projects.length > 0 ? "Create an invoice from a project." : "Create a client and project first."}
+          after="Send it when the draft is reviewed; payment status will stay visible here."
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Build invoice</Button>}
         />
       ) : (

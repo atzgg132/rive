@@ -49,6 +49,33 @@ async function mockVisualWorkspace(page: Page) {
       });
     }
     if (pathname === "/api/notifications") return json(route, { success: true, notifications: [] });
+    if (pathname === "/api/activation") return json(route, {
+      success: true,
+      activation: {
+        goal: "organize",
+        goalLabel: "Organize client work",
+        outcome: "Keep client work, deadlines, and delivery in one place.",
+        startingPath: "quickstart",
+        activationStage: "build",
+        stageLabel: "Build your next useful step",
+        recommendedAction: { id: "add_deadline", label: "Add a project deadline", description: "Deadlines flow into your calendar and next-action view.", href: "/workflow/projects" },
+        secondaryActions: [{ id: "connect_calendar", label: "Connect your calendar", description: "Keep project milestones and scheduled work visible together.", href: "/calendar" }],
+        milestones: [
+          { id: "client", label: "First client", complete: true, href: "/workflow/clients" },
+          { id: "project", label: "Active work", complete: true, href: "/workflow/projects" },
+          { id: "deadline", label: "Deadline added", complete: false, href: "/workflow/projects" },
+        ],
+        completed: 2,
+        total: 3,
+        percentage: 67,
+        guidanceDismissed: false,
+        hasMeaningfulContext: true,
+        unresolvedImportIssues: 0,
+        counts: { clients: 3, projects: 3, invoices: 6, expenses: 6 },
+        steps: [],
+        next: { id: "deadline", label: "Deadline added", complete: false, href: "/workflow/projects" },
+      },
+    });
     if (pathname === "/api/rates") return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { USD: 1, INR: 83, EUR: 0.9, GBP: 0.8 } } });
     if (pathname === "/api/workflow/dashboard") {
       return json(route, {
@@ -61,16 +88,15 @@ async function mockVisualWorkspace(page: Page) {
           { month: "Jul", revenue: 0, expenses: 120 }, { month: "Aug", revenue: 0, expenses: 0 },
         ],
         activation: {
-          counts: { clients: 3, projects: 3, invoices: 6, expenses: 6 }, completed: 5, total: 6, unresolvedImportIssues: 0,
-          next: { id: "calendar", label: "Calendar connected", complete: false, href: "/calendar" },
-          steps: [
-            { id: "profile", label: "Profile ready", complete: true, href: "/portfolio" },
+          goal: "organize", goalLabel: "Organize client work", outcome: "Keep client work, deadlines, and delivery in one place.", startingPath: "quickstart", activationStage: "build", stageLabel: "Build your next useful step",
+          recommendedAction: { id: "add_deadline", label: "Add a project deadline", description: "Deadlines flow into your calendar and next-action view.", href: "/workflow/projects" }, secondaryActions: [{ id: "connect_calendar", label: "Connect your calendar", description: "Keep project milestones and scheduled work visible together.", href: "/calendar" }],
+          milestones: [
             { id: "client", label: "First client", complete: true, href: "/workflow/clients" },
             { id: "project", label: "Active work", complete: true, href: "/workflow/projects" },
-            { id: "money", label: "Financial context", complete: true, href: "/workflow/revenue" },
-            { id: "calendar", label: "Calendar connected", complete: false, href: "/calendar" },
-            { id: "portfolio", label: "Portfolio ready", complete: true, href: "/portfolio" },
-          ],
+            { id: "deadline", label: "Deadline added", complete: false, href: "/workflow/projects" },
+          ], completed: 2, total: 3, percentage: 67, guidanceDismissed: false, hasMeaningfulContext: true,
+          counts: { clients: 3, projects: 3, invoices: 6, expenses: 6 }, unresolvedImportIssues: 0,
+          next: { id: "deadline", label: "Deadline added", complete: false, href: "/workflow/projects" }, steps: [],
         },
         profileReadiness: { completed: 5, total: 6, percentage: 83, substantial: true, signals: [] },
         insights: { collectionRate: 86, profitMargin: 90, overdueCount: 1, overdueAmount: 825, topExpenseCategory: "Software", topExpenseAmount: 220, upcomingProjects: [] },

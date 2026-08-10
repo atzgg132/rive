@@ -73,10 +73,11 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Email address</label>
+              <label htmlFor="login-email" className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Email address</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
                 <Input
+                  id="login-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -90,12 +91,13 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Password</label>
+                <label htmlFor="login-password" className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Password</label>
                 <Link href="/forgot-password" className="text-xs text-primary dark:text-blue-400 hover:underline font-semibold">Forgot password?</Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
                 <PasswordInput
+                  id="login-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"

@@ -8,6 +8,7 @@ import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { ACTIVATION_STARTING_PATHS } from "@/lib/activation";
 
 const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
@@ -105,7 +106,12 @@ export async function PATCH(req: NextRequest) {
   if (body.status === "in_progress" || body.status === "complete" || body.status === "skipped") {
     data.onboardingStatus = body.status;
   }
-  if (body.goal && GOALS.includes(body.goal) || Array.isArray(body.sources)) {
+  if (
+    (typeof body.goal === "string" && GOALS.includes(body.goal)) ||
+    Array.isArray(body.sources) ||
+    (typeof body.startingPath === "string" && ACTIVATION_STARTING_PATHS.includes(body.startingPath as typeof ACTIVATION_STARTING_PATHS[number])) ||
+    typeof body.guidanceDismissed === "boolean"
+  ) {
     const current = await prisma.user.findUnique({
       where: { id: session.userId },
       select: { onboardingData: true },
@@ -115,7 +121,9 @@ export async function PATCH(req: NextRequest) {
       : {};
     data.onboardingData = {
       ...onboardingData,
-      ...(body.goal && GOALS.includes(body.goal) ? { goal: body.goal } : {}),
+      ...(typeof body.goal === "string" && GOALS.includes(body.goal) ? { goal: body.goal } : {}),
+      ...(typeof body.startingPath === "string" && ACTIVATION_STARTING_PATHS.includes(body.startingPath as typeof ACTIVATION_STARTING_PATHS[number]) ? { startingPath: body.startingPath } : {}),
+      ...(typeof body.guidanceDismissed === "boolean" ? { guidanceDismissed: body.guidanceDismissed } : {}),
       ...(Array.isArray(body.sources)
         ? { sources: body.sources.filter((source: unknown): source is string => typeof source === "string" && STARTING_SOURCES.includes(source) && (source !== "google_calendar" || googleCalendarAvailable())).slice(0, 8) }
         : {}),

@@ -5,7 +5,7 @@ import {
   type ContractComposerClient,
   type ContractComposerProject,
 } from "@/components/contracts/ContractComposer";
-import { Badge, Button, Card, CardContent, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, Select } from "@/components/ui";
 import {
   AlertTriangle,
   ArrowRight,
@@ -227,12 +227,24 @@ export default function ContractsPage() {
       ) : loadError ? (
         <EmptyState icon={<AlertTriangle className="h-5 w-5" />} title="Agreements could not be loaded" description={loadError} action={<Button variant="outline" onClick={() => void load()}>Try again</Button>} />
       ) : contracts.length === 0 ? (
-        <EmptyState
-          icon={<FileSignature className="h-5 w-5" />}
-          title="Create the agreement before the work starts"
-          description="Start with an existing client or project. Rive will reuse the brief, milestones, currency, and contact details while every term remains editable."
-          action={<Button onClick={() => openComposer()}><Plus className="h-4 w-4" /> Create first Agreement</Button>}
-        />
+        clients.length === 0 || projects.length === 0 ? (
+          <ContextualEmptyState
+            icon={<FileSignature className="h-5 w-5" />}
+            title="Set up the work before an Agreement"
+            description="Agreements reuse client and project context so terms, milestones, and billing stay aligned."
+            why="This is most useful once there is real work to protect."
+            next={clients.length === 0 ? "Add a client first." : "Create a project first."}
+            after="Then Rive can prefill the Agreement without duplicating your records."
+            action={<Link href={clients.length === 0 ? "/workflow/clients?new=true" : "/workflow/projects?new=true"} className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">{clients.length === 0 ? "Add client first" : "Create project first"}</Link>}
+          />
+        ) : (
+          <EmptyState
+            icon={<FileSignature className="h-5 w-5" />}
+            title="Create the agreement before the work starts"
+            description="Rive will reuse the brief, milestones, currency, and contact details while every term remains editable."
+            action={<Button onClick={() => openComposer()}><Plus className="h-4 w-4" /> Create first Agreement</Button>}
+          />
+        )
       ) : filteredContracts.length === 0 ? (
         <EmptyState icon={<Search className="h-5 w-5" />} title="No Agreements match" description="Try a different search or stage filter." action={<Button variant="outline" onClick={() => { setSearch(""); setFilter("all"); }}>Clear filters</Button>} />
       ) : (

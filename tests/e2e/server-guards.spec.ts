@@ -9,6 +9,7 @@ const protectedGetRoutes = [
   "/api/portfolio",
   "/api/portfolio/analytics",
   "/api/workflow/dashboard",
+  "/api/activation",
   "/api/workflow/clients",
   "/api/workflow/projects",
   "/api/workflow/contracts",

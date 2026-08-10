@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { DEFAULT_PORTFOLIO_CONTENT, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioProject, type PortfolioTheme } from "@/utils/portfolio";
 import { uploadImage } from "@/utils/clientUploads";
 import PortfolioProjectEditor from "@/components/portfolio/PortfolioProjectEditor";
+import { FirstVisitNote } from "@/components/dashboard/ActivationCard";
 
 /* Validated portfolio uploads and remote image hosts cannot use a static Next image allowlist. */
 /* eslint-disable @next/next/no-img-element */
@@ -472,6 +473,11 @@ export default function PortfolioDashboardPage() {
             <Button onClick={() => save("published")} disabled={saving}><Check /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
           </>}
         />
+        {portfolio.status !== "published" && readiness.score < 100 && (
+          <FirstVisitNote>
+            Your profile and selected projects become public proof of work. Fill the essentials first; optional case-study detail can wait.
+          </FirstVisitNote>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border dark:border-slate-800">

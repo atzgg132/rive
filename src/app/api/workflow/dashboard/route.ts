@@ -4,6 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { mergePortfolioContent } from "@/utils/portfolio";
 import { normalizeCurrency } from "@/lib/currency";
 import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRates";
+import { buildActivationPlan } from "@/lib/activation-plan";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const userId = session.userId;
     const [currencyOwner, exchangeRates] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { displayCurrency: true, name: true, profession: true, businessType: true, businessTypes: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { displayCurrency: true, name: true, profession: true, businessType: true, businessTypes: true, onboardingData: true } }),
       getExchangeRateSnapshot(),
     ]);
     const displayCurrency = normalizeCurrency(currencyOwner?.displayCurrency);
@@ -202,6 +203,9 @@ export async function GET(req: NextRequest) {
       calendarConnectionCount,
       portfolio,
       unresolvedImportIssues,
+      projectDeadlineCount,
+      sentInvoiceCount,
+      importJobCount,
     ] = await Promise.all([
       prisma.client.count({ where: { userId } }),
       prisma.project.count({ where: { userId } }),
@@ -224,13 +228,16 @@ export async function GET(req: NextRequest) {
       }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, profession: true, businessType: true, businessTypes: true },
+        select: { name: true, profession: true, businessType: true, businessTypes: true, onboardingStatus: true, onboardingData: true },
       }),
       prisma.calendarConnection.count({ where: { userId, status: "connected" } }),
       prisma.portfolio.findUnique({ where: { userId }, select: { id: true, status: true, publishedAt: true, content: true } }),
       prisma.importIssue.count({
         where: { importJob: { userId }, resolvedAt: null, severity: { in: ["warning", "blocking"] } },
       }),
+      prisma.project.count({ where: { userId, dueDate: { not: null } } }),
+      prisma.invoice.count({ where: { userId, status: { in: ["sent", "viewed", "overdue", "paid"] } } }),
+      prisma.importJob.count({ where: { userId } }),
     ]);
 
     const receivableBase = totalPaid + totalPending;
@@ -258,22 +265,25 @@ export async function GET(req: NextRequest) {
       substantial: profileCoreCompleted >= 4,
       signals: profileSignals,
     };
-    const activationSteps = [
-      { id: "profile", label: "Profile ready", complete: profileReadiness.substantial, href: "/portfolio" },
-      { id: "client", label: "First client", complete: clientCount > 0, href: "/workflow/clients" },
-      { id: "project", label: "Active work", complete: projectCount > 0, href: "/workflow/projects" },
-      { id: "financial", label: "Financial context", complete: invoiceCount > 0 || expenseCount > 0, href: invoiceCount > 0 ? "/workflow/revenue" : "/workflow/expenses" },
-      { id: "calendar", label: "Calendar connected", complete: calendarConnectionCount > 0, href: "/calendar" },
-      { id: "portfolio", label: "Portfolio ready", complete: portfolio?.status === "published" || Boolean(portfolio?.publishedAt), href: "/portfolio" },
-    ];
-    const activation = {
+    const rawOnboardingData = workspaceUser?.onboardingData ?? currencyOwner?.onboardingData;
+    const onboardingData = rawOnboardingData && typeof rawOnboardingData === "object" && !Array.isArray(rawOnboardingData)
+      ? rawOnboardingData as Record<string, unknown>
+      : {};
+    const isLegacyCompletedUser = workspaceUser?.onboardingStatus === "complete" && typeof onboardingData.goal !== "string";
+    const activation = buildActivationPlan({
+      goal: onboardingData.goal,
+      startingPath: onboardingData.startingPath,
+      guidanceDismissed: onboardingData.guidanceDismissed === true || isLegacyCompletedUser,
       counts: { clients: clientCount, projects: projectCount, invoices: invoiceCount, expenses: expenseCount },
-      completed: activationSteps.filter((step) => step.complete).length,
-      total: activationSteps.length,
-      steps: activationSteps,
+      profileReady: profileReadiness.substantial,
+      selectedPortfolioProject: Boolean(portfolioContent?.projects.some((project) => project.visibility !== "private" && project.title.trim())),
+      publishedPortfolio: portfolio?.status === "published" || Boolean(portfolio?.publishedAt),
+      projectDeadlineCount,
+      sentInvoiceCount,
+      calendarConnectionCount,
+      importJobCount,
       unresolvedImportIssues,
-      next: activationSteps.find((step) => !step.complete) || null,
-    };
+    });
 
     const expenseCategoryTotals = new Map<string, number>();
     for (const group of expenseCategories) {

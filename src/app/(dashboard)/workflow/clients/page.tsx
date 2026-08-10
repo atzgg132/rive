@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, EmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -105,6 +105,13 @@ export default function ClientsPage() {
     setTagsInput("");
     setDrawerOpen(true);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("new") !== "true") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    openCreate();
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   const openEdit = (client: Client) => {
     setEditingId(client.id);
@@ -241,10 +248,13 @@ export default function ClientsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : clients.length === 0 ? (
-        <EmptyState
+        <ContextualEmptyState
           icon={<Users className="h-6 w-6" />}
-          title="No clients found"
-          description="Create your first client to start linking projects and tracking invoices."
+          title="Start with a client relationship"
+          description="Clients connect projects, invoices, and relationship history."
+          why="This is the context Rive reuses across the rest of your workspace."
+          next="Add one client you are actively working with."
+          after="Your projects and invoices can reuse these details."
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
         />
       ) : (

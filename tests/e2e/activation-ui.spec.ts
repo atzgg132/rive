@@ -1,0 +1,302 @@
+import { expect, test, type Page } from "@playwright/test";
+
+type Goal = "organize" | "get_paid" | "understand_finances" | "publish_portfolio" | "migrate";
+
+type Counts = { clients: number; projects: number; invoices: number; expenses: number };
+
+type MockState = {
+  goal: Goal;
+  counts: Counts;
+  guidanceDismissed?: boolean;
+  onboardingStatus?: "in_progress" | "complete" | "skipped";
+  onboardingStep?: number;
+  startingPath?: string;
+  projectDeadlineCount?: number;
+  importJobCount?: number;
+  unresolvedImportIssues?: number;
+};
+
+const goalLabels: Record<Goal, string> = {
+  organize: "Organize client work",
+  get_paid: "Get paid faster",
+  understand_finances: "Understand my numbers",
+  publish_portfolio: "Publish proof of work",
+  migrate: "Move from another tool",
+};
+
+function action(id: string, label: string, href: string) {
+  return { id, label, description: `${label} in this workspace.`, href };
+}
+
+function makePlan(state: MockState) {
+  const { counts } = state;
+  const hasFinancialContext = counts.invoices > 0 || counts.expenses > 0;
+  let recommendedAction = action("first_client", "Add your first client", "/workflow/clients?new=true");
+  let milestones = [
+    { id: "client", label: "First client", complete: counts.clients > 0, href: "/workflow/clients" },
+    { id: "project", label: "Active work", complete: counts.projects > 0, href: "/workflow/projects" },
+    { id: "deadline", label: "Deadline added", complete: (state.projectDeadlineCount || 0) > 0, href: "/workflow/projects" },
+  ];
+  if (state.goal === "get_paid") {
+    if (counts.clients > 0 && counts.projects === 0) recommendedAction = action("first_project", "Create your first project", "/workflow/projects?new=true");
+    else if (counts.projects > 0 && counts.invoices === 0) recommendedAction = action("create_invoice", "Create your first invoice", "/workflow/revenue?new=true");
+    else if (counts.invoices > 0) recommendedAction = action("send_invoice", "Review and send an invoice", "/workflow/revenue");
+    milestones = [
+      { id: "client", label: "First client", complete: counts.clients > 0, href: "/workflow/clients" },
+      { id: "project", label: "Active work", complete: counts.projects > 0, href: "/workflow/projects" },
+      { id: "invoice", label: "Invoice ready", complete: counts.invoices > 0, href: "/workflow/revenue" },
+      { id: "sent", label: "Invoice sent", complete: false, href: "/workflow/revenue" },
+    ];
+  } else if (state.goal === "understand_finances") {
+    recommendedAction = !hasFinancialContext && !state.importJobCount
+      ? action("import_work", "Import your work", "/onboarding?restart=1&focus=import")
+      : counts.invoices === 0
+        ? action("create_invoice", "Create your first invoice", "/workflow/revenue?new=true")
+        : action("add_expense", "Log your first expense", "/workflow/expenses?new=true");
+    milestones = [
+      { id: "context", label: "Financial context", complete: hasFinancialContext, href: "/workflow/revenue" },
+      { id: "revenue", label: "Revenue data", complete: counts.invoices > 0, href: "/workflow/revenue" },
+      { id: "expenses", label: "Expense data", complete: counts.expenses > 0, href: "/workflow/expenses" },
+    ];
+  } else if (state.goal === "publish_portfolio") {
+    recommendedAction = action("complete_profile", "Complete your profile", "/portfolio");
+    milestones = [
+      { id: "profile", label: "Profile ready", complete: false, href: "/portfolio" },
+      { id: "project", label: "Project selected", complete: false, href: "/portfolio" },
+      { id: "published", label: "Portfolio published", complete: false, href: "/portfolio" },
+    ];
+  } else if (state.goal === "migrate") {
+    recommendedAction = state.importJobCount
+      ? action("resolve_import", "Resolve imported records", "/onboarding?restart=1&focus=import")
+      : action("import_work", "Import your work", "/onboarding?restart=1&focus=import");
+    milestones = [
+      { id: "import", label: "Work imported", complete: Boolean(state.importJobCount), href: "/onboarding?restart=1&focus=import" },
+      { id: "resolved", label: "Records reviewed", complete: Boolean(state.importJobCount) && !state.unresolvedImportIssues, href: "/onboarding?restart=1&focus=import" },
+      { id: "workspace", label: "Workspace ready", complete: counts.clients + counts.projects + counts.invoices + counts.expenses > 0, href: "/dashboard" },
+    ];
+  } else if (counts.clients > 0 && counts.projects === 0) {
+    recommendedAction = action("first_project", "Create your first project", "/workflow/projects?new=true");
+  } else if (counts.projects > 0 && !state.projectDeadlineCount) {
+    recommendedAction = action("add_deadline", "Add a project deadline", "/workflow/projects");
+  }
+  const completed = milestones.filter((item) => item.complete).length;
+  return {
+    goal: state.goal,
+    goalLabel: goalLabels[state.goal],
+    outcome: "Keep the next useful step clear.",
+    startingPath: state.startingPath || "quickstart",
+    activationStage: completed === milestones.length ? "activated" : completed === 0 ? "start" : "build",
+    stageLabel: completed === 0 ? "Start here" : "Build your next useful step",
+    recommendedAction,
+    secondaryActions: [],
+    milestones,
+    completed,
+    total: milestones.length,
+    percentage: Math.round((completed / milestones.length) * 100),
+    guidanceDismissed: state.guidanceDismissed === true,
+    hasMeaningfulContext: counts.clients + counts.projects + counts.invoices + counts.expenses > 0,
+    unresolvedImportIssues: state.unresolvedImportIssues || 0,
+    counts,
+    steps: milestones,
+    next: milestones.find((item) => !item.complete) || null,
+  };
+}
+
+function dashboardPayload(state: MockState) {
+  const activation = makePlan(state);
+  return {
+    success: true,
+    stats: { totalPaid: 0, totalPending: 0, activeProjects: state.counts.projects, totalExpenses: 0, netEarnings: 0 },
+    topClients: [],
+    recentActivity: [],
+    chartData: [],
+    activation,
+    profileReadiness: { completed: 0, total: 6, percentage: 0, substantial: false, signals: [] },
+    insights: { collectionRate: 0, profitMargin: 0, overdueCount: 0, overdueAmount: 0, topExpenseCategory: null, topExpenseAmount: 0, upcomingProjects: [] },
+    currency: { displayCurrency: "USD", ratesAsOf: null, conversionAvailable: true },
+  };
+}
+
+async function installWorkspaceMocks(page: Page, state: MockState) {
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const pathname = url.pathname;
+    if (pathname === "/api/auth/session") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { id: "activation-test-user", name: "Activation Tester", email: "activation@rive.test", plan: "free", onboarding_status: state.onboardingStatus || "complete", display_currency: "USD" }, featureAvailability: { agreements: true } }) });
+    }
+    if (pathname === "/api/activation" || pathname === "/api/workflow/dashboard") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(pathname === "/api/activation" ? { success: true, activation: makePlan(state) } : dashboardPayload(state)) });
+    }
+    if (pathname === "/api/notifications") {
+      if (request.method() === "PATCH") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, notifications: [] }) });
+    }
+    if (pathname === "/api/rates") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: { base: "USD", date: "2026-08-10", rates: { USD: 1 } } }) });
+    if (pathname === "/api/workflow/clients") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, clients: [] }) });
+    if (pathname === "/api/workflow/projects") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, projects: [] }) });
+    if (pathname === "/api/workflow/invoices") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, invoices: [] }) });
+    if (pathname === "/api/workflow/expenses") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, expenses: [] }) });
+    if (pathname === "/api/workflow/contracts") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, contracts: [] }) });
+    if (pathname === "/api/calendar/events") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, events: [] }) });
+    if (pathname === "/api/calendar/calendars") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, calendars: [] }) });
+    if (pathname === "/api/calendar/tasks") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, tasks: [] }) });
+    if (pathname === "/api/portfolio") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, portfolio: { id: "portfolio", slug: "activation-tester", status: "draft", content: { headline: "", bio: "", services: [], projects: [], contactEmail: "", location: "" }, theme: {}, seo: null, revision: 1, templateKey: "minimal-pro" } }) });
+    return route.continue();
+  });
+}
+
+async function installOnboardingMocks(page: Page, state: MockState) {
+  await page.route("**/api/onboarding**", async (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { name: "Activation Tester", profession: "Product designer", businessType: "freelancer", businessTypes: ["freelancer"], currency: "USD", timeZone: "UTC", avatarUrl: "", onboardingStatus: state.onboardingStatus || "in_progress", onboardingStep: state.onboardingStep || 0, onboardingData: { goal: state.goal, sources: [], startingPath: state.startingPath } }, connections: [], businessConnections: [], connectorAvailability: { googleCalendar: false, zohoBooks: false } }) });
+    }
+    const body = route.request().postDataJSON() as Record<string, unknown> | null;
+    if (body?.status === "complete") state.onboardingStatus = "complete";
+    if (typeof body?.step === "number") state.onboardingStep = body.step;
+    if (typeof body?.startingPath === "string") state.startingPath = body.startingPath;
+    if (typeof body?.guidanceDismissed === "boolean") state.guidanceDismissed = body.guidanceDismissed;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { onboardingStatus: state.onboardingStatus, onboardingStep: state.onboardingStep } }) });
+  });
+  await page.route("**/api/onboarding/import/jobs", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, jobs: [] }) }));
+}
+
+test.describe("goal-aware activation", () => {
+  test("registration enters onboarding with the chosen starting context available", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 0 };
+    await installOnboardingMocks(page, state);
+    await page.route("**/api/auth/register**", async (route) => route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ success: true }) }));
+    await page.goto("/register?invite=test-invite", { waitUntil: "networkidle" });
+    await page.getByLabel("Full name").fill("Activation Tester");
+    await page.getByLabel("Email address").fill("activation@rive.test");
+    await page.getByRole("textbox", { name: "Password" }).fill("activation-password");
+    const createAccountButton = page.locator("form").getByRole("button", { name: "Create Account" });
+    await expect(createAccountButton).toBeEnabled();
+    await createAccountButton.click();
+    await expect(page).toHaveURL(/\/onboarding/);
+    await expect(page.getByRole("heading", { name: "Tell us enough to personalize everything else." })).toBeVisible();
+  });
+
+  test("an incomplete user returns to the saved onboarding step after login", async ({ page }) => {
+    const state: MockState = { goal: "get_paid", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 2 };
+    await installOnboardingMocks(page, state);
+    await page.route("**/api/auth/login**", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, destination: "/onboarding" }) }));
+    await page.goto("/login", { waitUntil: "networkidle" });
+    await page.getByLabel("Email address").fill("activation@rive.test");
+    await page.getByRole("textbox", { name: "Password" }).fill("activation-password");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/onboarding/);
+    await expect(page.getByRole("heading", { name: "Start with context, not an empty workspace." })).toBeVisible();
+  });
+
+  test("a completed user logs in to the dashboard without reopening onboarding", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 1, projects: 1, invoices: 0, expenses: 0 }, onboardingStatus: "complete" };
+    await installWorkspaceMocks(page, state);
+    await page.route("**/api/auth/login**", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, destination: "/dashboard" }) }));
+    await page.goto("/login", { waitUntil: "networkidle" });
+    await page.getByLabel("Email address").fill("activation@rive.test");
+    await page.getByRole("textbox", { name: "Password" }).fill("activation-password");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.getByRole("heading", { name: "Your business, at a glance" })).toBeVisible();
+    await expect(page).not.toHaveURL(/\/onboarding/);
+  });
+
+  test("organize flow lands on Today with one guided next action", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
+    await installWorkspaceMocks(page, state);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+    await expect(page.getByText("Add your first client").first()).toBeVisible();
+    await expect(page.getByTestId("activation-card")).toBeVisible();
+    await expect(page.getByText("More tools")).toBeVisible();
+    await page.getByRole("button", { name: "Open Getting Started" }).click();
+    await expect(page.getByTestId("getting-started-panel")).toBeVisible();
+    await page.getByRole("link", { name: "Add your first client" }).last().click();
+    await expect(page).toHaveURL(/\/workflow\/clients/);
+  });
+
+  test("get-paid recommendation advances as client, project and invoice context appears", async ({ page }) => {
+    const state: MockState = { goal: "get_paid", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
+    await installWorkspaceMocks(page, state);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Add your first client").first()).toBeVisible();
+    state.counts.clients = 1;
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Create your first project").first()).toBeVisible();
+    state.counts.projects = 1;
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Create your first invoice").first()).toBeVisible();
+    state.counts.invoices = 1;
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Review and send an invoice").first()).toBeVisible();
+  });
+
+  test("publish-proof and migrate goals expose their correct first action", async ({ page }) => {
+    const state: MockState = { goal: "publish_portfolio", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
+    await installWorkspaceMocks(page, state);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Complete your profile").first()).toBeVisible();
+    state.goal = "migrate";
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Import your work").first()).toBeVisible();
+  });
+
+  test("start-clean and incomplete onboarding remain resumable", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 2 };
+    await installWorkspaceMocks(page, state);
+    await installOnboardingMocks(page, state);
+    await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Start with context, not an empty workspace." })).toBeVisible();
+    await page.getByRole("button", { name: "Start clean" }).click();
+    await page.getByRole("button", { name: "Open my workspace" }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    expect(state.onboardingStatus).toBe("complete");
+  });
+
+  test("skip setup is a durable choice and does not reopen guidance", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 1 };
+    await installWorkspaceMocks(page, state);
+    await installOnboardingMocks(page, state);
+    await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "Skip setup" }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.getByTestId("activation-card")).toBeHidden();
+    expect(state.startingPath).toBe("skipped");
+    expect(state.guidanceDismissed).toBe(true);
+  });
+
+  test("guidance dismissal persists and More tools keeps direct routes available", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
+    await installWorkspaceMocks(page, state);
+    await page.route("**/api/onboarding", async (route) => {
+      if (route.request().method() === "PATCH") {
+        state.guidanceDismissed = true;
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
+      }
+      return route.continue();
+    });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "More tools" }).click();
+    await expect(page.getByRole("link", { name: "Portfolio" })).toBeVisible();
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Portfolio Studio")).toBeVisible();
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "Hide setup guidance" }).click();
+    await expect(page.getByTestId("activation-card")).toBeHidden();
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("activation-card")).toBeHidden();
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Portfolio Studio")).toBeVisible();
+  });
+
+  test("mobile first-run dashboard stays focused", async ({ page }) => {
+    const state: MockState = { goal: "understand_finances", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
+    await installWorkspaceMocks(page, state);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+    await expect(page.getByTestId("activation-card")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+  });
+});

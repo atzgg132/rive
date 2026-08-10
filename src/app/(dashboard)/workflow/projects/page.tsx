@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
@@ -164,6 +164,15 @@ export default function ProjectsPage() {
     setDrawerOpen(true);
     setOpenDropdownId(null);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("new") !== "true") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    openCreate();
+    window.history.replaceState({}, "", window.location.pathname);
+    // The intent is consumed once on mount; re-running when the drawer callback changes would reopen it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openEdit = (project: Project) => {
     setEditingId(project.id);
@@ -395,11 +404,14 @@ export default function ProjectsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : projects.length === 0 ? (
-        <EmptyState
+        <ContextualEmptyState
           icon={<Briefcase className="h-6 w-6" />}
-          title="No projects yet"
-          description="Log a project, assign it a budget, and link milestones."
-          action={<Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
+          title="Turn client work into a project"
+          description="Projects connect client work, deadlines, financials, and proof of work."
+          why="A project gives Rive something meaningful to organize."
+          next={clients.length === 0 ? "Add a client first, then create the project." : "Create the project you are working on now."}
+          after="Its deadlines and budget can flow into Calendar and Revenue."
+          action={clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
         />
       ) : (
         <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
