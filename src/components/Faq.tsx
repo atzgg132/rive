@@ -29,7 +29,8 @@ const publicFaqs = faqs
   .filter((faq) => !faq.question.includes("accepts an Agreement"))
   .map((faq) => ({ ...faq, answer: faq.answer.replaceAll("Agreements, ", "") }));
 
-export default function Faq() {
+export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
+  const visibleFaqs = agreementsEnabled ? faqs : publicFaqs;
   return (
     <section id="faq" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
@@ -57,7 +58,7 @@ export default function Faq() {
 
         {/* FAQ grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          {publicFaqs.map((faq) => (
+          {visibleFaqs.map((faq) => (
             <div
               key={faq.question}
               className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"

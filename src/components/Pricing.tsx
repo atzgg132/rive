@@ -12,7 +12,7 @@ const plans = [
     description: "Everything you need to run client work and business operations in one place.",
     features: [
         "Clients, projects, tasks, and calendar",
-        "Agreements, review, acceptance, and payment triggers",
+        "Contracts, review, acceptance, and payment triggers",
         "Revenue, invoices, and expenses",
         "Business overview and useful insights",
         "One public portfolio with analytics",
@@ -151,7 +151,7 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
 
               {/* Features */}
               <ul className="flex flex-col gap-3 mb-8 flex-1">
-                {plan.features.filter((feature) => agreementsEnabled || !feature.toLowerCase().startsWith("agreements")).map((feature) => (
+                {plan.features.filter((feature) => agreementsEnabled || !feature.toLowerCase().startsWith("contracts")).map((feature) => (
                   <li
                     key={feature}
                     className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-300 font-medium"

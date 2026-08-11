@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ExternalLink, Code2, Link2, Play } from "lucide-react";
+import { ExternalLink, Code2, Link2 } from "lucide-react";
 
 const footerLinks: Record<string, { label: string; href: string }[]> = {
   Product: [
     { label: "Features",   href: "/#features"  },
+    { label: "Connections", href: "/#connections" },
     { label: "Opportunities",  href: "/#gig-board" },
     { label: "Pricing",    href: "/#pricing"   },
     { label: "Changelog",  href: "/changelog"  },
@@ -36,7 +37,6 @@ const socials = [
   { icon: ExternalLink, label: "Twitter",  href: "#" },
   { icon: Code2,        label: "GitHub",   href: "#" },
   { icon: Link2,        label: "LinkedIn", href: "#" },
-  { icon: Play,         label: "YouTube",  href: "#" },
 ];
 
 export default function Footer() {
@@ -63,7 +63,7 @@ export default function Footer() {
               className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-[220px] font-medium"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              One connected workspace to run your clients, projects, money, calendar, and portfolio.
+              One connected workspace to run your clients, contracts, projects, money, calendar, and portfolio.
             </p>
 
             {/* Socials */}

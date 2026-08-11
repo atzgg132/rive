@@ -12,7 +12,15 @@ async function mockCurrencyWorkspace(page: Page) {
     if (pathname === "/api/auth/session") {
       return json(route, {
         success: true,
-        user: { id: "user-1", name: "Currency Tester", email: "currency@rive.test", plan: "pro", onboarding_status: "complete", display_currency: displayCurrency },
+        user: {
+          id: "user-1",
+          name: "Currency Tester",
+          email: "currency@rive.test",
+          plan: "pro",
+          onboarding_status: "complete",
+          currency: displayCurrency,
+          display_currency: displayCurrency,
+        },
       });
     }
     if (pathname === "/api/preferences/currency" && request.method() === "PATCH") {
@@ -32,7 +40,31 @@ async function mockCurrencyWorkspace(page: Page) {
       });
     }
     if (pathname === "/api/workflow/clients") return json(route, { success: true, clients: [] });
-    if (pathname === "/api/workflow/projects") return json(route, { success: true, projects: [] });
+    if (pathname === "/api/workflow/projects") return json(route, {
+      success: true,
+      projects: [{
+        id: "project-inr",
+        client_id: null,
+        title: "India launch",
+        description: "A project with a native rupee budget.",
+        status: "active",
+        priority: "medium",
+        start_date: null,
+        due_date: null,
+        budget: "1234.5",
+        currency: "INR",
+        tags: [],
+        client_name: null,
+        client_company: null,
+        milestone_count: 0,
+        completed_milestones: 0,
+        contract_coverage: "undecided",
+        external_contract_label: null,
+        external_contract_url: null,
+        contract_count: 0,
+        latest_contract: null,
+      }],
+    });
     if (pathname === "/api/notifications") return json(route, { success: true, notifications: [] });
     return json(route, { success: true });
   });
@@ -55,4 +87,13 @@ test("mixed invoices use a persistent display currency without changing native a
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Display currency").last()).toHaveValue("USD", { timeout: 20_000 });
+});
+
+test("project cards format the native project currency", async ({ page }) => {
+  await mockCurrencyWorkspace(page);
+  await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "India launch" })).toBeVisible();
+  await expect(page.getByText(/₹1,234\.50/)).toBeVisible();
+  await expect(page.getByText("$1,234.50", { exact: true })).toHaveCount(0);
 });

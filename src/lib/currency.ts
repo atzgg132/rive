@@ -46,10 +46,20 @@ export function convertWithUsdRates(
 }
 
 export function formatMoney(amount: number, currency: string, locale?: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currency.toUpperCase(),
-    currencyDisplay: "narrowSymbol",
-    maximumFractionDigits: currency.toUpperCase() === "JPY" ? 0 : 2,
-  }).format(amount);
+  const normalizedCurrency = currency.trim().toUpperCase() || "USD";
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: normalizedCurrency,
+      currencyDisplay: "narrowSymbol",
+      maximumFractionDigits: normalizedCurrency === "JPY" ? 0 : 2,
+    }).format(amount);
+  } catch {
+    // Project and contract currencies are intentionally extensible beyond the
+    // display-currency picker. Keep an unknown three-letter code visible
+    // instead of allowing Intl to take down a whole workspace view.
+    return `${normalizedCurrency} ${new Intl.NumberFormat(locale, {
+      maximumFractionDigits: normalizedCurrency === "JPY" ? 0 : 2,
+    }).format(amount)}`;
+  }
 }
