@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ExternalLink, Code2, Link2 } from "lucide-react";
+import { RiveLogo } from "@/components/RiveLogo";
 
 const footerLinks: Record<string, { label: string; href: string }[]> = {
   Product: [
@@ -50,13 +50,7 @@ export default function Footer() {
           {/* Logo + blurb */}
           <div className="col-span-2 flex flex-col gap-4">
             <Link href="/" className="inline-flex w-fit">
-              <Image
-                src="/brand-assets/logo.png"
-                alt="rive."
-                width={90}
-                height={40}
-                style={{ objectFit: "contain", width: "90px", height: "40px" }}
-              />
+              <RiveLogo height={40} className="text-foreground dark:text-white" />
             </Link>
 
             <p
