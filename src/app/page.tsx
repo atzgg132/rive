@@ -3,7 +3,6 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import AISection from "@/components/AISection";
-import GigBoard from "@/components/GigBoard";
 import RemitSection from "@/components/RemitSection";
 import Faq from "@/components/Faq";
 import Pricing from "@/components/Pricing";
@@ -26,7 +25,6 @@ export default function Home() {
     {agreementsEnabled && <MarketingAgreementsSection />}
     <MarketingPortfolioSection />
     <AISection />
-    <GigBoard />
     <RemitSection />
     <Faq />
     <Pricing agreementsEnabled={agreementsEnabled} />
