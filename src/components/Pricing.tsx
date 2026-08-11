@@ -98,13 +98,13 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
         </div>
 
         {/* Plan cards */}
-        <div className="grid md:grid-cols-3 gap-5 items-start">
+        <div className="grid md:grid-cols-3 gap-5 items-stretch">
           {plans.map((plan) => (
             <div
               key={plan.name}
               className={`relative rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-blue-900/20 ${
                 plan.highlighted
-                  ? "border-blue-200 dark:border-blue-800/80 bg-gradient-to-b from-blue-50/20 to-white dark:from-blue-950/40 dark:to-slate-900 shadow-xl dark:shadow-none pt-10 px-7 pb-7"
+                  ? "border-blue-200 dark:border-blue-800/80 bg-gradient-to-b from-blue-50/20 to-white dark:from-blue-950/40 dark:to-slate-900 shadow-xl dark:shadow-none p-7 pt-16"
                   : "p-7"
               }`}
             >

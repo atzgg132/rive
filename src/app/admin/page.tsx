@@ -3,7 +3,6 @@
 import { Button, Input, Select } from "@/components/ui";
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import {
   Users, Eye, TrendingUp, Zap, LogOut, Search, RefreshCw,
   ChevronLeft, ChevronRight, Mail, Clock, Shield, Loader2,
@@ -333,7 +332,7 @@ function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
       <header className="sticky top-0 z-40 bg-background/90 dark:bg-background/90 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/brand-assets/logo.png" alt="rive." width={72} height={32} style={{objectFit:"contain"}} className="dark:brightness-200 dark:contrast-100" priority/>
+            <RiveLogo height={32} className="text-foreground dark:text-white" />
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"/>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>Admin</span>
           </div>
