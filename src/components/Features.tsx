@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   FileSignature,
   FileUp,
+  CalendarDays,
   TrendingUp,
   Bot,
 } from "lucide-react";
@@ -67,9 +68,16 @@ const features = [
   },
   {
     icon: FileSignature,
-    title: "Agreements & acceptance",
-    description: "Create versioned Agreements, collect recorded acceptance, and connect payment terms to invoice triggers.",
+    title: "Contracts & acceptance",
+    description: "Create versioned contracts, collect recorded acceptance, and connect payment terms to deliberate invoice triggers.",
     color: "violet",
+    wide: false,
+  },
+  {
+    icon: CalendarDays,
+    title: "Imports and connections",
+    description: "Bring in CSV/XLSX exports, connect supported calendars, and keep your working data useful across Rive.",
+    color: "cyan",
     wide: false,
   },
   {
@@ -88,12 +96,13 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; badge
   amber:   { bg: "bg-amber-50/50 dark:bg-amber-950/40",   border: "border-amber-100/60 dark:border-amber-900/40",   icon: "text-amber-600 dark:text-amber-400",   badgeBg: "bg-amber-100/50 dark:bg-amber-900/40" },
   rose:    { bg: "bg-rose-50/50 dark:bg-rose-950/40",    border: "border-rose-100/60 dark:border-rose-900/40",    icon: "text-rose-600 dark:text-rose-400",    badgeBg: "bg-rose-100/50 dark:bg-rose-900/40" },
   violet:  { bg: "bg-violet-50/50 dark:bg-violet-950/40", border: "border-violet-100/60 dark:border-violet-900/40", icon: "text-violet-600 dark:text-violet-400", badgeBg: "bg-violet-100/50 dark:bg-violet-900/40" },
+  cyan:    { bg: "bg-cyan-50/50 dark:bg-cyan-950/40",       border: "border-cyan-100/60 dark:border-cyan-900/40",       icon: "text-cyan-600 dark:text-cyan-400",       badgeBg: "bg-cyan-100/50 dark:bg-cyan-900/40" },
 };
 
 export default function Features({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
   const visibleFeatures = agreementsEnabled
     ? features
-    : features.filter((feature) => feature.title !== "Agreements & acceptance");
+    : features.filter((feature) => feature.title !== "Contracts & acceptance");
   return (
     <section id="features" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}

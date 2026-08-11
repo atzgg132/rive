@@ -13,9 +13,9 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Rive — Client, Project and Financial Operations",
+  title: "Rive — Connected client, project, contract and financial operations",
   description:
-    "Rive is an all-in-one workspace for digital service businesses to manage clients, projects, revenue, invoices, expenses, calendars, and portfolios.",
+    "Rive is an all-in-one workspace for digital service businesses to manage clients, projects, contracts, revenue, invoices, expenses, calendars, imports, and portfolios.",
   keywords: [
     "digital service business software",
     "project management",
@@ -24,11 +24,14 @@ export const metadata: Metadata = {
     "service business software",
     "invoice management",
     "revenue management",
+    "contract management",
+    "calendar sync",
+    "business data import",
   ],
   openGraph: {
-    title: "Rive — Run your service business in one place",
+    title: "Rive — Run your service business in one connected workspace",
     description:
-      "Clients, projects, revenue, expenses, calendars, and your public portfolio—connected in one operating workspace.",
+      "Clients, projects, contracts, revenue, expenses, calendars, imports, and your public portfolio—connected in one operating workspace.",
     type: "website",
     url: "https://www.rive.work",
   },

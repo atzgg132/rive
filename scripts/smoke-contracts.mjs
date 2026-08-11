@@ -113,8 +113,9 @@ function startServer() {
     ...process.env,
     APP_URL: baseUrl,
     CONTRACTS_ENABLED: "true",
+    CONTRACTS_RECORDED_ACCEPTANCE_ENABLED: "true",
     EMAIL_PROVIDER: "disabled",
-    ESIGN_PROVIDER: process.env.CONTRACT_SMOKE_ESIGN_PROVIDER || "local",
+    ESIGN_PROVIDER: process.env.CONTRACT_SMOKE_ESIGN_PROVIDER || (productionServer ? "rive" : "local"),
     NODE_ENV: productionServer ? "production" : "development",
   };
   server = spawn(command, args, {

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
     const { email, type } = payload;
     const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-    const allowedTypes = new Set(["waitlist", "login", "demo", "remit"]);
+    const allowedTypes = new Set(["waitlist", "login", "remit"]);
     const normalizedType = typeof type === "string" && allowedTypes.has(type) ? type : null;
     if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !normalizedType) {
       return NextResponse.json({ success: false, message: "Missing required fields." }, { status: 400 });

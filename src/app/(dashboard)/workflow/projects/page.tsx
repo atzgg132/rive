@@ -11,7 +11,6 @@ import {
   Search,
   Calendar,
   User,
-  DollarSign,
   X,
   Loader2,
   MoreVertical,
@@ -30,6 +29,7 @@ import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
+import { formatMoney } from "@/lib/currency";
 
 interface Project {
   id: string;
@@ -820,9 +820,8 @@ function DraggableProjectCard({
             </span>
           )}
           {project.budget && (
-            <span className="font-extrabold text-[#10B981] dark:text-emerald-400 flex items-center">
-              <DollarSign className="h-3 w-3" />
-              <span>{parseFloat(project.budget).toLocaleString()}</span>
+            <span className="font-extrabold text-[#10B981] dark:text-emerald-400">
+              {formatMoney(parseFloat(project.budget), project.currency)}
             </span>
           )}
         </div>

@@ -3,7 +3,7 @@
 import { Button, Input } from "@/components/ui";
 
 import { useState } from "react";
-import { ArrowRight, Play, Zap, BarChart3, Users, Shield, Loader2, Clock } from "lucide-react";
+import { ArrowRight, Zap, BarChart3, Users, Shield, Loader2, Clock } from "lucide-react";
 
 import { submitToWaitlist } from "@/utils/api";
 
@@ -95,7 +95,7 @@ export default function Hero() {
       </p>
 
       {/* ── CTA row ─────────────────────────────────── */}
-      <div className="relative mb-12 flex w-full max-w-xl flex-col items-center gap-4 sm:flex-row">
+      <div className="relative mb-12 flex w-full max-w-xl flex-col items-center gap-4">
         {formState === "idle" || formState === "loading" ? (
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full">
             <Input
@@ -140,15 +140,6 @@ export default function Hero() {
             You&apos;re already on the list. We&apos;ll notify you when your access is ready.
           </div>
         )}
-        <Button
-          onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "demo" }))}
-          className="inline-flex items-center gap-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors group shrink-0"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white transition-all duration-200 group-hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900">
-            <Play className="ml-0.5 h-3 w-3 fill-current text-slate-600 dark:text-slate-300" />
-          </div>
-          Watch Demo
-        </Button>
       </div>
 
       {/* ── Stats bar ───────────────────────────────── */}

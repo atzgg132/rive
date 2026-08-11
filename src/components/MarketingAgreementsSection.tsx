@@ -47,7 +47,7 @@ export default function MarketingAgreementsSection() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/25 bg-blue-400/10 px-3.5 py-1.5 text-xs font-black uppercase tracking-[.14em] text-blue-200">
             <FileSignature className="h-3.5 w-3.5" />
-            Agreement to cash
+            Contract to cash
           </div>
 
           <h2 className="mt-6 max-w-2xl text-4xl font-black leading-[1.02] tracking-[-.045em] sm:text-6xl">
@@ -55,7 +55,7 @@ export default function MarketingAgreementsSection() {
           </h2>
 
           <p className="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
-            Create an Agreement from the client and project context you already have. Share it for review,
+            Create a contract from the client and project context you already have. Share it for review,
             collect recorded acceptance, and keep the next billing action connected to the terms everyone agreed to.
           </p>
 
@@ -77,7 +77,7 @@ export default function MarketingAgreementsSection() {
             onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
             className="group mt-10 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-black/20 transition hover:-translate-y-0.5"
           >
-            See the Agreement workflow
+            See the contract workflow
             <ArrowRight size={17} className="transition group-hover:translate-x-1" />
           </button>
         </div>
@@ -87,7 +87,7 @@ export default function MarketingAgreementsSection() {
           <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.07] p-4 shadow-2xl shadow-black/30 backdrop-blur sm:p-6">
             <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[.18em] text-blue-200">Agreement workspace</p>
+                <p className="text-[10px] font-black uppercase tracking-[.18em] text-blue-200">Contract workspace</p>
                 <h3 className="mt-2 text-xl font-black text-white sm:text-2xl">Brand identity sprint</h3>
               </div>
               <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-black text-emerald-200">
@@ -98,7 +98,7 @@ export default function MarketingAgreementsSection() {
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_0.82fr]">
               <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-bold text-slate-300">Agreement progress</p>
+                  <p className="text-xs font-bold text-slate-300">Contract progress</p>
                   <p className="text-[10px] font-black text-emerald-300">4 of 4</p>
                 </div>
                 <div className="mt-5 space-y-3">
