@@ -178,6 +178,10 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
   });
 
   const filesBySourceId = new Map(job.files.map((file) => [file.sourceId, file]));
+  // Anything the user still has to answer: files Rive could not read at all,
+  // plus files it read but is not confident enough about to accept silently.
+  const openQuestions = result.unclassified.length + result.needsConfirmation.length;
+  const state = nextState(result.plan, openQuestions);
 
   // Replace the staged IR wholesale. Rewriting is safe because nothing has been
   // committed yet; once operations exist, re-analysis is refused upstream.
@@ -217,14 +221,14 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
     await transaction.importJob.update({
       where: { id: importJobId },
       data: {
-        status: nextState(result.plan, result.unclassified.length),
-        phase: phaseFor(nextState(result.plan, result.unclassified.length)),
+        status: state,
+        phase: phaseFor(state),
         planHash: result.plan.planHash,
         planVersion: result.plan.planVersion,
         plan: result.plan as unknown as Prisma.InputJsonValue,
         totalRows: sources.reduce((sum, source) => sum + source.table.rows.length, 0),
         processedRows: result.records.length,
-        unresolvedCount: result.plan.reviewItems.length + result.unclassified.length,
+        unresolvedCount: result.plan.reviewItems.length + openQuestions,
         summary: {
           ...summary,
           // Resolutions are carried forward explicitly. Overwriting `summary`
@@ -235,6 +239,7 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
           counts: result.plan.counts,
           totals: result.plan.totals,
           unclassified: result.unclassified,
+          needsConfirmation: result.needsConfirmation,
         } as unknown as Prisma.InputJsonValue,
         error: null,
       },
@@ -264,19 +269,15 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
     }),
   ]);
 
-  return {
-    plan: result.plan,
-    state: nextState(result.plan, result.unclassified.length),
-    recordCount: result.records.length,
-  };
+  return { plan: result.plan, state, recordCount: result.records.length };
 }
 
 /**
  * A migration is only `ready` when nothing needs a person. Anything that would
  * require the user to accept a guess keeps it in `review_required`.
  */
-function nextState(plan: ImportPlan, unclassifiedCount: number): MigrationState {
-  if (unclassifiedCount > 0 || plan.reviewItems.length > 0 || plan.blocked.length > 0) return "review_required";
+function nextState(plan: ImportPlan, openQuestions: number): MigrationState {
+  if (openQuestions > 0 || plan.reviewItems.length > 0 || plan.blocked.length > 0) return "review_required";
   return "ready";
 }
 

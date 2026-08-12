@@ -205,7 +205,10 @@ export function buildRecords(
             break;
           }
           normalized[field.key] = parsed.iso;
-          if (parsed.ambiguous && parsed.alternative) {
+          // Only ask when nothing in the column settles the reading. If a
+          // sibling row has a day above 12, the format is known and repeating
+          // the question for every other row is noise, not diligence.
+          if (parsed.ambiguous && parsed.alternative && preference.preference === "auto") {
             warnings.push(
               warn(
                 "DATE_AMBIGUOUS",

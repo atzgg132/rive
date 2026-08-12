@@ -1,0 +1,4 @@
+merchant,amount,currency,expense_date,category
+Figma refund,-1500,INR,2026-04-02,software
+Adobe,"(4,200.00)",INR,2026-04-05,software
+Zoom,0,INR,2026-04-07,software

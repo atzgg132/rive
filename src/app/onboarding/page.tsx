@@ -189,6 +189,9 @@ export default function OnboardingPage() {
   const [zohoAvailable, setZohoAvailable] = useState(false);
   const [businessConnections, setBusinessConnections] = useState<BusinessConnection[]>([]);
   const [importJobs, setImportJobs] = useState<ImportJobSummary[]>([]);
+  // When the migration engine is live it owns importing entirely; this step
+  // hands over to it instead of offering a second importer beside it.
+  const [migrationEngine, setMigrationEngine] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -228,6 +231,7 @@ export default function OnboardingPage() {
       const connectorAvailability = data.connectorAvailability || {};
       const nextGoogleAvailable = connectorAvailability.googleCalendar === true;
       const nextZohoAvailable = connectorAvailability.zohoBooks === true;
+      setMigrationEngine(data.featureAvailability?.migrationEngine === true);
       const savedSources = normalizeSourceSelection(data.user.onboardingData?.sources);
       setSources(savedSources.filter((source) => source !== "google_calendar" || nextGoogleAvailable));
       const savedPath = data.user.onboardingData?.startingPath;
@@ -1019,7 +1023,37 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 3 && path === "import" && (
+          {step === 3 && path === "import" && migrationEngine && (
+            <div className="p-6 sm:p-9">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+                Migration
+              </p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight">
+                Bring your business into Rive.
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Upload the client, project, invoice, and expense exports you
+                already have, in any order. Rive works out what each file holds,
+                reconnects the records to each other, and shows you exactly what
+                it will create before anything is written.
+              </p>
+              <Button
+                className="mt-7 w-full rounded-2xl bg-blue-600 px-5 py-3.5 text-sm font-black text-white hover:bg-blue-700 sm:w-auto"
+                onClick={() => router.push("/migrate")}
+              >
+                Start importing
+              </Button>
+              <button
+                type="button"
+                onClick={() => setPath("quickstart")}
+                className="mt-4 block text-xs font-bold text-slate-500 underline-offset-4 hover:underline dark:text-slate-400"
+              >
+                I would rather start with one client instead
+              </button>
+            </div>
+          )}
+
+          {step === 3 && path === "import" && !migrationEngine && (
             <div className="p-6 sm:p-9">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
                 Migration studio

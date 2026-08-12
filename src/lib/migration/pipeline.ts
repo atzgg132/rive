@@ -124,12 +124,26 @@ export type PipelineResult = {
   plan: ImportPlan;
   /** Sources needing a decision before they contribute anything. */
   unclassified: Array<{ sourceId: string; fileName: string; sheetName: string | null; reason: string }>;
+  /**
+   * Sources that *were* classified, but not confidently enough to accept
+   * silently. They still produce records; the user is asked to confirm the
+   * record type before the migration is considered ready.
+   */
+  needsConfirmation: Array<{
+    sourceId: string;
+    fileName: string;
+    sheetName: string | null;
+    classification: MigrationEntity;
+    confidence: number;
+    reason: string;
+  }>;
 };
 
 export function runPipeline(input: PipelineInput): PipelineResult {
   const workspaceIndex = buildWorkspaceIndex(input.workspace);
   const analyzed: AnalyzedSource[] = [];
   const unclassified: PipelineResult["unclassified"] = [];
+  const needsConfirmation: PipelineResult["needsConfirmation"] = [];
   const records: MigrationRecordIR[] = [];
   let autoMapped = 0;
   let totalMappable = 0;
@@ -151,6 +165,20 @@ export function runPipeline(input: PipelineInput): PipelineResult {
     }
 
     const entity = classification.classification;
+    // A classification the engine is only moderately sure of is not silently
+    // accepted. The records are still built, so the user sees a real preview,
+    // but the migration stays in review until they confirm the record type.
+    if (classification.band !== "high" && !override) {
+      needsConfirmation.push({
+        sourceId: source.sourceId,
+        fileName: source.table.fileName,
+        sheetName: source.table.sheetName,
+        classification: entity,
+        confidence: classification.confidence,
+        reason: classification.reason,
+      });
+    }
+
     const mappingPlan = buildMappingPlan(
       profile,
       entity,
@@ -202,7 +230,7 @@ export function runPipeline(input: PipelineInput): PipelineResult {
     planVersion: input.planVersion,
   });
 
-  return { sources: analyzed, records, plan, unclassified };
+  return { sources: analyzed, records, plan, unclassified, needsConfirmation };
 }
 
 function isEntity(value: SourceClassification): value is MigrationEntity {

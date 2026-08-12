@@ -10,6 +10,11 @@
 // merely contains an "@". Full RFC 5322 acceptance is not the goal.
 const EMAIL_PATTERN = /^[^\s@,;<>()[\]\\]+@[^\s@,;<>()[\]\\]+\.[a-z]{2,}$/i;
 const URL_PATTERN = /^(https?:\/\/|www\.)[^\s]+\.[^\s]{2,}$/i;
+// Business exports routinely write a website as a bare domain ("acme.com"),
+// with no scheme and no "www". Requiring a scheme made those columns look like
+// free text, which was enough for a "Web Address" header to lose to `address`.
+const BARE_DOMAIN_PATTERN =
+  /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,24}(?:\/[^\s]*)?$/i;
 // "paid" and "unpaid" are deliberately absent. They are invoice *statuses*, and
 // treating them as booleans made status columns profile as yes/no data.
 const BOOLEAN_TRUE = new Set(["true", "yes", "y", "1", "on", "t"]);
@@ -72,7 +77,13 @@ export function isEmail(value: string): boolean {
 }
 
 export function isUrl(value: string): boolean {
-  return URL_PATTERN.test(value.trim());
+  const trimmed = value.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  if (URL_PATTERN.test(trimmed)) return true;
+  // A bare domain counts, but an email address never does — it also contains a
+  // dotted domain, and mapping an email column to `website` would be worse than
+  // leaving a website column unmapped.
+  return !trimmed.includes("@") && BARE_DOMAIN_PATTERN.test(trimmed);
 }
 
 /**

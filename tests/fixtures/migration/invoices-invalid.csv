@@ -1,0 +1,5 @@
+invoice_no,customer,total,currency,issue_date
+INV-501,Acme Technologies Pvt Ltd,75000,INR,2026-04-03
+INV-502,Globex Corporation,not-a-number,INR,2026-04-04
+,Initech Design Studio,5000,INR,2026-04-05
+INV-504,Acme Technologies Pvt Ltd,-2500,INR,2026-04-06

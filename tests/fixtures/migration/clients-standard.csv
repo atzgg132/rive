@@ -1,0 +1,4 @@
+client_name,email,phone,company,website,address,status
+Acme Technologies Pvt Ltd,contact@acme.example,+91 98765 43210,Acme Technologies,https://acme.example,"221B Residency Road, Bengaluru",active
+Globex Corporation,hello@globex.example,+91 91234 56780,Globex,https://globex.example,"14 Marine Drive, Mumbai",active
+Initech Design Studio,team@initech.example,+91 90000 11111,Initech,https://initech.example,"7 Park Street, Kolkata",inactive
