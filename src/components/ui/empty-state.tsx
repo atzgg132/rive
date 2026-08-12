@@ -8,6 +8,12 @@ export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   action?: React.ReactNode;
 }
 
+export interface ContextualEmptyStateProps extends EmptyStateProps {
+  why?: string;
+  next?: string;
+  after?: string;
+}
+
 export function EmptyState({
   icon,
   title,
@@ -36,4 +42,9 @@ export function EmptyState({
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
+}
+
+export function ContextualEmptyState({ why, next, after, description, ...props }: ContextualEmptyStateProps) {
+  const context = [why, next && `Next: ${next}`, after && `Then: ${after}`].filter(Boolean).join(" ");
+  return <EmptyState {...props} description={[description, context].filter(Boolean).join(" ")} />;
 }

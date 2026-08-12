@@ -9,6 +9,7 @@ const protectedGetRoutes = [
   "/api/portfolio",
   "/api/portfolio/analytics",
   "/api/workflow/dashboard",
+  "/api/activation",
   "/api/workflow/clients",
   "/api/workflow/projects",
   "/api/workflow/contracts",
@@ -61,6 +62,11 @@ test("login validates missing credentials on the server", async ({ request }) =>
 
   expect(response.status()).toBe(400);
   await expect(response.json()).resolves.toMatchObject({ success: false });
+});
+
+test("/api/guidance rejects unauthenticated access", async ({ request }) => {
+  const response = await request.post("/api/guidance", { data: { event: "started", mode: "automatic" } });
+  expect(response.status()).toBe(401);
 });
 
 test("a spoofed identity header cannot authenticate a request", async ({ request }) => {

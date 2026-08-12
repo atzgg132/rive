@@ -512,6 +512,16 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       const savedUser = await db.prisma.user.findUnique({ where: { id: user.id }, select: { businessType: true, businessTypes: true } });
       expect(savedUser).toEqual({ businessType: "freelancer", businessTypes: ["freelancer", "contractor"] });
 
+      const sourceSelection = await request.patch("/api/onboarding", { headers: auth, data: { sources: ["spreadsheets", "starting_fresh", "spreadsheets"] } });
+      expect(sourceSelection.status()).toBe(200);
+      const sourceUser = await db.prisma.user.findUnique({ where: { id: user.id }, select: { onboardingData: true } });
+      expect((sourceUser?.onboardingData as { sources?: unknown } | null)?.sources).toEqual(["starting_fresh"]);
+
+      const existingSources = await request.patch("/api/onboarding", { headers: auth, data: { sources: ["spreadsheets", "quickbooks", "spreadsheets"] } });
+      expect(existingSources.status()).toBe(200);
+      const existingSourceUser = await db.prisma.user.findUnique({ where: { id: user.id }, select: { onboardingData: true } });
+      expect((existingSourceUser?.onboardingData as { sources?: unknown } | null)?.sources).toEqual(["spreadsheets", "quickbooks"]);
+
       const started = await Promise.all([
         request.patch("/api/onboarding", { headers: auth, data: { step: 1, status: "in_progress" } }),
         request.patch("/api/onboarding", { headers: auth, data: { step: 1, status: "in_progress" } }),
@@ -521,6 +531,56 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       expect(events).toBe(1);
     } finally {
       await deleteTestUser(user.id);
+    }
+  });
+
+  test("automatic guidance persists, manual replay adapts, and state stays isolated per user", async ({ request }) => {
+    const user = await createTestUser("guidance-owner");
+    const other = await createTestUser("guidance-other");
+    const auth = headers(tokenFor(user));
+    const otherAuth = headers(tokenFor(other));
+    try {
+      const onboarding = await request.patch("/api/onboarding", {
+        headers: auth,
+        data: { goal: "organize", startingPath: "clean", status: "complete", step: 5 },
+      });
+      expect(onboarding.status()).toBe(200);
+
+      const initial = await request.get("/api/activation", { headers: auth });
+      expect(initial.status()).toBe(200);
+      expect((await json(initial)).activation).toEqual(expect.objectContaining({
+        goal: "organize",
+        startingPath: "clean",
+        automaticGuidanceStatus: "available",
+        guidanceDismissed: false,
+        activationStage: "start",
+      }));
+
+      const started = await request.post("/api/guidance", { headers: auth, data: { event: "started", mode: "automatic", guideId: "getting_started" } });
+      expect(started.status()).toBe(200);
+      const skipped = await request.post("/api/guidance", { headers: auth, data: { event: "skipped", mode: "automatic", guideId: "getting_started" } });
+      expect(skipped.status()).toBe(200);
+      const dismissed = await request.get("/api/activation", { headers: auth });
+      expect((await json(dismissed)).activation).toEqual(expect.objectContaining({ guidanceDismissed: true, automaticGuidanceStatus: "dismissed" }));
+
+      const replayed = await request.post("/api/guidance", { headers: auth, data: { event: "replayed", mode: "manual", guideId: "organize" } });
+      expect(replayed.status()).toBe(200);
+      const replayState = await request.get("/api/activation", { headers: auth });
+      expect((await json(replayState)).activation).toEqual(expect.objectContaining({ startingPath: "clean", guidanceDismissed: true, automaticGuidanceStatus: "dismissed" }));
+
+      const client = await request.post("/api/workflow/clients", { headers: auth, data: { name: "Guidance client", tags: [] } });
+      expect(client.status()).toBe(201);
+      const advanced = await request.get("/api/activation", { headers: auth });
+      const advancedPayload = await json(advanced) as { activation?: { recommendedAction?: unknown } };
+      expect(advancedPayload.activation?.recommendedAction).toEqual(expect.objectContaining({ id: "first_project" }));
+
+      const otherActivation = await request.get("/api/activation", { headers: otherAuth });
+      expect((await json(otherActivation)).activation).toEqual(expect.objectContaining({ guidanceDismissed: false, automaticGuidanceStatus: "available" }));
+      expect(await db!.prisma.auditEvent.count({ where: { userId: user.id, action: "guidance.skipped" } })).toBe(1);
+      expect(await db!.prisma.auditEvent.count({ where: { userId: other.id, action: "guidance.skipped" } })).toBe(0);
+    } finally {
+      await deleteTestUser(user.id);
+      await deleteTestUser(other.id);
     }
   });
 

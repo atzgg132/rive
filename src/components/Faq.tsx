@@ -29,7 +29,8 @@ const publicFaqs = faqs
   .filter((faq) => !faq.question.includes("accepts an Agreement"))
   .map((faq) => ({ ...faq, answer: faq.answer.replaceAll("Agreements, ", "") }));
 
-export default function Faq() {
+export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
+  const visibleFaqs = agreementsEnabled ? faqs : publicFaqs;
   return (
     <section id="faq" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
@@ -45,19 +46,17 @@ export default function Faq() {
             <span style={{ fontFamily: "var(--font-body)" }}>Frequently asked questions</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Clear answers.{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
-              No guesswork.
-            </span>
+            <span className="text-blue-700 dark:text-blue-400">No guesswork.</span>
           </h2>
         </div>
 
         {/* FAQ grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          {publicFaqs.map((faq) => (
+          {visibleFaqs.map((faq) => (
             <div
               key={faq.question}
               className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"

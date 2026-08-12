@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -701,7 +701,7 @@ export default function CalendarPage() {
                 </div>
               </>
             )}
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><p className="text-[9px] text-slate-400">{taskMode === "schedule" ? "You can complete the task from the planning queue." : "You can schedule it immediately after saving."}</p><Button disabled={saving || (taskMode === "create" && !taskTitle.trim())} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{taskMode === "schedule" ? "protect this time" : "add to queue"}</Button></div>
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><p className="text-[9px] text-slate-400">{taskMode === "schedule" ? "You can complete the task from the planning queue." : "You can schedule it immediately after saving."}</p><Button type="submit" disabled={saving || (taskMode === "create" && !taskTitle.trim())} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{taskMode === "schedule" ? "protect this time" : "add to queue"}</Button></div>
           </form>
         </ModalShell></Portal>
       )}
@@ -717,7 +717,7 @@ export default function CalendarPage() {
             </div>
             <label className="block"><span className="mb-1.5 block text-[10px] font-bold text-slate-500">Location or meeting link</span><Input value={draftLocation} onChange={(event) => setDraftLocation(event.target.value)} placeholder="Optional" className={inputClass} /></label>
             <label className="block"><span className="mb-1.5 block text-[10px] font-bold text-slate-500">Notes</span><Textarea value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} rows={3} placeholder="Context, agenda, or preparation notes" className={inputClass} /></label>
-            <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"><Input type="checkbox" checked={draftAvailability === "free"} onChange={(event) => setDraftAvailability(event.target.checked ? "free" : "busy")} />Show as available</label><Button disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editingId ? "save changes" : "create event"}</Button></div>
+            <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"><Input type="checkbox" checked={draftAvailability === "free"} onChange={(event) => setDraftAvailability(event.target.checked ? "free" : "busy")} />Show as available</label><Button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editingId ? "save changes" : "create event"}</Button></div>
           </form>
         </ModalShell></Portal>
       )}
@@ -881,6 +881,6 @@ function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date
 function AgendaView({ events, onSelect }: { events: CalendarEvent[]; onSelect: (event: CalendarEvent) => void }) {
   const grouped = new Map<string, CalendarEvent[]>();
   for (const event of events) grouped.set(eventDateKey(event), [...(grouped.get(eventDateKey(event)) || []), event]);
-  if (!events.length) return <div className="grid h-80 place-items-center rounded-2xl border border-dashed border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"><div className="text-center"><CalendarDays className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 text-sm font-bold text-slate-500">Nothing scheduled in this range.</p></div></div>;
+  if (!events.length) return <ContextualEmptyState icon={<CalendarDays className="h-6 w-6" />} title="Your work will show up here" description="Project milestones, invoice deadlines, and scheduled work stay connected in Calendar." why="Calendar turns the work you entered elsewhere into a plan for your time." next="Create a project with a deadline or connect a calendar." after="Rive will surface the next dates here automatically." action={<Link href="/workflow/projects?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Create project</Link>} className="min-h-80 border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900" />;
   return <div className="space-y-4">{Array.from(grouped.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([date, items]) => <section key={date} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="border-b border-slate-100 bg-slate-50 px-4 py-2 dark:border-slate-800 dark:bg-slate-900"><p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{new Date(`${date}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p></div><div className="divide-y divide-slate-100 dark:divide-slate-800">{items.map((event) => <Button key={event.id} onClick={() => onSelect(event)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"><span className="h-8 w-1 rounded-full" style={{ background: event.color }} /><span className="w-16 text-[10px] font-bold text-slate-400">{event.allDay ? "all day" : formatTime(event.startAt)}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-slate-700 dark:text-slate-200">{event.title}</span><span className="block text-[9px] text-slate-400">{sourceLabel(event.source)}</span></span></Button>)}</div></section>)}</div>;
 }

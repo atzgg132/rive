@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -121,6 +121,15 @@ export default function ExpensesPage() {
     setDrawerOpen(true);
     setOpenDropdownId(null);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("new") !== "true") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    openCreate();
+    window.history.replaceState({}, "", window.location.pathname);
+    // The intent is consumed once on mount; re-running when the drawer callback changes would reopen it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openEdit = (expense: Expense) => {
     setEditingId(expense.id);
@@ -243,7 +252,7 @@ export default function ExpensesPage() {
       <PageHeader
         title="Expenses"
         description={<>Track operating and project costs in {displayCurrency} while preserving each expense&apos;s original currency.</>}
-        actions={<Button onClick={openCreate}><Plus /> Log expense</Button>}
+        actions={<Button data-guide-target="expenses-create" onClick={openCreate}><Plus /> Log expense</Button>}
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -295,10 +304,13 @@ export default function ExpensesPage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : expenses.length === 0 ? (
-        <EmptyState
+        <ContextualEmptyState
           icon={<Receipt className="h-6 w-6" />}
-          title="No expenses logged"
-          description="Log operating or project costs to keep accurate profitability margins."
+          title="See the cost of doing the work"
+          description="Project-linked expenses contribute to profitability and net earnings."
+          why="A small amount of cost context makes the financial summary more useful."
+          next="Log one recent operating or project expense."
+          after="Rive will include it in your expense and profitability views."
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Log expense</Button>}
         />
       ) : (

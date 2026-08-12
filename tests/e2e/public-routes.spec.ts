@@ -53,6 +53,15 @@ test("light theme is the default for a new visitor", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
 
+test("marketing page advertises current connections without a demo CTA", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Start with the data you already have.", { exact: true })).toBeVisible();
+  await expect(page.getByText("CSV and XLSX imports", { exact: true })).toBeVisible();
+  await expect(page.getByText("Contracts & acceptance", { exact: true })).toBeVisible();
+});
+
 test("login password visibility control works", async ({ page }) => {
   await page.goto("/login");
   const password = page.locator('input[type="password"]');

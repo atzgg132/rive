@@ -18,7 +18,7 @@ export default function MarketingPortfolioSection() {
           <p className="text-xs font-black uppercase tracking-[.16em] text-blue-700 dark:text-blue-300">
             Your reputation, ready to share
           </p>
-          <h2 className="mt-4 max-w-xl text-4xl font-black leading-[1.02] tracking-[-.045em] text-slate-950 dark:text-white sm:text-6xl">
+          <h2 className="mt-4 max-w-xl text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-950 dark:text-white">
             Your best work should win your next client.
           </h2>
           <p className="mt-6 max-w-lg text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">

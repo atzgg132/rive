@@ -36,7 +36,9 @@ function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 }
 
-async function mockVisualWorkspace(page: Page) {
+async function mockVisualWorkspace(page: Page, guidance: "completed" | "active" | "activated" = "completed") {
+  const activated = guidance === "activated";
+  const guidanceDone = guidance === "completed" || activated;
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -49,6 +51,35 @@ async function mockVisualWorkspace(page: Page) {
       });
     }
     if (pathname === "/api/notifications") return json(route, { success: true, notifications: [] });
+    if (pathname === "/api/activation") return json(route, {
+      success: true,
+      activation: {
+        goal: "organize",
+        goalLabel: "Organize client work",
+        outcome: "Keep client work, deadlines, and delivery in one place.",
+        startingPath: "quickstart",
+        activationStage: activated ? "activated" : "build",
+        stageLabel: activated ? "Ready to run" : "Build your next useful step",
+        recommendedAction: activated ? null : { id: "add_deadline", label: "Add a project deadline", description: "Deadlines flow into your calendar and next-action view.", href: "/workflow/projects" },
+        secondaryActions: [{ id: "connect_calendar", label: "Connect your calendar", description: "Keep project milestones and scheduled work visible together.", href: "/calendar" }],
+        milestones: [
+          { id: "client", label: "First client", complete: true, href: "/workflow/clients" },
+          { id: "project", label: "Active work", complete: true, href: "/workflow/projects" },
+          { id: "deadline", label: "Deadline added", complete: activated, href: "/workflow/projects" },
+        ],
+        completed: activated ? 3 : 2,
+        total: 3,
+        percentage: activated ? 100 : 67,
+        guidanceDismissed: false,
+        guidanceCompleted: guidanceDone,
+        automaticGuidanceStatus: guidance === "active" ? "available" : "completed",
+        hasMeaningfulContext: true,
+        unresolvedImportIssues: 0,
+        counts: { clients: 3, projects: 3, invoices: 6, expenses: 6 },
+        steps: [],
+        next: { id: "deadline", label: "Deadline added", complete: false, href: "/workflow/projects" },
+      },
+    });
     if (pathname === "/api/rates") return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { USD: 1, INR: 83, EUR: 0.9, GBP: 0.8 } } });
     if (pathname === "/api/workflow/dashboard") {
       return json(route, {
@@ -61,16 +92,15 @@ async function mockVisualWorkspace(page: Page) {
           { month: "Jul", revenue: 0, expenses: 120 }, { month: "Aug", revenue: 0, expenses: 0 },
         ],
         activation: {
-          counts: { clients: 3, projects: 3, invoices: 6, expenses: 6 }, completed: 5, total: 6, unresolvedImportIssues: 0,
-          next: { id: "calendar", label: "Calendar connected", complete: false, href: "/calendar" },
-          steps: [
-            { id: "profile", label: "Profile ready", complete: true, href: "/portfolio" },
+          goal: "organize", goalLabel: "Organize client work", outcome: "Keep client work, deadlines, and delivery in one place.", startingPath: "quickstart", activationStage: activated ? "activated" : "build", stageLabel: activated ? "Ready to run" : "Build your next useful step",
+          recommendedAction: activated ? null : { id: "add_deadline", label: "Add a project deadline", description: "Deadlines flow into your calendar and next-action view.", href: "/workflow/projects" }, secondaryActions: [{ id: "connect_calendar", label: "Connect your calendar", description: "Keep project milestones and scheduled work visible together.", href: "/calendar" }],
+          milestones: [
             { id: "client", label: "First client", complete: true, href: "/workflow/clients" },
             { id: "project", label: "Active work", complete: true, href: "/workflow/projects" },
-            { id: "money", label: "Financial context", complete: true, href: "/workflow/revenue" },
-            { id: "calendar", label: "Calendar connected", complete: false, href: "/calendar" },
-            { id: "portfolio", label: "Portfolio ready", complete: true, href: "/portfolio" },
-          ],
+            { id: "deadline", label: "Deadline added", complete: activated, href: "/workflow/projects" },
+          ], completed: activated ? 3 : 2, total: 3, percentage: activated ? 100 : 67, guidanceDismissed: false, guidanceCompleted: guidanceDone, automaticGuidanceStatus: guidance === "active" ? "available" : "completed", hasMeaningfulContext: true,
+          counts: { clients: 3, projects: 3, invoices: 6, expenses: 6 }, unresolvedImportIssues: 0,
+          next: { id: "deadline", label: "Deadline added", complete: false, href: "/workflow/projects" }, steps: [],
         },
         profileReadiness: { completed: 5, total: 6, percentage: 83, substantial: true, signals: [] },
         insights: { collectionRate: 86, profitMargin: 90, overdueCount: 1, overdueAmount: 825, topExpenseCategory: "Software", topExpenseAmount: 220, upcomingProjects: [] },
@@ -124,7 +154,7 @@ async function mockVisualWorkspace(page: Page) {
   });
 }
 
-async function prepareVisualPage(page: Page, theme: "light" | "dark", viewport = { width: 1440, height: 900 }) {
+async function prepareVisualPage(page: Page, theme: "light" | "dark", viewport = { width: 1440, height: 900 }, guidance: "completed" | "active" | "activated" = "completed") {
   await page.setViewportSize(viewport);
   await page.clock.setFixedTime(new Date("2026-08-10T09:00:00.000Z"));
   await page.addInitScript((selectedTheme) => {
@@ -134,7 +164,7 @@ async function prepareVisualPage(page: Page, theme: "light" | "dark", viewport =
     style.textContent = "nextjs-portal{display:none!important}*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}";
     document.documentElement.appendChild(style);
   }, theme);
-  await mockVisualWorkspace(page);
+  await mockVisualWorkspace(page, guidance);
 }
 
 async function expectDesktopVisualInvariants(page: Page, theme: "light" | "dark") {
@@ -150,8 +180,13 @@ async function expectDesktopVisualInvariants(page: Page, theme: "light" | "dark"
     return { asideWidth: aside?.width || 0, headingLeft: heading?.left || 0, mainLeft: main?.left || 0, scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth };
   });
   expect(geometry.asideWidth).toBe(256);
-  expect(geometry.headingLeft - geometry.mainLeft).toBeGreaterThanOrEqual(24);
-  expect(geometry.headingLeft - geometry.mainLeft).toBeLessThanOrEqual(40);
+  // CSS grid/flex layout can resolve the same 40px inset to a fractional
+  // subpixel value (for example 40.28px) at some viewport sizes. The
+  // invariant is about the intended whole-pixel spacing, so round before
+  // asserting it rather than making the threshold artificially permissive.
+  const contentInset = Math.round(geometry.headingLeft - geometry.mainLeft);
+  expect(contentInset).toBeGreaterThanOrEqual(24);
+  expect(contentInset).toBeLessThanOrEqual(40);
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
 }
 
@@ -183,6 +218,53 @@ for (const { width, height } of [{ width: 1280, height: 800 }, { width: 1024, he
     });
   }
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`active guidance ${theme} visual`, async ({ page }) => {
+    await prepareVisualPage(page, theme, { width: 1440, height: 900 }, "active");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("guide-popover")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-guide-target="activation-primary"]').last()).toHaveAttribute("data-guide-highlight", "true");
+    await expect(page).toHaveScreenshot(`guidance-active-${theme}-1440x900.png`, { fullPage: false });
+  });
+
+  test(`help guides ${theme} visual`, async ({ page }) => {
+    await prepareVisualPage(page, theme);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "Help & guides" }).click();
+    await expect(page.getByTestId("help-guides-panel")).toBeVisible();
+    await expect(page).toHaveScreenshot(`help-guides-${theme}-1440x900.png`, { fullPage: false });
+  });
+
+  test(`getting started expanded ${theme} visual`, async ({ page }) => {
+    await prepareVisualPage(page, theme);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "Open Getting Started" }).click();
+    await expect(page.getByTestId("getting-started-panel")).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.locator("main").evaluate((main) => {
+      main.scrollTop = 0;
+      main.scrollLeft = 0;
+    });
+    await expect(page).toHaveScreenshot(`getting-started-expanded-${theme}-1440x900.png`, { fullPage: false });
+  });
+
+  test(`manual completion ${theme} visual`, async ({ page }) => {
+    await prepareVisualPage(page, theme, { width: 1440, height: 900 }, "activated");
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "Help & guides" }).click();
+    await page.getByRole("button", { name: "Organize clients & projects" }).click();
+    await expect(page.getByRole("heading", { name: "You are ready to run with it" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`guidance-complete-${theme}-1440x900.png`, { fullPage: false });
+  });
+}
+
+test("active guidance mobile visual", async ({ page }) => {
+  await prepareVisualPage(page, "light", { width: 390, height: 844 }, "active");
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("guide-popover")).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveScreenshot("guidance-active-light-390x844.png", { fullPage: false });
+});
 
 for (const theme of ["light", "dark"] as const) {
   test(`calendar week ${theme} 1024x768 visual`, async ({ page }) => {

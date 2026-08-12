@@ -23,6 +23,8 @@ import {
   FileSignature,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
+  CircleHelp,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
@@ -32,6 +34,8 @@ import CommandPalette from "@/components/dashboard/CommandPalette";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
+import { ACTIVATION_GOAL_NAV_PATHS, type ActivationPlan } from "@/lib/activation";
+import { GuidedExperience, openHelpFromMobileShell } from "@/components/dashboard/GuidedExperience";
 
 interface UserProfile {
   id: string;
@@ -61,11 +65,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activation, setActivation] = useState<ActivationPlan | null>(null);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [isMac, setIsMac] = useState(true);
-  const [notifications, setNotifications] = useState<WorkspaceNotification[]>([
-    { id: "welcome", text: "Welcome to Rive. Your client operations workspace is ready.", read: false },
-    { id: "tip", text: "Pro Tip: Open search to move around the workspace faster.", read: false },
-  ]);
+  const [notifications, setNotifications] = useState<WorkspaceNotification[]>([]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -157,6 +160,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
+  }, [pathname, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void fetch("/api/activation", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled && data?.success && data.activation) setActivation(data.activation as ActivationPlan);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
   }, [user]);
 
   // Handle logout
@@ -171,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
-  const navLinks = [
+  const allNavLinks = [
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/calendar", label: "Calendar", icon: CalendarDays },
     { href: "/workflow/projects", label: "Projects", icon: Briefcase },
@@ -181,6 +196,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/workflow/expenses", label: "Expenses", icon: Receipt },
     { href: "/portfolio", label: "Portfolio", icon: Globe2 },
   ];
+  const progressiveReveal = Boolean(activation && !activation.guidanceDismissed && activation.automaticGuidanceStatus !== "completed" && activation.activationStage !== "activated");
+  const goalPaths = activation ? ACTIVATION_GOAL_NAV_PATHS[activation.goal] : [];
+  const overviewLink = allNavLinks[0];
+  const prioritizedLinks = allNavLinks.filter((link) => goalPaths.includes(link.href));
+  const navLinks = progressiveReveal ? [overviewLink, ...prioritizedLinks] : allNavLinks;
+  const moreNavLinks = progressiveReveal ? allNavLinks.filter((link) => !navLinks.includes(link)) : [];
+  const moreToolsActive = moreNavLinks.some((link) => pathname === link.href || pathname.startsWith(link.href + "/"));
+  const moreToolsExpanded = moreToolsOpen || moreToolsActive;
+
+  const renderNavLink = (link: (typeof allNavLinks)[number], mobile = false) => {
+    const Icon = link.icon;
+    const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+    return (
+      <Link
+        key={link.href}
+        href={link.href}
+        title={!mobile && sidebarCollapsed ? link.label : undefined}
+        onClick={mobile ? () => setMobileMenuOpen(false) : undefined}
+        className={mobile
+          ? `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive ? "bg-accent text-primary dark:bg-blue-900/20 dark:text-blue-400" : "text-muted-foreground hover:bg-background hover:text-foreground dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"}`
+          : `flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${isActive ? "bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
+      >
+        <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+        {(!sidebarCollapsed || mobile) && <span>{link.label}</span>}
+      </Link>
+    );
+  };
 
   if (loading) {
     return (
@@ -214,25 +256,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <nav className="flex flex-col gap-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  title={sidebarCollapsed ? link.label : undefined}
-                  className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
-                    isActive
-                      ? "bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10"
-                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                  }`}
+            {navLinks.map((link) => renderNavLink(link))}
+            {moreNavLinks.length > 0 && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setMoreToolsOpen((value) => !value)}
+                  aria-expanded={moreToolsExpanded}
+                  title={sidebarCollapsed ? "More tools" : undefined}
+                  className={`min-h-11 justify-between rounded-xl px-3 py-2.5 text-sm font-medium ${moreToolsActive ? "bg-primary/[0.08] text-primary" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
                 >
-                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                  {!sidebarCollapsed && <span>{link.label}</span>}
-                </Link>
-              );
-            })}
+                  <span className="flex items-center gap-3"><span className="grid h-5 w-5 place-items-center text-base leading-none">…</span>{!sidebarCollapsed && <span>More tools</span>}</span>
+                  {!sidebarCollapsed && <ChevronDown className={`h-4 w-4 transition-transform ${moreToolsExpanded ? "rotate-180" : ""}`} />}
+                </Button>
+                {moreToolsExpanded && moreNavLinks.map((link) => renderNavLink(link))}
+              </>
+            )}
           </nav>
         </div>
 
@@ -269,6 +309,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-1">
             <CurrencySwitcher compact />
             <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
+              <CircleHelp className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
               <Menu className="h-5 w-5" />
             </Button>
@@ -303,6 +346,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3">
             <CurrencySwitcher />
             <ThemeToggle />
+            <GuidedExperience activation={activation} pathname={pathname} onActivationChange={setActivation} />
             <div className="relative">
               <Button
                 variant="ghost"
@@ -358,25 +402,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
 
               <nav className="flex flex-col gap-1 flex-1">
-                {navLinks.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-accent dark:bg-blue-900/20 text-primary dark:text-blue-400"
-                          : "text-muted-foreground dark:text-slate-400 hover:text-foreground dark:hover:text-slate-200 hover:bg-background dark:hover:bg-slate-800"
-                      }`}
+                {navLinks.map((link) => renderNavLink(link, true))}
+                {moreNavLinks.length > 0 && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setMoreToolsOpen((value) => !value)}
+                      aria-expanded={moreToolsExpanded}
+                      className={`mt-2 justify-between rounded-xl px-3 py-2.5 text-sm font-medium ${moreToolsActive ? "bg-accent text-primary" : "text-muted-foreground"}`}
                     >
-                      <Icon className="h-5 w-5" />
-                      <span>{link.label}</span>
-                    </Link>
-                  );
-                })}
+                      <span>More tools</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${moreToolsExpanded ? "rotate-180" : ""}`} />
+                    </Button>
+                    {moreToolsExpanded && moreNavLinks.map((link) => renderNavLink(link, true))}
+                  </>
+                )}
               </nav>
 
               <div className="flex flex-col gap-4 border-t border-border dark:border-slate-800 pt-4 mt-auto">

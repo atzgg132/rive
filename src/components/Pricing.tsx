@@ -12,7 +12,7 @@ const plans = [
     description: "Everything you need to run client work and business operations in one place.",
     features: [
         "Clients, projects, tasks, and calendar",
-        "Agreements, review, acceptance, and payment triggers",
+        "Contracts, review, acceptance, and payment triggers",
         "Revenue, invoices, and expenses",
         "Business overview and useful insights",
         "One public portfolio with analytics",
@@ -76,18 +76,11 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
             <span style={{ fontFamily: "var(--font-body)" }}>Simple, transparent pricing</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-5 tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white mb-5"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Start with the complete workspace. <br />
-            <span
-              className="bg-clip-text text-transparent"
-              style={{
-                backgroundImage: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 50%, #60A5FA 100%)",
-              }}
-            >
-              Free during early access.
-            </span>
+            <span className="text-blue-700 dark:text-blue-400">Free during early access.</span>
           </h2>
           <p
             className="text-slate-600 dark:text-slate-300 text-lg max-w-xl mx-auto font-normal leading-relaxed"
@@ -151,7 +144,7 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
 
               {/* Features */}
               <ul className="flex flex-col gap-3 mb-8 flex-1">
-                {plan.features.filter((feature) => agreementsEnabled || !feature.toLowerCase().startsWith("agreements")).map((feature) => (
+                {plan.features.filter((feature) => agreementsEnabled || !feature.toLowerCase().startsWith("contracts")).map((feature) => (
                   <li
                     key={feature}
                     className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-300 font-medium"

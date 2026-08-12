@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -20,7 +21,18 @@ export async function GET(req: NextRequest) {
       createdAt: true,
     },
   });
-  return NextResponse.json({ success: true, connections });
+  const response = NextResponse.json({
+    success: true,
+    connections,
+    connectorAvailability: {
+      googleCalendar: googleCalendarAvailable(),
+      zohoBooks: zohoBooksAvailable(),
+      csvImport: true,
+      appleCalendarFeed: true,
+    },
+  });
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  return response;
 }
 
 export async function DELETE(req: NextRequest) {

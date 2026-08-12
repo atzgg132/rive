@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
@@ -164,6 +164,15 @@ export default function ProjectsPage() {
     setDrawerOpen(true);
     setOpenDropdownId(null);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("new") !== "true") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    openCreate();
+    window.history.replaceState({}, "", window.location.pathname);
+    // The intent is consumed once on mount; re-running when the drawer callback changes would reopen it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openEdit = (project: Project) => {
     setEditingId(project.id);
@@ -358,7 +367,7 @@ export default function ProjectsPage() {
       <PageHeader
         title="Projects"
         description="Keep delivery moving with clear milestones, budgets, tasks, and deadlines."
-        actions={<Button onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button>}
+        actions={<Button data-guide-target="projects-create" onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button>}
       />
 
       {/* Filter and Search */}
@@ -395,11 +404,14 @@ export default function ProjectsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
         </div>
       ) : projects.length === 0 ? (
-        <EmptyState
+        <ContextualEmptyState
           icon={<Briefcase className="h-6 w-6" />}
-          title="No projects yet"
-          description="Log a project, assign it a budget, and link milestones."
-          action={<Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
+          title="Turn client work into a project"
+          description="Projects connect client work, deadlines, financials, and proof of work."
+          why="A project gives Rive something meaningful to organize."
+          next={clients.length === 0 ? "Add a client first, then create the project." : "Create the project you are working on now."}
+          after="Its deadlines and budget can flow into Calendar and Revenue."
+          action={clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
         />
       ) : (
         <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
@@ -730,6 +742,7 @@ function DraggableProjectCard({
           <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
             <div className="w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up">
               <Button
+                data-guide-target={!project.due_date ? "projects-deadline" : undefined}
                 onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
               >
@@ -794,7 +807,20 @@ function DraggableProjectCard({
               <span>due {new Date(project.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
             </span>
           ) : (
-            <span>No due date</span>
+            <span className="flex items-center gap-2">
+              <span>No due date</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-guide-target="projects-deadline"
+                aria-label={`Add deadline to ${project.title}`}
+                onClick={(e) => { e.stopPropagation(); openEdit(project); }}
+                className="h-7 px-2 text-[11px] font-bold text-primary hover:bg-primary/10"
+              >
+                Add deadline
+              </Button>
+            </span>
           )}
           {budgetAmount !== null && (
             <span className="flex flex-col items-end text-right font-extrabold text-[#10B981] dark:text-emerald-400">
