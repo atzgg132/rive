@@ -32,7 +32,53 @@ async function mockCurrencyWorkspace(page: Page) {
       });
     }
     if (pathname === "/api/workflow/clients") return json(route, { success: true, clients: [] });
-    if (pathname === "/api/workflow/projects") return json(route, { success: true, projects: [] });
+    if (pathname === "/api/workflow/projects/project-usd") return json(route, {
+      success: true,
+      project: {
+        id: "project-usd",
+        title: "US launch",
+        status: "active",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        budget: "100",
+        currency: "USD",
+        dueDate: null,
+        tags: [],
+        description: "A project with a native dollar budget.",
+        contractCoverage: "undecided",
+        externalContractLabel: null,
+        externalContractUrl: null,
+        contractDecisionAt: null,
+        client: null,
+        invoices: [],
+        milestones: [],
+        contracts: [],
+      },
+    });
+    if (pathname === "/api/workflow/projects") return json(route, {
+      success: true,
+      projects: [{
+        id: "project-usd",
+        client_id: null,
+        title: "US launch",
+        description: "A project with a native dollar budget.",
+        status: "active",
+        priority: "medium",
+        start_date: null,
+        due_date: null,
+        budget: "100",
+        currency: "USD",
+        tags: [],
+        client_name: null,
+        client_company: null,
+        milestone_count: 0,
+        completed_milestones: 0,
+        contract_coverage: "undecided",
+        external_contract_label: null,
+        external_contract_url: null,
+        contract_count: 0,
+        latest_contract: null,
+      }],
+    });
     if (pathname === "/api/notifications") return json(route, { success: true, notifications: [] });
     return json(route, { success: true });
   });
@@ -55,4 +101,19 @@ test("mixed invoices use a persistent display currency without changing native a
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Display currency").last()).toHaveValue("USD", { timeout: 20_000 });
+});
+
+test("project budgets follow the selected display currency on the list and detail page", async ({ page }) => {
+  await mockCurrencyWorkspace(page);
+  await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "US launch" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/₹8,300\.00/)).toBeVisible();
+  await expect(page.getByText("Originally $100.00", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "US launch" }).click();
+  await expect(page).toHaveURL(/\/workflow\/projects\/project-usd$/);
+  await expect(page.getByRole("heading", { name: "US launch" })).toBeVisible();
+  await expect(page.getByText(/₹8,300\.00/)).toBeVisible();
+  await expect(page.getByText("Originally $100.00", { exact: true })).toBeVisible();
 });
