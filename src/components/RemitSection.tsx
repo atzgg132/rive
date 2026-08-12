@@ -171,9 +171,9 @@ export default function RemitSection() {
               <span style={{ fontFamily: "var(--font-body)" }}>Concept preview</span>
             </div>
 
-            <h2 className="text-4xl font-bold leading-[1.06] tracking-tight text-slate-900 dark:text-white sm:text-6xl" style={{ fontFamily: "var(--font-display)" }}>
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white" style={{ fontFamily: "var(--font-display)" }}>
               Remit{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Payments</span>
+              <span className="text-blue-700 dark:text-blue-400">Payments</span>
               <br />
               <span className="text-2xl font-medium text-slate-500 dark:text-slate-400 sm:text-3xl">By Rive.</span>
             </h2>

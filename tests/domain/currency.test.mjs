@@ -28,3 +28,7 @@ test("formats the selected currency rather than assuming dollars", () => {
   assert.match(formatMoney(1_234.5, "INR", "en-IN"), /1,234\.50/);
   assert.match(formatMoney(1_234, "JPY", "ja-JP"), /1,234/);
 });
+
+test("keeps an extensible project currency visible when Intl has no symbol", () => {
+  assert.match(formatMoney(1_234.5, "XYZ", "en-US"), /^XYZ.*1,234\.5/);
+});
