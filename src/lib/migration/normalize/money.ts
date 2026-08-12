@@ -20,7 +20,7 @@ import {
 import {
   MAX_MONETARY_VALUE,
   // @ts-expect-error The standalone domain test runner needs the explicit TypeScript extension.
-} from "../domain-vocabulary.ts";
+} from "../../domain-vocabulary.ts";
 import type { CurrencySource } from "../config.ts";
 
 export type AmountResolution = {

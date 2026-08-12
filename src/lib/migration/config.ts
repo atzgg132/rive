@@ -78,8 +78,12 @@ export const MATCH_THRESHOLDS = {
   suggest: 0.72,
   /** Below this, do not even offer the candidate. */
   floor: 0.6,
-  /** Fuzzy-only name similarity needed before we will *suggest* anything. */
-  fuzzyNameSuggest: 0.86,
+  /**
+   * Fuzzy-only name similarity needed before we will *suggest* anything.
+   * Set below `suggest` deliberately: when several clients look alike we would
+   * rather show the user the shortlist than silently resolve nothing.
+   */
+  fuzzyNameSuggest: 0.8,
 } as const;
 
 /**

@@ -68,6 +68,7 @@ model User {
   contractEvents        ContractEvent[]        @relation("ContractEventActor")
   contractComments      ContractComment[]      @relation("ContractCommentAuthor")
   notifications         Notification[]
+  migrationEvents       MigrationEvent[]
 
   @@map("users")
 }
@@ -452,30 +453,41 @@ model Expense {
 }
 
 model ImportJob {
-  id              String           @id @default(uuid())
-  userId          String           @map("user_id")
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  source          String           @default("generic_csv")
-  sourceLabel     String?          @map("source_label")
-  status          String           @default("uploaded")
-  phase           String           @default("analysis")
-  mode            String           @default("migration")
-  totalRows       Int              @default(0) @map("total_rows")
-  processedRows   Int              @default(0) @map("processed_rows")
-  createdRecords  Int              @default(0) @map("created_records")
-  updatedRecords  Int              @default(0) @map("updated_records")
-  skippedRecords  Int              @default(0) @map("skipped_records")
-  unresolvedCount Int              @default(0) @map("unresolved_count")
+  id              String               @id @default(uuid())
+  userId          String               @map("user_id")
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source          String               @default("generic_csv")
+  sourceLabel     String?              @map("source_label")
+  status          String               @default("uploaded")
+  phase           String               @default("analysis")
+  mode            String               @default("migration")
+  // 1 = the original onboarding importer, 2 = the migration engine. Both write
+  // here so migration history stays continuous across the rollout.
+  engineVersion   Int                  @default(1) @map("engine_version")
+  // Hash of the plan the user last previewed. Commit must quote it back.
+  planHash        String?              @map("plan_hash")
+  planVersion     Int                  @default(0) @map("plan_version")
+  plan            Json?
+  // Currency chosen for this migration when a source does not state one.
+  defaultCurrency String?              @map("default_currency")
+  totalRows       Int                  @default(0) @map("total_rows")
+  processedRows   Int                  @default(0) @map("processed_rows")
+  createdRecords  Int                  @default(0) @map("created_records")
+  updatedRecords  Int                  @default(0) @map("updated_records")
+  skippedRecords  Int                  @default(0) @map("skipped_records")
+  unresolvedCount Int                  @default(0) @map("unresolved_count")
   summary         Json?
   error           String?
-  startedAt       DateTime?        @map("started_at")
-  completedAt     DateTime?        @map("completed_at")
-  rolledBackAt    DateTime?        @map("rolled_back_at")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  startedAt       DateTime?            @map("started_at")
+  completedAt     DateTime?            @map("completed_at")
+  rolledBackAt    DateTime?            @map("rolled_back_at")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
   files           ImportFile[]
   records         ImportedRecord[]
   issues          ImportIssue[]
+  stagedRecords   MigrationRecord[]
+  operations      MigrationOperation[]
 
   @@index([userId, createdAt])
   @@index([userId, status, createdAt])
@@ -483,22 +495,44 @@ model ImportJob {
 }
 
 model ImportFile {
-  id          String           @id @default(uuid())
-  importJobId String           @map("import_job_id")
-  importJob   ImportJob        @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  id          String            @id @default(uuid())
+  importJobId String            @map("import_job_id")
+  importJob   ImportJob         @relation(fields: [importJobId], references: [id], onDelete: Cascade)
   name        String
-  mimeType    String           @map("mime_type")
-  sizeBytes   Int              @map("size_bytes")
+  mimeType    String            @map("mime_type")
+  sizeBytes   Int               @map("size_bytes")
   checksum    String
   entity      String
-  rowCount    Int              @map("row_count")
+  rowCount    Int               @map("row_count")
   headers     Json
   sample      Json?
   mapping     Json?
-  createdAt   DateTime         @default(now()) @map("created_at")
+  // Stable identity for one table within an upload: `<checksum>:<sheet>`. It
+  // seeds every sourceKey, so re-uploading identical bytes reproduces the same
+  // keys and the commit stays idempotent.
+  sourceId    String?           @map("source_id")
+  sheetName   String?           @map("sheet_name")
+  encoding    String?
+  delimiter   String?
+  headerRow   Int               @default(0) @map("header_row")
+  // The parsed grid, kept so the pipeline can be re-run after the user changes
+  // a classification or a column mapping. Staged records alone are not enough:
+  // a source the engine could not classify has no records yet, and that is
+  // exactly the case the user is about to resolve.
+  rows        Json?
+  // Full column profile: types, null/unique ratios, detected formats.
+  profile     Json?
+  confidence  Float?
+  reason      String?
+  // The user's own decisions for this source: chosen record type, manual
+  // column mappings, confirmed date formats. Replayed on every re-analysis.
+  overrides   Json?
+  createdAt   DateTime          @default(now()) @map("created_at")
   records     ImportedRecord[]
   issues      ImportIssue[]
+  staged      MigrationRecord[]
 
+  @@unique([importJobId, sourceId])
   @@index([importJobId])
   @@index([checksum])
   @@map("import_files")
@@ -518,12 +552,91 @@ model ImportedRecord {
   action       String      @default("created")
   before       Json?
   metadata     Json?
+  // `updatedAt` of the created row at the moment it was written. Rollback
+  // compares against it to tell "untouched since import" from "edited since",
+  // and refuses to delete anything the user has changed.
+  targetStamp  DateTime?   @map("target_stamp")
   createdAt    DateTime    @default(now()) @map("created_at")
 
   @@unique([importJobId, sourceType, sourceKey])
   @@index([importJobId, targetType])
   @@index([targetType, targetId])
   @@map("imported_records")
+}
+
+/// One candidate record in the canonical migration IR.
+///
+/// This is the intermediate representation the pipeline compiles to. Because it
+/// is persisted, commit never re-reads an upload: preview and commit operate on
+/// exactly the same rows, and a user can close the browser and come back.
+model MigrationRecord {
+  id                     String      @id @default(uuid())
+  importJobId            String      @map("import_job_id")
+  importJob              ImportJob   @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  importFileId           String?     @map("import_file_id")
+  importFile             ImportFile? @relation(fields: [importFileId], references: [id], onDelete: SetNull)
+  entity                 String
+  sourceRow              Int         @map("source_row")
+  /// Stable provenance key, also the commit idempotency key.
+  sourceKey              String      @map("source_key")
+  externalId             String?     @map("external_id")
+  /// Original cell values, never discarded after normalization.
+  raw                    Json
+  normalized             Json
+  fieldMappings          Json        @map("field_mappings")
+  confidence             Float       @default(0)
+  warnings               Json
+  errors                 Json
+  relationshipCandidates Json        @map("relationship_candidates")
+  resolvedRelationships  Json        @map("resolved_relationships")
+  duplicateCandidates    Json        @map("duplicate_candidates")
+  /// Identity cluster shared by every mention of the same client.
+  groupKey               String?     @map("group_key")
+  status                 String      @default("ready")
+  action                 String      @default("create")
+  /// Set once the record has been written, so rollback can find it.
+  targetType             String?     @map("target_type")
+  targetId               String?     @map("target_id")
+  createdAt              DateTime    @default(now()) @map("created_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
+
+  @@unique([importJobId, sourceKey])
+  @@index([importJobId, entity, status])
+  @@index([importJobId, groupKey])
+  @@map("migration_records")
+}
+
+/// The commit ledger.
+///
+/// Every planned operation is written as `pending` before execution begins and
+/// flipped to `applied` inside the same transaction that creates the record.
+/// A retried or double-clicked commit re-reads the ledger, skips what is
+/// already applied, and resumes — which is what makes commit idempotent and
+/// partial failures recoverable rather than mysterious.
+model MigrationOperation {
+  id           String    @id @default(uuid())
+  importJobId  String    @map("import_job_id")
+  importJob    ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  /// Unique per migration; derived from entity + sourceKey.
+  operationKey String    @map("operation_key")
+  /// Plan hash this operation belongs to. A stale commit cannot execute it.
+  planHash     String    @map("plan_hash")
+  sequence     Int
+  batch        Int       @default(0)
+  action       String
+  entity       String
+  sourceKey    String    @map("source_key")
+  payloadHash  String    @map("payload_hash")
+  status       String    @default("pending")
+  targetType   String?   @map("target_type")
+  targetId     String?   @map("target_id")
+  error        String?
+  appliedAt    DateTime? @map("applied_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@unique([importJobId, operationKey])
+  @@index([importJobId, status, sequence])
+  @@map("migration_operations")
 }
 
 model ImportIssue {
@@ -562,6 +675,30 @@ model ImportMapping {
   @@unique([userId, provider, entity, name])
   @@index([userId, provider])
   @@map("import_mappings")
+}
+
+/// Product analytics for the migration funnel.
+///
+/// `AuditEvent` cannot serve this purpose: it is uniquely constrained on
+/// (user, action) so that activation milestones stay idempotent, which means a
+/// user's second migration could never record a second `migration.completed`.
+/// Migration events repeat by nature and carry dimensions, so they get their
+/// own append-only table rather than distorting the audit log's semantics.
+model MigrationEvent {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importJobId String?  @map("import_job_id")
+  event       String
+  /// Dimensions: file_count, record_count, auto_mapping_rate, duration, etc.
+  /// Never raw customer rows.
+  properties  Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
+  @@index([importJobId, createdAt])
+  @@map("migration_events")
 }
 
 model ConnectorConnection {
@@ -621,9 +758,9 @@ model AuditEvent {
   ipHash     String?  @map("ip_hash")
   createdAt  DateTime @default(now()) @map("created_at")
 
+  @@unique([userId, action])
   @@index([userId, createdAt])
   @@index([action, createdAt])
-  @@unique([userId, action])
   @@map("audit_events")
 }
 
