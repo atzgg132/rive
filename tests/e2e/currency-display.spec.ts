@@ -40,19 +40,41 @@ async function mockCurrencyWorkspace(page: Page) {
       });
     }
     if (pathname === "/api/workflow/clients") return json(route, { success: true, clients: [] });
+    if (pathname === "/api/workflow/projects/project-usd") return json(route, {
+      success: true,
+      project: {
+        id: "project-usd",
+        title: "US launch",
+        status: "active",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        budget: "100",
+        currency: "USD",
+        dueDate: null,
+        tags: [],
+        description: "A project with a native dollar budget.",
+        contractCoverage: "undecided",
+        externalContractLabel: null,
+        externalContractUrl: null,
+        contractDecisionAt: null,
+        client: null,
+        invoices: [],
+        milestones: [],
+        contracts: [],
+      },
+    });
     if (pathname === "/api/workflow/projects") return json(route, {
       success: true,
       projects: [{
-        id: "project-inr",
+        id: "project-usd",
         client_id: null,
-        title: "India launch",
-        description: "A project with a native rupee budget.",
+        title: "US launch",
+        description: "A project with a native dollar budget.",
         status: "active",
         priority: "medium",
         start_date: null,
         due_date: null,
-        budget: "1234.5",
-        currency: "INR",
+        budget: "100",
+        currency: "USD",
         tags: [],
         client_name: null,
         client_company: null,
@@ -89,11 +111,17 @@ test("mixed invoices use a persistent display currency without changing native a
   await expect(page.getByLabel("Display currency").last()).toHaveValue("USD", { timeout: 20_000 });
 });
 
-test("project cards format the native project currency", async ({ page }) => {
+test("project budgets follow the selected display currency on the list and detail page", async ({ page }) => {
   await mockCurrencyWorkspace(page);
   await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByRole("heading", { name: "India launch" })).toBeVisible();
-  await expect(page.getByText(/₹1,234\.50/)).toBeVisible();
-  await expect(page.getByText("$1,234.50", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "US launch" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/₹8,300\.00/)).toBeVisible();
+  await expect(page.getByText("Originally $100.00", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "US launch" }).click();
+  await expect(page).toHaveURL(/\/workflow\/projects\/project-usd$/);
+  await expect(page.getByRole("heading", { name: "US launch" })).toBeVisible();
+  await expect(page.getByText(/₹8,300\.00/)).toBeVisible();
+  await expect(page.getByText("Originally $100.00", { exact: true })).toBeVisible();
 });
