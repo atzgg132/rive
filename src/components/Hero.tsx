@@ -106,7 +106,7 @@ export default function Hero() {
             <Button
               type="submit"
               disabled={formState === "loading"}
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-sm transition-all duration-200 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
+              className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-sm transition-[transform,opacity] duration-200 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
               style={{
                 fontFamily: "var(--font-display)",
                 background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
@@ -141,7 +141,7 @@ export default function Hero() {
           {floatingStats.map(({ icon: Icon, label, value }) => (
             <div
               key={label}
-              className="group flex min-w-0 cursor-default flex-col items-center gap-2.5 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm transition-all duration-300 hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900 dark:hover:bg-slate-800 sm:p-5"
+              className="group flex min-w-0 cursor-default flex-col items-center gap-2.5 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm transition-[border-color,background-color] duration-300 hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900 dark:hover:bg-slate-800 sm:p-5"
             >
               <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
                 style={{ background: "rgba(29,78,216,0.06)" }}>
@@ -159,7 +159,7 @@ export default function Hero() {
       </div>
 
       {/* ── Dashboard preview ───────────────────────── */}
-      <div className="relative mt-12 w-full max-w-6xl sm:mt-16">
+      <div className="relative mt-12 w-full max-w-6xl sm:mt-16 animate-hero-preview-in">
         <div className="relative overflow-hidden rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/30"
           style={{ border: "1px solid rgba(12,30,54,0.08)" }}>
 

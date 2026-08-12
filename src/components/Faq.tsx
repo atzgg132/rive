@@ -63,7 +63,7 @@ export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: 
           {visibleFaqs.map((faq) => (
             <div
               key={faq.question}
-              className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"
+              className="flex flex-col p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"
             >
               <h3
                 className="text-slate-800 dark:text-white font-bold text-base mb-3"

@@ -75,7 +75,7 @@ export default function FinalCTA() {
           {/* Idle + Loading form */}
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col sm:flex-row gap-3 w-full transition-all duration-300"
+            className="flex flex-col sm:flex-row gap-3 w-full transition-[opacity,transform] duration-300"
             style={{
               opacity: formState === "idle" || formState === "loading" ? 1 : 0,
               pointerEvents: formState === "idle" || formState === "loading" ? "auto" : "none",
@@ -89,13 +89,13 @@ export default function FinalCTA() {
               placeholder="your@email.com"
               required
               disabled={formState === "loading"}
-              className="flex-1 min-w-0 px-5 py-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-all duration-200 disabled:opacity-60"
+              className="flex-1 min-w-0 px-5 py-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-60"
               style={{ fontFamily: "var(--font-body)" }}
             />
             <Button
               type="submit"
               disabled={formState === "loading"}
-              className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
+              className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-[transform,opacity] duration-200 shadow-lg shadow-blue-600/15 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {formState === "loading" ? (
@@ -108,7 +108,7 @@ export default function FinalCTA() {
 
           {/* Success */}
           <div
-            className="absolute inset-0 flex items-center justify-center transition-all duration-500"
+            className="absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-500"
             style={{
               opacity: formState === "success" ? 1 : 0,
               transform: formState === "success" ? "translateY(0) scale(1)" : "translateY(12px) scale(0.97)",
@@ -125,7 +125,7 @@ export default function FinalCTA() {
 
           {/* Already joined */}
           <div
-            className="absolute inset-0 flex items-center justify-center transition-all duration-500"
+            className="absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-500"
             style={{
               opacity: formState === "already-joined" ? 1 : 0,
               transform: formState === "already-joined" ? "translateY(0) scale(1)" : "translateY(12px) scale(0.97)",
@@ -145,7 +145,7 @@ export default function FinalCTA() {
           className="text-slate-400 text-sm font-medium"
           style={{ fontFamily: "var(--font-body)" }}
         >
-          free plan available when we launch · no credit card needed · cancel anytime
+          Free plan available when we launch · no credit card needed · cancel anytime
         </p>
       </div>
     </section>
