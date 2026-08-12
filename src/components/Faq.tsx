@@ -46,13 +46,11 @@ export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: 
             <span style={{ fontFamily: "var(--font-body)" }}>Frequently asked questions</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Clear answers.{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
-              No guesswork.
-            </span>
+            <span className="text-blue-700 dark:text-blue-400">No guesswork.</span>
           </h2>
         </div>
 

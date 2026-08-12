@@ -69,19 +69,12 @@ export default function Hero() {
 
       {/* ── Headline ────────────────────────────────── */}
       <h1
-        className="relative mb-6 max-w-5xl text-center leading-[0.94] tracking-[-0.055em] text-slate-900 dark:text-white"
+        className="relative mb-6 max-w-5xl text-center font-bold leading-[0.94] tracking-[-0.055em] text-slate-900 dark:text-white"
         style={{ fontFamily: "var(--font-hero)", fontSize: "clamp(3rem, 7vw, 6.4rem)" }}
       >
         <span>Run your services </span>
-        <span className="inline">
-          <span style={{
-            background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}>
-            without the chaos
-          </span>
+        <span className="inline text-blue-700 dark:text-blue-400">
+          without the chaos
         </span>
         <span>.</span>
       </h1>
@@ -170,20 +163,14 @@ export default function Hero() {
         <div className="relative overflow-hidden rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/30"
           style={{ border: "1px solid rgba(12,30,54,0.08)" }}>
 
-          {/* Browser chrome bar */}
-          <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-100 px-5 py-3 dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex gap-1.5 shrink-0">
-              <div className="w-3 h-3 rounded-full bg-red-400" />
-              <div className="w-3 h-3 rounded-full bg-amber-400" />
-              <div className="w-3 h-3 rounded-full bg-emerald-400" />
-            </div>
-            <div className="flex-1 mx-6">
-              <div className="mx-auto flex h-5 w-44 items-center justify-center rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
-                <span className="text-[10px] text-slate-400 font-medium" style={{ fontFamily: "var(--font-body)" }}>
-                  app.rive.work
-                </span>
-              </div>
-            </div>
+          {/* Panel header */}
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-100 px-5 py-3 dark:border-slate-800 dark:bg-slate-900">
+            <span className="text-[11px] font-medium text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
+              app.rive.work
+            </span>
+            <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300">
+              Overview
+            </span>
           </div>
 
           {/* Dashboard body */}

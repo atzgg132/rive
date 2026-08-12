@@ -37,7 +37,7 @@ export default function MarketingConnectionsSection({ googleCalendarEnabled }: M
         <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[.16em] text-cyan-700 dark:text-cyan-300">Bring your work with you</p>
-            <h2 className="mt-4 max-w-xl text-4xl font-black leading-[1.03] tracking-[-.045em] text-slate-900 dark:text-white sm:text-6xl">
+            <h2 className="mt-4 max-w-xl text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white">
               Start with the data you already have.
             </h2>
           </div>

@@ -76,18 +76,11 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
             <span style={{ fontFamily: "var(--font-body)" }}>Simple, transparent pricing</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-5 tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white mb-5"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Start with the complete workspace. <br />
-            <span
-              className="bg-clip-text text-transparent"
-              style={{
-                backgroundImage: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 50%, #60A5FA 100%)",
-              }}
-            >
-              Free during early access.
-            </span>
+            <span className="text-blue-700 dark:text-blue-400">Free during early access.</span>
           </h2>
           <p
             className="text-slate-600 dark:text-slate-300 text-lg max-w-xl mx-auto font-normal leading-relaxed"
