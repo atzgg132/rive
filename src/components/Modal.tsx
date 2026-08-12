@@ -2,11 +2,11 @@
 
 import { Button, Input } from "@/components/ui";
 
-import { X, CheckCircle2, Play, Loader2, Clock } from "lucide-react";
+import { X, CheckCircle2, Loader2, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { submitToWaitlist } from "@/utils/api";
 
-type ModalType = "login" | "waitlist" | "demo";
+type ModalType = "login" | "waitlist";
 type FormState = "idle" | "loading" | "success" | "already-joined";
 
 interface ModalProps {
@@ -28,7 +28,7 @@ function WaitlistForm({
   subtext: string;
   ctaLabel: string;
   ctaClass: string;
-  submitType: "waitlist" | "login" | "demo";
+  submitType: "waitlist" | "login";
 }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<FormState>("idle");
@@ -180,7 +180,6 @@ function WaitlistForm({
 
 export default function Modal({ isOpen, onClose, type }: ModalProps) {
   const [visible, setVisible] = useState(false);
-  const [demoPlayed, setDemoPlayed] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -189,7 +188,6 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
     } else {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(false);
-      setDemoPlayed(false);
     }
   }, [isOpen]);
 
@@ -225,7 +223,7 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={type === "demo" ? "Product demo" : type === "login" ? "Developer access" : "Join the waitlist"}
+        aria-label={type === "login" ? "Developer access" : "Join the waitlist"}
         className="relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-100 bg-white p-5 shadow-2xl shadow-slate-200/80 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-8"
         style={{
           transition: "transform 350ms cubic-bezier(.16,1,.3,1), opacity 300ms",
@@ -266,66 +264,6 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
           />
         )}
 
-        {/* ── Demo ── */}
-        {type === "demo" && (
-          <div className="flex flex-col gap-5 text-center">
-            <div>
-              <h3
-                className="text-2xl font-bold text-slate-800 mb-1"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                rive. product preview
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontFamily: "var(--font-body)" }}>
-                See how clients, projects, invoices, and expenses stay connected.
-              </p>
-            </div>
-
-            <div className="relative aspect-video w-full rounded-2xl bg-gradient-to-br from-blue-50 to-sky-50 border border-slate-200 flex items-center justify-center overflow-hidden group">
-              <Button
-                onClick={() => setDemoPlayed(true)}
-                className="relative z-10 w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform duration-200"
-                style={{ opacity: demoPlayed ? 0 : 1, transition: "opacity 300ms" }}
-              >
-                <Play className="w-6 h-6 fill-current ml-1" />
-              </Button>
-
-              <div
-                className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/95 dark:bg-slate-900/95 px-6"
-                style={{
-                  opacity: demoPlayed ? 1 : 0,
-                  transform: demoPlayed ? "scale(1)" : "scale(0.96)",
-                  transition: "opacity 400ms, transform 400ms cubic-bezier(.16,1,.3,1)",
-                }}
-              >
-                <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-                <p
-                  className="text-slate-700 text-sm font-bold"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  Your workspace is ready
-                </p>
-                <p className="text-slate-400 text-xs" style={{ fontFamily: "var(--font-body)" }}>
-                  Manage clients, projects, invoices, and expenses from one calm dashboard.
-                </p>
-                <Button
-                  onClick={() => {
-                    setDemoPlayed(false);
-                    onClose();
-                    setTimeout(() =>
-                      window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" })),
-                      350
-                    );
-                  }}
-                  className="mt-1 px-5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  Join the waitlist →
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

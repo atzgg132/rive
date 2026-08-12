@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 
-type ModalType = "login" | "waitlist" | "demo";
+type ModalType = "login" | "waitlist";
 
 function isModalType(value: unknown): value is ModalType {
-  return value === "login" || value === "waitlist" || value === "demo";
+  return value === "login" || value === "waitlist";
 }
 
 export default function MarketingModalHost() {

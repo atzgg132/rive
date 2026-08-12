@@ -12,7 +12,15 @@ async function mockCurrencyWorkspace(page: Page) {
     if (pathname === "/api/auth/session") {
       return json(route, {
         success: true,
-        user: { id: "user-1", name: "Currency Tester", email: "currency@rive.test", plan: "pro", onboarding_status: "complete", display_currency: displayCurrency },
+        user: {
+          id: "user-1",
+          name: "Currency Tester",
+          email: "currency@rive.test",
+          plan: "pro",
+          onboarding_status: "complete",
+          currency: displayCurrency,
+          display_currency: displayCurrency,
+        },
       });
     }
     if (pathname === "/api/preferences/currency" && request.method() === "PATCH") {

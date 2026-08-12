@@ -28,7 +28,9 @@ The composer reuses the existing client name, email, company, and address, plus 
 
 ## Provider configuration
 
-For production, set `CONTRACTS_ENABLED=true`, `ESIGN_PROVIDER=rive`, and a strong `SESSION_SECRET`; keep `CONTRACTS_RECORDED_ACCEPTANCE_ENABLED=false` until the alpha adapter is explicitly approved for that environment. Enabling the flag is the explicit opt-in for the current recorded-acceptance implementation. The `local` provider remains available for isolated development smoke tests; it is rejected in production unless `CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION=true` is explicitly set. Unknown providers, missing production secrets, disabled feature flags, and incomplete provider responses fail closed.
+For production, set `CONTRACTS_ENABLED=true`, `ESIGN_PROVIDER=rive`, `CONTRACTS_RECORDED_ACCEPTANCE_ENABLED=true`, and a strong `SESSION_SECRET`. The production parameter set now explicitly opts into Rive's first-party recorded-acceptance implementation. The `local` provider remains available for isolated development smoke tests; it is rejected in production unless `CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION=true` is explicitly set. Unknown providers, missing production secrets, disabled feature flags, and incomplete provider responses fail closed.
+
+This release enables the current alpha acceptance record, not a regulated or independently verified electronic-signature service. Keep the consent language and product copy that explain the typed-name method and its limits, and obtain the applicable legal/product approval before marketing it as a contract acceptance workflow.
 
 The provider-neutral `EsignProvider` interface remains the seam for a future external provider. The current `local` and `rive` adapters are not a complete external e-sign integration: there is no completed callback route, webhook signature verification, or asynchronous reconciliation. `ESIGN_WEBHOOK_SECRET` is reserved for that future adapter and is not evidence that callbacks are active. No provider failure may mark an Agreement accepted.
 

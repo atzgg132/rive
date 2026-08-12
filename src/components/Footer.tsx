@@ -7,7 +7,8 @@ import { RiveLogo } from "@/components/RiveLogo";
 const footerLinks: Record<string, { label: string; href: string }[]> = {
   Product: [
     { label: "Features",   href: "/#features"  },
-    { label: "Opportunities",  href: "/#gig-board" },
+    { label: "Connections", href: "/#connections" },
+    { label: "Remit",      href: "/#remit"     },
     { label: "Pricing",    href: "/#pricing"   },
     { label: "Changelog",  href: "/changelog"  },
     { label: "Roadmap",    href: "/roadmap"    },
@@ -57,7 +58,7 @@ export default function Footer() {
               className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-[220px] font-medium"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              One connected workspace to run your clients, projects, money, calendar, and portfolio.
+              One connected workspace to run your clients, contracts, projects, money, calendar, and portfolio.
             </p>
 
             {/* Socials */}
