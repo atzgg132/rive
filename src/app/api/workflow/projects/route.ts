@@ -3,9 +3,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { PROJECT_PRIORITY_SET, PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
 
-const PROJECT_STATUSES = new Set(["active", "paused", "completed", "archived"]);
-const PROJECT_PRIORITIES = new Set(["low", "medium", "high", "urgent"]);
+// Shared with the migration engine so imported projects can never carry a
+// status this endpoint would reject.
+const PROJECT_STATUSES = PROJECT_STATUS_SET;
+const PROJECT_PRIORITIES = PROJECT_PRIORITY_SET;
 
 function cleanText(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
