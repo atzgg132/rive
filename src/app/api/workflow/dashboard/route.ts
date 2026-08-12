@@ -5,6 +5,7 @@ import { mergePortfolioContent } from "@/utils/portfolio";
 import { normalizeCurrency } from "@/lib/currency";
 import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRates";
 import { buildActivationPlan } from "@/lib/activation-plan";
+import { migrationEngineAvailable } from "@/utils/migration/config";
 import { normalizeActivationGoal } from "@/lib/activation";
 
 export async function GET(req: NextRequest) {
@@ -203,10 +204,11 @@ export async function GET(req: NextRequest) {
       workspaceUser,
       calendarConnectionCount,
       portfolio,
-      unresolvedImportIssues,
+      legacyImportIssues,
       projectDeadlineCount,
       sentInvoiceCount,
       importJobCount,
+      migrationsNeedingReview,
     ] = await Promise.all([
       prisma.client.count({ where: { userId } }),
       prisma.project.count({ where: { userId } }),
@@ -239,7 +241,12 @@ export async function GET(req: NextRequest) {
       prisma.project.count({ where: { userId, dueDate: { not: null } } }),
       prisma.invoice.count({ where: { userId, status: { in: ["sent", "viewed", "overdue", "paid"] } } }),
       prisma.importJob.count({ where: { userId } }),
+      // The migration engine records outstanding questions on the job itself
+      // rather than as ImportIssue rows, so activation counts both.
+      prisma.importJob.count({ where: { userId, engineVersion: 2, status: "review_required" } }),
     ]);
+
+    const unresolvedImportIssues = legacyImportIssues + migrationsNeedingReview;
 
     const receivableBase = totalPaid + totalPending;
     const collectionRate = receivableBase > 0 ? Math.round((totalPaid / receivableBase) * 100) : 0;
@@ -290,6 +297,9 @@ export async function GET(req: NextRequest) {
       calendarConnectionCount,
       importJobCount,
       unresolvedImportIssues,
+      // The migration engine owns the import journey once it is switched on, so
+      // activation points at it rather than the original onboarding importer.
+      migrationHref: migrationEngineAvailable() ? "/migrate" : undefined,
     });
 
     const expenseCategoryTotals = new Map<string, number>();

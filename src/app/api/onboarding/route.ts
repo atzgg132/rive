@@ -7,6 +7,7 @@ import { isValidOnboardingAvatarUrl, mergePortfolioContent } from "@/utils/portf
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
+import { migrationEngineAvailable } from "@/utils/migration/config";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { ACTIVATION_STARTING_PATHS } from "@/lib/activation";
 
@@ -64,6 +65,11 @@ export async function GET(req: NextRequest) {
     connectorAvailability: {
       googleCalendar: googleCalendarAvailable(),
       zohoBooks: zohoBooksAvailable(),
+    },
+    featureAvailability: {
+      // When the migration engine is on, onboarding hands the import journey
+      // over to it rather than offering a second, weaker importer alongside.
+      migrationEngine: migrationEngineAvailable(),
     },
   });
 }

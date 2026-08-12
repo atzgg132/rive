@@ -23,7 +23,15 @@ export type ActivationPlanInput = {
   calendarConnectionCount: number;
   importJobCount: number;
   unresolvedImportIssues: number;
+  /**
+   * Where "import your work" should send the user. Passed in rather than read
+   * from the environment so this module stays pure and testable; the caller
+   * supplies the migration route when the engine is switched on.
+   */
+  migrationHref?: string;
 };
+
+const DEFAULT_IMPORT_HREF = "/onboarding?restart=1&focus=import";
 
 function activationAction(id: string, label: string, description: string, href: string): ActivationAction {
   return { id, label, description, href };
@@ -61,8 +69,9 @@ export function buildActivationPlan(input: ActivationPlanInput): ActivationPlan 
   const createInvoice = activationAction("create_invoice", "Create your first invoice", "Reuse the client, project and currency you already entered.", "/workflow/revenue?new=true");
   const sendInvoice = activationAction("send_invoice", "Review and send an invoice", "A sent invoice is the first step toward getting paid.", "/workflow/revenue");
   const addExpense = activationAction("add_expense", "Log your first expense", "Project-linked costs make profitability easier to understand.", "/workflow/expenses?new=true");
-  const importWork = activationAction("import_work", "Import your work", "Bring existing records across with a preview and rollback path.", "/onboarding?restart=1&focus=import");
-  const resolveImport = activationAction("resolve_import", "Resolve imported records", "Review unresolved relationships before relying on the totals.", "/onboarding?restart=1&focus=import");
+  const importHref = typeof input.migrationHref === "string" && input.migrationHref ? input.migrationHref : DEFAULT_IMPORT_HREF;
+  const importWork = activationAction("import_work", "Import your work", "Bring existing records across with a preview and rollback path.", importHref);
+  const resolveImport = activationAction("resolve_import", "Resolve imported records", "Review unresolved relationships before relying on the totals.", importHref);
   const completeProfile = activationAction("complete_profile", "Complete your profile", "Your profile becomes the foundation for public proof of work.", "/portfolio");
   const selectProject = activationAction("select_project", "Select a project for your portfolio", "Choose real work that helps prospective clients understand you.", "/portfolio");
   const publishPortfolio = activationAction("publish_portfolio", "Publish your portfolio", "Make the proof you have prepared available to the people you want to reach.", "/portfolio");

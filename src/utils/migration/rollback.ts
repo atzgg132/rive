@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { MIGRATION_EVENTS, recordMigrationEvent } from "@/utils/migration/analytics";
 import { phaseFor } from "@/utils/migration/session";
+import { rollbackEligibility } from "@/lib/migration/state";
 
 /**
  * Rollback.
@@ -21,9 +22,6 @@ import { phaseFor } from "@/utils/migration/session";
  * A destructive operation that is only *mostly* right is worse than one that
  * refuses and explains itself.
  */
-
-/** Clock skew and same-transaction writes make an exact match unreliable. */
-const MODIFICATION_TOLERANCE_MS = 1_000;
 
 const ROLLBACKABLE_STATES = new Set(["completed", "completed_with_issues", "failed"]);
 
@@ -79,25 +77,9 @@ async function partitionCandidates(
       const row = currentById.get(id);
       if (!row) continue; // already gone; nothing to undo
 
-      const stamp = stampById.get(id);
-      if (!stamp) {
-        // Imported before rollback stamps existed. Without evidence that it is
-        // untouched, refusing is the safe answer.
-        conflicts.push({
-          targetType,
-          targetId: id,
-          label: row.label,
-          reason: "Rive cannot tell whether this has changed since it was imported.",
-        });
-        continue;
-      }
-      if (row.updatedAt.getTime() - stamp.getTime() > MODIFICATION_TOLERANCE_MS) {
-        conflicts.push({
-          targetType,
-          targetId: id,
-          label: row.label,
-          reason: "You have edited this since it was imported, so Rive kept it.",
-        });
+      const verdict = rollbackEligibility(stampById.get(id) ?? null, row.updatedAt);
+      if (!verdict.eligible) {
+        conflicts.push({ targetType, targetId: id, label: row.label, reason: verdict.reason });
         continue;
       }
       const list = eligible.get(targetType) || [];

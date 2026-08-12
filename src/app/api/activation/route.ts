@@ -3,13 +3,14 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { mergePortfolioContent } from "@/utils/portfolio";
 import { buildActivationPlan } from "@/lib/activation-plan";
+import { migrationEngineAvailable } from "@/utils/migration/config";
 import { normalizeActivationGoal } from "@/lib/activation";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 
-  const [user, clientCount, projectCount, invoiceCount, expenseCount, projectDeadlineCount, sentInvoiceCount, calendarConnectionCount, importJobCount, unresolvedImportIssues, portfolio] = await Promise.all([
+  const [user, clientCount, projectCount, invoiceCount, expenseCount, projectDeadlineCount, sentInvoiceCount, calendarConnectionCount, importJobCount, legacyImportIssues, migrationsNeedingReview, portfolio] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
       select: { name: true, profession: true, businessType: true, businessTypes: true, onboardingStatus: true, onboardingData: true },
@@ -23,10 +24,15 @@ export async function GET(req: NextRequest) {
     prisma.calendarConnection.count({ where: { userId: session.userId, status: "connected" } }),
     prisma.importJob.count({ where: { userId: session.userId } }),
     prisma.importIssue.count({ where: { importJob: { userId: session.userId }, resolvedAt: null, severity: { in: ["warning", "blocking"] } } }),
+    // The migration engine records outstanding questions on the job itself
+    // rather than as ImportIssue rows, so activation counts both.
+    prisma.importJob.count({ where: { userId: session.userId, engineVersion: 2, status: "review_required" } }),
     prisma.portfolio.findUnique({ where: { userId: session.userId }, select: { status: true, publishedAt: true, content: true } }),
   ]);
 
   if (!user) return NextResponse.json({ success: false, message: "User not found." }, { status: 404 });
+
+  const unresolvedImportIssues = legacyImportIssues + migrationsNeedingReview;
 
   const portfolioContent = portfolio ? mergePortfolioContent(portfolio.content) : null;
   const businessTypes = user.businessTypes?.length ? user.businessTypes : user.businessType ? [user.businessType] : [];
@@ -62,6 +68,9 @@ export async function GET(req: NextRequest) {
     calendarConnectionCount,
     importJobCount,
     unresolvedImportIssues,
+    // The migration engine owns the import journey once it is switched on, so
+    // activation points at it rather than the original onboarding importer.
+    migrationHref: migrationEngineAvailable() ? "/migrate" : undefined,
   });
 
   return NextResponse.json({ success: true, activation });

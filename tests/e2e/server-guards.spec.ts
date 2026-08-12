@@ -20,12 +20,18 @@ const protectedGetRoutes = [
   "/api/calendar/tasks",
   "/api/calendar/connections",
   "/api/admin/waitlist",
+  // Behind a flag: 404 while disabled, 401 when enabled. Either way it must
+  // never serve migration data to an unauthenticated caller.
+  "/api/migrations",
 ];
+
+const flaggedRoutes = new Set(["/api/migrations"]);
 
 for (const route of protectedGetRoutes) {
   test(`${route} rejects unauthenticated access`, async ({ request }) => {
     const response = await request.get(route);
-    expect(response.status(), `${route} should be protected`).toBe(401);
+    const acceptable = flaggedRoutes.has(route) ? [401, 404] : [401];
+    expect(acceptable, `${route} should be protected, got ${response.status()}`).toContain(response.status());
   });
 }
 

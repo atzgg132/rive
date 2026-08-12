@@ -1,0 +1,5 @@
+merchant,amount,currency,expense_date,category,project,billable
+Figma,1500,INR,2026-04-02,software,Website redesign,yes
+Adobe Creative Cloud,4200,INR,2026-04-05,Software,Brand refresh,no
+IndiGo,18500,INR,2026-04-11,travel,Mobile app,yes
+Freelance illustrator,35000,INR,2026-04-18,contractor,Brand refresh,yes

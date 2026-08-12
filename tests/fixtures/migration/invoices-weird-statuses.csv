@@ -1,0 +1,5 @@
+invoice_no,customer,total,currency,issue_date,status
+INV-301,Acme Technologies Pvt Ltd,10000,INR,2026-04-03,Settled
+INV-302,Globex Corporation,20000,INR,2026-04-04,Awaiting Payment
+INV-303,Initech Design Studio,30000,INR,2026-04-05,Past Due
+INV-304,Acme Technologies Pvt Ltd,40000,INR,2026-04-06,Escalated to legal

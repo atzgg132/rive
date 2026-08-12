@@ -1,0 +1,4 @@
+invoice_no,customer,customer_email,project,subtotal,tax,total,currency,issue_date,due_date,paid_date,status
+INV-001,Acme Technologies Pvt Ltd,contact@acme.example,Website redesign,63559.32,11440.68,75000,INR,2026-04-03,2026-05-03,2026-04-28,paid
+INV-002,Globex Corporation,hello@globex.example,Brand refresh,35593.22,6406.78,42000,INR,2026-04-10,2026-05-10,,settled
+INV-003,Initech Design Studio,team@initech.example,Mobile app,101694.92,18305.08,120000,INR,2026-03-22,2026-04-21,,overdue
