@@ -59,9 +59,7 @@ export default function FinalCTA() {
           }}
         >
           Stop juggling tools.
-          <span className="mt-2 block bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 bg-clip-text text-transparent">
-            Run everything together.
-          </span>
+          <span className="mt-2 block text-blue-700 dark:text-blue-400">Run everything together.</span>
         </h2>
 
         {/* Sub */}

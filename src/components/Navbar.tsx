@@ -11,7 +11,6 @@ const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Connections", href: "#connections" },
   { label: "Portfolio", href: "#portfolio" },
-  { label: "Opportunities", href: "#gig-board" },
   { label: "Remit", href: "#remit" },
   { label: "Pricing", href: "#pricing" },
 ];
@@ -74,7 +73,7 @@ export default function Navbar() {
               boxShadow: "0 4px 20px rgba(29,78,216,0.18)",
             }}
           >
-            Get Started Free
+            Join the waitlist
           </Button>
         </div>
 
@@ -117,7 +116,7 @@ export default function Navbar() {
             className="w-full text-sm font-semibold px-5 py-3 rounded-xl text-white mt-1"
             style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)" }}
           >
-            Get Started Free
+            Join the waitlist
           </Button>
         </div>
       )}
