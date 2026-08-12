@@ -143,6 +143,20 @@ textarea {
   outline-offset: 2px;
 }
 
+/* The lightweight guidance layer highlights a real action without masking the
+   rest of the workspace or turning the guide into a keyboard trap. */
+[data-guide-highlight="true"] {
+  position: relative;
+  z-index: 60;
+  outline: 3px solid rgb(59 130 246 / 0.35);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px rgb(59 130 246 / 0.08);
+}
+
+[data-testid="guide-popover"] > * {
+  pointer-events: auto;
+}
+
 /* Legacy marketing pages used desktop-only spacing. Keep their authored
    desktop rhythm while providing a safe mobile gutter everywhere. */
 @media (max-width: 639px) {

@@ -144,10 +144,11 @@ export default function RegisterPage() {
               )}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Full name</label>
+                <label htmlFor="register-name" className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Full name</label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
                   <Input
+                    id="register-name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -160,10 +161,11 @@ export default function RegisterPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Email address</label>
+                <label htmlFor="register-email" className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Email address</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
                   <Input
+                    id="register-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -176,10 +178,11 @@ export default function RegisterPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Password</label>
+                <label htmlFor="register-password" className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
                   <PasswordInput
+                    id="register-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"

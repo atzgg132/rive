@@ -11,7 +11,7 @@ export type WaitlistResult = {
 
 export async function submitToWaitlist(
   email: string,
-  type: "waitlist" | "login" | "demo" | "remit"
+  type: "waitlist" | "login" | "remit"
 ): Promise<WaitlistResult> {
   try {
     const response = await fetch("/api/waitlist", {

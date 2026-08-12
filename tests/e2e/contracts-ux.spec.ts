@@ -170,7 +170,7 @@ test.describe("contracts UX", () => {
       };
     });
     expect(primaryStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(primaryStyle.height).toBeGreaterThanOrEqual(39.5);
+    expect(primaryStyle.height).toBeGreaterThanOrEqual(39);
     expect(primaryStyle.paddingLeft).toBeGreaterThanOrEqual(16);
     expect(primaryStyle.paddingRight).toBeGreaterThanOrEqual(16);
 

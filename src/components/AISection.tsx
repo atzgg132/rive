@@ -35,10 +35,10 @@ export default function AISection() {
       </div>
 
       <div className="max-w-7xl mx-auto px-8">
-        <div className="grid lg:grid-cols-2 gap-20 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:items-stretch">
 
           {/* ── Left: Orb visual ─────────────────────── */}
-          <div className="relative flex items-center justify-center order-2 lg:order-1 py-8">
+          <div className="relative flex min-h-[420px] items-center justify-center order-2 rounded-3xl border border-slate-100 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900/30 lg:order-1">
             {/* Outer ring */}
             <div
               className="absolute w-72 h-72 rounded-full border border-blue-500/[0.12]"
@@ -101,13 +101,11 @@ export default function AISection() {
             </div>
 
             <h2
-              className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.08]"
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white"
               style={{ fontFamily: "var(--font-display)" }}
             >
               One record.{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
-                Every workflow in sync.
-              </span>
+              <span className="text-blue-700 dark:text-blue-400">Every workflow in sync.</span>
             </h2>
 
             <p

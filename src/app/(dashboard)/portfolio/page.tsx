@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { DEFAULT_PORTFOLIO_CONTENT, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioProject, type PortfolioTheme } from "@/utils/portfolio";
 import { uploadImage } from "@/utils/clientUploads";
 import PortfolioProjectEditor from "@/components/portfolio/PortfolioProjectEditor";
+import { FirstVisitNote } from "@/components/dashboard/ActivationCard";
 
 /* Validated portfolio uploads and remote image hosts cannot use a static Next image allowlist. */
 /* eslint-disable @next/next/no-img-element */
@@ -469,9 +470,14 @@ export default function PortfolioDashboardPage() {
             {savedPublicUrl && <a href={savedPublicUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-accent"><ExternalLink className="h-4 w-4" /> View live site</a>}
             <div role="status" aria-live="polite" className={`inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold ${displayedSaveState === "error" ? "bg-destructive/10 text-destructive" : displayedSaveState === "saved" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}><span className={`h-1.5 w-1.5 rounded-full ${displayedSaveState === "error" ? "bg-destructive" : displayedSaveState === "saved" ? "bg-success" : displayedSaveState === "saving" ? "animate-pulse bg-primary" : "bg-warning"}`} /> {displayedSaveState === "saving" ? "Saving…" : displayedSaveState === "error" ? "Save failed" : displayedSaveState === "saved" ? "Saved" : "Unsaved changes"}</div>
             <Button variant="outline" onClick={() => save()} disabled={saving || !dirty}><Save /> {saving ? "Saving…" : "Save draft"}</Button>
-            <Button onClick={() => save("published")} disabled={saving}><Check /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
+            <Button data-guide-target="portfolio-publish" onClick={() => save("published")} disabled={saving}><Check /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
           </>}
         />
+        {portfolio.status !== "published" && readiness.score < 100 && (
+          <FirstVisitNote>
+            Your profile and selected projects become public proof of work. Fill the essentials first; optional case-study detail can wait.
+          </FirstVisitNote>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border dark:border-slate-800">
@@ -492,7 +498,7 @@ export default function PortfolioDashboardPage() {
               { key: "proof", label: "Testimonials", sub: `${content.testimonials.length} added`, icon: Sparkles },
               { key: "design", label: "Appearance", sub: "Theme and visibility", icon: Settings2 },
             ] as const).map(({ key, label, sub, icon: Icon }) => (
-              <Button data-portfolio-section={key} key={key} onClick={() => setEditorSection(key)} className={`grid min-h-14 w-full grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${editorSection === key ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-blue-300 dark:ring-slate-700" : "text-slate-600 hover:bg-white/70 dark:text-slate-400 dark:hover:bg-slate-800/70"}`}>
+              <Button data-guide-target={key === "profile" ? "portfolio-profile" : key === "work" ? "portfolio-project" : undefined} data-portfolio-section={key} key={key} onClick={() => setEditorSection(key)} className={`grid min-h-14 w-full grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${editorSection === key ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-blue-300 dark:ring-slate-700" : "text-slate-600 hover:bg-white/70 dark:text-slate-400 dark:hover:bg-slate-800/70"}`}>
                 <Icon className="h-4 w-4 justify-self-center" />
                 <span className="min-w-0"><span className="block truncate text-xs font-bold">{label}</span><span className="hidden truncate text-[10px] leading-4 text-slate-400 lg:block">{sub}</span></span>
               </Button>

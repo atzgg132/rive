@@ -11,6 +11,10 @@ export const ACTIVATION_EVENTS = {
   firstClientCreated: "activation.first_client_created",
   firstProjectCreated: "activation.first_project_created",
   firstMeaningfulWorkflowCompleted: "activation.first_meaningful_workflow_completed",
+  guidanceStarted: "guidance.started",
+  guidanceSkipped: "guidance.skipped",
+  guidanceCompleted: "guidance.completed",
+  guideReplayed: "guidance.replayed",
 } as const;
 
 type ActivationMetadata = Record<string, string | number | boolean | null>;
