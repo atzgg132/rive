@@ -49,6 +49,10 @@
   --font-display: Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
   --font-body:    Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
   --font-hero:    Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
+
+  /* Shared motion curves — reuse these instead of hand-typing new cubic-beziers. */
+  --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);   /* strong ease-out for UI/marketing entrances */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);   /* iOS-like drawer/sheet curve */
 }
 
 /* ─── Base styles ────────────────────────────────── */
@@ -299,6 +303,17 @@ p {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* One-time hero product-preview entrance. Fires on mount only — the preview
+   is above the fold, so it does not need scroll-triggering. The delay lets
+   the (static) headline/CTA read first before the product proof settles in. */
+@keyframes heroPreviewIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+.animate-hero-preview-in {
+  animation: heroPreviewIn 650ms var(--ease-out) 150ms both;
 }
 
 /* ─── Utility classes ────────────────────────────── */

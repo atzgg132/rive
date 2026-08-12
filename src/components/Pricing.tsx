@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui";
 
-import { Check, Zap } from "lucide-react";
+import { Check } from "lucide-react";
 
 const plans = [
   {
@@ -18,7 +18,7 @@ const plans = [
         "One public portfolio with analytics",
         "Guided onboarding and data import",
     ],
-    cta: "join the waitlist",
+    cta: "Join the waitlist",
     ctaStyle: "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50",
     highlighted: false,
     checkColor: "text-slate-400 dark:text-slate-500",
@@ -35,7 +35,7 @@ const plans = [
       "Expanded customization",
       "Priority support",
     ],
-    cta: "join the early-access list",
+    cta: "Join the early-access list",
     ctaStyle:
       "bg-gradient-to-r from-blue-600 to-sky-500 text-white hover:from-blue-700 hover:to-sky-600 shadow-lg shadow-blue-600/20",
     highlighted: true,
@@ -53,7 +53,7 @@ const plans = [
       "Studio-level reporting",
       "Branded client experiences",
     ],
-    cta: "tell us what your team needs",
+    cta: "Tell us what your team needs",
     ctaStyle: "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50",
     highlighted: false,
     checkColor: "text-slate-400 dark:text-slate-500",
@@ -71,10 +71,6 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
       <div className="max-w-7xl mx-auto px-8 relative">
         {/* Section header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5">
-            <Zap className="w-3 h-3 shrink-0" />
-            <span style={{ fontFamily: "var(--font-body)" }}>Simple, transparent pricing</span>
-          </div>
           <h2
             className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white mb-5"
             style={{ fontFamily: "var(--font-display)" }}
@@ -95,20 +91,12 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-blue-900/20 ${
+              className={`relative rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex flex-col p-7 transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-blue-900/20 ${
                 plan.highlighted
-                  ? "border-blue-200 dark:border-blue-800/80 bg-gradient-to-b from-blue-50/20 to-white dark:from-blue-950/40 dark:to-slate-900 shadow-xl dark:shadow-none p-7 pt-16"
-                  : "p-7"
+                  ? "border-blue-200 dark:border-blue-800/80 bg-gradient-to-b from-blue-50/20 to-white dark:from-blue-950/40 dark:to-slate-900 shadow-xl dark:shadow-none"
+                  : ""
               }`}
             >
-              {/* Popular badge */}
-              {plan.highlighted && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 text-white text-[11px] font-bold shadow-lg whitespace-nowrap">
-                  <Zap className="w-3 h-3" />
-                  Most Popular
-                </div>
-              )}
-
               {/* Plan name + description */}
               <div className="mb-6">
                 <h3
@@ -118,7 +106,7 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
                   {plan.name}
                 </h3>
                 <p
-                  className="text-slate-400 dark:text-slate-400 text-sm mb-5 font-medium"
+                  className="text-slate-400 dark:text-slate-400 text-sm mb-5 font-medium min-h-10"
                   style={{ fontFamily: "var(--font-body)" }}
                 >
                   {plan.description}
@@ -159,7 +147,7 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
               {/* CTA */}
               <Button
                 onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
-                className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 ${plan.ctaStyle}`}
+                className={`w-full py-3 rounded-xl font-bold text-sm transition-[background-color] duration-200 ${plan.ctaStyle}`}
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {plan.cta}

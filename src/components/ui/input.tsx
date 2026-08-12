@@ -5,12 +5,12 @@ import { Input as BaseInput } from "@base-ui/react/input";
 import { cn } from "@/lib/utils";
 
 export const fieldControlClassName =
-  "flex w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm text-foreground shadow-sm transition-[border-color,box-shadow,background-color] placeholder:text-muted-foreground/65 hover:border-primary/25 focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25 disabled:cursor-not-allowed disabled:opacity-50";
+  "flex w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm text-foreground shadow-sm transition-[border-color,box-shadow,background-color] placeholder:text-muted-foreground/65 hover:border-primary/25 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring/25 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const inputClassName = cn(fieldControlClassName, "h-11");
 
 const choiceInputClassName =
-  "h-4 w-4 shrink-0 cursor-pointer border-input bg-background text-primary accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
+  "h-4 w-4 shrink-0 cursor-pointer border-input bg-background text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 export type InputProps = React.ComponentPropsWithoutRef<typeof BaseInput>;
 

@@ -23,6 +23,10 @@ const faqs = [
     question: "What makes the workspace connected?",
     answer: "The same records power every view. A client links to projects, Agreements, and invoices; project milestones and invoice due dates appear on your calendar; revenue and expenses update your business overview automatically.",
   },
+  {
+    question: "Can I bring my existing data into rive.?",
+    answer: "Yes. Rive supports CSV and XLSX imports for clients, projects, invoices, and expenses, so you can start with the business data you already have.",
+  },
 ];
 
 const publicFaqs = faqs
@@ -59,7 +63,7 @@ export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: 
           {visibleFaqs.map((faq) => (
             <div
               key={faq.question}
-              className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"
+              className="flex flex-col p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"
             >
               <h3
                 className="text-slate-800 dark:text-white font-bold text-base mb-3"
