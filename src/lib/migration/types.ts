@@ -195,6 +195,13 @@ export type PlannedOperation = {
   /** Present for `link`: the existing workspace record being attached to. */
   existingId: string | null;
   reason: string;
+  /**
+   * Hash of the exact values this operation will write, including resolved
+   * relationships. Without it the plan hash would only cover *which* records
+   * are created, so a re-mapping that changed a field's value could slip
+   * between preview and commit unnoticed.
+   */
+  payloadHash: string;
 };
 
 export type ImportPlanCounts = Record<MigrationEntity, { create: number; link: number; skip: number; review: number }>;

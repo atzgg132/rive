@@ -68,8 +68,12 @@ export async function DELETE(req: NextRequest, context: ImportJobRouteContext) {
         summary: { previous: job.summary, rollback: results },
       },
     });
-    await transaction.auditEvent.create({
-      data: {
+    // Unique on (user, action): a second rollback would otherwise throw P2002
+    // inside the transaction and undo a rollback that had already succeeded.
+    await transaction.auditEvent.upsert({
+      where: { userId_action: { userId: session.userId, action: "import.rolled_back" } },
+      update: { targetId: job.id, metadata: results },
+      create: {
         userId: session.userId,
         action: "import.rolled_back",
         targetType: "import_job",
