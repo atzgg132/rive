@@ -48,7 +48,7 @@ import {
 import {
   FIELD_LIMITS,
   // @ts-expect-error The standalone domain test runner needs the explicit TypeScript extension.
-} from "./domain-vocabulary.ts";
+} from "../domain-vocabulary.ts";
 import {
   displayRowNumber,
   rowToRecord,
@@ -71,12 +71,36 @@ const ENUM_DOMAINS: Record<string, EnumDomain> = {
   "expenses:category": "expenseCategory",
 };
 
+/**
+ * Value-level corrections the user made during review.
+ *
+ * Keyed by the raw source value rather than by row, so answering once ("Rs/-
+ * means INR") resolves every row that used it. This is what makes bulk
+ * resolution possible without asking the same question 23 times.
+ */
+export type ValueMappings = {
+  currency?: Record<string, string>;
+  status?: Record<string, string>;
+  category?: Record<string, string>;
+  priority?: Record<string, string>;
+};
+
 export type BuildContext = {
   sourceId: string;
   currency: Omit<CurrencyContext, "rowCurrency">;
   /** Date reading forced by the user during review, per column header. */
   datePreferences?: Record<string, DayFirstPreference>;
+  valueMappings?: ValueMappings;
 };
+
+/** Look up a user correction for a raw value, case-insensitively. */
+function userValue(mappings: Record<string, string> | undefined, raw: string): string | null {
+  if (!mappings) return null;
+  const direct = mappings[raw];
+  if (direct) return direct;
+  const key = Object.keys(mappings).find((candidate) => candidate.toLowerCase().trim() === raw.toLowerCase().trim());
+  return key ? mappings[key] : null;
+}
 
 function warn(code: string, message: string, extra: Partial<MigrationIssue> = {}): MigrationIssue {
   return { code, severity: "warning", message, ...extra };
@@ -236,6 +260,22 @@ export function buildRecords(
         case "enum": {
           const domain = ENUM_DOMAINS[`${entity}:${field.key}`];
           if (!domain) break;
+
+          // A correction the user already made for this exact source value
+          // settles it for every row, with no further questions.
+          const corrected = userValue(
+            field.key === "category"
+              ? context.valueMappings?.category
+              : field.key === "priority"
+                ? context.valueMappings?.priority
+                : context.valueMappings?.status,
+            value,
+          );
+          if (corrected) {
+            normalized[field.key] = corrected;
+            break;
+          }
+
           const resolved = resolveEnum(domain, value);
           if (resolved.value) {
             normalized[field.key] = resolved.value;
@@ -293,7 +333,16 @@ export function buildRecords(
     // Currency is resolved once per record, after amounts are known, so an
     // embedded symbol can contribute.
     if (entityNeedsCurrency(entity, normalized)) {
-      const resolution = resolveCurrency({ ...context.currency, rowCurrency: rowCurrencyToken }, amountParseForCurrency);
+      // A user's answer for an ambiguous token ("Rs/-" → INR, "$" → SGD)
+      // outranks every inference, including the row's own symbol.
+      const correctedCurrency =
+        userValue(context.valueMappings?.currency, rowCurrencyToken) ||
+        userValue(context.valueMappings?.currency, amountParseForCurrency?.symbol || "");
+
+      const resolution = correctedCurrency
+        ? { currency: correctedCurrency, source: "row" as const, ambiguousCandidates: [], reason: `You chose ${correctedCurrency}.` }
+        : resolveCurrency({ ...context.currency, rowCurrency: rowCurrencyToken }, amountParseForCurrency);
+
       if (resolution.currency) {
         normalized.currency = resolution.currency;
         normalized.currencySource = resolution.source;

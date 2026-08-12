@@ -162,16 +162,6 @@ function scoreContext(field: CanonicalField, presentHeaders: ReadonlySet<string>
   return best;
 }
 
-/**
- * Whether the engine holds any contextual opinion about this field.
- *
- * When a rule exists but its sibling columns are absent, that is real negative
- * evidence and the zero counts. When no rule exists at all, context is simply
- * not a question we can ask, and it must not drag the score down.
- */
-function hasContextOpinion(field: CanonicalField): boolean {
-  return CONTEXT_RULES.some((rule) => rule.entity === field.entity && rule.target === field.key);
-}
 
 function scoreAdapterHint(field: CanonicalField, column: ColumnProfile, hints: AdapterHintIndex | null): number {
   if (!hints) return 0;
@@ -243,29 +233,25 @@ export function buildMappingPlan(
         adapterHint: scoreAdapterHint(field, column, hints),
       };
 
-      // Score over the signals that can actually be evaluated, then renormalize.
-      //
-      // Cross-column context and adapter hints are not available for every
-      // field: a generic CSV has no vendor adapter, and most fields have no
-      // contextual rule. Charging them as missing points would cap a perfect
-      // header + type + value match at 0.75 and put every obvious mapping into
-      // review. Renormalizing keeps the documented weight *ratios* intact while
-      // letting unambiguous evidence reach the auto-map threshold.
-      let weighted =
-        signals.header * MAPPING_WEIGHTS.header +
-        signals.typeCompatibility * MAPPING_WEIGHTS.typeCompatibility +
-        signals.valuePattern * MAPPING_WEIGHTS.valuePattern;
-      let availableWeight = MAPPING_WEIGHTS.header + MAPPING_WEIGHTS.typeCompatibility + MAPPING_WEIGHTS.valuePattern;
+      // Header, type, and value pattern are the evidence every source can
+      // supply, so they form the core score, renormalized to 0–1. Without that
+      // renormalization a perfect match would cap at 0.75 and nothing would
+      // ever auto-map from a plain CSV.
+      const core =
+        (signals.header * MAPPING_WEIGHTS.header +
+          signals.typeCompatibility * MAPPING_WEIGHTS.typeCompatibility +
+          signals.valuePattern * MAPPING_WEIGHTS.valuePattern) /
+        (MAPPING_WEIGHTS.header + MAPPING_WEIGHTS.typeCompatibility + MAPPING_WEIGHTS.valuePattern);
 
-      if (hasContextOpinion(field)) {
-        weighted += signals.crossColumnContext * MAPPING_WEIGHTS.crossColumnContext;
-        availableWeight += MAPPING_WEIGHTS.crossColumnContext;
-      }
-      if (hints?.headerAliases.has(column.normalizedHeader)) {
-        weighted += signals.adapterHint * MAPPING_WEIGHTS.adapterHint;
-        availableWeight += MAPPING_WEIGHTS.adapterHint;
-      }
-      const confidence = weighted / availableWeight;
+      // Context and adapter hints only ever add. Treating an absent sibling
+      // column as evidence *against* a mapping is wrong and actively harmful:
+      // it let `total` lose to `taxAmount` on a sheet with no tax column,
+      // purely because `total` has a contextual rule and `taxAmount` does not.
+      // As a bonus, they close the remaining gap to certainty instead.
+      const bonus =
+        signals.crossColumnContext * MAPPING_WEIGHTS.crossColumnContext +
+        signals.adapterHint * MAPPING_WEIGHTS.adapterHint;
+      const confidence = Math.min(1, core + bonus * (1 - core));
 
       // A column with no header agreement at all is not a mapping, it is a
       // coincidence of data shape. Requiring a minimum keeps unrelated text

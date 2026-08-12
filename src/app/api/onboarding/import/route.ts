@@ -561,8 +561,13 @@ export async function POST(req: NextRequest) {
         completedAt: new Date(),
       },
     }),
-    prisma.auditEvent.create({
-      data: {
+    // `audit_events` is unique on (user, action), so a plain create threw
+    // P2002 on a user's *second* import — after the records had already been
+    // written, leaving a successful import reported as a server error.
+    prisma.auditEvent.upsert({
+      where: { userId_action: { userId: session.userId, action: "import.completed" } },
+      update: { targetId: job.id, metadata: report },
+      create: {
         userId: session.userId,
         action: "import.completed",
         targetType: "import_job",
