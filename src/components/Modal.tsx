@@ -67,7 +67,7 @@ function WaitlistForm({
     <div className="relative overflow-hidden min-h-[260px] flex flex-col">
       {/* ── Idle / loading form ── */}
       <div
-        className="flex flex-col gap-5 transition-all duration-500"
+        className="flex flex-col gap-5 transition-[opacity,transform] duration-300 ease-[var(--ease-out)]"
         style={{
           opacity: state === "idle" || state === "loading" ? 1 : 0,
           transform:
@@ -98,12 +98,12 @@ function WaitlistForm({
             placeholder="your@email.com"
             required
             disabled={state === "loading"}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-all duration-200 disabled:opacity-60"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-60"
           />
           <Button
             type="submit"
             disabled={state === "loading"}
-            className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${ctaClass} disabled:opacity-75`}
+            className={`w-full py-3 rounded-xl font-bold text-sm transition-[background-color,opacity] duration-200 flex items-center justify-center gap-2 ${ctaClass} disabled:opacity-75`}
             style={{ fontFamily: "var(--font-display)" }}
           >
             {state === "loading" ? (
@@ -120,7 +120,7 @@ function WaitlistForm({
 
       {/* ── Success state ── */}
       <div
-        className="absolute inset-0 flex flex-col items-center justify-center gap-5 text-center transition-all duration-500"
+        className="absolute inset-0 flex flex-col items-center justify-center gap-5 text-center transition-[opacity,transform] duration-300 ease-[var(--ease-out)]"
         style={{
           opacity: state === "success" ? 1 : 0,
           transform: state === "success" ? "translateY(0) scale(1)" : "translateY(24px) scale(0.96)",
@@ -148,7 +148,7 @@ function WaitlistForm({
 
       {/* ── Already joined state ── */}
       <div
-        className="absolute inset-0 flex flex-col items-center justify-center gap-5 text-center transition-all duration-500"
+        className="absolute inset-0 flex flex-col items-center justify-center gap-5 text-center transition-[opacity,transform] duration-300 ease-[var(--ease-out)]"
         style={{
           opacity: state === "already-joined" ? 1 : 0,
           transform: state === "already-joined" ? "translateY(0) scale(1)" : "translateY(24px) scale(0.96)",
@@ -178,16 +178,25 @@ function WaitlistForm({
   );
 }
 
+// Matches the unified 300ms open/close transition below — the DOM node stays
+// mounted for this long after close so the exit transition can play instead
+// of the modal vanishing instantly.
+const MODAL_EXIT_MS = 300;
+
 export default function Modal({ isOpen, onClose, type }: ModalProps) {
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMounted(true);
       // Small delay so mount → animate-in
       requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(false);
+      const timeout = setTimeout(() => setMounted(false), MODAL_EXIT_MS);
+      return () => clearTimeout(timeout);
     }
   }, [isOpen]);
 
@@ -205,18 +214,22 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!mounted) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ transition: "opacity 300ms", opacity: visible ? 1 : 0 }}
+      style={{
+        transition: "opacity 300ms var(--ease-out)",
+        opacity: visible ? 1 : 0,
+        pointerEvents: visible ? "auto" : "none",
+      }}
     >
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-[#0C1E36]/30 dark:bg-slate-950/80 backdrop-blur-md"
         onClick={onClose}
-        style={{ transition: "opacity 300ms" }}
+        style={{ transition: "opacity 300ms var(--ease-out)" }}
       />
 
       {/* Card */}
@@ -226,7 +239,7 @@ export default function Modal({ isOpen, onClose, type }: ModalProps) {
         aria-label={type === "login" ? "Developer access" : "Join the waitlist"}
         className="relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-100 bg-white p-5 shadow-2xl shadow-slate-200/80 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-8"
         style={{
-          transition: "transform 350ms cubic-bezier(.16,1,.3,1), opacity 300ms",
+          transition: "transform 300ms var(--ease-out), opacity 300ms var(--ease-out)",
           transform: visible ? "translateY(0) scale(1)" : "translateY(20px) scale(0.97)",
           opacity: visible ? 1 : 0,
         }}

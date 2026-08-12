@@ -124,7 +124,7 @@ export default function AISection() {
                   </div>
                   <div>
                     <h3
-                      className="text-slate-800 font-bold text-[15px] mb-1"
+                      className="text-slate-800 dark:text-white font-bold text-[15px] mb-1"
                       style={{ fontFamily: "var(--font-display)" }}
                     >
                       {title}

@@ -62,7 +62,7 @@ export default function MarketingPortfolioSection() {
               <span className="rounded-full bg-slate-950 px-3 py-1.5 text-[9px] font-black text-white dark:bg-white dark:text-slate-950">Start a project</span>
             </div>
 
-            <div className="p-5 sm:p-8">
+            <div className="p-5 sm:px-8 sm:pt-8 sm:pb-24">
               <div className="flex items-start justify-between gap-5">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[.18em] text-blue-600">Product designer + developer</p>
