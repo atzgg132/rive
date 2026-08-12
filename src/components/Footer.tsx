@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink, Code2, Link2 } from "lucide-react";
+import { ExternalLink, Code2, Link2, Play } from "lucide-react";
 import { RiveLogo } from "@/components/RiveLogo";
 
 const footerLinks: Record<string, { label: string; href: string }[]> = {
   Product: [
     { label: "Features",   href: "/#features"  },
     { label: "Connections", href: "/#connections" },
-    { label: "Opportunities",  href: "/#gig-board" },
+    { label: "Remit",      href: "/#remit"     },
     { label: "Pricing",    href: "/#pricing"   },
     { label: "Changelog",  href: "/changelog"  },
     { label: "Roadmap",    href: "/roadmap"    },
@@ -37,6 +37,7 @@ const socials = [
   { icon: ExternalLink, label: "Twitter",  href: "#" },
   { icon: Code2,        label: "GitHub",   href: "#" },
   { icon: Link2,        label: "LinkedIn", href: "#" },
+  { icon: Play,         label: "YouTube",  href: "#" },
 ];
 
 export default function Footer() {
@@ -67,7 +68,7 @@ export default function Footer() {
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="w-9 h-9 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-400 transition-all duration-200 shadow-sm dark:shadow-none hover:border-blue-200 dark:hover:border-blue-800 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-950/40"
+                  className="w-9 h-9 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-400 transition-[border-color,color,background-color] duration-200 shadow-sm dark:shadow-none hover:border-blue-200 dark:hover:border-blue-800 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-950/40"
                 >
                   <Icon className="w-4 h-4" />
                 </a>

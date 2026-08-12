@@ -23,6 +23,10 @@ const faqs = [
     question: "What makes the workspace connected?",
     answer: "The same records power every view. A client links to projects, Agreements, and invoices; project milestones and invoice due dates appear on your calendar; revenue and expenses update your business overview automatically.",
   },
+  {
+    question: "Can I bring my existing data into rive.?",
+    answer: "Yes. Rive supports CSV and XLSX imports for clients, projects, invoices, and expenses, so you can start with the business data you already have.",
+  },
 ];
 
 const publicFaqs = faqs
@@ -46,13 +50,11 @@ export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: 
             <span style={{ fontFamily: "var(--font-body)" }}>Frequently asked questions</span>
           </div>
           <h2
-            className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Clear answers.{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
-              No guesswork.
-            </span>
+            <span className="text-blue-700 dark:text-blue-400">No guesswork.</span>
           </h2>
         </div>
 
@@ -61,7 +63,7 @@ export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: 
           {visibleFaqs.map((faq) => (
             <div
               key={faq.question}
-              className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"
+              className="flex flex-col p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors"
             >
               <h3
                 className="text-slate-800 dark:text-white font-bold text-base mb-3"

@@ -171,9 +171,9 @@ export default function RemitSection() {
               <span style={{ fontFamily: "var(--font-body)" }}>Concept preview</span>
             </div>
 
-            <h2 className="text-4xl font-bold leading-[1.06] tracking-tight text-slate-900 dark:text-white sm:text-6xl" style={{ fontFamily: "var(--font-display)" }}>
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white" style={{ fontFamily: "var(--font-display)" }}>
               Remit{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Payments</span>
+              <span className="text-blue-700 dark:text-blue-400">Payments</span>
               <br />
               <span className="text-2xl font-medium text-slate-500 dark:text-slate-400 sm:text-3xl">By Rive.</span>
             </h2>
@@ -204,15 +204,15 @@ export default function RemitSection() {
                 <Input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com" required disabled={formState === "loading"}
-                  className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 transition-all duration-200 disabled:opacity-60"
+                  className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 transition-[border-color,opacity] duration-200 disabled:opacity-60"
                   style={{ fontFamily: "var(--font-body)" }}
                 />
                 <Button type="submit" disabled={formState === "loading"}
-                  className="group inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
+                  className="group inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-sky-600 transition-[transform,opacity] duration-200 shadow-lg shadow-blue-600/15 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
                   style={{ fontFamily: "var(--font-display)" }}>
                   {formState === "loading"
                     ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Checking...</span></>
-                    : <>Join Waitlist <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
+                    : <>Join the waitlist <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
                   }
                 </Button>
               </form>
@@ -252,7 +252,7 @@ export default function RemitSection() {
                   onClick={handleRefresh}
                   disabled={cooldown > 0 || ratesState === "loading"}
                   title={cooldown > 0 ? `Refresh available in ${cooldown}s` : "Refresh rates"}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed transition-[border-color,color,background-color,opacity] duration-200"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${ratesState === "loading" ? "animate-spin" : ""}`} />
@@ -267,7 +267,7 @@ export default function RemitSection() {
                   <Select
                     value={fromCode}
                     onChange={e => setFromCode(e.target.value)}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-[border-color] shrink-0"
                     style={{ fontFamily: "var(--font-display)", width: "9rem" }}
                   >
                     {CURRENCIES.map(c => (
@@ -311,7 +311,7 @@ export default function RemitSection() {
                   <Select
                     value={toCode}
                     onChange={e => setToCode(e.target.value)}
-                    className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/50 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-all shrink-0"
+                    className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/50 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-[border-color] shrink-0"
                     style={{ fontFamily: "var(--font-display)", width: "9rem" }}
                   >
                     {CURRENCIES.map(c => (
@@ -319,7 +319,7 @@ export default function RemitSection() {
                     ))}
                   </Select>
                   <span
-                    className={`min-w-0 flex-1 overflow-hidden text-ellipsis text-right text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400 transition-all duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
+                    className={`min-w-0 flex-1 overflow-hidden text-ellipsis text-right text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400 transition-[opacity] duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     {received !== null ? fmt(received, toCode) : "—"}
@@ -341,7 +341,7 @@ export default function RemitSection() {
 
               <Button
                 onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-px"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition-[box-shadow,transform] hover:-translate-y-px"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 Coming soon — join the waitlist

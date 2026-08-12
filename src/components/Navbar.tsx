@@ -11,14 +11,19 @@ const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Connections", href: "#connections" },
   { label: "Portfolio", href: "#portfolio" },
-  { label: "Opportunities", href: "#gig-board" },
   { label: "Remit", href: "#remit" },
   { label: "Pricing", href: "#pricing" },
 ];
 
+// Matches the mobile panel's transition duration below — the backdrop and
+// panel stay mounted this long after close so the exit transition can play.
+const MOBILE_MENU_EXIT_MS = 220;
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuMounted, setMenuMounted] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 24);
@@ -26,9 +31,42 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (menuOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMenuMounted(true);
+      requestAnimationFrame(() => requestAnimationFrame(() => setMenuVisible(true)));
+    } else {
+      setMenuVisible(false);
+      const timeout = setTimeout(() => setMenuMounted(false), MOBILE_MENU_EXIT_MS);
+      return () => clearTimeout(timeout);
+    }
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
+
   return (
+    <>
+    {menuMounted && (
+      <div
+        className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm md:hidden"
+        onClick={() => setMenuOpen(false)}
+        aria-hidden="true"
+        style={{
+          transition: "opacity 200ms var(--ease-out)",
+          opacity: menuVisible ? 1 : 0,
+        }}
+      />
+    )}
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-[220ms] ease-[var(--ease-out)] ${
         scrolled
           ? "bg-background dark:bg-background/90 dark:bg-background/90 backdrop-blur-2xl border-b border-black/[0.06] dark:border-white/[0.06] py-3"
           : "bg-transparent py-5"
@@ -67,14 +105,14 @@ export default function Navbar() {
           </Link>
           <Button
             onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
-            className="text-[13px] font-semibold px-5 py-2.5 rounded-xl text-white transition-all duration-200 hover:-translate-y-px"
+            className="text-[13px] font-semibold px-5 py-2.5 rounded-xl text-white transition-[transform] duration-200 hover:-translate-y-px"
             style={{
               fontFamily: "var(--font-display)",
               background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
               boxShadow: "0 4px 20px rgba(29,78,216,0.18)",
             }}
           >
-            Get Started Free
+            Join the waitlist
           </Button>
         </div>
 
@@ -87,17 +125,24 @@ export default function Navbar() {
             aria-label="Toggle menu"
           >
             <div className="w-5 h-4 flex flex-col justify-between">
-              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-[7.5px]" : ""}`} />
-              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "opacity-0 scale-x-0" : ""}`} />
-              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-all duration-300 origin-center ${menuOpen ? "-rotate-45 -translate-y-[7.5px]" : ""}`} />
+              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-[transform] duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-[7.5px]" : ""}`} />
+              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-[opacity,transform] duration-300 ${menuOpen ? "opacity-0 scale-x-0" : ""}`} />
+              <span className={`block h-px bg-slate-800 dark:bg-slate-200 transition-[transform] duration-300 origin-center ${menuOpen ? "-rotate-45 -translate-y-[7.5px]" : ""}`} />
             </div>
           </Button>
         </div>
       </div>
 
       {/* Mobile menu */}
-      {menuOpen && (
-        <div className="flex flex-col gap-2 border-t border-black/[0.06] bg-background/95 px-4 py-4 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-background/95 md:hidden">
+      {menuMounted && (
+        <div
+          className="flex flex-col gap-2 border-t border-black/[0.06] bg-background/95 px-4 py-4 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-background/95 md:hidden"
+          style={{
+            transition: "opacity 220ms var(--ease-drawer), transform 220ms var(--ease-drawer)",
+            opacity: menuVisible ? 1 : 0,
+            transform: menuVisible ? "translateY(0)" : "translateY(-8px)",
+          }}
+        >
           {navLinks.map((link) => (
             <a
               key={link.label}
@@ -117,10 +162,11 @@ export default function Navbar() {
             className="w-full text-sm font-semibold px-5 py-3 rounded-xl text-white mt-1"
             style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)" }}
           >
-            Get Started Free
+            Join the waitlist
           </Button>
         </div>
       )}
     </nav>
+    </>
   );
 }
