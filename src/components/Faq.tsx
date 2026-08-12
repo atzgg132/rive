@@ -23,6 +23,10 @@ const faqs = [
     question: "What makes the workspace connected?",
     answer: "The same records power every view. A client links to projects, Agreements, and invoices; project milestones and invoice due dates appear on your calendar; revenue and expenses update your business overview automatically.",
   },
+  {
+    question: "Can I bring my existing data into rive.?",
+    answer: "Yes. Rive supports CSV and XLSX imports for clients, projects, invoices, and expenses, so you can start with the business data you already have.",
+  },
 ];
 
 const publicFaqs = faqs
