@@ -135,6 +135,8 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
   }
 
   const s = getStatusDisplay(project.status);
+  const budgetAmount = project.budget === null ? null : Number(project.budget);
+  const convertedBudget = budgetAmount === null ? null : formatConverted(budgetAmount, project.currency);
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in pb-12">
@@ -192,7 +194,8 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
             <div className="flex flex-col gap-5">
               <div>
                 <div className="text-xs text-slate-400 mb-1 flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Budget</div>
-                <div className="text-2xl font-bold text-emerald-400">{project.budget ? formatCurrency(parseFloat(project.budget), project.currency) : "Unspecified"}</div>
+                <div className="text-2xl font-bold text-emerald-400">{budgetAmount === null ? "Unspecified" : convertedBudget || formatCurrency(budgetAmount, project.currency)}</div>
+                {budgetAmount !== null && project.currency !== displayCurrency && convertedBudget && <div className="mt-1 text-[10px] font-medium text-slate-400">Originally {formatCurrency(budgetAmount, project.currency)}</div>}
               </div>
               
               <div className="h-px bg-slate-700/50 w-full" />

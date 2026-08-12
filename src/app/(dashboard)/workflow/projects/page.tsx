@@ -11,7 +11,6 @@ import {
   Search,
   Calendar,
   User,
-  DollarSign,
   X,
   Loader2,
   MoreVertical,
@@ -30,6 +29,7 @@ import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
 
 interface Project {
   id: string;
@@ -698,6 +698,7 @@ function DraggableProjectCard({
 }: { project: Project; openDropdownId: string | null; setOpenDropdownId: (id: string | null) => void; openEdit: (project: Project) => void; handleDelete: (id: string, name: string) => void; getPriorityColor: (priority: string) => string; getProgressPercent: (project: Project) => number }) {
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const { agreements } = useFeatureAvailability();
+  const { displayCurrency, format, formatConverted } = useCurrency();
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
@@ -711,6 +712,8 @@ function DraggableProjectCard({
   };
 
   const pct = getProgressPercent(project);
+  const budgetAmount = project.budget === null ? null : Number(project.budget);
+  const convertedBudget = budgetAmount === null ? null : formatConverted(budgetAmount, project.currency);
 
   return (
     <div ref={setNodeRef} style={style} className="group relative flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-card">
@@ -819,10 +822,12 @@ function DraggableProjectCard({
               </Button>
             </span>
           )}
-          {project.budget && (
-            <span className="font-extrabold text-[#10B981] dark:text-emerald-400 flex items-center">
-              <DollarSign className="h-3 w-3" />
-              <span>{parseFloat(project.budget).toLocaleString()}</span>
+          {budgetAmount !== null && (
+            <span className="flex flex-col items-end text-right font-extrabold text-[#10B981] dark:text-emerald-400">
+              <span>{convertedBudget || format(budgetAmount, project.currency)}</span>
+              {project.currency !== displayCurrency && convertedBudget && (
+                <span className="text-[10px] font-medium text-muted-foreground">Originally {format(budgetAmount, project.currency)}</span>
+              )}
             </span>
           )}
         </div>
