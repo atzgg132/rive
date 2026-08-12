@@ -44,12 +44,12 @@ async function deliverInvitation({
   waitlistId: number;
 }) {
   const emailResult = await sendWaitlistInviteEmail(email, token);
-  const now = new Date();
 
   if (emailResult.sent) {
+    const now = new Date();
     await prisma.authToken.updateMany({
       where: {
-        email,
+        email: email.trim().toLowerCase(),
         type: "waitlist_invite",
         usedAt: null,
         id: { not: tokenId },
@@ -57,12 +57,11 @@ async function deliverInvitation({
       data: { usedAt: now },
     });
   } else {
-    // Keep any older delivered invitation usable when a resend fails. The raw
-    // value for this failed attempt was never delivered, so deactivate it.
-    await prisma.authToken.updateMany({
-      where: { id: tokenId, usedAt: null },
-      data: { usedAt: now },
-    });
+    // Do not revoke the new token when SMTP reports a failure. A provider can
+    // accept a message and then fail before the application receives the
+    // response; the recipient may still receive the link later or in spam.
+    // A later successful resend revokes every older unused token atomically
+    // from the application's point of view.
   }
 
   await prisma.auditEvent.create({

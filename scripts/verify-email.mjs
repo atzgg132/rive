@@ -11,7 +11,7 @@ const sendIndex = process.argv.indexOf("--send");
 const recipient = sendIndex >= 0 ? process.argv[sendIndex + 1] : "";
 
 if (!["smtp", "zoho"].includes(provider)) {
-  console.error(`EMAIL_PROVIDER is "${provider}". Set it to "zoho" or "smtp" for this diagnostic.`);
+  console.error(`EMAIL_PROVIDER is "${provider}". Set it to "smtp" for Google Workspace or "zoho" for Zoho Mail.`);
   process.exitCode = 1;
 } else if (!host || !user || !password || !Number.isSafeInteger(port)) {
   const missing = [
