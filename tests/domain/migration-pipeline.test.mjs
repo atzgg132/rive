@@ -98,6 +98,46 @@ test("offers a merge for an abbreviated client name rather than deciding", () =>
   assert.match(reviewItem.message, /not sure which client/i);
 });
 
+test("a resolved relationship is not also reported as an open question", () => {
+  const result = run([
+    source("s1", "clients.csv", CLIENTS_CSV),
+    source("s3", "invoices.csv", INVOICES_CSV),
+  ]);
+  const invoice = result.records.find((record) => record.normalized.invoiceNumber === "INV-001");
+  assert.ok(invoice.resolvedRelationships.clientId, "the client should resolve");
+  assert.deepEqual(
+    invoice.relationshipCandidates,
+    [],
+    "candidates describe a question being asked; a resolved link is not one",
+  );
+  assert.equal(
+    result.plan.reviewItems.filter((item) => item.kind === "relationship").length,
+    0,
+    "nothing should be queued for review",
+  );
+});
+
+test("asks about an unresolved client even when the project resolved", () => {
+  // An invoice can resolve one relationship and not the other. The unresolved
+  // one must still surface.
+  const invoices = [
+    "invoice_no,customer,project,total,currency,issue_date",
+    "INV-070,ACME,Website redesign,1000,INR,2026-04-03",
+  ].join("\n");
+  const result = run([
+    source("s1", "clients.csv", CLIENTS_CSV),
+    source("s2", "projects.csv", PROJECTS_CSV),
+    source("s3", "invoices.csv", invoices),
+  ]);
+  const invoice = result.records.find((record) => record.normalized.invoiceNumber === "INV-070");
+  assert.ok(invoice.resolvedRelationships.projectId, "the project matches exactly");
+  assert.equal(invoice.resolvedRelationships.clientId, undefined, "ACME is not deterministic");
+  assert.ok(
+    result.plan.reviewItems.some((item) => item.sourceKey === invoice.source.sourceKey && item.kind === "relationship"),
+    "the unresolved client must still be asked about",
+  );
+});
+
 test("maps vendor statuses onto Rive's vocabulary", () => {
   const result = run([source("s3", "invoices.csv", INVOICES_CSV)]);
   const settled = result.records.find((record) => record.normalized.invoiceNumber === "INV-002");

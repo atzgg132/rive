@@ -144,11 +144,13 @@ function resolveClientReference(
   const groupKey = index.groupKeyByMentionId.get(mentionId);
   if (groupKey) {
     const group = index.groups.get(groupKey);
-    // A group containing an actual client row is a real link. A group holding
-    // only this one reference is not evidence of anything yet.
+    // Only link to a group that contains an actual client row. A group made
+    // purely of references has no record behind it yet, and resolving to it
+    // would produce a link that silently evaporates at commit time. Such
+    // groups either become a derived client — after which this runs again and
+    // the group does contain a record — or stay an open question.
     const hasRecord = group?.mentions.some((mention) => mention.origin === "record");
-    const sharesWithOthers = (group?.mentions.length || 0) > 1;
-    if (group && (hasRecord || sharesWithOthers)) {
+    if (group && hasRecord) {
       const candidate: RelationshipCandidate = {
         field: "clientId",
         targetEntity: "clients",
@@ -305,27 +307,40 @@ export function resolveRelationships(
       continue;
     }
 
+    // This runs a second time after implied clients are derived, so previous
+    // conclusions are cleared first. Appending instead would leave a record
+    // carrying duplicate candidates, and a stale resolution from a pass made
+    // before the client it points at existed.
+    record.relationshipCandidates = [];
+    record.resolvedRelationships = {};
+
+    // `relationshipCandidates` means "options for a question we are asking".
+    // A resolved relationship is not a question, so its candidate is not
+    // recorded — otherwise every deterministic link would also appear in the
+    // review list, and the product would look like it resolved nothing.
     if (record.entity === "projects" || record.entity === "invoices") {
       const { candidates, resolved } = resolveClientReference(record, index, workspace);
-      record.relationshipCandidates.push(...candidates);
       if (resolved) {
         record.resolvedRelationships.clientId = {
           groupKey: resolved.groupKey,
           existingId: resolved.existingId,
           confidence: resolved.confidence,
         };
+      } else {
+        record.relationshipCandidates.push(...candidates);
       }
     }
 
     if (record.entity === "invoices" || record.entity === "expenses") {
       const { candidates, resolved } = resolveProjectReference(record, projectsByName, workspace);
-      record.relationshipCandidates.push(...candidates);
       if (resolved) {
         record.resolvedRelationships.projectId = {
           groupKey: resolved.groupKey,
           existingId: resolved.existingId,
           confidence: resolved.confidence,
         };
+      } else {
+        record.relationshipCandidates.push(...candidates);
       }
     }
   }

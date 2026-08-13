@@ -95,8 +95,11 @@ function reviewKind(record: MigrationRecordIR): { kind: ImportPlan["reviewItems"
     };
   }
 
-  // Relationship the engine found candidates for but would not choose between.
-  if (record.relationshipCandidates.length && !Object.keys(record.resolvedRelationships).length) {
+  // Candidates only exist for relationships that did *not* resolve, so their
+  // presence is exactly the condition for asking. Checking
+  // `resolvedRelationships` here as well would wrongly stay silent about an
+  // unresolved client on an invoice whose project happened to resolve.
+  if (record.relationshipCandidates.length) {
     const candidate = record.relationshipCandidates[0];
     return {
       kind: "relationship",
