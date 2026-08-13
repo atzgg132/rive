@@ -50,7 +50,7 @@ test.describe("admin waitlist operations", () => {
     await prisma.$disconnect();
   });
 
-  test("approval persists when invitation delivery is unavailable", async ({ request }) => {
+  test("approval persists and the invite remains usable when delivery is unavailable", async ({ request }) => {
     const response = await request.patch(`/api/admin/waitlist/${waitlistId}`, {
       headers: { "x-admin-token": adminToken },
       data: { status: "approved" },
@@ -65,7 +65,8 @@ test.describe("admin waitlist operations", () => {
         email,
         status: "approved",
         registered: false,
-        invite_status: "delivery_failed",
+        invite_status: "active",
+        latest_delivery_status: expect.stringMatching(/^(failed|skipped)$/),
       },
     });
 
@@ -78,7 +79,7 @@ test.describe("admin waitlist operations", () => {
       orderBy: { createdAt: "desc" },
       select: { usedAt: true },
     });
-    expect(failedInvitation?.usedAt).not.toBeNull();
+    expect(failedInvitation?.usedAt).toBeNull();
   });
 
   test("a failed resend preserves an older active invitation", async ({ request }) => {

@@ -43,11 +43,11 @@ locals {
       "${environment}/EMAIL_PROVIDER"                               = environment == "prod" ? var.email_provider : "disabled"
       "${environment}/EMAIL_FROM"                                   = "\"rive.\" <hello@${var.domain_name}>"
       "${environment}/EMAIL_REPLY_TO"                               = "hello@${var.domain_name}"
-      "${environment}/SMTP_HOST"                                    = "smtppro.zoho.in"
-      "${environment}/SMTP_PORT"                                    = "465"
-      "${environment}/SMTP_SECURE"                                  = "true"
-      "${environment}/SMTP_USER"                                    = var.zoho_smtp_user
-      "${environment}/SMTP_PASS"                                    = environment == "prod" ? var.zoho_smtp_password : "DISABLED"
+      "${environment}/SMTP_HOST"                                    = var.smtp_host
+      "${environment}/SMTP_PORT"                                    = tostring(var.smtp_port)
+      "${environment}/SMTP_SECURE"                                  = tostring(var.smtp_secure)
+      "${environment}/SMTP_USER"                                    = var.smtp_user
+      "${environment}/SMTP_PASS"                                    = environment == "prod" ? var.smtp_password : "DISABLED"
       "${environment}/SES_CONFIGURATION_SET"                        = aws_sesv2_configuration_set.transactional.configuration_set_name
       "${environment}/ASSET_BUCKET"                                 = aws_s3_bucket.assets[environment].id
       "${environment}/MIGRATION_QUEUE_URL"                          = aws_sqs_queue.migration[environment].url

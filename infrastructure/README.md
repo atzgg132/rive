@@ -7,7 +7,7 @@ Rive runs in `ap-south-1` on a deliberately small AWS footprint:
 - one private S3 asset bucket per environment;
 - one encrypted migration queue and dead-letter queue per environment;
 - ECR for immutable application and migration images;
-- Zoho Mail SMTP for production transactional email, with SES resources retained as a fallback;
+- Google Workspace SMTP for production transactional email, with SES resources retained as a fallback;
 - EventBridge and Lambda for calendar outbox and webhook maintenance;
 - SSM Parameter Store and Session Manager instead of SSH or access keys;
 - CloudWatch and AWS Budgets for operational and cost controls.
@@ -50,20 +50,20 @@ terraform -chdir=infrastructure/aws plan `
 Never commit `.tfvars`, state files, plans, credentials, database exports, or
 generated environment files.
 
-Before planning or applying email-related infrastructure, provide the Zoho app
-password only in the current shell:
+Before planning or applying email-related infrastructure, provide the Google
+Workspace app password only in the current shell:
 
 ```powershell
-$env:TF_VAR_zoho_smtp_password = "<Zoho app password>"
+$env:TF_VAR_smtp_password = "<Google Workspace app password>"
 ```
 
-The variable keeps Terraform from reverting the manually verified production
-SMTP parameter to the old SES provider configuration. Clear the shell variable
-after the apply.
+The SMTP parameters default to `smtp.gmail.com:587` with STARTTLS as
+`hello@rive.work`. Clear the shell variable after the apply. If the account uses
+Google's SMTP relay instead of authenticated SMTP, set `smtp_host`, `smtp_port`,
+and `smtp_secure` to the values approved in the Workspace Admin console.
 
-Production remains on Zoho while the SES account is in the sandbox. After AWS
-approves SES production access, select the AWS SDK-based provider before the
-Terraform plan:
+After AWS approves SES production access, select the AWS SDK-based provider
+before the Terraform plan:
 
 ```powershell
 $env:TF_VAR_email_provider = "ses"

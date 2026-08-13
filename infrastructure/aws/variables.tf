@@ -75,27 +75,50 @@ variable "zoho_books_client_secret" {
   description = "Zoho Books server-based OAuth client secret."
 }
 
-variable "zoho_smtp_user" {
+variable "smtp_host" {
   type        = string
-  default     = "hello@rive.work"
-  description = "Zoho Mail account used for production transactional email."
+  default     = "smtp.gmail.com"
+  description = "SMTP host used for production transactional email. Google Workspace uses smtp.gmail.com."
 }
 
-variable "zoho_smtp_password" {
+variable "smtp_port" {
+  type        = number
+  default     = 587
+  description = "SMTP port used for production transactional email."
+
+  validation {
+    condition     = var.smtp_port > 0 && var.smtp_port <= 65535
+    error_message = "smtp_port must be between 1 and 65535."
+  }
+}
+
+variable "smtp_secure" {
+  type        = bool
+  default     = false
+  description = "Use implicit TLS for SMTP. Google Workspace port 587 should use STARTTLS (false)."
+}
+
+variable "smtp_user" {
+  type        = string
+  default     = "hello@rive.work"
+  description = "Google Workspace account used for production transactional email."
+}
+
+variable "smtp_password" {
   type        = string
   sensitive   = true
   default     = "UNCONFIGURED"
-  description = "Zoho app password for production SMTP. Supply through TF_VAR_zoho_smtp_password; never commit it."
+  description = "Google Workspace app password for production SMTP. Supply through TF_VAR_smtp_password; never commit it."
 }
 
 variable "email_provider" {
   type        = string
-  default     = "zoho"
-  description = "Production transactional provider. Keep zoho until SES production access is approved, then set ses."
+  default     = "smtp"
+  description = "Production transactional provider. Use smtp for Google Workspace or ses after SES production access is approved."
 
   validation {
-    condition     = contains(["zoho", "ses"], var.email_provider)
-    error_message = "email_provider must be either zoho or ses."
+    condition     = contains(["smtp", "zoho", "ses"], var.email_provider)
+    error_message = "email_provider must be smtp, zoho, or ses."
   }
 }
 
