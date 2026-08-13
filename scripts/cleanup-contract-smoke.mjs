@@ -23,7 +23,14 @@ const pool = new Pool({
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 try {
-  const users = await prisma.user.findMany({ where: { email: { startsWith: "contract-smoke-" } }, select: { id: true } });
+  // Fixture emails are always contract-smoke-<runId>@example.invalid — the
+  // reserved .invalid TLD (RFC 2606) can never belong to a real account, so
+  // matching on the full suffix (not just the prefix) means this can never
+  // touch a real user's data even if someone chose a colliding local part.
+  const users = await prisma.user.findMany({
+    where: { email: { startsWith: "contract-smoke-", endsWith: "@example.invalid" } },
+    select: { id: true },
+  });
   for (const user of users) {
     await prisma.contract.deleteMany({ where: { userId: user.id } });
     await prisma.invoice.deleteMany({ where: { userId: user.id } });

@@ -236,6 +236,16 @@ removed while an invoice still points at it.
 `GET /api/migrations/:id/rollback` previews exactly what would happen, so the
 confirmation the user sees is the truth rather than an estimate.
 
+**Operating rule: there is exactly one rollback implementation.**
+`src/utils/migration/rollback.ts` (`previewRollback`/`executeRollback`) is the
+only code in this codebase permitted to delete a record a migration created,
+and only under the eligibility rule above. Both entry points — the v2 engine's
+`POST /api/migrations/:id/rollback` and the legacy onboarding screen's
+`DELETE /api/onboarding/import/jobs/:id` — call into it; neither runs its own
+`deleteMany`. `tests/domain/migration-rollback-safety.test.mjs` fails the build
+if either route stops delegating to it. If you're adding a new way to undo an
+import, extend this module — do not write a second deletion path next to it.
+
 ---
 
 ## Security

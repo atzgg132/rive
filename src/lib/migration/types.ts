@@ -252,12 +252,6 @@ export const MIGRATION_STATES = [
 
 export type MigrationState = (typeof MIGRATION_STATES)[number];
 
-/** States a user may still edit mappings or resolutions in. */
-export const EDITABLE_STATES: readonly MigrationState[] = ["review_required", "ready", "mapping"];
-
-/** States from which a commit may be started. */
-export const COMMITTABLE_STATES: readonly MigrationState[] = ["ready", "review_required"];
-
 export function confidenceBand(score: number, high: number, medium: number): ConfidenceBand {
   if (score >= high) return "high";
   if (score >= medium) return "medium";

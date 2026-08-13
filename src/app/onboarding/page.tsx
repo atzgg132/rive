@@ -430,7 +430,7 @@ export default function OnboardingPage() {
   async function rollbackImport(job: ImportJobSummary) {
     if (
       !window.confirm(
-        `Remove the ${job.createdRecords} records created by this import? Records added later will not be removed.`,
+        `Remove the ${job.createdRecords} records created by this import? Anything you've edited since, or that other records now depend on, will be kept and reported instead of removed.`,
       )
     )
       return;
@@ -453,7 +453,12 @@ export default function OnboardingPage() {
             : item,
         ),
       );
-      toast.success("Imported records were removed safely.");
+      const keptCount = Array.isArray(data.conflicts) ? data.conflicts.length : 0;
+      toast.success(
+        keptCount > 0
+          ? `Untouched records were removed. ${keptCount} record${keptCount === 1 ? "" : "s"} you'd edited since import were kept.`
+          : "Untouched records were removed safely.",
+      );
     } catch (error) {
       toast.error(
         error instanceof Error
