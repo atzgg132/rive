@@ -147,12 +147,52 @@ async function googleFetch<T>(
     credentials = await refreshCredentials(connection.id, credentials);
     response = await perform(credentials.accessToken);
   }
+
+  // Transient failures (rate limit, momentary 5xx) get a couple of short
+  // retries so a blip doesn't flip the whole connection to an error state.
+  // Anything else — including a second 401 — surfaces immediately.
+  const TRANSIENT_STATUSES = new Set([429, 500, 502, 503, 504]);
+  for (const delayMs of [300, 900]) {
+    if (response.ok || !TRANSIENT_STATUSES.has(response.status)) break;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    response = await perform(credentials.accessToken);
+  }
+
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 500);
     throw new Error(`Google Calendar request failed (${response.status}): ${detail}`);
   }
   if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error("Google Calendar returned a response that could not be read.");
+  }
+}
+
+/**
+ * Revoke Rive's grant at Google so a "disconnected" refresh token can't still
+ * be used. Best-effort: a revoke failure (network blip, already-revoked token)
+ * must never block the local disconnect the user actually asked for.
+ */
+export async function revokeGoogleCredentials(encryptedCredentials: string): Promise<void> {
+  let credentials: GoogleCredentials;
+  try {
+    credentials = decryptCalendarCredentials<GoogleCredentials>(encryptedCredentials);
+  } catch {
+    return;
+  }
+  const token = credentials.refreshToken || credentials.accessToken;
+  if (!token) return;
+  try {
+    await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+    });
+  } catch (error) {
+    console.error("Google token revocation failed; local disconnect still proceeds:", error);
+  }
 }
 
 export async function getGoogleAccount(credentials: GoogleCredentials) {

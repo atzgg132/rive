@@ -1,9 +1,15 @@
 import crypto from "crypto";
 
 function encryptionKey(): Buffer {
-  const secret = process.env.CALENDAR_ENCRYPTION_KEY || process.env.SESSION_SECRET;
+  // Deliberately does not fall back to SESSION_SECRET: that secret also signs
+  // sessions and OAuth state, and reusing it here would mean one leaked value
+  // compromises session integrity, OAuth CSRF protection, and calendar/Zoho
+  // token confidentiality all at once. connectorConfig.ts's availability
+  // checks already keep both connectors off without this key configured; this
+  // throw is the defense-in-depth backstop if that's ever bypassed.
+  const secret = process.env.CALENDAR_ENCRYPTION_KEY;
   if (!secret) {
-    throw new Error("CALENDAR_ENCRYPTION_KEY is required for calendar connections.");
+    throw new Error("CALENDAR_ENCRYPTION_KEY is required for calendar and connector credential storage.");
   }
   try {
     const decoded = Buffer.from(secret, "base64");

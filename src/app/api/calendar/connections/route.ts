@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
+import { revokeGoogleCredentials } from "@/utils/googleCalendar";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -54,6 +55,11 @@ export async function DELETE(req: NextRequest) {
     include: { externalCalendars: { select: { calendarId: true } } },
   });
   if (!connection) return NextResponse.json({ success: false, message: "Connection not found." }, { status: 404 });
+  // Revoke before deleting the local row: if this failed silently after
+  // deletion, there would be no record left to retry the revoke against.
+  if (connection.provider === "google") {
+    await revokeGoogleCredentials(connection.encryptedCredentials);
+  }
   await prisma.$transaction([
     prisma.calendarConnection.delete({ where: { id: connection.id } }),
     prisma.calendar.deleteMany({ where: { id: { in: connection.externalCalendars.map((calendar) => calendar.calendarId) }, userId: session.userId } }),
