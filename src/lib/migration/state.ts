@@ -15,19 +15,24 @@ import type { MigrationState } from "./types.ts";
  *   - `committing` cannot fall back to `ready`. A commit that dies mid-flight
  *     stays committing until it is resumed or explicitly failed, so a crash can
  *     never be mistaken for "not started".
- *   - `rolled_back` is terminal. A migration that has been undone is history.
+ *   - `abandoned` is terminal. An unfinished migration remains retained as
+ *     history; imported records are never removed by this engine.
  */
 const TRANSITIONS: Record<MigrationState, readonly MigrationState[]> = {
-  created: ["uploading", "failed"],
-  uploading: ["profiling", "failed"],
-  profiling: ["mapping", "review_required", "ready", "failed"],
-  mapping: ["review_required", "ready", "failed"],
-  review_required: ["profiling", "mapping", "review_required", "ready", "committing", "failed"],
-  ready: ["profiling", "mapping", "review_required", "ready", "committing", "failed"],
+  created: ["uploading", "failed", "abandoned"],
+  uploading: ["profiling", "failed", "abandoned"],
+  profiling: ["mapping", "review_required", "ready", "failed", "abandoned"],
+  mapping: ["review_required", "ready", "failed", "abandoned"],
+  review_required: ["profiling", "mapping", "review_required", "ready", "committing", "failed", "abandoned"],
+  ready: ["profiling", "mapping", "review_required", "ready", "committing", "failed", "abandoned"],
   committing: ["completed", "completed_with_issues", "failed", "committing"],
   completed: ["rolled_back"],
   completed_with_issues: ["rolled_back"],
-  failed: ["profiling", "mapping", "review_required", "ready", "committing"],
+  failed: ["profiling", "mapping", "review_required", "ready", "committing", "abandoned"],
+  abandoned: [],
+  // Legacy terminal state. Nothing transitions into this anymore — rollback
+  // is disabled — but historical rows already in this state must still type
+  // check and remain terminal.
   rolled_back: [],
 };
 
@@ -36,7 +41,7 @@ const EDITABLE: readonly MigrationState[] = [
   "created", "uploading", "profiling", "mapping", "review_required", "ready", "failed",
 ];
 
-const TERMINAL: readonly MigrationState[] = ["completed", "completed_with_issues", "rolled_back"];
+const TERMINAL: readonly MigrationState[] = ["completed", "completed_with_issues", "abandoned"];
 
 /** States from which a user may still return to an unfinished migration. */
 const RESUMABLE: readonly MigrationState[] = [
@@ -68,6 +73,9 @@ export function phaseFor(state: MigrationState): string {
   if (["created", "uploading", "profiling"].includes(state)) return "analysis";
   if (["mapping", "review_required", "ready"].includes(state)) return "review";
   if (state === "committing") return "commit";
+  if (state === "abandoned") return "abandoned";
+  // Legacy state — see the comment on MIGRATION_STATES. Kept only so rows
+  // written before rollback was disabled still display their original label.
   if (state === "rolled_back") return "rollback";
   return "reconciliation";
 }

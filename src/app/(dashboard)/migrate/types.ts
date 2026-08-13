@@ -73,7 +73,7 @@ export type MigrationRecordView = {
 
 export type MigrationState =
   | "created" | "uploading" | "profiling" | "mapping" | "review_required"
-  | "ready" | "committing" | "completed" | "completed_with_issues" | "failed" | "rolled_back";
+  | "ready" | "committing" | "completed" | "completed_with_issues" | "failed" | "abandoned" | "rolled_back";
 
 export type MigrationDetail = {
   migration: {
@@ -106,7 +106,6 @@ export type MigrationHistoryEntry = {
   skipped: number;
   warnings: number;
   files: Array<{ name: string; sheetName: string | null; entity: string; rowCount: number }>;
-  canRollback: boolean;
 };
 
 export const ENTITY_LABELS: Record<string, string> = {

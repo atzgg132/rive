@@ -220,8 +220,12 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
     if (!window.confirm("Discard this import? Nothing has been added to your workspace yet.")) return;
     setBusy(true);
     try {
-      await fetch(`/api/migrations/${migrationId}`, { method: "DELETE" });
-    } catch {
+      const response = await fetch(`/api/migrations/${migrationId}`, { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "This migration could not be abandoned.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "This migration could not be abandoned.");
+      return;
       // Ignored — worst case it stays visible, unresumed, in migration history.
     } finally {
       setBusy(false);
@@ -313,7 +317,7 @@ function AnalyzingPanel() {
 function stepForState(detail: MigrationDetail): Step {
   const { state } = detail.migration;
   if (state === "completed" || state === "completed_with_issues") return "done";
-  if (state === "rolled_back") return "upload";
+  if (state === "abandoned" || state === "rolled_back") return "upload";
   if (state === "review_required") return "review";
   // A commit that failed is retried from the plan screen with one click —
   // the plan the user already reviewed is still there and still valid.

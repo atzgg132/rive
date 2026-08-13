@@ -61,8 +61,6 @@ export async function GET(req: NextRequest) {
       skipped: job.skippedRecords,
       warnings: job.unresolvedCount,
       files: job.files,
-      // A migration can only be undone while it still owns untouched records.
-      canRollback: ["completed", "completed_with_issues"].includes(job.status) && !job.rolledBackAt,
     })),
   });
 }

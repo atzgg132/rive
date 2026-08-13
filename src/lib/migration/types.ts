@@ -235,7 +235,14 @@ export type ImportPlan = {
   };
 };
 
-/** Server-controlled session states. The client never sets these. */
+/**
+ * Server-controlled session states. The client never sets these.
+ *
+ * `rolled_back` is retained only so historical rows created before rollback
+ * was disabled still type-check and display correctly; nothing can transition
+ * into it anymore (see TRANSITIONS in state.ts). `abandoned` is its
+ * non-destructive replacement for unfinished migrations going forward.
+ */
 export const MIGRATION_STATES = [
   "created",
   "uploading",
@@ -247,6 +254,7 @@ export const MIGRATION_STATES = [
   "completed",
   "completed_with_issues",
   "failed",
+  "abandoned",
   "rolled_back",
 ] as const;
 

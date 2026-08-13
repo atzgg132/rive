@@ -18,7 +18,6 @@ import {
   Link2,
   Loader2,
   Receipt,
-  RotateCcw,
   Rocket,
   Sparkles,
   Upload,
@@ -421,49 +420,6 @@ export default function OnboardingPage() {
         error instanceof Error
           ? error.message
           : "Import could not be processed.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function rollbackImport(job: ImportJobSummary) {
-    if (
-      !window.confirm(
-        `Remove the ${job.createdRecords} records created by this import? Anything you've edited since, or that other records now depend on, will be kept and reported instead of removed.`,
-      )
-    )
-      return;
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/onboarding/import/jobs/${job.id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.message || "Import could not be rolled back.");
-      setImportJobs((current) =>
-        current.map((item) =>
-          item.id === job.id
-            ? {
-                ...item,
-                status: "rolled_back",
-                rolledBackAt: new Date().toISOString(),
-              }
-            : item,
-        ),
-      );
-      const keptCount = Array.isArray(data.conflicts) ? data.conflicts.length : 0;
-      toast.success(
-        keptCount > 0
-          ? `Untouched records were removed. ${keptCount} record${keptCount === 1 ? "" : "s"} you'd edited since import were kept.`
-          : "Untouched records were removed safely.",
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Import could not be rolled back.",
       );
     } finally {
       setSaving(false);
@@ -1172,21 +1128,9 @@ export default function OnboardingPage() {
                               {job.unresolvedCount} need review
                             </p>
                           </div>
-                          {job.status === "rolled_back" ? (
-                            <span className="text-[9px] font-black uppercase text-slate-400">
-                              Rolled back
-                            </span>
-                          ) : (
-                            <Button
-                              type="button"
-                              onClick={() => void rollbackImport(job)}
-                              disabled={saving}
-                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-[10px] font-black text-red-600 dark:border-red-900 dark:text-red-300"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                              Undo import
-                            </Button>
-                          )}
+                          <span className="text-[9px] font-black uppercase text-slate-400">
+                            {job.status === "rolled_back" ? "Rolled back" : "Imported"}
+                          </span>
                         </div>
                       ))}
                   </div>

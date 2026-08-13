@@ -8,7 +8,7 @@ import { MIGRATION_ENTITIES, type ImportPlan, type MigrationState, type SourceCl
 import type { RecordResolution, SourceOverrides } from "@/lib/migration/pipeline";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 import { analyzeMigration } from "@/utils/migration/analyze";
-import { isEditable, loadSession } from "@/utils/migration/session";
+import { isEditable, loadSession, transition } from "@/utils/migration/session";
 import { MIGRATION_EVENTS, recordMigrationEvent } from "@/utils/migration/analytics";
 import { isValidIsoCurrency } from "@/lib/migration/normalize/money";
 
@@ -295,8 +295,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 }
 
-/** Discard a migration that has not been imported. */
-export async function DELETE(req: NextRequest, context: RouteContext) {
+/** Mark an unfinished migration abandoned without deleting its audit trail. */
+export async function POST(req: NextRequest, context: RouteContext) {
   if (!migrationEngineAvailable()) return unavailable();
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -306,12 +306,29 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
   if (!job) return NextResponse.json({ success: false, message: "Migration not found." }, { status: 404 });
   if (!isEditable(job.status as MigrationState)) {
     return NextResponse.json(
-      { success: false, message: "This migration has been imported. Undo it instead of discarding it." },
+      { success: false, message: "Only an unfinished migration can be abandoned." },
       { status: 409 },
     );
   }
 
-  // Cascades remove the staged records, files, and ledger with the job.
-  await prisma.importJob.deleteMany({ where: { id: job.id, userId: session.userId } });
-  return NextResponse.json({ success: true });
+  const abandoned = await transition(
+    job.id,
+    session.userId,
+    ["created", "uploading", "profiling", "mapping", "review_required", "ready", "failed"],
+    "abandoned",
+    { completedAt: new Date() },
+  );
+  if (!abandoned) {
+    return NextResponse.json({ success: false, message: "This migration changed. Refresh and try again." }, { status: 409 });
+  }
+  await recordMigrationEvent(session.userId, MIGRATION_EVENTS.abandoned, job.id);
+  return NextResponse.json({ success: true, status: "abandoned" });
+}
+
+/** Record deletion is intentionally unavailable. Migration history is retained. */
+export async function DELETE() {
+  return NextResponse.json(
+    { success: false, message: "Migration deletion is disabled. Abandon the migration instead; imported records are never removed." },
+    { status: 410 },
+  );
 }

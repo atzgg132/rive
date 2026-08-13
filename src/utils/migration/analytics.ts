@@ -23,6 +23,7 @@ export const MIGRATION_EVENTS = {
   commitStarted: "migration_commit_started",
   completed: "migration_completed",
   failed: "migration_failed",
+  abandoned: "migration_abandoned",
   rolledBack: "migration_rolled_back",
 } as const;
 
