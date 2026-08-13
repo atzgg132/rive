@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-import { PageHeader } from "@/components/ui";
+import { Button, PageHeader } from "@/components/ui";
 import UploadStep from "./steps/UploadStep";
 import AnalysisStep from "./steps/AnalysisStep";
 import ReviewStep from "./steps/ReviewStep";
@@ -14,7 +14,19 @@ import SuccessStep from "./steps/SuccessStep";
 import MigrationHistory from "./MigrationHistory";
 import type { MigrationDetail, MigrationLimits } from "./types";
 
-type Step = "upload" | "analyzing" | "found" | "review" | "plan" | "done";
+type Step = "upload" | "analyzing" | "found" | "review" | "plan" | "committing" | "done";
+
+type CommitResult = { created: Record<string, number>; linked: number; skipped: number; total: number };
+
+function resultFromSummary(summary: Record<string, unknown> | null): CommitResult | null {
+  if (!summary || typeof summary !== "object") return null;
+  const created = summary.created as Record<string, number> | undefined;
+  const linked = summary.linked as number | undefined;
+  const skipped = summary.skipped as number | undefined;
+  if (!created || typeof linked !== "number" || typeof skipped !== "number") return null;
+  const total = Object.values(created).reduce((sum, count) => sum + count, 0) + linked;
+  return { created, linked, skipped, total };
+}
 
 /**
  * The migration wizard.
@@ -57,7 +69,9 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
         const data = await load(resumeId);
         if (cancelled) return;
         setMigrationId(resumeId);
-        setStep(stepForState(data));
+        const nextStep = stepForState(data);
+        if (nextStep === "done") setResult(resultFromSummary(data.summary));
+        setStep(nextStep);
       } catch (error) {
         if (cancelled) return;
         toast.error(error instanceof Error ? error.message : "This migration could not be opened.");
@@ -68,6 +82,32 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
       cancelled = true;
     };
   }, [resumeId, load]);
+
+  // A refresh mid-commit lands here rather than on a stale analysis screen.
+  // The server is the source of truth for when it actually finished.
+  useEffect(() => {
+    if (step !== "committing" || !migrationId) return;
+    let cancelled = false;
+    const poll = setInterval(async () => {
+      try {
+        const data = await load(migrationId);
+        if (cancelled) return;
+        const state = data.migration.state;
+        if (state === "completed" || state === "completed_with_issues") {
+          setResult(resultFromSummary(data.summary));
+          setStep("done");
+        } else if (state === "failed") {
+          setStep("plan");
+        }
+      } catch {
+        // Transient — the next tick tries again.
+      }
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+    };
+  }, [step, migrationId, load]);
 
   async function handleUpload(files: File[], defaultCurrency: string) {
     setBusy(true);
@@ -166,12 +206,42 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
     router.replace("/migrate", { scroll: false });
   }
 
+  // Abandoning is non-destructive: DELETE /api/migrations/:id only ever removes
+  // this migration's own staged rows (files, staged records, the plan) — never
+  // the Client/Project/Invoice/Expense rows a prior commit already created. It's
+  // only permitted pre-commit in the first place, which the server enforces.
+  // Best-effort: if the request fails, the migration is simply left in history
+  // rather than blocking the user from starting over.
+  async function abandonMigration() {
+    if (!migrationId) {
+      reset();
+      return;
+    }
+    if (!window.confirm("Discard this import? Nothing has been added to your workspace yet.")) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/migrations/${migrationId}`, { method: "DELETE" });
+    } catch {
+      // Ignored — worst case it stays visible, unresumed, in migration history.
+    } finally {
+      setBusy(false);
+      reset();
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      <PageHeader
-        title="Import your business"
-        description="Bring the clients, projects, invoices, and expenses you already track into Rive. Nothing is written until you have seen exactly what will happen."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="Import your business"
+          description="Bring the clients, projects, invoices, and expenses you already track into Rive. Nothing is written until you have seen exactly what will happen."
+        />
+        {["found", "review", "plan"].includes(step) ? (
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => void abandonMigration()}>
+            Discard and start over
+          </Button>
+        ) : null}
+      </div>
 
       {step === "upload" ? (
         <>
@@ -210,6 +280,8 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
         />
       ) : null}
 
+      {step === "committing" ? <CommittingPanel /> : null}
+
       {step === "done" && result ? (
         <SuccessStep result={result} migrationId={migrationId} onStartAnother={reset} />
       ) : null}
@@ -243,6 +315,28 @@ function stepForState(detail: MigrationDetail): Step {
   if (state === "completed" || state === "completed_with_issues") return "done";
   if (state === "rolled_back") return "upload";
   if (state === "review_required") return "review";
-  if (state === "ready") return "plan";
+  // A commit that failed is retried from the plan screen with one click —
+  // the plan the user already reviewed is still there and still valid.
+  if (state === "ready" || state === "failed") return "plan";
+  // A commit still in flight (or one that died and hasn't been marked
+  // failed yet) gets its own screen rather than the analysis screen, which
+  // would otherwise imply nothing had started.
+  if (state === "committing") return "committing";
   return "found";
+}
+
+function CommittingPanel() {
+  return (
+    <div
+      className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-card"
+      role="status"
+      aria-live="polite"
+    >
+      <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
+      <h2 className="mt-4 text-base font-bold text-foreground">Finishing your import</h2>
+      <p className="mt-1 max-w-md text-sm text-muted-foreground">
+        This picks up automatically — nothing already imported will be imported twice.
+      </p>
+    </div>
+  );
 }
