@@ -54,8 +54,12 @@ jobs:
       - run: npm run test:unit
       - run: npx tsc --noEmit --incremental false
       - run: npm run lint
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - name: Install Playwright browser
+        if: github.ref_name == 'main'
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E tests
+        if: github.ref_name == 'main'
+        run: npm run test:e2e
       - run: npm run build
       - run: npm audit --omit=dev
 

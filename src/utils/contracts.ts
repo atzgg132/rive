@@ -337,6 +337,15 @@ type ContractStatusWriteClient = {
   };
 };
 
+type ProjectCoverageWriteClient = {
+  contract: {
+    count(args: Prisma.ContractCountArgs): Promise<number>;
+  };
+  project: {
+    updateMany(args: Prisma.ProjectUpdateManyArgs): Promise<{ count: number }>;
+  };
+};
+
 export async function transitionContractStatus(
   db: ContractStatusWriteClient,
   input: {
@@ -357,6 +366,21 @@ export async function transitionContractStatus(
     data: update.data,
   });
   return result.count;
+}
+
+export async function resetProjectCoverageIfNoActiveContracts(
+  db: ProjectCoverageWriteClient,
+  projectId: string,
+  userId: string,
+): Promise<void> {
+  const remainingContracts = await db.contract.count({
+    where: { projectId, status: { not: "void" } },
+  });
+  if (remainingContracts !== 0) return;
+  await db.project.updateMany({
+    where: { id: projectId, userId, contractCoverage: "rive" },
+    data: { contractCoverage: "undecided", contractDecisionAt: null },
+  });
 }
 
 export function addDays(date: Date, days: number): Date {

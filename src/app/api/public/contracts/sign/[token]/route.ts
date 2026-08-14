@@ -36,7 +36,7 @@ async function resolveLink(token: string) {
 }
 
 function invalidLink(link: Awaited<ReturnType<typeof resolveLink>>): string | null {
-  if (!link || link.type !== "sign") return "Acceptance link not found.";
+  if (!link || !["sign", "void"].includes(link.type)) return "Acceptance link not found.";
   if (link.revokedAt) return "This acceptance link has been revoked.";
   if (link.expiresAt <= new Date()) return "This acceptance link has expired. Ask the sender to reissue it.";
   if (!link.version || !link.signer) return "This acceptance link is incomplete.";
@@ -104,6 +104,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     if (problem) {
       logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
       return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
+    }
+    if (link!.type !== "sign") {
+      return NextResponse.json({ success: false, message: "This is a void-confirmation link. Use the void controls on the page." }, { status: 409 });
     }
     const ip = getRequestIp(req);
     if (!(await durableRateLimit(`contract-sign:${link!.id}:${hashRequestValue(ip)}`, 5, 60 * 60 * 1000))) {

@@ -620,6 +620,7 @@ export function sendContractVoidRequestedEmail(input: {
   contractTitle: string;
   requesterName: string;
   note: string;
+  voidUrl: string;
 }): Promise<EmailResult> {
   const safeRecipient = escapeHtml(input.recipientName);
   const safeRequester = escapeHtml(input.requesterName);
@@ -632,10 +633,12 @@ export function sendContractVoidRequestedEmail(input: {
       eyebrow: "void requested",
       title: `${safeRequester} requested to void an accepted Agreement.`,
       intro: `A void request was raised for “${escapeHtml(input.contractTitle)}”. Both parties must agree before it is voided.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeRecipient}, open the acceptance link you were sent for this Agreement to confirm or decline the void. The Agreement stays accepted and fully retained until the other party also confirms.</p><p style="margin:18px 0 0;padding:14px 16px;border:1px solid #DDE7F2;border-radius:12px;background:#F7FAFD;color:#42556F;font-size:13px;line-height:21px"><strong style="color:#0C1E36">Reason:</strong><br>${safeNote}</p>`,
-      aside: "If you did not expect this message, you can safely ignore it. The Agreement is not voided unless you confirm through your acceptance link.",
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeRecipient}, use the secure link below to confirm or decline the void. The Agreement stays accepted and fully retained until the other party also confirms.</p><p style="margin:18px 0 0;padding:14px 16px;border:1px solid #DDE7F2;border-radius:12px;background:#F7FAFD;color:#42556F;font-size:13px;line-height:21px"><strong style="color:#0C1E36">Reason:</strong><br>${safeNote}</p>`,
+      action: "Review void request",
+      actionUrl: input.voidUrl,
+      aside: "If you did not expect this message, you can safely ignore it. The Agreement is not voided unless you confirm through the secure link.",
       recipient: input.to,
     }),
-    text: `${input.requesterName} requested to void “${input.contractTitle}”.\n\nReason: ${input.note}\n\nOpen the acceptance link you were sent to confirm or decline. The Agreement stays accepted until you confirm.`,
+    text: `${input.requesterName} requested to void “${input.contractTitle}”.\n\nReason: ${input.note}\n\nReview the void request: ${input.voidUrl}\n\nThe Agreement stays accepted until you confirm.`,
   });
 }

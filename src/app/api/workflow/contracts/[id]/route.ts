@@ -8,6 +8,7 @@ import {
   assertContractsEnabled,
   CONTRACT_MAX_TITLE_LENGTH,
   normalizeSections,
+  resetProjectCoverageIfNoActiveContracts,
   sha256,
   stableStringify,
   transitionContractStatus,
@@ -231,17 +232,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       if (voided !== 1) throw new Error("The Agreement changed while it was being voided. Reload and try again.");
       await tx.contractReviewLink.updateMany({ where: { contractId: id, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, actorUserId: session.userId, eventType: "contract_voided", metadata: { providerEnvelopeId: contract.providerEnvelopeId } } });
-      if (contract.projectId) {
-        const remainingContracts = await tx.contract.count({
-          where: { projectId: contract.projectId, id: { not: id }, status: { not: "void" } },
-        });
-        if (remainingContracts === 0) {
-          await tx.project.updateMany({
-            where: { id: contract.projectId, userId: session.userId, contractCoverage: "rive" },
-            data: { contractCoverage: "undecided", contractDecisionAt: null },
-          });
-        }
-      }
+      if (contract.projectId) await resetProjectCoverageIfNoActiveContracts(tx, contract.projectId, session.userId);
     });
     return NextResponse.json({ success: true, message: "Agreement voided. Its history is retained." });
   } catch (error) {
