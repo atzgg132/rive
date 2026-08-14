@@ -987,6 +987,11 @@ model ContractArtifact {
   generatedAt  DateTime        @default(now()) @map("generated_at")
 
   @@index([contractId, generatedAt])
+  // One artifact per (contract, version, type) — e.g. a single evidence PDF per
+  // accepted version. Defense-in-depth: correctness currently rests on the
+  // optimistic signing → executed transaction ordering; this makes a duplicate
+  // artifact write impossible even if that ordering ever races.
+  @@unique([contractId, versionId, artifactType], name: "unique_contract_artifact_per_version_type")
   @@map("contract_artifacts")
 }
 
