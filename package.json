@@ -14,7 +14,7 @@
     "lint": "eslint",
     "test:domain": "node --experimental-strip-types --import ./tests/helpers/module-loader.mjs --test tests/domain/*.test.mjs",
     "test": "npm run test:e2e",
-    "test:unit": "node --test tests/domain/*.test.mjs",
+    "test:unit": "node --experimental-strip-types --import ./tests/helpers/module-loader.mjs --test tests/domain/*.test.mjs",
     "test:e2e": "playwright test",
     "test:visual": "playwright test tests/e2e/visual-regression.spec.ts",
     "test:integration": "playwright test tests/e2e/release-critical.spec.ts",
