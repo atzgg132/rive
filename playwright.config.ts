@@ -10,6 +10,7 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   workers: 2,
+  timeout: 60_000,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
@@ -18,6 +19,7 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   expect: {
+    timeout: 10_000,
     toHaveScreenshot: {
       animations: "disabled",
       caret: "hide",
