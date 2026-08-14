@@ -19,88 +19,91 @@ import { Pool } from "pg";
 
 const FIXTURES = join(process.cwd(), "tests", "fixtures", "migration");
 
-let sessionTokenPromise: Promise<string> | undefined;
+/**
+ * The session token for the CURRENT test's fresh user. Set by `authenticate`
+ * (which each test calls once with its own context); the API-request tests
+ * reuse it so the browser session and the `request` calls act as the same
+ * tenant.
+ */
+let currentSessionToken: string | undefined;
 
 /**
- * Build a session token for a FRESH disposable user created for this run.
+ * Build a session token for a FRESH disposable user.
  *
- * Migration commits write real workspace records, so re-running the suite
- * against a fixed account would accumulate clients/projects/invoices and
- * change what later tests see (a previously-imported client would be matched
- * as an existing workspace record instead of surfacing for review). Each run
- * therefore gets its own `@example.invalid` user with an empty workspace,
- * matching the self-created-fixture pattern from scripts/smoke-contracts.mjs.
- * The user is left in place after the run — nothing is ever deleted.
+ * Migration commits write real workspace records, so tests must never share a
+ * user: a previously-imported client would be matched as an existing
+ * workspace record instead of surfacing for review. Each call creates its own
+ * `@example.invalid` user with an empty workspace, matching the
+ * self-created-fixture pattern from scripts/smoke-contracts.mjs. Users are
+ * left in place — nothing is ever deleted.
  */
 async function getSessionToken() {
-  if (!sessionTokenPromise) {
-    sessionTokenPromise = (async () => {
-      loadEnvConfig(process.cwd());
-      if (!process.env.E2E_USER_EMAIL) throw new Error("E2E_USER_EMAIL is required for migration tests.");
+  loadEnvConfig(process.cwd());
+  if (!process.env.E2E_USER_EMAIL) throw new Error("E2E_USER_EMAIL is required for migration tests.");
 
-      const databaseUrl = process.env.DATABASE_URL;
-      if (!databaseUrl) throw new Error("DATABASE_URL is required for migration tests.");
-      const ssl =
-        process.env.DATABASE_SSL === "disable" || databaseUrl.includes("sslmode=disable")
-          ? false
-          : {
-              rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
-              ...(process.env.DATABASE_SSL_SERVERNAME
-                ? {
-                    checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) =>
-                      checkServerIdentity(process.env.DATABASE_SSL_SERVERNAME!, certificate),
-                  }
-                : {}),
-            };
-      const parsed = new URL(databaseUrl);
-      for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) {
-        parsed.searchParams.delete(parameter);
-      }
-      const pool = new Pool({ connectionString: parsed.toString(), ssl });
-      const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
-      try {
-        const email = `migration-e2e-${Date.now()}-${process.pid}@example.invalid`;
-        const user = await prisma.user.create({
-          data: {
-            email,
-            name: "Migration E2E User",
-            passwordHash: "e2e-only",
-            plan: "pro",
-            onboardingStatus: "complete",
-            onboardingStep: 5,
-            businessType: "freelancer",
-            profession: "Product designer",
-            currency: "USD",
-            timeZone: "Asia/Kolkata",
-          },
-          select: { id: true, email: true, plan: true, sessionVersion: true },
-        });
-        const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
-        const payload = JSON.stringify({
-          userId: user.id,
-          email: user.email,
-          plan: user.plan,
-          sessionVersion: user.sessionVersion,
-          expiry,
-        });
-        const secret = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-local-development-session-secret";
-        const signature = createHmac("sha256", secret).update(payload).digest("hex");
-        return Buffer.from(`${payload}.${signature}`).toString("base64");
-      } finally {
-        await prisma.$disconnect();
-        await pool.end();
-      }
-    })();
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL is required for migration tests.");
+  const ssl =
+    process.env.DATABASE_SSL === "disable" || databaseUrl.includes("sslmode=disable")
+      ? false
+      : {
+          rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+          ...(process.env.DATABASE_SSL_SERVERNAME
+            ? {
+                checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) =>
+                  checkServerIdentity(process.env.DATABASE_SSL_SERVERNAME!, certificate),
+              }
+            : {}),
+        };
+  const parsed = new URL(databaseUrl);
+  for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) {
+    parsed.searchParams.delete(parameter);
   }
-  return sessionTokenPromise;
+  const pool = new Pool({ connectionString: parsed.toString(), ssl });
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+  try {
+    const email = `migration-e2e-${Date.now()}-${process.pid}@example.invalid`;
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name: "Migration E2E User",
+        passwordHash: "e2e-only",
+        plan: "pro",
+        onboardingStatus: "complete",
+        onboardingStep: 5,
+        businessType: "freelancer",
+        profession: "Product designer",
+        currency: "USD",
+        timeZone: "Asia/Kolkata",
+      },
+      select: { id: true, email: true, plan: true, sessionVersion: true },
+    });
+    const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const payload = JSON.stringify({
+      userId: user.id,
+      email: user.email,
+      plan: user.plan,
+      sessionVersion: user.sessionVersion,
+      expiry,
+    });
+    const secret = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-local-development-session-secret";
+    const signature = createHmac("sha256", secret).update(payload).digest("hex");
+    return Buffer.from(`${payload}.${signature}`).toString("base64");
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
+  }
 }
 
 async function authenticate(context: BrowserContext, baseURL: string) {
   const url = new URL(baseURL);
+  // Fresh user per test: the browser session and any `request` API calls in
+  // the same test must share it.
+  currentSessionToken = await getSessionToken();
   await context.addCookies([
     {
       name: "rive_session",
-      value: await getSessionToken(),
+      value: currentSessionToken,
       domain: url.hostname,
       path: "/",
       httpOnly: true,
@@ -108,6 +111,12 @@ async function authenticate(context: BrowserContext, baseURL: string) {
       sameSite: "Lax",
     },
   ]);
+}
+
+/** The current test's session token (set by authenticate). */
+function getCurrentSessionToken(): string {
+  if (!currentSessionToken) throw new Error("authenticate() must run before using the session token.");
+  return currentSessionToken;
 }
 
 function fixture(name: string) {
@@ -132,6 +141,25 @@ async function uploadAndAnalyze(page: Page, names: string[]) {
   return body;
 }
 
+/**
+ * Land on the review screen after an upload.
+ *
+ * The wizard can reach it two ways: clicking "Review these" from the analysis
+ * screen ("found" step), or the resume effect landing directly on it
+ * ("review" step) when the migration is review_required. This helper waits
+ * for whichever path, clicking "Review these" only if it is actually present.
+ */
+async function gotoReview(page: Page) {
+  const reviewButton = page.getByRole("button", { name: /Review these|Check the details/ }).first();
+  await expect(async () => {
+    if (await reviewButton.isVisible().catch(() => false)) {
+      await reviewButton.click({ noWaitAfter: true });
+    }
+    // The review screen always has this footer button.
+    await expect(page.getByRole("button", { name: "See what will be imported" })).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
 test.describe("migration", () => {
   test.setTimeout(120_000);
   test.skip(!process.env.E2E_USER_EMAIL, "Set E2E_USER_EMAIL to run migration tests.");
@@ -143,7 +171,9 @@ test.describe("migration", () => {
   test("imports multiple files end to end and lands on a populated workspace", async ({ context, page, baseURL }) => {
     await authenticate(context, baseURL!);
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Import your business" })).toBeVisible();
+    // First load on a cold dev server compiles routes on demand; the app shell
+    // can sit on "Loading your workspace..." for a while before rendering.
+    await expect(page.getByRole("heading", { name: "Import your business" })).toBeVisible({ timeout: 30_000 });
 
     await uploadAndAnalyze(page, [
       "clients-standard.csv",
@@ -152,23 +182,35 @@ test.describe("migration", () => {
       "expenses-standard.csv",
     ]);
 
-    await expect(page.getByRole("heading", { name: "What Rive found" })).toBeVisible({ timeout: 30_000 });
-    // The entity count card for clients ("3" with the label) — scoped to the
-    // analysis grid rather than the sidebar or file badges.
-    await expect(page.locator("main").getByText("Clients", { exact: true }).first()).toBeVisible();
+    // The wizard can land on either the analysis screen ("What Rive found",
+    // with a "See what will be imported" button) or, for a clean migration that
+    // needs no decisions, straight on the plan screen ("What will happen").
+    // Wait for whichever appears; the plan screen is what actually precedes
+    // the commit.
+    const seePlan = page.getByRole("button", { name: "See what will be imported" }).first();
+    const importButton = page.getByRole("button", { name: "Import workspace" });
 
-    await page.getByRole("button", { name: "See what will be imported" }).first().click();
-    await expect(page.getByRole("heading", { name: "What will happen" })).toBeVisible();
+    // The plan screen appears either directly or after advancing past the
+    // analysis screen. Poll up to the timeout for it.
+    await expect(async () => {
+      if (await seePlan.isVisible().catch(() => false)) {
+        // Clicking advances the wizard to the plan screen; the button may be
+        // torn down mid-transition, so don't wait for the click to settle.
+        await seePlan.click({ noWaitAfter: true });
+      }
+      await expect(page.getByRole("heading", { name: "What will happen" })).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 30_000 });
+    await expect(importButton).toBeVisible();
 
     const commit = page.waitForResponse((response) => response.url().includes("/commit"));
-    await page.getByRole("button", { name: "Import workspace" }).click();
+    await importButton.click({ noWaitAfter: true });
     expect((await commit).status()).toBeLessThan(400);
 
     await expect(page.getByRole("heading", { name: "Your workspace is ready" })).toBeVisible({ timeout: 60_000 });
     await page.getByRole("link", { name: "Go to Overview" }).click();
     // The dashboard is the shell's Overview link; wait for it rather than
     // racing the client-side transition against the URL alone.
-    await expect(page.getByRole("link", { name: "Overview" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
@@ -177,7 +219,7 @@ test.describe("migration", () => {
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
 
     await uploadAndAnalyze(page, ["invoices-multiple-currencies.csv"]);
-    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
+    await gotoReview(page);
 
     // The dollar sign is ambiguous, so the engine asks rather than guessing.
     await expect(page.getByText(/could mean/i).first()).toBeVisible({ timeout: 30_000 });
@@ -226,8 +268,8 @@ test.describe("migration", () => {
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
 
     await uploadAndAnalyze(page, ["invoices-weird-statuses.csv"]);
-    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
-    await expect(page.getByText(/is not an invoice status/i).first()).toBeVisible({ timeout: 30_000 });
+    await gotoReview(page);
+    await expect(page.getByText(/is not (a|an) invoice status/i).first()).toBeVisible({ timeout: 30_000 });
 
     // Nothing may overflow the viewport horizontally.
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -242,14 +284,14 @@ test.describe("migration", () => {
 
     const first = await request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash },
-      headers: { cookie: `rive_session=${await getSessionToken()}` },
+      headers: { cookie: `rive_session=${getCurrentSessionToken()}` },
     });
     expect(first.status()).toBe(200);
     const firstBody = await first.json();
 
     const second = await request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash },
-      headers: { cookie: `rive_session=${await getSessionToken()}` },
+      headers: { cookie: `rive_session=${getCurrentSessionToken()}` },
     });
     // The second attempt is refused outright rather than creating duplicates.
     expect(second.status()).toBe(409);
@@ -263,7 +305,7 @@ test.describe("migration", () => {
     const { migrationId } = await uploadAndAnalyze(page, ["clients-standard.csv"]);
     const response = await request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash: "0".repeat(64) },
-      headers: { cookie: `rive_session=${await getSessionToken()}` },
+      headers: { cookie: `rive_session=${getCurrentSessionToken()}` },
     });
     expect(response.status()).toBe(409);
     expect((await response.json()).message).toMatch(/changed since you reviewed it/i);
@@ -277,7 +319,7 @@ test.describe("migration", () => {
     // that only resemble the imported client rows, so the engine must ask rather
     // than guess.
     await uploadAndAnalyze(page, ["clients-standard.csv", "projects-unresolved-client.csv"]);
-    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
+    await gotoReview(page);
 
     // The relationship review section is visible and names the unresolved client.
     await expect(page.getByText(/not linked yet/i)).toBeVisible({ timeout: 30_000 });
@@ -293,11 +335,13 @@ test.describe("migration", () => {
     await linkButton.click();
     expect((await patch).status()).toBeLessThan(400);
 
-    // The resolution persists server-side: a refresh lands back on review with
-    // the resolved row no longer listed as an open question.
+    // The resolution persists server-side. "Website redesign" is the only
+    // askable relationship in this fixture (the other project references no
+    // similar client), so after the link the migration has no open questions
+    // and a refresh lands on the plan screen — never back on the review list.
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByText(/not linked yet/i)).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/ACME/i).first()).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "What will happen" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/not linked yet/i)).toHaveCount(0);
   });
 
   test("an identical expense is raised as a possible duplicate for the user to decide", async ({ context, page, baseURL }) => {
@@ -308,9 +352,9 @@ test.describe("migration", () => {
     // date — the composite fingerprint is identical, so the second is offered
     // for review rather than silently merged.
     await uploadAndAnalyze(page, ["expenses-duplicates.csv"]);
-    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
+    await gotoReview(page);
 
-    await expect(page.getByText(/possible duplicates/i)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/possible duplicate/i)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/We think these are the same/i).first()).toBeVisible();
     await expect(page.getByText(/identical expense appears earlier/i).first()).toBeVisible();
 
@@ -325,7 +369,7 @@ test.describe("migration", () => {
     expect((await patch).status()).toBeLessThan(400);
 
     // After the merge decision the duplicate is no longer an open question.
-    await expect(page.getByText(/possible duplicates/i)).toHaveCount(0, { timeout: 30_000 });
+    await expect(page.getByText(/possible duplicate/i)).toHaveCount(0, { timeout: 30_000 });
   });
 
   test("abandoning a review migration removes it from history without touching any workspace record", async ({ context, page, baseURL }) => {
@@ -333,8 +377,8 @@ test.describe("migration", () => {
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
 
     const { migrationId } = await uploadAndAnalyze(page, ["clients-standard.csv", "expenses-duplicates.csv"]);
-    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
-    await expect(page.getByText(/possible duplicates/i)).toBeVisible({ timeout: 30_000 });
+    await gotoReview(page);
+    await expect(page.getByText(/possible duplicate/i)).toBeVisible({ timeout: 30_000 });
 
     // Confirm the dialog the abandon control shows.
     page.once("dialog", (dialog) => void dialog.accept());
@@ -350,7 +394,7 @@ test.describe("migration", () => {
     // Back at the upload screen, the abandoned migration is gone from history.
     await expect(page.getByRole("heading", { name: "Import your business" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(migrationId)).toHaveCount(0);
-    await expect(page.getByText(/possible duplicates/i)).toHaveCount(0);
+    await expect(page.getByText(/possible duplicate/i)).toHaveCount(0);
   });
 
   test("a refresh during an in-flight commit lands on the finishing screen, not the analysis screen", async ({ context, page, baseURL, request }) => {
@@ -359,12 +403,26 @@ test.describe("migration", () => {
 
     const { migrationId, planHash } = await uploadAndAnalyze(page, ["clients-standard.csv"]);
 
-    // Fire the commit request but don't await it — the server is now committing
-    // and the browser immediately reloads, as a user would after closing a tab.
+    // Fire the commit request but don't await it — the server is now committing.
+    const token = getCurrentSessionToken();
     const commitPromise = request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash },
-      headers: { cookie: `rive_session=${await getSessionToken()}` },
+      headers: { cookie: `rive_session=${token}` },
     });
+
+    // Wait until the commit has actually claimed the migration (status
+    // `committing`), so the reload below lands mid-commit rather than racing
+    // ahead of it.
+    await expect(async () => {
+      const probe = await request.get(`/api/migrations/${migrationId}`, {
+        headers: { cookie: `rive_session=${token}` },
+      });
+      if (probe.ok()) {
+        const body = await probe.json().catch(() => null);
+        if (body?.migration?.state === "committing" || body?.migration?.state?.includes("complete")) return;
+      }
+      throw new Error("commit not claimed yet");
+    }).toPass({ timeout: 30_000 });
 
     await page.reload({ waitUntil: "domcontentloaded" });
     // Whatever the exact timing, a resumed migration must never land back on

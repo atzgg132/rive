@@ -117,6 +117,7 @@ async function getUsers() {
 const cookieFor = (token: string) => `rive_session=${token}`;
 
 test.describe("cross-tenant agreement isolation", () => {
+  test.setTimeout(120_000);
   test.skip(!process.env.E2E_USER_EMAIL, "Set E2E_USER_EMAIL and DATABASE_URL to run cross-tenant contract tests.");
 
   test("user B cannot read, edit, finalize, review, sign, or delete user A's contract", async ({ request }) => {

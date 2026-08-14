@@ -130,7 +130,11 @@ test("maps vendor statuses and refuses to invent one it does not know", () => {
   const warning = unknown.warnings.find((item) => item.code === "STATUS_UNKNOWN");
   assert.ok(warning);
   assert.ok(warning.suggestions.length > 0, "the review UI needs options to offer");
-  assert.equal(unknown.status, "ready", "an unknown status does not block the row");
+  assert.equal(
+    unknown.status,
+    "review",
+    "an unknown status is an open question: the review screen only fetches review/error rows",
+  );
 });
 
 test("settles ambiguous dates from an unambiguous sibling row", () => {

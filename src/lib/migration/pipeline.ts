@@ -219,17 +219,22 @@ export function runPipeline(input: PipelineInput): PipelineResult {
 
   validateRecords(records);
 
-  // A record with unresolved relationship candidates is an open question — the
-  // review screen must surface it (the GET's `filter=issues` returns
-  // statuses `review`/`error`). Deduplication already marks duplicates
-  // `review`; relationship questions need the same treatment or the review
-  // screen would claim "everything matched" while the plan still lists the
-  // question. `applyResolutions` below clears both the candidates and the
-  // review status once the user answers, so a resolved question stops asking.
+  // A record the plan will ask the user about must be `review` so the review
+  // screen surfaces it (the GET's `filter=issues` returns statuses
+  // `review`/`error`). Deduplication already marks duplicates `review`; this
+  // covers the two remaining review-item kinds: unresolved relationship
+  // candidates, and decisive warnings (unknown currency/status, ambiguous
+  // date). Without it the review screen would claim "everything matched"
+  // while the plan still lists the question. `applyResolutions` below clears
+  // the review status once the user answers, so a resolved question stops
+  // asking.
+  const decisiveWarningCodes = new Set(["CURRENCY_AMBIGUOUS", "STATUS_UNKNOWN", "DATE_AMBIGUOUS"]);
   for (const record of records) {
-    if (record.relationshipCandidates.length > 0 && record.status !== "error") {
-      record.status = "review";
-    }
+    if (record.status === "error") continue;
+    const hasOpenQuestion =
+      record.relationshipCandidates.length > 0 ||
+      record.warnings.some((warning) => decisiveWarningCodes.has(warning.code));
+    if (hasOpenQuestion) record.status = "review";
   }
 
   // The user's decisions are applied last so they override anything the engine

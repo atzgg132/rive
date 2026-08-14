@@ -341,7 +341,10 @@ test("flags an ambiguous date but still imports the row", () => {
   const warning = invoice.warnings.find((item) => item.code === "DATE_AMBIGUOUS");
   assert.ok(warning);
   assert.match(warning.message, /2026-04-03 or 2026-03-04/);
-  assert.equal(invoice.status, "ready");
+  // The row is not blocked, but it is an open question: the review screen
+  // only fetches review/error rows, so the row must carry `review` status or
+  // the ambiguity would never be shown even though the plan lists it.
+  assert.equal(invoice.status, "review");
 
   const reviewItem = result.plan.reviewItems.find((item) => item.kind === "date");
   assert.ok(reviewItem, "an ambiguous date should reach the review list");
