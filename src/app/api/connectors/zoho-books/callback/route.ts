@@ -24,7 +24,10 @@ export async function GET(req: NextRequest) {
         metadata: { provider: "zoho_books", organizationCount: organizations.length },
       },
     });
-    return NextResponse.redirect(new URL(`${state.returnTo}?connected=zoho_books`, req.url));
+    // The connection is saved but the organization is NOT auto-selected. The
+    // user confirms it explicitly before any sync runs (see
+    // POST /api/connectors/zoho-books/organization).
+    return NextResponse.redirect(new URL(`${state.returnTo}?connected=zoho_books&zohoOrgConfirmation=1`, req.url));
   } catch (error) {
     console.error("Zoho Books callback failed:", error);
     return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=zoho_connection_failed`, req.url));

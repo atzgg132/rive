@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
+import { revokeZohoCredentials } from "@/utils/zohoBooks";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -40,8 +41,19 @@ export async function DELETE(req: NextRequest) {
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ success: false, message: "Connection ID is required." }, { status: 400 });
-  const deleted = await prisma.connectorConnection.deleteMany({ where: { id, userId: session.userId } });
-  if (!deleted.count) return NextResponse.json({ success: false, message: "Connection not found." }, { status: 404 });
+  const connection = await prisma.connectorConnection.findFirst({
+    where: { id, userId: session.userId },
+  });
+  if (!connection) return NextResponse.json({ success: false, message: "Connection not found." }, { status: 404 });
+
+  // Revoke the provider grant before removing the local row, so a
+  // "disconnected" refresh token can't still be used. Best-effort — a revoke
+  // failure must never block the disconnect the user asked for.
+  if (connection.provider === "zoho_books") {
+    await revokeZohoCredentials(connection.encryptedCredentials);
+  }
+
+  await prisma.connectorConnection.deleteMany({ where: { id, userId: session.userId } });
   await prisma.auditEvent.create({
     data: { userId: session.userId, action: "connector.disconnected", targetType: "connector_connection", targetId: id },
   });

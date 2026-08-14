@@ -4,6 +4,12 @@ import {
   connectorCredentialConfigured,
   zohoBooksAvailable,
 } from "@/utils/connectorConfig";
+import {
+  createZohoProvider,
+  zohoHttpError,
+  ZohoAuthError,
+  type ZohoOrganization,
+} from "@/lib/migration/adapters/zoho";
 
 export { zohoBooksAvailable };
 
@@ -13,14 +19,6 @@ type ZohoCredentials = {
   expiresAt: number;
   apiDomain: string;
   accountsServer: string;
-};
-
-type ZohoOrganization = {
-  organization_id: string;
-  name: string;
-  is_default_org?: boolean;
-  currency_code?: string;
-  time_zone?: string;
 };
 
 const ZOHO_ACCOUNT_HOSTS = new Set([
@@ -143,85 +141,197 @@ async function refresh(connectionId: string, credentials: ZohoCredentials): Prom
   return updated;
 }
 
-async function apiFetch<T>(
+/**
+ * Bounded retry schedule for Zoho transient failures (429/5xx).
+ *
+ * Pure so it can be unit-tested: the caller decides whether a status is
+ * transient, and this decides how long to wait (honoring `Retry-After`) and
+ * when to stop. Two short retries, then surface the error — a blip shouldn't
+ * flip a connection to an error state, but a genuinely failing endpoint must
+ * not keep the request hanging.
+ */
+export function zohoRetryDelays(status: number, retryAfterHeader: string | null): number[] {
+  if (status !== 429 && !(status >= 500 && status <= 599)) return [];
+  const retryAfter = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : Number.NaN;
+  const base = Number.isFinite(retryAfter) ? Math.max(1, retryAfter) * 1000 : null;
+  return [base ?? 300, base ?? 900];
+}
+
+async function zohoFetch<T>(
   connection: { id: string; encryptedCredentials: string },
   path: string,
   params?: Record<string, string>,
 ): Promise<T> {
   let credentials = decryptCalendarCredentials<ZohoCredentials>(connection.encryptedCredentials);
   if (credentials.expiresAt < Date.now() + 60_000) credentials = await refresh(connection.id, credentials);
-  const request = async () => {
+  const perform = (token: string) => {
     const url = new URL(`/books/v3/${path.replace(/^\//, "")}`, credentials.apiDomain);
     for (const [key, value] of Object.entries(params || {})) url.searchParams.set(key, value);
-    return fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${credentials.accessToken}` } });
+    return fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
   };
-  let response = await request();
+
+  let response = await perform(credentials.accessToken);
   if (response.status === 401) {
     credentials = await refresh(connection.id, credentials);
-    response = await request();
+    response = await perform(credentials.accessToken);
   }
-  if (!response.ok) throw new Error(`Zoho Books request failed (${response.status}).`);
-  const payload = await response.json() as T & { code?: number; message?: string };
-  if (payload.code && payload.code !== 0) throw new Error(payload.message || "Zoho Books returned an error.");
-  return payload;
+
+  for (const delayMs of zohoRetryDelays(response.status, response.headers.get("Retry-After"))) {
+    if (response.ok) break;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    response = await perform(credentials.accessToken);
+  }
+
+  if (!response.ok) {
+    throw zohoHttpError(response.status);
+  }
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error("Zoho Books returned a response that could not be read.");
+  }
+}
+
+/** A FetchPage transport wired to the real Zoho client, for the provider seam. */
+function zohoFetchPage(connection: { id: string; encryptedCredentials: string }) {
+  return async (path: string, options?: { params?: Record<string, string>; retry?: boolean }) => {
+    return zohoFetch(connection, path, options?.params);
+  };
 }
 
 export async function getZohoOrganizations(credentials: ZohoCredentials): Promise<ZohoOrganization[]> {
   const temporary = { id: "oauth-callback", encryptedCredentials: encryptCalendarCredentials(credentials) };
-  const result = await apiFetch<{ organizations?: ZohoOrganization[] }>(temporary, "organizations");
-  return result.organizations || [];
+  const provider = createZohoProvider();
+  const listed = await provider.listOrganizations(zohoFetchPage(temporary));
+  // The provider seam returns the mapped shape; the callback stores the raw
+  // Zoho organization objects so nothing is lost (ids, currency, timezone).
+  return listed.map((organization) => ({
+    organization_id: organization.id,
+    name: organization.name,
+    currency_code: organization.currency || undefined,
+  }));
 }
 
+/**
+ * Save a Zoho connection WITHOUT choosing an organization.
+ *
+ * The OAuth callback stores the candidate organizations in `settings`; the
+ * user explicitly picks one via `POST /api/connectors/zoho-books/organization`
+ * before any sync runs. `saveZohoConnection` never auto-selects — that
+ * contradicted the onboarding copy which promises confirmation.
+ */
 export async function saveZohoConnection(userId: string, credentials: ZohoCredentials, organizations: ZohoOrganization[]) {
-  const organization = organizations.find((item) => item.is_default_org) || organizations[0];
-  if (!organization) throw new Error("No Zoho Books organization is available for this account.");
+  if (!organizations.length) throw new Error("No Zoho Books organization is available for this account.");
+  const settings = {
+    organizations: organizations.map((organization) => ({
+      id: organization.organization_id,
+      name: organization.name,
+      currency: organization.currency_code || null,
+      timeZone: organization.time_zone || null,
+    })),
+    // organizationId is deliberately absent until the user confirms.
+  };
+  const first = organizations[0];
   return prisma.connectorConnection.upsert({
     where: {
       userId_provider_providerAccountId: {
         userId,
         provider: "zoho_books",
-        providerAccountId: organization.organization_id,
+        providerAccountId: first.organization_id,
       },
     },
     create: {
       userId,
       provider: "zoho_books",
-      providerAccountId: organization.organization_id,
-      accountLabel: organization.name,
+      providerAccountId: first.organization_id,
+      accountLabel: first.name,
       encryptedCredentials: encryptCalendarCredentials(credentials),
       scopes: ["contacts.read", "settings.read", "projects.read", "invoices.read", "customerpayments.read", "expenses.read"],
-      settings: {
-        organizationId: organization.organization_id,
-        organizationName: organization.name,
-        currency: organization.currency_code,
-        timeZone: organization.time_zone,
-        organizations,
-      },
+      settings,
     },
     update: {
-      accountLabel: organization.name,
+      accountLabel: first.name,
       encryptedCredentials: encryptCalendarCredentials(credentials),
       status: "connected",
       lastError: null,
-      settings: {
-        organizationId: organization.organization_id,
-        organizationName: organization.name,
-        currency: organization.currency_code,
-        timeZone: organization.time_zone,
-        organizations,
-      },
+      settings,
     },
   });
 }
+
+/**
+ * Confirm the organization the user actually picked. Sync is refused until
+ * this has been called with one of the stored `settings.organizations` ids.
+ */
+export async function confirmZohoOrganization(connectionId: string, userId: string, organizationId: string) {
+  const connection = await prisma.connectorConnection.findFirst({
+    where: { id: connectionId, userId, provider: "zoho_books" },
+  });
+  if (!connection) throw new ZohoNotFound("Zoho Books connection not found.");
+  const settings = (connection.settings as { organizations?: Array<{ id: string; name: string; currency?: string | null }> } | null) || {};
+  const organization = (settings.organizations || []).find((item) => item.id === organizationId);
+  if (!organization) {
+    throw new ZohoValidationError("Choose one of the organizations listed for this account.");
+  }
+  const updated = await prisma.connectorConnection.update({
+    where: { id: connection.id },
+    data: {
+      providerAccountId: organization.id,
+      accountLabel: organization.name,
+      settings: {
+        ...settings,
+        organizationId: organization.id,
+        organizationName: organization.name,
+        currency: organization.currency || null,
+      },
+      status: "connected",
+      lastError: null,
+    },
+  });
+  return updated;
+}
+
+export class ZohoNotFound extends Error {}
+export class ZohoValidationError extends Error {}
 
 export async function verifyZohoConnection(connectionId: string) {
   const connection = await prisma.connectorConnection.findUniqueOrThrow({ where: { id: connectionId } });
   const settings = connection.settings as { organizationId?: string } | null;
   if (!settings?.organizationId) throw new Error("Choose a Zoho Books organization before syncing.");
-  await apiFetch(connection, "organizations");
+  // Confirm the stored API domain is still a sanctioned Zoho host before any
+  // request is made (fail closed, never a silent fallback).
+  createZohoProvider().resolveApiDomain(decryptCalendarCredentials<{ apiDomain?: string }>(connection.encryptedCredentials));
+  await zohoFetch(connection, "organizations");
   await prisma.connectorConnection.update({
     where: { id: connection.id },
     data: { status: "connected", lastError: null, lastSyncedAt: new Date() },
   });
   return connection;
 }
+
+/**
+ * Revoke Rive's Zoho grant so a disconnected refresh token can't still be
+ * used. Best-effort, mirroring `revokeGoogleCredentials`: a revoke failure
+ * must never block the local disconnect the user asked for.
+ */
+export async function revokeZohoCredentials(encryptedCredentials: string): Promise<void> {
+  let credentials: ZohoCredentials;
+  try {
+    credentials = decryptCalendarCredentials<ZohoCredentials>(encryptedCredentials);
+  } catch {
+    return;
+  }
+  const token = credentials.refreshToken || credentials.accessToken;
+  if (!token) return;
+  try {
+    await fetch(`${credentials.accountsServer}/oauth/v2/token/revoke`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+    });
+  } catch (error) {
+    console.error("Zoho token revocation failed; local disconnect still proceeds:", error);
+  }
+}
+
+export { ZohoAuthError };

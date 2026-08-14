@@ -11,6 +11,11 @@ import type { WorkspaceSnapshot } from "@/lib/migration/workspace";
 import { MIGRATION_EVENTS, recordMigrationEvent } from "@/utils/migration/analytics";
 import { phaseFor } from "@/utils/migration/session";
 import type { IngestedSource } from "@/utils/migration/ingest";
+import { resolveRelationships, deriveImpliedClients } from "@/lib/migration/relationships";
+import { applyDeduplication } from "@/lib/migration/dedupe";
+import { validateRecords } from "@/lib/migration/validate";
+import { buildImportPlan } from "@/lib/migration/plan";
+import { buildWorkspaceIndex } from "@/lib/migration/workspace";
 
 /**
  * Analysis: persist sources, run the deterministic pipeline, store the result.
@@ -306,4 +311,156 @@ function toRecordRow(
     status: record.status,
     action: record.action,
   };
+}
+
+export type ProviderAnalysisResult = {
+  plan: ImportPlan;
+  state: MigrationState;
+  recordCount: number;
+};
+
+/**
+ * Persist provider-sourced IR (Zoho Books, later QuickBooks/Xero) into an
+ * existing migration and run the post-file pipeline stages.
+ *
+ * A provider adapter already produces canonical `MigrationRecordIR`, so the
+ * file/profile/mapping stages do not apply. What still must run — and is the
+ * whole point of routing provider imports through the Migration Engine — is
+ * the relationship resolution, deduplication, validation, and plan/hash
+ * machinery, so a Zoho import gets exactly the same review, no-duplicate
+ * guarantee, and commit ledger as a CSV import.
+ *
+ * Resolutions stored on the migration replay here, exactly as they do in
+ * `analyzeMigration`, so a review decision survives re-sync.
+ */
+export async function persistProviderRecords(
+  userId: string,
+  importJobId: string,
+  providerRecords: MigrationRecordIR[],
+): Promise<ProviderAnalysisResult> {
+  const job = await prisma.importJob.findFirstOrThrow({
+    where: { id: importJobId, userId, engineVersion: 2 },
+  });
+  const workspace = await loadWorkspaceSnapshot(userId);
+  const workspaceIndex = buildWorkspaceIndex(workspace);
+
+  const summary = (job.summary as Record<string, unknown> | null) || {};
+  const resolutions = (summary.resolutions as Record<string, RecordResolution> | undefined) || {};
+
+  // Same deterministic sequence as runPipeline's post-file stages.
+  const records = [...providerRecords];
+  const resolution = resolveRelationships(records, workspaceIndex);
+  const implied = deriveImpliedClients(records, resolution);
+  if (implied.length) {
+    records.push(...implied);
+    const second = resolveRelationships(records, workspaceIndex);
+    applyDeduplication(records, second.index, workspaceIndex);
+  } else {
+    applyDeduplication(records, resolution.index, workspaceIndex);
+  }
+  validateRecords(records);
+  applyResolutionsFromSummary(records, resolutions);
+
+  const plan = buildImportPlan({
+    records,
+    mappingStats: { autoMapped: 1, totalMappable: 1 },
+    planVersion: job.planVersion + 1,
+  });
+
+  const state = nextState(plan, 0);
+
+  await prisma.$transaction(async (transaction) => {
+    await transaction.migrationRecord.deleteMany({ where: { importJobId } });
+    if (records.length) {
+      await transaction.migrationRecord.createMany({
+        data: records.map((record) => toRecordRow(importJobId, record, new Map())),
+      });
+    }
+    await transaction.importJob.update({
+      where: { id: importJobId },
+      data: {
+        status: state,
+        phase: phaseFor(state),
+        planHash: plan.planHash,
+        planVersion: plan.planVersion,
+        plan: plan as unknown as Prisma.InputJsonValue,
+        totalRows: providerRecords.length,
+        processedRows: records.length,
+        unresolvedCount: plan.reviewItems.length,
+        summary: {
+          ...summary,
+          resolutions,
+          metrics: plan.metrics,
+          counts: plan.counts,
+          totals: plan.totals,
+          source: "zoho_books",
+        } as unknown as Prisma.InputJsonValue,
+        error: null,
+      },
+    });
+  }, { timeout: 60_000 });
+
+  await recordMigrationEvent(userId, MIGRATION_EVENTS.planCreated, importJobId, {
+    recordCount: plan.operations.length,
+    reviewCount: plan.reviewItems.length,
+    errorCount: plan.metrics.errorCount,
+    warningCount: plan.metrics.warningCount,
+    duplicateRate: plan.metrics.duplicateRate,
+    entityCounts: {
+      clients: plan.counts.clients.create,
+      projects: plan.counts.projects.create,
+      invoices: plan.counts.invoices.create,
+      expenses: plan.counts.expenses.create,
+    },
+  });
+
+  return { plan, state, recordCount: records.length };
+}
+
+/**
+ * Apply the same review decisions `runPipeline` replays, so provider imports
+ * honor previously-resolved questions. Kept local to avoid importing the
+ * pipeline's private helper.
+ */
+function applyResolutionsFromSummary(records: MigrationRecordIR[], resolutions: Record<string, RecordResolution>): void {
+  if (!Object.keys(resolutions).length) return;
+  for (const record of records) {
+    const resolution = resolutions[record.source.sourceKey];
+    if (!resolution || record.errors.length) continue;
+    switch (resolution.decision) {
+      case "create":
+        record.action = "create";
+        record.status = "ready";
+        break;
+      case "skip":
+        record.action = "skip";
+        record.status = "skipped";
+        break;
+      case "merge": {
+        const candidate = record.duplicateCandidates[0];
+        if (!candidate) break;
+        if (candidate.scope === "workspace" && candidate.targetId) {
+          record.action = "link";
+          record.status = "ready";
+        } else {
+          record.action = "skip";
+          record.status = "skipped";
+        }
+        break;
+      }
+      case "link": {
+        const field = record.entity === "expenses" ? "projectId" : "clientId";
+        record.resolvedRelationships[field] = {
+          groupKey: resolution.groupKey || null,
+          existingId: resolution.existingId || null,
+          confidence: 1,
+        };
+        record.relationshipCandidates = [];
+        if (record.status === "review") record.status = "ready";
+        break;
+      }
+      default:
+        break;
+    }
+  }
 }
