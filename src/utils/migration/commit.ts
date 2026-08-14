@@ -225,8 +225,15 @@ export async function commitMigration(
     }
   }
 
+  // Fetch every operation that has not actually applied. `pending` is the
+  // fresh-commit case; `failed` is the resume case — a previous attempt died
+  // mid-batch and marked that batch failed, and resuming must re-run exactly
+  // those operations. The ledger's per-operation idempotency (unique
+  // operationKey + the applied status flip inside the create transaction)
+  // makes re-running them safe: records already created by a prior attempt are
+  // skipped, not duplicated.
   const batches = await prisma.migrationOperation.findMany({
-    where: { importJobId, planHash: plan.planHash, status: "pending" },
+    where: { importJobId, planHash: plan.planHash, status: { in: ["pending", "failed"] } },
     orderBy: { sequence: "asc" },
     select: { id: true, operationKey: true, action: true, entity: true, sourceKey: true, sequence: true, batch: true },
   });
