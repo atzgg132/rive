@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const state = verifyConnectorOAuthState(req.nextUrl.searchParams.get("state") || "", "zoho_books");
   if (!session || !state || state.userId !== session.userId || !code) {
-    return NextResponse.redirect(new URL("/onboarding?connectionError=invalid_zoho_callback", req.url));
+    return NextResponse.redirect(new URL("/onboarding?connectionError=invalid_zoho_callback", process.env.APP_URL || req.url));
   }
   try {
     const credentials = await exchangeZohoCode(code, req.nextUrl.searchParams.get("accounts-server"));
@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
     // The connection is saved but the organization is NOT auto-selected. The
     // user confirms it explicitly before any sync runs (see
     // POST /api/connectors/zoho-books/organization).
-    return NextResponse.redirect(new URL(`${state.returnTo}?connected=zoho_books&zohoOrgConfirmation=1`, req.url));
+    return NextResponse.redirect(new URL(`${state.returnTo}?connected=zoho_books&zohoOrgConfirmation=1`, process.env.APP_URL || req.url));
   } catch (error) {
     console.error("Zoho Books callback failed:", error);
-    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=zoho_connection_failed`, req.url));
+    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=zoho_connection_failed`, process.env.APP_URL || req.url));
   }
 }

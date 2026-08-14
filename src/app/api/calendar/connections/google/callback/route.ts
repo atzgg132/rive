@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const state = verifyCalendarOAuthState(req.nextUrl.searchParams.get("state") || "");
   if (!session || !state || state.userId !== session.userId || !code) {
-    return NextResponse.redirect(new URL("/calendar?connectionError=invalid_google_callback", req.url));
+    return NextResponse.redirect(new URL("/calendar?connectionError=invalid_google_callback", process.env.APP_URL || req.url));
   }
   if (!googleCalendarAvailable()) {
-    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=google_not_available`, req.url));
+    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=google_not_available`, process.env.APP_URL || req.url));
   }
   try {
     const credentials = await exchangeGoogleCode(code);
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     for (const external of calendars.filter((calendar) => calendar.selected)) {
       await watchGoogleCalendar(external.id).catch((error) => console.error("Google watch setup failed:", error));
     }
-    return NextResponse.redirect(new URL(`${state.returnTo}?connected=google`, req.url));
+    return NextResponse.redirect(new URL(`${state.returnTo}?connected=google`, process.env.APP_URL || req.url));
   } catch (error) {
     console.error("Google calendar callback failed:", error);
     const existing = await prisma.calendarConnection.findFirst({
@@ -35,6 +35,6 @@ export async function GET(req: NextRequest) {
         data: { status: "error", lastError: error instanceof Error ? error.message.slice(0, 500) : "Connection failed" },
       });
     }
-    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=google_sync_failed`, req.url));
+    return NextResponse.redirect(new URL(`${state.returnTo}?connectionError=google_sync_failed`, process.env.APP_URL || req.url));
   }
 }
