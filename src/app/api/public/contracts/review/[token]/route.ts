@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { assertContractsEnabled, classifyContractPublicLinkFailure, createNotification, getRequestId, getRequestIp, hashAccessToken, hashRequestValue, logContractPublicLinkAccess, CONTRACT_MAX_COMMENT_LENGTH } from "@/utils/contracts";
-import { rateLimit } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
 
 async function resolveLink(token: string) {
   return prisma.contractReviewLink.findUnique({
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       return NextResponse.json({ success: false, message: "This version is no longer accepting review comments." }, { status: 409 });
     }
     const ip = getRequestIp(req);
-    if (!rateLimit(`contract-review:${link!.id}:${hashRequestValue(ip)}`, 20, 60 * 60 * 1000)) {
+    if (!(await durableRateLimit(`contract-review:${link!.id}:${hashRequestValue(ip)}`, 20, 60 * 60 * 1000))) {
       logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "rate_limited", revoked: false, expired: false, rateLimited: true });
       return NextResponse.json({ success: false, message: "Too many comments from this link. Try again later." }, { status: 429 });
     }

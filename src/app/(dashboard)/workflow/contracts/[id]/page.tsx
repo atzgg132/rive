@@ -79,6 +79,10 @@ type Contract = {
   finalized_at: string | null;
   executed_at: string | null;
   voided_at: string | null;
+  void_requested_at: string | null;
+  void_requested_by_role: string | null;
+  void_request_note: string | null;
+  void_confirm_note: string | null;
   client: { id: string; name: string; email: string | null; company?: string | null; address?: string | null };
   project: { id: string; title: string; description?: string | null; milestones?: Array<{ id: string; title: string; dueDate: string | null; completed: boolean }> } | null;
   versions: Array<{ id: string; version: number; status: string; content: Content; content_hash: string; created_at: string; finalized_at: string | null; artifacts: Array<{ id: string }> }>;
@@ -134,6 +138,7 @@ export default function ContractDetailPage() {
   const [comment, setComment] = useState("");
   const [finalizeOpenComments, setFinalizeOpenComments] = useState<number | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [voidNote, setVoidNote] = useState("");
 
   const hydrateEditor = (nextContract: Contract) => {
     const latest = nextContract.versions[0]?.content;
@@ -280,6 +285,36 @@ export default function ContractDetailPage() {
           {contract.status !== "executed" && contract.status !== "void" ? <Button variant="ghost" className="text-destructive" onClick={() => setVoidDialogOpen(true)}><XCircle className="h-4 w-4" /> Void</Button> : null}
         </div>
       </div>
+
+      {contract.status === "executed" ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+          {contract.void_requested_at ? (
+            contract.void_requested_by_role === "client" ? (
+              <>
+                <p className="font-bold">The client requested to void this accepted Agreement.</p>
+                {contract.void_request_note ? <p className="mt-1 whitespace-pre-wrap text-xs">{contract.void_request_note}</p> : null}
+                <textarea className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground" rows={2} placeholder="Add a short confirmation note" value={voidNote} onChange={(event) => setVoidNote(event.target.value)} />
+                <div className="mt-2 flex gap-2">
+                  <Button size="sm" disabled={busy === "void-confirm" || voidNote.trim().length < 5} onClick={() => void runAction("void-confirm", `/api/workflow/contracts/${id}/void`, "POST", { action: "confirm", note: voidNote })}>Confirm void</Button>
+                  <Button size="sm" variant="outline" disabled={busy === "void-decline"} onClick={() => void runAction("void-decline", `/api/workflow/contracts/${id}/void`, "POST", { action: "decline", note: voidNote })}>Decline</Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p><strong>Void requested.</strong> Waiting for the client to confirm — the Agreement stays accepted until then.</p>
+                <Button size="sm" variant="outline" disabled={busy === "void-decline"} onClick={() => void runAction("void-decline", `/api/workflow/contracts/${id}/void`, "POST", { action: "decline", note: "" })}>Cancel request</Button>
+              </div>
+            )
+          ) : (
+            <>
+              <p className="font-bold">Void this accepted Agreement</p>
+              <p className="mt-1 text-xs">Both parties must agree. The client will be asked to confirm; the record is retained either way.</p>
+              <textarea className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground" rows={2} placeholder="Add a short reason for the void request" value={voidNote} onChange={(event) => setVoidNote(event.target.value)} />
+              <Button size="sm" className="mt-2" disabled={busy === "void-request" || voidNote.trim().length < 5} onClick={() => void runAction("void-request", `/api/workflow/contracts/${id}/void`, "POST", { action: "request", note: voidNote })}>Request void</Button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <ContractProgress status={contract.status} />
 

@@ -816,6 +816,10 @@ model Contract {
   finalizedAt        DateTime?                   @map("finalized_at")
   executedAt         DateTime?                   @map("executed_at")
   voidedAt           DateTime?                   @map("voided_at")
+  voidRequestedAt    DateTime?                   @map("void_requested_at")
+  voidRequestedByRole String?                    @map("void_requested_by_role")
+  voidRequestNote    String?                     @map("void_request_note")
+  voidConfirmNote    String?                     @map("void_confirm_note")
   createdAt          DateTime                    @default(now()) @map("created_at")
   updatedAt          DateTime                    @updatedAt @map("updated_at")
   versions           ContractVersion[]
@@ -1067,4 +1071,15 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")
+}
+
+model RateLimitBucket {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  count     Int
+  resetAt   DateTime @map("reset_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([resetAt])
+  @@map("rate_limit_buckets")
 }

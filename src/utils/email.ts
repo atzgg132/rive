@@ -16,6 +16,7 @@ export type EmailType =
   | "contract_review"
   | "contract_signing"
   | "contract_executed"
+  | "contract_void"
   | "invoice_ready"
   | "invoice_sent";
 
@@ -610,5 +611,31 @@ export function sendInvoiceSentEmail(input: {
       recipient: input.to,
     }),
     text: `Invoice ${input.invoiceNumber} from ${input.senderName}.\n\nAmount due: ${input.currency} ${input.total}\nDue: ${due}\n\nVerify payment details through a trusted channel before paying.`,
+  });
+}
+
+export function sendContractVoidRequestedEmail(input: {
+  to: string;
+  recipientName: string;
+  contractTitle: string;
+  requesterName: string;
+  note: string;
+}): Promise<EmailResult> {
+  const safeRecipient = escapeHtml(input.recipientName);
+  const safeRequester = escapeHtml(input.requesterName);
+  const safeNote = escapeHtml(input.note).replace(/\n/g, "<br>");
+  return deliver({
+    to: input.to,
+    type: "contract_void",
+    subject: `Void requested: ${input.contractTitle}`,
+    html: baseTemplate({
+      eyebrow: "void requested",
+      title: `${safeRequester} requested to void an accepted Agreement.`,
+      intro: `A void request was raised for “${escapeHtml(input.contractTitle)}”. Both parties must agree before it is voided.`,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeRecipient}, open the acceptance link you were sent for this Agreement to confirm or decline the void. The Agreement stays accepted and fully retained until the other party also confirms.</p><p style="margin:18px 0 0;padding:14px 16px;border:1px solid #DDE7F2;border-radius:12px;background:#F7FAFD;color:#42556F;font-size:13px;line-height:21px"><strong style="color:#0C1E36">Reason:</strong><br>${safeNote}</p>`,
+      aside: "If you did not expect this message, you can safely ignore it. The Agreement is not voided unless you confirm through your acceptance link.",
+      recipient: input.to,
+    }),
+    text: `${input.requesterName} requested to void “${input.contractTitle}”.\n\nReason: ${input.note}\n\nOpen the acceptance link you were sent to confirm or decline. The Agreement stays accepted until you confirm.`,
   });
 }

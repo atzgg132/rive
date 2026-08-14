@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { processContractBilling } from "@/utils/contractBilling";
 import { prisma } from "@/utils/db";
 import { assertContractsEnabled, createNotification, transitionContractStatus } from "@/utils/contracts";
+import { pruneExpiredRateLimitBuckets } from "@/utils/durableRateLimit";
 
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get("authorization");
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
       data: { status: "overdue" },
     });
     const billing = await processContractBilling({ limit: 500 });
+    await pruneExpiredRateLimitBuckets().catch(() => undefined);
     return NextResponse.json({ success: billing.failed === 0, expiredContracts: expired, overdueInvoices: overdue.count, billing });
   } catch (error) {
     console.error("Contract billing maintenance error:", error);

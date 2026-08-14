@@ -461,7 +461,7 @@ export default function PortfolioDashboardPage() {
 
   return (
     <div className="portfolio-editor-panels workspace-page gap-5">
-      <div className="sticky top-0 z-20 border-b border-border bg-background/95 py-4 backdrop-blur">
+      <div className="sticky top-0 z-20 border-b border-border bg-background py-4 backdrop-blur">
         <PageHeader
           className="sm:flex-col xl:flex-row"
           title={<span className="flex items-center gap-2"><Globe2 className="h-6 w-6 text-primary" /> Portfolio Studio</span>}

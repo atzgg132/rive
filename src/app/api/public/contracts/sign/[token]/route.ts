@@ -19,7 +19,7 @@ import {
   stableStringify,
   transitionContractStatus,
 } from "@/utils/contracts";
-import { rateLimit } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
 import { createNotification } from "@/utils/contracts";
 import { processContractBilling } from "@/utils/contractBilling";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
@@ -78,6 +78,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
         version: { id: link!.version!.id, number: link!.version!.version, hash: link!.version!.contentHash },
         expires_at: link!.expiresAt,
         executed_at: link!.contract.executedAt,
+        void_requested_at: link!.contract.voidRequestedAt,
+        void_requested_by_role: link!.contract.voidRequestedByRole,
+        void_request_note: link!.contract.voidRequestNote,
+        void_confirm_note: link!.contract.voidConfirmNote,
       },
       signer: { id: link!.signer!.id, role: link!.signer!.role, name: link!.signer!.name, email: link!.signer!.email, status: link!.signer!.status, sequence: link!.signer!.sequence },
       consent: { version: CONTRACT_CONSENT_TEXT_VERSION, text: CONTRACT_CONSENT_TEXT },
@@ -102,7 +106,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
     }
     const ip = getRequestIp(req);
-    if (!rateLimit(`contract-sign:${link!.id}:${hashRequestValue(ip)}`, 5, 60 * 60 * 1000)) {
+    if (!(await durableRateLimit(`contract-sign:${link!.id}:${hashRequestValue(ip)}`, 5, 60 * 60 * 1000))) {
       logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link!.contractId, versionId: link!.versionId, outcome: "rate_limited", revoked: false, expired: false, rateLimited: true });
       return NextResponse.json({ success: false, message: "Too many acceptance attempts. Try again later." }, { status: 429 });
     }

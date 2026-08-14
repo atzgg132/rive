@@ -29,6 +29,10 @@ type SignData = {
     version: { number: number; hash: string };
     expires_at: string;
     executed_at: string | null;
+    void_requested_at: string | null;
+    void_requested_by_role: string | null;
+    void_request_note: string | null;
+    void_confirm_note: string | null;
   };
   signer: { role: string; name: string; email: string; status: string; sequence: number };
   consent: { version: string; text: string };
@@ -48,6 +52,8 @@ export default function ContractSignPage() {
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [declining, setDeclining] = useState(false);
+  const [voidNote, setVoidNote] = useState("");
+  const [voidBusy, setVoidBusy] = useState(false);
 
   const load = async () => {
     if (!token) return;
@@ -111,6 +117,27 @@ export default function ContractSignPage() {
       toast.error(declineError instanceof Error ? declineError.message : "Unable to request changes.");
     } finally {
       setDeclining(false);
+    }
+  };
+
+  const submitVoid = async (action: "request" | "confirm" | "decline") => {
+    if (!token || voidBusy) return;
+    setVoidBusy(true);
+    try {
+      const response = await fetch(`/api/public/contracts/void/${encodeURIComponent(token)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, note: voidNote }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.message || "Unable to process the void request.");
+      toast.success(payload.message);
+      setVoidNote("");
+      await load();
+    } catch (voidError) {
+      toast.error(voidError instanceof Error ? voidError.message : "Unable to process the void request.");
+    } finally {
+      setVoidBusy(false);
     }
   };
 
@@ -189,6 +216,35 @@ export default function ContractSignPage() {
                   <>
                     <Alert variant="success"><CheckCircle2 className="h-5 w-5" /><p className="text-sm">{data.contract.status === "executed" ? "Both parties have recorded acceptance." : "Your acceptance is recorded. The next party can continue."}</p></Alert>
                     {downloadUrl && data.contract.status === "executed" ? <a href={downloadUrl} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground" download><Download className="h-4 w-4" /> Download accepted PDF</a> : null}
+                    {data.contract.status === "executed" ? (
+                      <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
+                        {data.contract.void_requested_at ? (
+                          data.contract.void_requested_by_role !== data.signer.role ? (
+                            <>
+                              <p className="font-bold">A void was requested for this Agreement.</p>
+                              {data.contract.void_request_note ? <p className="mt-1 whitespace-pre-wrap text-xs">{data.contract.void_request_note}</p> : null}
+                              <Textarea rows={2} className="mt-2" placeholder="Add a short confirmation note" value={voidNote} onChange={(event) => setVoidNote(event.target.value)} maxLength={2_000} />
+                              <div className="mt-2 flex gap-2">
+                                <Button size="sm" disabled={voidBusy || voidNote.trim().length < 5} onClick={() => void submitVoid("confirm")}>Confirm void</Button>
+                                <Button size="sm" variant="outline" disabled={voidBusy} onClick={() => void submitVoid("decline")}>Decline</Button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-xs">You requested to void. Waiting for the other party to confirm.</p>
+                              <Button size="sm" variant="outline" disabled={voidBusy} onClick={() => void submitVoid("decline")}>Cancel</Button>
+                            </div>
+                          )
+                        ) : (
+                          <>
+                            <p className="font-bold">Void this accepted Agreement</p>
+                            <p className="mt-1 text-xs">Both parties must agree. Your request will be sent to the other party for confirmation.</p>
+                            <Textarea rows={2} className="mt-2" placeholder="Add a short reason for the void request" value={voidNote} onChange={(event) => setVoidNote(event.target.value)} maxLength={2_000} />
+                            <Button size="sm" className="mt-2" disabled={voidBusy || voidNote.trim().length < 5} onClick={() => void submitVoid("request")}>Request void</Button>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
                   </>
                 ) : waiting ? <p className="text-sm text-muted-foreground">The acceptance form unlocks after the prior party records acceptance.</p> : (
                   <>
