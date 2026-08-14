@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { readIdempotentResult, recordIdempotentResult } from "@/utils/idempotency";
 import {
   buildContractContent,
   type ContractContent,
@@ -127,6 +128,24 @@ export async function POST(req: NextRequest) {
     const projectId = clean(body.projectId ?? body.project_id, 80) || null;
     if (!title) return NextResponse.json({ success: false, message: "Agreement title is required." }, { status: 400 });
     if (!clientId) return NextResponse.json({ success: false, message: "Choose a client before creating an Agreement." }, { status: 400 });
+
+    // Idempotency: a client-supplied request id turns a double-click or a
+    // retry after a dropped response into one creation instead of a duplicate
+    // draft. The header is the conventional place; the body field is accepted
+    // too so the contract composer needs no special header handling.
+    const requestId = clean(
+      req.headers.get("Idempotency-Key") ?? (body.requestId as string | undefined) ?? "",
+      80,
+    );
+    if (requestId && requestId.length > 0) {
+      const prior = readIdempotentResult(session.userId, requestId);
+      if (prior) {
+        return NextResponse.json(
+          { success: true, contractId: prior.contractId, versionId: prior.versionId, message: "This request was already handled." },
+          { status: 200 },
+        );
+      }
+    }
 
     const [owner, client] = await Promise.all([
       prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, name: true, email: true, currency: true } }),
@@ -272,6 +291,15 @@ export async function POST(req: NextRequest) {
       }
       return { contractId: contract.id, versionId: version.id };
     });
+
+    // Record the idempotency result only after the creation actually
+    // succeeded, so a failed attempt is retriable.
+    if (requestId && requestId.length > 0) {
+      recordIdempotentResult(session.userId, requestId, {
+        contractId: created.contractId,
+        versionId: created.versionId,
+      });
+    }
 
     return NextResponse.json({ success: true, contractId: created.contractId, versionId: created.versionId, message: "Agreement draft created." }, { status: 201 });
   } catch (error) {
