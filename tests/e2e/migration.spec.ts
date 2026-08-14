@@ -235,4 +235,112 @@ test.describe("migration", () => {
     expect(response.status()).toBe(409);
     expect((await response.json()).message).toMatch(/changed since you reviewed it/i);
   });
+
+  test("an unresolved relationship is surfaced for review and the resolution persists through a refresh", async ({ context, page, baseURL }) => {
+    await authenticate(context, baseURL!);
+    await page.goto("/migrate", { waitUntil: "domcontentloaded" });
+
+    // projects-unresolved-client.csv names clients ("ACME", "Umbrella Holdings")
+    // that only resemble the imported client rows, so the engine must ask rather
+    // than guess.
+    await uploadAndAnalyze(page, ["clients-standard.csv", "projects-unresolved-client.csv"]);
+    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
+
+    // The relationship review section is visible and names the unresolved client.
+    await expect(page.getByText(/not linked yet/i)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/ACME/i).first()).toBeVisible();
+
+    // Resolve one relationship: link "Website redesign" (project) to the client
+    // it actually belongs to, using the "Link to" candidate button.
+    const linkButton = page.getByRole("button", { name: /^Link to .*%/ }).first();
+    await expect(linkButton).toBeVisible();
+    const patch = page.waitForResponse(
+      (response) => response.url().includes("/api/migrations/") && response.request().method() === "PATCH",
+    );
+    await linkButton.click();
+    expect((await patch).status()).toBeLessThan(400);
+
+    // The resolution persists server-side: a refresh lands back on review with
+    // the resolved row no longer listed as an open question.
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText(/not linked yet/i)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/ACME/i).first()).not.toBeVisible();
+  });
+
+  test("an identical expense is raised as a possible duplicate for the user to decide", async ({ context, page, baseURL }) => {
+    await authenticate(context, baseURL!);
+    await page.goto("/migrate", { waitUntil: "domcontentloaded" });
+
+    // expenses-duplicates.csv has two rows with the same merchant, amount, and
+    // date — the composite fingerprint is identical, so the second is offered
+    // for review rather than silently merged.
+    await uploadAndAnalyze(page, ["expenses-duplicates.csv"]);
+    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
+
+    await expect(page.getByText(/possible duplicates/i)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/We think these are the same/i).first()).toBeVisible();
+    await expect(page.getByText(/identical expense appears earlier/i).first()).toBeVisible();
+
+    // Decide: merge the duplicate row. The button is "Merge them" for batch
+    // scope duplicates.
+    const mergeButton = page.getByRole("button", { name: /Merge them/ }).first();
+    await expect(mergeButton).toBeVisible();
+    const patch = page.waitForResponse(
+      (response) => response.url().includes("/api/migrations/") && response.request().method() === "PATCH",
+    );
+    await mergeButton.click();
+    expect((await patch).status()).toBeLessThan(400);
+
+    // After the merge decision the duplicate is no longer an open question.
+    await expect(page.getByText(/possible duplicates/i)).toHaveCount(0, { timeout: 30_000 });
+  });
+
+  test("abandoning a review migration removes it from history without touching any workspace record", async ({ context, page, baseURL }) => {
+    await authenticate(context, baseURL!);
+    await page.goto("/migrate", { waitUntil: "domcontentloaded" });
+
+    const { migrationId } = await uploadAndAnalyze(page, ["clients-standard.csv", "expenses-duplicates.csv"]);
+    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
+    await expect(page.getByText(/possible duplicates/i)).toBeVisible({ timeout: 30_000 });
+
+    // Confirm the dialog the abandon control shows.
+    page.once("dialog", (dialog) => void dialog.accept());
+
+    // Abandoning is a POST to the migration route (non-destructive — the
+    // server transitions to `abandoned`, never deletes staged rows' targets).
+    const abandon = page.waitForResponse(
+      (response) => response.url().includes(`/api/migrations/${migrationId}`) && response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Discard and start over" }).click();
+    expect((await abandon).status()).toBeLessThan(400);
+
+    // Back at the upload screen, the abandoned migration is gone from history.
+    await expect(page.getByRole("heading", { name: "Import your business" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(migrationId)).toHaveCount(0);
+    await expect(page.getByText(/possible duplicates/i)).toHaveCount(0);
+  });
+
+  test("a refresh during an in-flight commit lands on the finishing screen, not the analysis screen", async ({ context, page, baseURL, request }) => {
+    await authenticate(context, baseURL!);
+    await page.goto("/migrate", { waitUntil: "domcontentloaded" });
+
+    const { migrationId, planHash } = await uploadAndAnalyze(page, ["clients-standard.csv"]);
+
+    // Fire the commit request but don't await it — the server is now committing
+    // and the browser immediately reloads, as a user would after closing a tab.
+    const commitPromise = request.post(`/api/migrations/${migrationId}/commit`, {
+      data: { planHash },
+      headers: { cookie: `rive_session=${await getSessionToken()}` },
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    // Whatever the exact timing, a resumed migration must never land back on
+    // the analysis screen — that would imply the commit never started.
+    await expect(page.getByText(/Reading your files/i)).toHaveCount(0, { timeout: 30_000 });
+
+    // The commit finishes in the background and the polling panel eventually
+    // reports success.
+    await expect(page.getByRole("heading", { name: "Your workspace is ready" })).toBeVisible({ timeout: 60_000 });
+    await commitPromise;
+  });
 });
