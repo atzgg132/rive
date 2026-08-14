@@ -219,6 +219,19 @@ export function runPipeline(input: PipelineInput): PipelineResult {
 
   validateRecords(records);
 
+  // A record with unresolved relationship candidates is an open question — the
+  // review screen must surface it (the GET's `filter=issues` returns
+  // statuses `review`/`error`). Deduplication already marks duplicates
+  // `review`; relationship questions need the same treatment or the review
+  // screen would claim "everything matched" while the plan still lists the
+  // question. `applyResolutions` below clears both the candidates and the
+  // review status once the user answers, so a resolved question stops asking.
+  for (const record of records) {
+    if (record.relationshipCandidates.length > 0 && record.status !== "error") {
+      record.status = "review";
+    }
+  }
+
   // The user's decisions are applied last so they override anything the engine
   // inferred, and are re-applied on every run so review work is never lost when
   // the pipeline recomputes.

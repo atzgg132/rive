@@ -21,12 +21,22 @@ const FIXTURES = join(process.cwd(), "tests", "fixtures", "migration");
 
 let sessionTokenPromise: Promise<string> | undefined;
 
+/**
+ * Build a session token for a FRESH disposable user created for this run.
+ *
+ * Migration commits write real workspace records, so re-running the suite
+ * against a fixed account would accumulate clients/projects/invoices and
+ * change what later tests see (a previously-imported client would be matched
+ * as an existing workspace record instead of surfacing for review). Each run
+ * therefore gets its own `@example.invalid` user with an empty workspace,
+ * matching the self-created-fixture pattern from scripts/smoke-contracts.mjs.
+ * The user is left in place after the run — nothing is ever deleted.
+ */
 async function getSessionToken() {
   if (!sessionTokenPromise) {
     sessionTokenPromise = (async () => {
       loadEnvConfig(process.cwd());
-      const email = process.env.E2E_USER_EMAIL?.trim().toLowerCase();
-      if (!email) throw new Error("E2E_USER_EMAIL is required for migration tests.");
+      if (!process.env.E2E_USER_EMAIL) throw new Error("E2E_USER_EMAIL is required for migration tests.");
 
       const databaseUrl = process.env.DATABASE_URL;
       if (!databaseUrl) throw new Error("DATABASE_URL is required for migration tests.");
@@ -49,11 +59,22 @@ async function getSessionToken() {
       const pool = new Pool({ connectionString: parsed.toString(), ssl });
       const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
       try {
-        const user = await prisma.user.findUnique({
-          where: { email },
+        const email = `migration-e2e-${Date.now()}-${process.pid}@example.invalid`;
+        const user = await prisma.user.create({
+          data: {
+            email,
+            name: "Migration E2E User",
+            passwordHash: "e2e-only",
+            plan: "pro",
+            onboardingStatus: "complete",
+            onboardingStep: 5,
+            businessType: "freelancer",
+            profession: "Product designer",
+            currency: "USD",
+            timeZone: "Asia/Kolkata",
+          },
           select: { id: true, email: true, plan: true, sessionVersion: true },
         });
-        if (!user) throw new Error(`No test user exists for ${email}.`);
         const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
         const payload = JSON.stringify({
           userId: user.id,
@@ -101,8 +122,14 @@ async function uploadAndAnalyze(page: Page, names: string[]) {
   );
   await page.getByRole("button", { name: "Analyze files" }).click();
   const response = await analysis;
-  expect(response.status(), await response.text()).toBeLessThan(400);
-  return response.json();
+  // The wizard navigates (router.replace) as soon as the analysis resolves, so
+  // the body must be read before the navigation races it away.
+  const [status, body] = await Promise.all([
+    response.status(),
+    response.json().catch(() => null),
+  ]);
+  expect(status, body ? JSON.stringify(body).slice(0, 300) : `status ${status}`).toBeLessThan(400);
+  return body;
 }
 
 test.describe("migration", () => {
@@ -126,7 +153,9 @@ test.describe("migration", () => {
     ]);
 
     await expect(page.getByRole("heading", { name: "What Rive found" })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Clients", { exact: true })).toBeVisible();
+    // The entity count card for clients ("3" with the label) — scoped to the
+    // analysis grid rather than the sidebar or file badges.
+    await expect(page.locator("main").getByText("Clients", { exact: true }).first()).toBeVisible();
 
     await page.getByRole("button", { name: "See what will be imported" }).first().click();
     await expect(page.getByRole("heading", { name: "What will happen" })).toBeVisible();
@@ -137,6 +166,9 @@ test.describe("migration", () => {
 
     await expect(page.getByRole("heading", { name: "Your workspace is ready" })).toBeVisible({ timeout: 60_000 });
     await page.getByRole("link", { name: "Go to Overview" }).click();
+    // The dashboard is the shell's Overview link; wait for it rather than
+    // racing the client-side transition against the URL alone.
+    await expect(page.getByRole("link", { name: "Overview" })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
@@ -175,8 +207,9 @@ test.describe("migration", () => {
     await authenticate(context, baseURL!);
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
 
+    // unknown-shape.csv produces no records, so the wizard lands directly on
+    // the review step where the classify control is already visible.
     await uploadAndAnalyze(page, ["unknown-shape.csv"]);
-    await page.getByRole("button", { name: /Review these|Check the details/ }).click();
 
     const select = page.locator('select[id^="classify-"]').first();
     await expect(select).toBeVisible({ timeout: 30_000 });

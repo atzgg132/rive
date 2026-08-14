@@ -3,7 +3,7 @@ import { loadEnvConfig } from "@next/env";
 import { checkServerIdentity } from "node:tls";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { Pool } from "pg";
 
 /**
@@ -20,7 +20,7 @@ import { Pool } from "pg";
  * like the rest of the authenticated suite.
  */
 
-let usersPromise: Promise<{ userA: { token: string }; userB: { token: string } }> | undefined;
+let usersPromise: Promise<{ userA: { token: string; clientId: string }; userB: { token: string } }> | undefined;
 
 async function signSessionToken(payload: Record<string, unknown>): Promise<string> {
   const secret = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-local-development-session-secret";
@@ -28,7 +28,7 @@ async function signSessionToken(payload: Record<string, unknown>): Promise<strin
   return Buffer.from(`${JSON.stringify(payload)}.${signature}`).toString("base64");
 }
 
-async function getUsers(request: APIRequestContext) {
+async function getUsers() {
   if (!usersPromise) {
     usersPromise = (async () => {
       loadEnvConfig(process.cwd());
@@ -61,24 +61,26 @@ async function getUsers(request: APIRequestContext) {
         });
         if (!userA) throw new Error(`No test user exists for ${emailA}.`);
 
-        // User B: a distinct tenant created via the register endpoint. Using a
-        // disposable address under @example.invalid means no real mailbox is
-        // involved, matching the repo's established test-user pattern.
-        const emailB = `cross-tenant-${Date.now()}@example.invalid`;
-        const register = await request.post("/api/auth/register", {
-          data: { email: emailB, name: "Cross Tenant B", password: "test-password-123", inviteToken: "" },
-        });
-        if (register.status() >= 400 && register.status() !== 409) {
-          // The route may reject invites/registration in this environment; fall
-          // back to direct creation only when the register API is unavailable.
-          const existing = await prisma.user.findUnique({ where: { email: emailB } });
-          if (!existing) throw new Error(`Could not create user B (${register.status()}).`);
-        }
-        const userB = await prisma.user.findUnique({
-          where: { email: emailB },
+        // User B: a distinct tenant created directly via Prisma. The register
+        // API requires a waitlist invite, so a self-created fixture user is the
+        // established pattern (see scripts/smoke-contracts.mjs). Disposable
+        // address under @example.invalid; never deleted.
+        const emailB = `cross-tenant-${Date.now()}-${process.pid}@example.invalid`;
+        const userB = await prisma.user.create({
+          data: {
+            email: emailB,
+            name: "Cross Tenant B",
+            passwordHash: "e2e-only",
+            plan: "pro",
+            onboardingStatus: "complete",
+            onboardingStep: 5,
+            businessType: "freelancer",
+            profession: "Product designer",
+            currency: "USD",
+            timeZone: "Asia/Kolkata",
+          },
           select: { id: true, email: true, plan: true, sessionVersion: true },
         });
-        if (!userB) throw new Error(`User B was not created.`);
 
         const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
         const tokenA = await signSessionToken({
@@ -87,7 +89,22 @@ async function getUsers(request: APIRequestContext) {
         const tokenB = await signSessionToken({
           userId: userB.id, email: userB.email, plan: userB.plan, sessionVersion: userB.sessionVersion, expiry,
         });
-        return { userA: { token: tokenA }, userB: { token: tokenB } };
+
+        // A client owned by user A so the fixture contract has a valid owner.
+        const client = await prisma.client.create({
+          data: {
+            userId: userA.id,
+            name: "Cross-tenant fixture client",
+            email: `cross-tenant-client-${Date.now()}@example.invalid`,
+            status: "active",
+          },
+          select: { id: true },
+        });
+
+        return {
+          userA: { token: tokenA, clientId: client.id },
+          userB: { token: tokenB },
+        };
       } finally {
         await prisma.$disconnect();
         await pool.end();
@@ -103,7 +120,7 @@ test.describe("cross-tenant agreement isolation", () => {
   test.skip(!process.env.E2E_USER_EMAIL, "Set E2E_USER_EMAIL and DATABASE_URL to run cross-tenant contract tests.");
 
   test("user B cannot read, edit, finalize, review, sign, or delete user A's contract", async ({ request }) => {
-    const { userA, userB } = await getUsers(request);
+    const { userA, userB } = await getUsers();
 
     // Create a contract as user A with a request id, so we know which record
     // belongs to A.
@@ -111,17 +128,11 @@ test.describe("cross-tenant agreement isolation", () => {
       headers: { cookie: cookieFor(userA.token), "Idempotency-Key": `cross-tenant-${Date.now()}` },
       data: {
         title: "Cross-tenant isolation target",
-        clientId: "client-that-exists",
+        clientId: userA.clientId,
         currency: "USD",
       },
     });
-    // If the fixture client doesn't exist the creation fails; in that case the
-    // contract can't be created in this environment and the test should be
-    // skipped rather than fail. The server returns 400 for a bad client.
-    if (create.status() !== 201) {
-      test.skip(true, "No usable client fixture for user A in this environment.");
-      return;
-    }
+    expect(create.status(), `contract creation should succeed: ${await create.text()}`).toBe(201);
     const { contractId } = await create.json();
     expect(contractId).toBeTruthy();
 
@@ -135,7 +146,7 @@ test.describe("cross-tenant agreement isolation", () => {
       { method: "POST", url: `/api/workflow/contracts/${contractId}/finalize`, data: {} },
       { method: "POST", url: `/api/workflow/contracts/${contractId}/start-signing`, data: {} },
       { method: "POST", url: `/api/workflow/contracts/${contractId}/signing-links`, data: { role: "client" } },
-      { method: "GET", url: `/api/workflow/contracts/${contractId}/comments` },
+      { method: "POST", url: `/api/workflow/contracts/${contractId}/comments`, data: { body: "stolen comment" } },
       { method: "POST", url: `/api/workflow/contracts/${contractId}/billing/run`, data: {} },
     ];
 
