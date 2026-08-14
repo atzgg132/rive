@@ -1,17 +1,30 @@
 import crypto from "node:crypto";
 
-type ConnectorState = {
+/**
+ * HMAC-signed OAuth state for connectors (Zoho Books, Google Calendar, and
+ * any future provider). One implementation so a security fix lands everywhere
+ * — calendarCrypto delegates here rather than keeping a second copy.
+ */
+
+export type ConnectorState = {
   userId: string;
   provider: string;
-  returnTo: "/onboarding" | "/dashboard";
+  /** One of the known safe in-app return paths. */
+  returnTo: string;
   expiresAt: number;
 };
+
+/** Return paths OAuth flows may send the user back to. Everything else is refused. */
+export const SAFE_RETURN_PATHS = new Set(["/calendar", "/onboarding", "/dashboard"]);
 
 export function createConnectorOAuthState(
   userId: string,
   provider: string,
-  returnTo: ConnectorState["returnTo"] = "/onboarding",
+  returnTo: string = "/onboarding",
 ): string {
+  if (!SAFE_RETURN_PATHS.has(returnTo)) {
+    throw new Error(`Unsupported OAuth return path: ${returnTo}`);
+  }
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("SESSION_SECRET is required for connector OAuth.");
   const payload = Buffer.from(JSON.stringify({
@@ -35,10 +48,11 @@ export function verifyConnectorOAuthState(value: string, provider: string): Conn
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as ConnectorState;
     if (!parsed.userId || parsed.provider !== provider || parsed.expiresAt <= Date.now()) return null;
+    if (!SAFE_RETURN_PATHS.has(parsed.returnTo)) return null;
     return {
       userId: parsed.userId,
       provider,
-      returnTo: parsed.returnTo === "/dashboard" ? "/dashboard" : "/onboarding",
+      returnTo: parsed.returnTo,
       expiresAt: parsed.expiresAt,
     };
   } catch {

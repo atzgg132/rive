@@ -41,6 +41,7 @@ type GoogleEvent = {
   recurringEventId?: string;
   start?: { date?: string; dateTime?: string; timeZone?: string };
   end?: { date?: string; dateTime?: string; timeZone?: string };
+  extendedProperties?: { private?: { riveEventId?: string } };
 };
 
 function googleConfig() {
@@ -526,6 +527,28 @@ export async function pushEventToGoogle(eventId: string, operation: "create" | "
     include: { connection: true },
   });
   if (!external || ["reader", "freeBusyReader"].includes(external.accessRole || "")) return false;
+
+  // Search-before-create safety net. If a previous attempt's Google POST
+  // succeeded but the local mapping write was lost (crash, network blip, or a
+  // race), a retry would otherwise create a second event. Every event we push
+  // carries `extendedProperties.private.riveEventId`, so we can ask Google for
+  // the event we already created and adopt it instead of duplicating it.
+  const existing = await findGoogleEventByRiveId(external.connection, external.providerCalendarId, event.id);
+  if (existing) {
+    await prisma.externalEventMapping.create({
+      data: {
+        eventId: event.id,
+        externalCalendarId: external.id,
+        providerEventId: existing.id,
+        iCalUid: existing.iCalUID,
+        providerEtag: existing.etag,
+        providerUpdatedAt: existing.updated ? new Date(existing.updated) : null,
+        lastFingerprint: fingerprintGoogleEvent(existing),
+      },
+    });
+    return true;
+  }
+
   const payload = eventToGooglePayload(event);
   payload.extendedProperties.private.riveEventId = event.id;
   const created = await googleFetch<GoogleEvent>(
@@ -545,4 +568,25 @@ export async function pushEventToGoogle(eventId: string, operation: "create" | "
     },
   });
   return true;
+}
+
+/**
+ * Find a Google Calendar event this Rive event previously pushed, by the
+ * private `riveEventId` extended property. Returns null when Google has no
+ * record of it — the caller may then create it.
+ */
+async function findGoogleEventByRiveId(
+  connection: { id: string; encryptedCredentials: string },
+  providerCalendarId: string,
+  riveEventId: string,
+): Promise<GoogleEvent | null> {
+  const result = await googleFetch<{ items?: GoogleEvent[] }>(
+    connection,
+    `/calendar/v3/calendars/${encodeURIComponent(providerCalendarId)}/events?privateExtendedProperty=${encodeURIComponent(`riveEventId=${riveEventId}`)}&maxResults=5&singleEvents=true`,
+  );
+  // Only adopt an event that genuinely carries this Rive event's id. The
+  // filter should guarantee it, but if Google ever ignores the property we
+  // must not adopt an unrelated event.
+  const items = result.items || [];
+  return items.find((item) => item.extendedProperties?.private?.riveEventId === riveEventId) || null;
 }

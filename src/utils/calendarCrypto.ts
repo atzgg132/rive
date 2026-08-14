@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { createConnectorOAuthState, verifyConnectorOAuthState } from "@/utils/connectorSecurity";
 
 function encryptionKey(): Buffer {
   // Deliberately does not fall back to SESSION_SECRET: that secret also signs
@@ -39,26 +40,15 @@ export function decryptCalendarCredentials<T>(value: string): T {
 }
 
 export function createCalendarOAuthState(userId: string, returnTo: "/calendar" | "/onboarding" = "/calendar"): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is required for calendar OAuth.");
-  const payload = Buffer.from(JSON.stringify({ userId, returnTo, expiresAt: Date.now() + 10 * 60 * 1000 })).toString("base64url");
-  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
-  return `${payload}.${signature}`;
+  // Delegates to the single connector OAuth-state implementation (provider
+  // "google") so there is only one HMAC-signed-state implementation to keep
+  // secure — a fix in connectorSecurity lands here too.
+  return createConnectorOAuthState(userId, "google", returnTo);
 }
 
 export function verifyCalendarOAuthState(value: string): { userId: string; returnTo: "/calendar" | "/onboarding" } | null {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) return null;
-  const [payload, signature] = value.split(".");
-  if (!payload || !signature) return null;
-  const expected = crypto.createHmac("sha256", secret).update(payload).digest();
-  const actual = Buffer.from(signature, "base64url");
-  if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
-  try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { userId: string; returnTo?: string; expiresAt: number };
-    if (!parsed.userId || parsed.expiresAt <= Date.now()) return null;
-    return { userId: parsed.userId, returnTo: parsed.returnTo === "/onboarding" ? "/onboarding" : "/calendar" };
-  } catch {
-    return null;
-  }
+  const state = verifyConnectorOAuthState(value, "google");
+  if (!state) return null;
+  // Calendar flows only ever return to the calendar or onboarding screens.
+  return { userId: state.userId, returnTo: state.returnTo === "/onboarding" ? "/onboarding" : "/calendar" };
 }
