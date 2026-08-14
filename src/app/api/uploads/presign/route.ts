@@ -17,6 +17,14 @@ export async function POST(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
+  // Local development origins are not in the asset bucket's CORS allowlist, so
+  // a browser PUT to S3 would be rejected with a network-level "Failed to
+  // fetch". Fall back to inline image data there (the existing 503 path) so
+  // local uploads keep working without widening the bucket's CORS origins.
+  const origin = request.headers.get("origin") || "";
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+    return NextResponse.json({ message: "Local development uses inline image data." }, { status: 503 });
+  }
   if (!rateLimit(`asset-presign:${session.userId}:${getRequestIp(request)}`, 60, 15 * 60 * 1000)) {
     return NextResponse.json({ message: "Too many upload attempts. Please wait and try again." }, { status: 429 });
   }
