@@ -27,8 +27,12 @@ export async function register() {
   // They already have an instance role with SES permissions, so use SES as the
   // safe forward-compatible default while keeping production explicit.
   const appEnvironment = (process.env.APP_ENV || "").toLowerCase();
+  const nonProductionEnvironment = ["dev", "test", "development", "staging"].includes(appEnvironment);
+  const configuredEmailProvider = (process.env.EMAIL_PROVIDER || "").toLowerCase();
   const emailProvider = (
-    process.env.EMAIL_PROVIDER || (["dev", "test"].includes(appEnvironment) ? "ses" : "")
+    nonProductionEnvironment && ["", "disabled"].includes(configuredEmailProvider)
+      ? "ses"
+      : configuredEmailProvider
   ).toLowerCase();
   if (!["smtp", "zoho", "ses"].includes(emailProvider)) {
     throw new Error("EMAIL_PROVIDER must be configured as smtp, zoho, or ses in production.");

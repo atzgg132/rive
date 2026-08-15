@@ -32,8 +32,13 @@ type EmailProvider = "disabled" | "console" | "smtp" | "zoho" | "ses";
 const appEnvironment = (process.env.APP_ENV || "").toLowerCase();
 // Dev/test instances created before the EMAIL_PROVIDER SSM parameter existed
 // should still be able to send verification mail through the EC2 SES role.
-const defaultProvider = ["dev", "test"].includes(appEnvironment) ? "ses" : "smtp";
-const requestedProvider = (process.env.EMAIL_PROVIDER || defaultProvider).toLowerCase();
+const nonProductionEnvironment = ["dev", "test", "development", "staging"].includes(appEnvironment);
+const configuredProvider = (process.env.EMAIL_PROVIDER || "").toLowerCase();
+const requestedProvider = (
+  nonProductionEnvironment && ["", "disabled"].includes(configuredProvider)
+    ? "ses"
+    : configuredProvider || "smtp"
+).toLowerCase();
 const emailProvider: EmailProvider = ["disabled", "console", "smtp", "zoho", "ses"].includes(requestedProvider)
   ? requestedProvider as EmailProvider
   : "disabled";
