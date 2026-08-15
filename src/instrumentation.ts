@@ -23,7 +23,13 @@ export async function register() {
     throw new Error("SESSION_SECRET and CRON_SECRET must be different.");
   }
 
-  const emailProvider = (process.env.EMAIL_PROVIDER || "").toLowerCase();
+  // Older non-production hosts may not have the EMAIL_PROVIDER parameter yet.
+  // They already have an instance role with SES permissions, so use SES as the
+  // safe forward-compatible default while keeping production explicit.
+  const appEnvironment = (process.env.APP_ENV || "").toLowerCase();
+  const emailProvider = (
+    process.env.EMAIL_PROVIDER || (["dev", "test"].includes(appEnvironment) ? "ses" : "")
+  ).toLowerCase();
   if (!["smtp", "zoho", "ses"].includes(emailProvider)) {
     throw new Error("EMAIL_PROVIDER must be configured as smtp, zoho, or ses in production.");
   }

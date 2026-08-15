@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { hashPassword } from "@/utils/userAuth";
 import { findValidAuthToken, prepareAuthToken } from "@/utils/authTokens";
-import { buildEmailVerificationEmail } from "@/utils/email";
+import { buildEmailVerificationEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { getRequestIp } from "@/utils/rateLimit";
@@ -154,10 +154,10 @@ export async function POST(req: NextRequest) {
 
     await recordActivationEvent(user.id, ACTIVATION_EVENTS.registered);
 
-    // Console delivery is immediate and intentionally local-only, making the
-    // verification link practical to test without a real inbox. SMTP/SES jobs
-    // remain queued for the cron/worker endpoint and do not block signup.
-    if ((process.env.EMAIL_PROVIDER || "smtp").toLowerCase() === "console") {
+    // Verification is launch-critical. Process one queued message immediately
+    // so signup does not depend on an optional cron schedule. The outbox still
+    // retries transient delivery failures asynchronously.
+    if (getEmailProvider() !== "disabled") {
       await processEmailOutbox(1);
     }
 

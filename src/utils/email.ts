@@ -29,7 +29,11 @@ export type EmailResult = {
 
 type EmailProvider = "disabled" | "console" | "smtp" | "zoho" | "ses";
 
-const requestedProvider = (process.env.EMAIL_PROVIDER || "smtp").toLowerCase();
+const appEnvironment = (process.env.APP_ENV || "").toLowerCase();
+// Dev/test instances created before the EMAIL_PROVIDER SSM parameter existed
+// should still be able to send verification mail through the EC2 SES role.
+const defaultProvider = ["dev", "test"].includes(appEnvironment) ? "ses" : "smtp";
+const requestedProvider = (process.env.EMAIL_PROVIDER || defaultProvider).toLowerCase();
 const emailProvider: EmailProvider = ["disabled", "console", "smtp", "zoho", "ses"].includes(requestedProvider)
   ? requestedProvider as EmailProvider
   : "disabled";
@@ -70,6 +74,10 @@ const transporter = smtpConfigured
 const appUrl = (process.env.APP_URL || "https://www.rive.work").replace(/\/$/, "");
 const fromAddress = process.env.EMAIL_FROM || `"rive." <${process.env.SMTP_USER || "hello@rive.work"}>`;
 const replyTo = process.env.EMAIL_REPLY_TO || "hello@rive.work";
+
+export function getEmailProvider(): EmailProvider {
+  return emailProvider;
+}
 
 export function getEmailConfigurationStatus() {
   return {

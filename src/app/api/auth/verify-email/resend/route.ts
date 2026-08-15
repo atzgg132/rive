@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { prepareAuthToken } from "@/utils/authTokens";
-import { buildEmailVerificationEmail } from "@/utils/email";
+import { buildEmailVerificationEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { getRequestIp } from "@/utils/rateLimit";
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         properties: { delivery: "outbox", reason: "resend" },
       }, tx);
     });
-    if ((process.env.EMAIL_PROVIDER || "smtp").toLowerCase() === "console") await processEmailOutbox(1);
+    if (getEmailProvider() !== "disabled") await processEmailOutbox(1);
     return genericResponse();
   } catch (error) {
     console.error("Verification resend error:", error);
