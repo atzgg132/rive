@@ -50,4 +50,14 @@ test.describe("marketing responsive guardrails", () => {
     expect(geometry!.calculatorWidth).toBeLessThanOrEqual(geometry!.clientWidth - 32);
     expect(geometry!.scrollWidth).toBeLessThanOrEqual(geometry!.clientWidth + 1);
   });
+
+  test("marketing keeps the complete product structure", async ({ page }) => {
+    await installMarketingMocks(page);
+    await page.goto("/#faq", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByTestId("marketing-agreements-section")).toBeVisible();
+    await expect(page.getByText("Contract to cash", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("faq-grid").locator("h3")).toHaveCount(6);
+    await expect(page.getByRole("heading", { name: "Can I bring my existing data into rive.?" })).toBeVisible();
+  });
 });

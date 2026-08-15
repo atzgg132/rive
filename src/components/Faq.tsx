@@ -59,7 +59,7 @@ export default function Faq({ agreementsEnabled = true }: { agreementsEnabled?: 
         </div>
 
         {/* FAQ grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div data-testid="faq-grid" className="grid md:grid-cols-2 gap-6">
           {visibleFaqs.map((faq) => (
             <div
               key={faq.question}

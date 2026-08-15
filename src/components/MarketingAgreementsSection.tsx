@@ -36,7 +36,7 @@ const stages = ["Draft", "Review", "Acceptance", "Billing active"] as const;
 
 export default function MarketingAgreementsSection() {
   return (
-    <section id="agreements" className="relative overflow-hidden bg-white py-24 dark:bg-slate-950 sm:py-32">
+    <section id="agreements" data-testid="marketing-agreements-section" className="relative overflow-hidden bg-white py-24 dark:bg-slate-950 sm:py-32">
       <div className="pointer-events-none absolute -left-40 top-1/4 h-[28rem] w-[28rem] rounded-full bg-blue-600/[0.06] blur-3xl dark:bg-blue-600/20" />
 
       <div className="relative mx-auto grid max-w-7xl gap-14 px-5 sm:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">

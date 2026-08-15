@@ -11,26 +11,29 @@ import Footer from "@/components/Footer";
 import MarketingPortfolioSection from "@/components/MarketingPortfolioSection";
 import MarketingAgreementsSection from "@/components/MarketingAgreementsSection";
 import MarketingConnectionsSection from "@/components/MarketingConnectionsSection";
-import { contractsAvailable } from "@/utils/contracts";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 export const dynamic = "force-dynamic";
 
 export default function Home() {
-  const agreementsEnabled = contractsAvailable();
+  // Keep the public product story consistent across environments. The actual
+  // Agreements workflow remains gated independently in auth/session and API
+  // routes, but a dev-only runtime flag must not make the marketing page fall
+  // back to an older, incomplete layout.
+  const marketingAgreementsEnabled = true;
   const googleAvailable = googleCalendarAvailable();
   return <main className="min-h-screen overflow-hidden bg-background">
     <Navbar />
     <Hero />
-    <Features agreementsEnabled={agreementsEnabled} />
-    <ConnectedProductSection agreementsEnabled={agreementsEnabled} />
+    <Features agreementsEnabled={marketingAgreementsEnabled} />
+    <ConnectedProductSection agreementsEnabled={marketingAgreementsEnabled} />
     <MarketingConnectionsSection googleCalendarEnabled={googleAvailable} />
-    {agreementsEnabled && <MarketingAgreementsSection />}
+    {marketingAgreementsEnabled && <MarketingAgreementsSection />}
     <MarketingPortfolioSection />
     <AISection />
     <RemitSection />
-    <Faq agreementsEnabled={agreementsEnabled} />
-    <Pricing agreementsEnabled={agreementsEnabled} />
+    <Faq agreementsEnabled={marketingAgreementsEnabled} />
+    <Pricing agreementsEnabled={marketingAgreementsEnabled} />
     <FinalCTA />
     <Footer />
   </main>;

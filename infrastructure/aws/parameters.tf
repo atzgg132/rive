@@ -29,9 +29,11 @@ locals {
       "${environment}/CRON_SECRET"                      = random_password.cron[environment].result
       "${environment}/CONTRACTS_ENABLED"                = "true"
       "${environment}/ESIGN_PROVIDER"                   = "rive"
-      # Production uses Rive's first-party recorded-acceptance adapter. The
-      # local/demo provider remains rejected by the application in production.
-      "${environment}/CONTRACTS_RECORDED_ACCEPTANCE_ENABLED"        = environment == "prod" ? "true" : "false"
+      # Keep the alpha recorded-acceptance workflow available in every
+      # deployed environment so dev/test do not silently diverge from the
+      # public product structure. The local/demo provider remains rejected by
+      # the application in production.
+      "${environment}/CONTRACTS_RECORDED_ACCEPTANCE_ENABLED"        = "true"
       "${environment}/CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION" = "false"
       "${environment}/GOOGLE_CALENDAR_ENABLED"                      = "false"
       "${environment}/GOOGLE_CALENDAR_CLIENT_ID"                    = var.google_calendar_client_id
