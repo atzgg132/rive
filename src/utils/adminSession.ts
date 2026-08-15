@@ -51,7 +51,7 @@ export async function hasAdminSession(req: NextRequest): Promise<boolean> {
   // Compatibility for local scripts and the legacy admin E2E fixture. The
   // application UI no longer stores or sends this header, and production never
   // accepts it as an authentication mechanism.
-  const localCompatibility = process.env.NODE_ENV === "test"
+  const localCompatibility = ["development", "test"].includes(process.env.NODE_ENV || "")
     || ["local", "development", "test"].includes((process.env.APP_ENV || "").toLowerCase());
   return localCompatibility && verifyLegacyToken(req.headers.get("x-admin-token"));
 }
