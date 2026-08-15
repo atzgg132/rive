@@ -233,6 +233,7 @@ async function installOnboardingMocks(page: Page, state: MockState) {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { onboardingStatus: state.onboardingStatus, onboardingStep: state.onboardingStep } }) });
   });
   await page.route("**/api/onboarding/import/jobs", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, jobs: [] }) }));
+  await page.route("**/api/uploads/presign", async (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Inline upload fallback" }) }));
 }
 
 test.describe("goal-aware activation", () => {
@@ -327,6 +328,35 @@ test.describe("goal-aware activation", () => {
     await page.getByRole("button", { name: "Open my workspace" }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
     expect(state.onboardingStatus).toBe("complete");
+  });
+
+  test("mobile onboarding photo trigger opens the picker and keeps work cards left-aligned", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 0 };
+    await installWorkspaceMocks(page, state);
+    await installOnboardingMocks(page, state);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/onboarding?restart=1", { waitUntil: "domcontentloaded" });
+
+    const firstWorkType = page.getByTestId("onboarding-business-type-card").first();
+    await expect(firstWorkType).toBeVisible();
+    await expect(firstWorkType).toHaveCSS("justify-content", "flex-start");
+
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByTestId("onboarding-avatar-upload").click();
+    await (await chooser).setFiles({
+      name: "avatar.png",
+      mimeType: "image/png",
+      buffer: Buffer.from("synthetic avatar"),
+    });
+
+    await expect(page.locator('img[alt=""]').first()).toBeVisible();
+    await expect(page.getByText("Profile photo added.")).toBeVisible();
+
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
   });
 
   test("build one real workflow submits the workspace activation form", async ({ page }) => {

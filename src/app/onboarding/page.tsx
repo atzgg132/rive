@@ -2,7 +2,7 @@
 
 import { Button, Input, Textarea, Select } from "@/components/ui";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -170,6 +170,8 @@ export default function OnboardingPage() {
   const [currency, setCurrency] = useState("INR");
   const [timeZone, setTimeZone] = useState("Asia/Calcutta");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [goal, setGoal] = useState("organize");
   const [sources, setSources] = useState<string[]>([]);
   const [path, setPath] = useState<"import" | "quickstart" | "clean">("import");
@@ -376,14 +378,18 @@ export default function OnboardingPage() {
     ) {
       return toast.error("Use a PNG, JPEG, or WebP image under 1.8 MB.");
     }
+    setAvatarUploading(true);
     try {
       setAvatarUrl(await uploadImage(file));
+      toast.success("Profile photo added.");
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
           : "Profile photo could not be uploaded.",
       );
+    } finally {
+      setAvatarUploading(false);
     }
   }
 
@@ -604,19 +610,39 @@ export default function OnboardingPage() {
                       name.slice(0, 2) || "You"
                     )}
                   </div>
-                  <label className="mt-3 flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 px-3 py-2 text-[10px] font-bold text-blue-700 dark:border-blue-800 dark:text-blue-300">
-                    <Upload className="h-3.5 w-3.5" />
-                    Upload photo
-                    <Input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="sr-only"
-                      onChange={(event) => {
-                        handleAvatar(event.target.files?.[0]);
-                        event.currentTarget.value = "";
-                      }}
-                    />
-                  </label>
+                  <Button
+                    type="button"
+                    data-testid="onboarding-avatar-upload"
+                    aria-controls="onboarding-avatar-input"
+                    disabled={avatarUploading}
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 px-3 py-2 text-[10px] font-bold text-blue-700 disabled:cursor-wait dark:border-blue-800 dark:text-blue-300"
+                  >
+                    {avatarUploading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Uploading…
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload photo
+                      </>
+                    )}
+                  </Button>
+                  <Input
+                    ref={avatarInputRef}
+                    id="onboarding-avatar-input"
+                    data-testid="onboarding-avatar-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      event.currentTarget.value = "";
+                      void handleAvatar(file);
+                    }}
+                  />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label>
@@ -686,9 +712,10 @@ export default function OnboardingPage() {
                       <Button
                         key={item.id}
                         type="button"
+                        data-testid="onboarding-business-type-card"
                         aria-pressed={businessTypes.includes(item.id)}
                         onClick={() => setBusinessTypes((current) => current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id])}
-                        className={`flex min-h-28 min-w-0 items-start gap-2 rounded-xl border p-3 text-left whitespace-normal ${businessTypes.includes(item.id) ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
+                        className={`flex min-h-28 min-w-0 items-start justify-start gap-2 rounded-xl border p-3 text-left whitespace-normal ${businessTypes.includes(item.id) ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
                       >
                         <Icon className="h-4 w-4 shrink-0 text-blue-600" />
                         <span className="min-w-0">
