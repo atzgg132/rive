@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rive-local-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rive
+      POSTGRES_USER: rive
+      POSTGRES_PASSWORD: rive_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - rive-local-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rive -d rive"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  rive-local-postgres:

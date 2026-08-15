@@ -4,6 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { mergePortfolioContent, normalizeSlug, validatePortfolioContent, validatePortfolioForPublish } from "@/utils/portfolio";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 class PortfolioConflictError extends Error {
   constructor() {
@@ -127,6 +128,7 @@ export async function PATCH(req: NextRequest) {
     }
     if (body.status === "published") {
       await recordActivationEvent(session.userId, ACTIVATION_EVENTS.portfolioPublished, { portfolioId: portfolio.id });
+      await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.portfolioPublished, module: "portfolio", entityType: "portfolio", entityId: portfolio.id, dataOrigin: "user" });
     }
     return NextResponse.json({ success: true, portfolio });
   } catch (error) {

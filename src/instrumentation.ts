@@ -22,4 +22,15 @@ export async function register() {
   if (process.env.SESSION_SECRET === process.env.CRON_SECRET) {
     throw new Error("SESSION_SECRET and CRON_SECRET must be different.");
   }
+
+  const emailProvider = (process.env.EMAIL_PROVIDER || "").toLowerCase();
+  if (!["smtp", "zoho", "ses"].includes(emailProvider)) {
+    throw new Error("EMAIL_PROVIDER must be configured as smtp, zoho, or ses in production.");
+  }
+  const missingEmailVariables = emailProvider === "ses"
+    ? ["AWS_REGION"].filter((name) => !process.env[name])
+    : ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"].filter((name) => !process.env[name]);
+  if (missingEmailVariables.length > 0) {
+    throw new Error(`Missing transactional email environment variables: ${missingEmailVariables.join(", ")}`);
+  }
 }

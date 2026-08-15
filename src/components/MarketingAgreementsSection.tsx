@@ -70,7 +70,7 @@ export default function MarketingAgreementsSection() {
           </div>
 
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+            onClick={() => { window.location.href = "/register"; }}
             className="group mt-10 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950 dark:shadow-black/20"
           >
             See the contract workflow

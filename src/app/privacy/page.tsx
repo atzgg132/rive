@@ -55,14 +55,14 @@ export default function PrivacyPage() {
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 md:p-10 transition-colors">
 
               <Section id="intro" title="1. Introduction">
-                <p>rive. (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains what data we collect, why we collect it, and how we handle it when you use our website and waitlist.</p>
-                <p>By using rive. or joining our waitlist, you agree to the practices described in this policy.</p>
+                <p>rive. (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains what data we collect, why we collect it, and how we handle it when you use our website and workspace.</p>
+                <p>By using rive. or creating an account, you agree to the practices described in this policy.</p>
               </Section>
 
               <Section id="collect" title="2. Information we collect">
                 <p>We collect the following types of information:</p>
                 <ul className="list-disc pl-5 space-y-1.5">
-                  <li><strong>Email addresses</strong> — When you join our waitlist or contact us.</li>
+                  <li><strong>Email addresses</strong> — When you create an account, use the workspace, or contact us.</li>
                   <li><strong>Usage analytics</strong> — Page views, session duration, and navigation patterns (aggregated, not personally linked).</li>
                   <li><strong>Browser and device information</strong> — Browser type, OS, screen resolution, for product compatibility purposes.</li>
                   <li><strong>Cookies</strong> — See our <a href="/cookies" className="text-blue-600 dark:text-blue-400 hover:underline">Cookie Policy</a> For details.</li>
@@ -73,8 +73,8 @@ export default function PrivacyPage() {
               <Section id="use" title="3. How we use your information">
                 <p>We use the data we collect solely to:</p>
                 <ul className="list-disc pl-5 space-y-1.5">
-                  <li>Manage waitlist access and notify you when your batch opens.</li>
-                  <li>Improve our website, user experience, and upcoming product features.</li>
+                  <li>Provide, secure, and improve the workspace and its features.</li>
+                  <li>Understand onboarding, activation, workflow depth, and feedback so we can improve the product.</li>
                   <li>Respond to support requests or inquiries sent to us.</li>
                   <li>Detect and prevent spam, abuse, or unauthorized access.</li>
                 </ul>
@@ -82,7 +82,7 @@ export default function PrivacyPage() {
               </Section>
 
               <Section id="retention" title="4. Data retention">
-                <p>We retain your email address for as long as you remain on the waitlist or use the Service. You can request removal at any time by emailing <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>.</p>
+                <p>We retain account and workspace information for as long as you use the Service or as needed for legitimate business, security, and legal purposes. You can request access, correction, or deletion at any time by emailing <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>.</p>
               </Section>
 
               <Section id="third" title="5. Third-party services">
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
               </Section>
 
               <Section id="changes" title="8. Changes to this policy">
-                <p>We may update this Privacy Policy from time to time. When we do, we will revise the &quot;last updated&quot; date at the top of this page. For significant changes, we will notify waitlist members via email.</p>
+                <p>We may update this Privacy Policy from time to time. When we do, we will revise the &quot;last updated&quot; date at the top of this page. For significant changes, we will notify account holders through the Service or by email.</p>
                 <p>Your continued use of rive. after any changes constitutes acceptance of the updated policy.</p>
               </Section>
 

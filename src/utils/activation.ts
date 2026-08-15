@@ -2,6 +2,7 @@ import "server-only";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
+import { recordProductEvent } from "@/utils/productEvents";
 
 export const ACTIVATION_EVENTS = {
   registered: "activation.registered",
@@ -44,4 +45,11 @@ export async function recordActivationEvent(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return;
     console.error("Activation event could not be recorded:", error);
   }
+  await recordProductEvent({
+    userId,
+    eventName: action,
+    module: "activation",
+    dedupeKey: `activation:${userId}:${action}`,
+    properties: metadata,
+  });
 }

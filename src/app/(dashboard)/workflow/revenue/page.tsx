@@ -1,35 +1,16 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
-
-import React, { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  FileText,
-  Plus,
-  Search,
-  X,
-  Loader2,
-  Trash2,
-  CheckCircle,
-  MoreVertical,
-  Edit2,
-  Send
-} from "lucide-react";
+import { AlertTriangle, ArrowUpRight, CheckCircle, Clock3, Download, FileText, MoreVertical, Plus, Search, Send, Trash2, WalletCards } from "lucide-react";
 import { toast } from "sonner";
+import { Button, Input, PageHeader, Select } from "@/components/ui";
 import DropdownPortal from "@/components/ui/DropdownPortal";
-import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
-import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
+import { formatMoney } from "@/lib/currency";
 
-interface InvoiceItemForm {
-  description: string;
-  quantity: string;
-  unit_price: string;
-}
-
-interface Invoice {
+type Invoice = {
   id: string;
   client_id: string | null;
   project_id: string | null;
@@ -37,744 +18,179 @@ interface Invoice {
   status: string;
   currency: string;
   subtotal: string;
+  discount_rate: string;
+  discount_amount: string;
   tax_rate: string;
   tax_amount: string;
   total: string;
+  amount_paid: string;
+  outstanding: string;
   issue_date: string;
   due_date: string | null;
   paid_date: string | null;
-  notes: string | null;
+  sent_at?: string | null;
   client_name: string | null;
   project_title: string | null;
   contract_id: string | null;
   contract_title: string | null;
-  created_at: string;
-  items: InvoiceItemForm[];
+  items: Array<{ description: string; quantity: string; unit_price: string; amount: string }>;
+};
+
+type CurrencySummary = { currency: string; issued: number; collected: number; outstanding: number; overdue: number; draft: number; invoiceCount: number; paidCount: number; collectionRate: number | null };
+type AgingRow = { currency: string; current: number; days30: number; days60: number; days90: number; days90Plus: number; noDueDate: number };
+type MonthlyRow = { month: string; currency: string; invoiced: number; collected: number };
+type AttentionRow = { id: string; invoiceNumber: string; currency: string; status: string; outstanding: number; dueDate: string | null; client: string | null; reason: string };
+
+function statusClass(status: string): string {
+  if (status === "paid") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (["sent", "viewed", "partially_paid"].includes(status)) return "border-blue-200 bg-blue-50 text-blue-700";
+  if (["overdue", "voided"].includes(status)) return "border-red-200 bg-red-50 text-red-700";
+  return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
-interface Client {
-  id: string;
-  name: string;
+function statusLabel(status: string): string {
+  return status.replaceAll("_", " ");
 }
 
-interface Project {
-  id: string;
-  title: string;
-  client_id: string | null;
-  currency: string;
+function dateLabel(value: string | null): string {
+  if (!value) return "No due date";
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function RevenuePage() {
-  const { displayCurrency, convert, format, formatConverted, ratesAsOf, ratesStatus } = useCurrency();
-  const { agreements } = useFeatureAvailability();
+  const { displayCurrency, convert, formatConverted, ratesStatus } = useCurrency();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search);
-  const [status, setStatus] = useState("all");
+  const [summaries, setSummaries] = useState<CurrencySummary[]>([]);
+  const [aging, setAging] = useState<AgingRow[]>([]);
+  const [monthly, setMonthly] = useState<MonthlyRow[]>([]);
+  const [attention, setAttention] = useState<AttentionRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+  const debouncedSearch = useDebouncedValue(search);
 
-  // Form Drawer state
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  // Dropdown state
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
-
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [currency, setCurrency] = useState("USD");
-  const [taxRate, setTaxRate] = useState("0");
-  const [notes, setNotes] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [issueDate, setIssueDate] = useState("");
-  const [items, setItems] = useState<InvoiceItemForm[]>([{ description: "", quantity: "1", unit_price: "0" }]);
-  const [saving, setSaving] = useState(false);
-  const [highlightedInvoiceId, setHighlightedInvoiceId] = useState<string | null>(null);
-  const invoiceQueryConsumed = useRef(false);
-
-  const loadInvoices = async () => {
+  const load = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/invoices?search=${encodeURIComponent(debouncedSearch)}&status=${status}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setInvoices(data.invoices);
-        }
+      const [invoiceResponse, summaryResponse] = await Promise.all([
+        fetch(`/api/workflow/invoices?search=${encodeURIComponent(debouncedSearch)}&status=${encodeURIComponent(status)}`, { cache: "no-store" }),
+        fetch("/api/workflow/revenue/summary", { cache: "no-store" }),
+      ]);
+      const invoiceData = await invoiceResponse.json().catch(() => null);
+      const summaryData = await summaryResponse.json().catch(() => null);
+      if (!invoiceResponse.ok || !invoiceData?.success) throw new Error(invoiceData?.message || "Invoices could not be loaded.");
+      setInvoices(invoiceData.invoices || []);
+      if (summaryResponse.ok && summaryData?.success) {
+        setSummaries(summaryData.currencies || []);
+        setAging(summaryData.aging || []);
+        setMonthly(summaryData.monthlyRevenue || []);
+        setAttention(summaryData.attention || []);
       }
-    } catch (err) {
-      console.error("Error loading invoices:", err);
-      toast.error("Failed to load invoices.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Revenue data could not be loaded.");
     } finally {
       setLoading(false);
     }
   };
 
-  const loadSelectionData = async () => {
-    try {
-      const [cRes, pRes] = await Promise.all([
-        fetch("/api/workflow/clients"),
-        fetch("/api/workflow/projects")
-      ]);
+  // This effect intentionally refreshes server state when the query controls
+  // change; the async loader owns the resulting state updates.
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, [debouncedSearch, status]);
 
-      if (cRes.ok) {
-        const cData = await cRes.json();
-        if (cData.success) setClients(cData.clients);
-      }
-      if (pRes.ok) {
-        const pData = await pRes.json();
-        if (pData.success) setProjects(pData.projects);
-      }
-    } catch (err) {
-      console.error("Error loading selection lists:", err);
-    }
-  };
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadInvoices();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadSelectionData();
-  }, []);
-
-  const openCreate = () => {
-    setEditingId(null);
-    setClientId("");
-    setProjectId("");
-    setCurrency(displayCurrency);
-    setTaxRate("0");
-    setNotes("");
-    setDueDate("");
-    setIssueDate("");
-    setItems([{ description: "", quantity: "1", unit_price: "0" }]);
-    const nextNum = `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`;
-    setInvoiceNumber(nextNum);
-    setHighlightedInvoiceId(null);
-    setDrawerOpen(true);
-    setOpenDropdownId(null);
-  };
-
-  useEffect(() => {
-    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("new") !== "true") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    openCreate();
-    window.history.replaceState({}, "", window.location.pathname);
-    // The intent is consumed once on mount; re-running when the drawer callback changes would reopen it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const openEdit = (invoice: Invoice) => {
-    setEditingId(invoice.id);
-    setInvoiceNumber(invoice.invoice_number);
-    setClientId(invoice.client_id || "");
-    setProjectId(invoice.project_id || "");
-    setCurrency(invoice.currency || "USD");
-    setTaxRate(invoice.tax_rate || "0");
-    setNotes(invoice.notes || "");
-    setDueDate(invoice.due_date ? new Date(invoice.due_date).toISOString().split("T")[0] : "");
-    setIssueDate(invoice.issue_date ? new Date(invoice.issue_date).toISOString().split("T")[0] : "");
-
-    if (invoice.items && invoice.items.length > 0) {
-      setItems(invoice.items.map(item => ({
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price
-      })));
-    } else {
-      setItems([{ description: "", quantity: "1", unit_price: "0" }]);
-    }
-
-    setDrawerOpen(true);
-    setHighlightedInvoiceId(invoice.id);
-    setOpenDropdownId(null);
-  };
-
-  useEffect(() => {
-    if (loading || invoiceQueryConsumed.current || typeof window === "undefined") return;
-    const url = new URL(window.location.href);
-    const requestedInvoiceId = url.searchParams.get("invoiceId");
-    if (!requestedInvoiceId) {
-      invoiceQueryConsumed.current = true;
-      return;
-    }
-    invoiceQueryConsumed.current = true;
-    const requestedInvoice = invoices.find((invoice) => invoice.id === requestedInvoiceId);
-    if (requestedInvoice) {
-      // This consumes an external navigation intent once after async hydration.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      openEdit(requestedInvoice);
-      toast.info(requestedInvoice.contract_id && agreements ? "Review the Agreement-generated draft before sending it." : "Invoice opened for review.");
-    } else {
-      toast.error("That invoice is unavailable or no longer matches this workspace.");
-    }
-    url.searchParams.delete("invoiceId");
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [agreements, invoices, loading]);
-
-  const handleAddItem = () => {
-    setItems([...items, { description: "", quantity: "1", unit_price: "0" }]);
-  };
-
-  const handleRemoveItem = (idx: number) => {
-    if (items.length === 1) return;
-    setItems(items.filter((_, i) => i !== idx));
-  };
-
-  const handleItemChange = (idx: number, field: keyof InvoiceItemForm, value: string) => {
-    const nextItems = [...items];
-    nextItems[idx][field] = value;
-    setItems(nextItems);
-  };
-
-  const calculateSubtotal = () => {
-    return items.reduce((acc, curr) => {
-      const q = parseFloat(curr.quantity) || 0;
-      const p = parseFloat(curr.unit_price) || 0;
-      return acc + (q * p);
-    }, 0);
-  };
-
-  const calculateTotal = () => {
-    const sub = calculateSubtotal();
-    const rate = parseFloat(taxRate) || 0;
-    return sub + (sub * (rate / 100));
-  };
-
-  const handleDelete = async (id: string, invoiceNum: string) => {
-    if (!window.confirm(`Are you sure you want to delete invoice ${invoiceNum}? This action cannot be undone.`)) {
-      return;
-    }
-
-    setOpenDropdownId(null);
-    const loadingToast = toast.loading(`Deleting invoice ${invoiceNum}...`);
-
-    try {
-      const res = await fetch(`/api/workflow/invoices?id=${id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success(data.message || "Invoice deleted successfully.", { id: loadingToast });
-        loadInvoices();
-      } else {
-        toast.error(data.message || "Failed to delete invoice.", { id: loadingToast });
-      }
-    } catch {
-      toast.error("Network error. Try again.", { id: loadingToast });
-    }
-  };
-
-  const handleMarkPaid = async (id: string, invoiceNum: string) => {
-    setOpenDropdownId(null);
-    const loadingToast = toast.loading(`Marking invoice ${invoiceNum} as paid...`);
-
-    try {
-      const res = await fetch("/api/workflow/invoices", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status: "paid" })
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success(`Invoice ${invoiceNum} marked as paid.`, { id: loadingToast });
-        loadInvoices();
-      } else {
-        toast.error(data.message || "Failed to update invoice.", { id: loadingToast });
-      }
-    } catch {
-      toast.error("Network error. Try again.", { id: loadingToast });
-    }
-  };
-
-  const handleSendInvoice = async (id: string, invoiceNum: string) => {
-    setOpenDropdownId(null);
-    if (!window.confirm(`Review invoice ${invoiceNum}, then send it to the client?`)) return;
-    const loadingToast = toast.loading(`Sending invoice ${invoiceNum}...`);
-    try {
-      const res = await fetch(`/api/workflow/invoices/${id}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Invoice was not sent.");
-      toast.success(data.message || "Invoice sent.", { id: loadingToast });
-      loadInvoices();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invoice was not sent.", { id: loadingToast });
-    }
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!invoiceNumber || saving) return;
-
-    // Validate items
-    const invalidItem = items.some(item => !item.description || parseFloat(item.quantity) <= 0 || parseFloat(item.unit_price) < 0);
-    if (invalidItem) {
-      toast.error("Please check line item description, quantity and rates.");
-      return;
-    }
-
-    setSaving(true);
-    const loadingToast = toast.loading(editingId ? "Updating invoice..." : "Generating invoice...");
-
-    try {
-      const url = "/api/workflow/invoices";
-      const method = editingId ? "PUT" : "POST";
-      const body = JSON.stringify({
-        id: editingId,
-        client_id: clientId || null,
-        project_id: projectId || null,
-        currency,
-        invoice_number: invoiceNumber,
-        status: editingId ? undefined : "draft", // every new invoice stays in review until explicitly sent
-        tax_rate: taxRate,
-        notes,
-        due_date: dueDate || null,
-        issue_date: issueDate || null,
-        items
-      });
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body,
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        toast.success(data.message || `Invoice ${editingId ? "updated" : "generated"} successfully!`, { id: loadingToast });
-        setDrawerOpen(false);
-        loadInvoices();
-      } else {
-        toast.error(data.message || "Failed to save invoice.", { id: loadingToast });
-      }
-    } catch {
-      toast.error("Network error. Try again.", { id: loadingToast });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "paid": return "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50";
-      case "sent": return "bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400 border-blue-100 dark:border-blue-900/50";
-      case "overdue": return "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/50";
-      default: return "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
-    }
-  };
-
-  const formatCurrency = (val: number, currency: string = displayCurrency) => format(val, currency);
-
-  const sumInvoices = (itemsToSum: Invoice[]) => {
+  const convertedTotal = (field: "issued" | "collected" | "outstanding" | "overdue" | "draft") => {
     let total = 0;
-    for (const invoice of itemsToSum) {
-      const converted = convert(Number(invoice.total), invoice.currency);
-      if (converted === null) return null;
-      total += converted;
+    for (const summary of summaries) {
+      const value = convert(summary[field], summary.currency);
+      if (value === null) return null;
+      total += value;
     }
     return total;
   };
-  const summaryValue = (value: number | null) => value === null ? (ratesStatus === "loading" ? "Converting…" : "Rates unavailable") : formatCurrency(value);
-  const paidRevenue = sumInvoices(invoices.filter((invoice) => invoice.status === "paid"));
-  const outstandingRevenue = sumInvoices(invoices.filter((invoice) => ["sent", "viewed", "overdue"].includes(invoice.status)));
-  const overdueInvoices = invoices.filter((invoice) => invoice.status === "overdue" || (invoice.due_date && new Date(invoice.due_date) < new Date() && !["paid", "cancelled"].includes(invoice.status)));
-  const overdueRevenue = sumInvoices(overdueInvoices);
-  const collectionRate = paidRevenue !== null && outstandingRevenue !== null && paidRevenue + outstandingRevenue > 0 ? Math.round((paidRevenue / (paidRevenue + outstandingRevenue)) * 100) : null;
-  const editingInvoice = editingId ? invoices.find((invoice) => invoice.id === editingId) || null : null;
+  const invoiced = convertedTotal("issued");
+  const collected = convertedTotal("collected");
+  const outstanding = convertedTotal("outstanding");
+  const overdue = convertedTotal("overdue");
+  const drafts = convertedTotal("draft");
+  const collectionRate = invoiced !== null && invoiced > 0 && collected !== null ? Math.round((collected / invoiced) * 1000) / 10 : null;
+  const topMonths = useMemo(() => monthly.slice(-6), [monthly]);
+
+  const refresh = () => { void load(); };
+
+  const recordPayment = async (invoice: Invoice) => {
+    const amount = window.prompt(`Record a payment for ${invoice.invoice_number}. Outstanding: ${invoice.outstanding} ${invoice.currency}`, invoice.outstanding);
+    if (!amount) return;
+    const key = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${invoice.id}-${Date.now()}`;
+    try {
+      const response = await fetch(`/api/workflow/invoices/${invoice.id}/payment`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify({ amount, method: "manual" }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.message || "Payment could not be recorded.");
+      toast.success(data.duplicate ? "That payment was already recorded." : "Payment recorded.");
+      refresh();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Payment could not be recorded."); }
+  };
+
+  const sendInvoice = async (invoice: Invoice) => {
+    if (!window.confirm(`Send ${invoice.invoice_number} to ${invoice.client_name || "the client"}?`)) return;
+    try {
+      const response = await fetch(`/api/workflow/invoices/${invoice.id}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.message || "Invoice was not sent.");
+      toast.success("Invoice sent and delivery recorded.");
+      refresh();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Invoice was not sent."); }
+  };
+
+  const deleteInvoice = async (invoice: Invoice) => {
+    if (!window.confirm(`Delete draft ${invoice.invoice_number}?`)) return;
+    const response = await fetch(`/api/workflow/invoices?id=${encodeURIComponent(invoice.id)}`, { method: "DELETE" });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.success) toast.error(data?.message || "Invoice could not be deleted.");
+    else { toast.success("Draft deleted."); refresh(); }
+  };
+
+  const openPdf = (invoice: Invoice) => {
+    window.open(`/api/workflow/invoices/${invoice.id}/pdf`, "_blank", "noopener,noreferrer");
+  };
+
+  const summaryCards = [
+    { label: "Total invoiced", value: invoiced, icon: FileText, tone: "text-blue-600 bg-blue-50" },
+    { label: "Collected", value: collected, icon: WalletCards, tone: "text-emerald-600 bg-emerald-50" },
+    { label: "Outstanding", value: outstanding, icon: Clock3, tone: "text-amber-600 bg-amber-50" },
+    { label: "Overdue", value: overdue, icon: AlertTriangle, tone: "text-red-600 bg-red-50" },
+    { label: "Draft pipeline", value: drafts, icon: FileText, tone: "text-slate-600 bg-slate-100" },
+  ];
 
   return (
-    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
-      <PageHeader
-        title="Revenue & invoices"
-        description={<>Send invoices, track what is paid or overdue, and review totals in {displayCurrency} while preserving each invoice&apos;s original currency.</>}
-        actions={<Button data-guide-target="revenue-create" onClick={openCreate}><Plus /> Create invoice</Button>}
-      />
+    <div className="workspace-page min-h-[calc(100vh-8rem)] space-y-7 animate-fade-in">
+      <PageHeader title="Revenue & invoices" description="A reliable view of what has been invoiced, collected, and needs attention across every currency." actions={<Link href="/workflow/invoices/new"><Button data-guide-target="revenue-create" className="gap-2"><Plus className="h-4 w-4" /> Create invoice</Button></Link>} />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["collected", summaryValue(paidRevenue), "cash recognized"],
-          ["outstanding", summaryValue(outstandingRevenue), "sent and awaiting payment"],
-          ["overdue", summaryValue(overdueRevenue), `${overdueInvoices.length} invoice${overdueInvoices.length === 1 ? "" : "s"} need follow-up`],
-          ["collection rate", collectionRate === null ? "—" : `${collectionRate}%`, "of issued value collected"],
-        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-card"><p className="text-xs font-semibold capitalize text-muted-foreground">{label}</p><p className={`mt-2 text-xl font-extrabold ${label === "overdue" && overdueRevenue !== null && overdueRevenue > 0 ? "text-destructive" : "text-foreground"}`}>{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>)}
-      </section>
-
-      <p className="-mt-3 text-[11px] text-muted-foreground">Original invoice currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native invoice amounts remain visible."}</p>
-
-      {/* Filter and Search */}
-      <div className="workspace-toolbar">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Search by invoice number, client..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs font-medium text-muted-foreground">Status</span>
-          <Select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="sm:w-auto"
-          >
-            <option value="all">All invoices</option>
-            <option value="sent">Sent</option>
-            <option value="paid">Paid</option>
-            <option value="overdue">Overdue</option>
-            <option value="draft">Draft</option>
-          </Select>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {summaryCards.map(({ label, value, icon: Icon, tone }) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><span className={`grid h-8 w-8 place-items-center rounded-xl ${tone}`}><Icon className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-bold tracking-tight">{value === null ? (ratesStatus === "loading" ? "Converting…" : "—") : formatMoney(value, displayCurrency)}</p></div>)}
       </div>
 
-      {/* Invoices List Table */}
-      {loading ? (
-        <div className="flex justify-center items-center h-48">
-          <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
-        </div>
-      ) : invoices.length === 0 ? (
-        <ContextualEmptyState
-          icon={<FileText className="h-6 w-6" />}
-          title="Turn completed work into revenue"
-          description="Invoices turn project work into a clear next step for collection."
-          why="Rive can reuse the client, project, currency, and due date you already entered."
-          next={projects.length > 0 ? "Create an invoice from a project." : "Create a client and project first."}
-          after="Send it when the draft is reviewed; payment status will stay visible here."
-          action={<Button variant="secondary" size="sm" onClick={openCreate}>Build invoice</Button>}
-        />
-      ) : (
-        <div className="workspace-table overflow-visible">
-          <div className="overflow-x-auto overflow-y-visible pb-12">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-border text-xs font-semibold text-muted-foreground">
-                  <th className="py-4 px-6">Invoice number</th>
-                  <th className="py-4 px-6">Client</th>
-                  <th className="py-4 px-6">Linked project</th>
-                  <th className="py-4 px-6">Issue date</th>
-                  <th className="py-4 px-6">Due date</th>
-                  <th className="py-4 px-6">Amount due</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border text-sm text-foreground">
-                {invoices.map((inv) => (
-                  <tr key={inv.id} className={`group transition-colors ${highlightedInvoiceId === inv.id ? "bg-primary/[0.06] ring-1 ring-inset ring-primary/20" : "hover:bg-muted/35"}`}>
-                    <td className="py-4 px-6 font-bold text-primary dark:text-blue-400">{inv.invoice_number}</td>
-                    <td className="py-4 px-6 font-semibold">{inv.client_name || "private client"}</td>
-                    <td className="py-4 px-6 text-muted-foreground"><span>{inv.project_title || "None"}</span>{agreements && inv.contract_id && inv.contract_title ? <Link href={`/workflow/contracts/${inv.contract_id}`} className="mt-1 block max-w-[220px] truncate text-xs font-semibold text-primary hover:underline">Agreement: {inv.contract_title}</Link> : null}</td>
-                    <td className="py-4 px-6">{new Date(inv.issue_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
-                    <td className="py-4 px-6">
-                      {inv.due_date ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "immediate"}
-                    </td>
-                    <td className="py-4 px-6 font-extrabold text-foreground dark:text-slate-100">
-                      <span className="block">{formatConverted(parseFloat(inv.total), inv.currency) || formatCurrency(parseFloat(inv.total), inv.currency)}</span>
-                      {inv.currency !== displayCurrency && <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(inv.total), inv.currency)}</span>}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${getStatusBadge(inv.status)}`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-right relative">
-                      {inv.status === "draft" ? <Button size="sm" variant="outline" className="mr-1" onClick={() => openEdit(inv)}><Edit2 className="h-3.5 w-3.5" /> Review</Button> : null}
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (openDropdownId === inv.id) {
-                            setOpenDropdownId(null);
-                          } else {
-                            setDropdownRect(e.currentTarget.getBoundingClientRect());
-                            setOpenDropdownId(inv.id);
-                          }
-                        }}
-                        aria-label={`Actions for invoice ${inv.invoice_number}`}
-                        title={`Actions for invoice ${inv.invoice_number}`}
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Collection health</p><h2 className="mt-1 text-xl font-semibold">{collectionRate === null ? "—" : `${collectionRate}%`} collected</h2><p className="mt-1 text-sm text-muted-foreground">Collected against issued invoice value, using server-side payment ledger totals.</p></div><Link href="/workflow/invoice-settings" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">Invoice settings <ArrowUpRight className="h-3.5 w-3.5" /></Link></div>
+          <div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.min(collectionRate || 0, 100)}%` }} /></div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">{summaries.map((summary) => <div key={summary.currency} className="rounded-xl border border-border/70 bg-background p-3"><div className="flex justify-between text-xs text-muted-foreground"><span>{summary.currency}</span><span>{summary.invoiceCount} invoices</span></div><p className="mt-2 text-sm font-semibold">{formatConverted(summary.collected, summary.currency) || `${summary.currency} ${summary.collected.toFixed(2)}`}</p><p className="mt-1 text-xs text-muted-foreground">{summary.collectionRate === null ? "No issued value" : `${summary.collectionRate}% collection rate`}</p></div>)}</div>
+        </section>
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">A/R aging</p><h2 className="mt-1 text-xl font-semibold">Where outstanding money sits</h2><div className="mt-5 space-y-3">{aging.length ? aging.map((row) => <div key={row.currency} className="rounded-xl border border-border/70 p-3"><div className="flex justify-between text-xs font-semibold"><span>{row.currency}</span><span>{formatConverted(row.days30 + row.days60 + row.days90 + row.days90Plus, row.currency) || "—"} overdue</span></div><div className="mt-3 grid grid-cols-4 gap-2 text-[11px] text-muted-foreground"><span>1–30<br /><strong className="text-foreground">{row.days30.toFixed(0)}</strong></span><span>31–60<br /><strong className="text-foreground">{row.days60.toFixed(0)}</strong></span><span>61–90<br /><strong className="text-foreground">{row.days90.toFixed(0)}</strong></span><span>90+<br /><strong className="text-foreground">{row.days90Plus.toFixed(0)}</strong></span></div></div>) : <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">No outstanding balances have aged yet.</p>}</div></section>
+      </div>
 
-                      {openDropdownId === inv.id && (
-                        <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
-                          <div className="w-40 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up text-left">
-                            {["draft", "overdue"].includes(inv.status) && (
-                              <Button
-                                onClick={() => handleSendInvoice(inv.id, inv.invoice_number)}
-                                className="w-full text-left px-3 py-2 text-xs font-medium text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 flex items-center gap-2 transition-colors"
-                              >
-                                <Send className="h-3.5 w-3.5" /> Review and send
-                              </Button>
-                            )}
-                            {!['paid', 'cancelled', 'sending'].includes(inv.status) && (
-                              <Button
-                                onClick={() => { handleMarkPaid(inv.id, inv.invoice_number); setOpenDropdownId(null); }}
-                                className="w-full text-left px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors"
-                              >
-                                <CheckCircle className="h-3.5 w-3.5" /> Mark paid
-                              </Button>
-                            )}
-                            <Button
-                              onClick={async () => {
-                                setOpenDropdownId(null);
-                                const { downloadInvoicePDF } = await import("@/utils/pdfGenerator");
-                                await downloadInvoicePDF(inv);
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
-                            >
-                              <FileText className="h-3.5 w-3.5" /> Download PDF
-                            </Button>
-                            {["draft", "overdue"].includes(inv.status) ? <Button
-                              onClick={() => { openEdit(inv); setOpenDropdownId(null); }}
-                              className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" /> Edit
-                            </Button> : null}
-                            {!inv.contract_id && !["sent", "paid"].includes(inv.status) ? <Button
-                              onClick={() => { handleDelete(inv.id, inv.invoice_number); setOpenDropdownId(null); }}
-                              className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" /> Delete
-                            </Button> : null}
-                          </div>
-                        </DropdownPortal>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Trend</p><h2 className="mt-1 text-xl font-semibold">Monthly invoice activity</h2></div><span className="text-xs text-muted-foreground">Last 6 recorded months</span></div>{topMonths.length ? <div className="mt-5 space-y-3">{topMonths.map((row) => <div key={`${row.month}-${row.currency}`}><div className="mb-1 flex justify-between text-xs"><span className="font-medium">{row.month} · {row.currency}</span><span className="text-muted-foreground">{formatConverted(row.invoiced, row.currency) || "—"} invoiced</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(100, row.invoiced ? Math.max(8, (row.collected / row.invoiced) * 100) : 0)}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-muted-foreground">Your monthly trend will appear after the first invoice.</p>}</section>
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-600">Attention queue</p><h2 className="mt-1 text-xl font-semibold">Next best actions</h2><div className="mt-4 space-y-2">{attention.slice(0, 5).map((item) => <Link key={item.id} href={item.status === "draft" ? `/workflow/invoices/new?invoiceId=${encodeURIComponent(item.id)}` : `/workflow/revenue#invoice-${encodeURIComponent(item.id)}`} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-3 transition hover:border-primary/40 hover:bg-primary/[0.03]"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.invoiceNumber} · {item.client || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{item.reason} · {dateLabel(item.dueDate)}</p></div><span className="shrink-0 text-sm font-semibold">{formatConverted(item.outstanding, item.currency) || `${item.currency} ${item.outstanding.toFixed(2)}`}</span></Link>)}{!attention.length ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">Nothing urgent in the invoice queue.</p> : null}</div></section>
+      </div>
 
-      {/* Add/Edit Invoice Drawer */}
-      {drawerOpen && (
-        <Portal>
-          <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
-            <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 h-full flex flex-col justify-between py-6 px-6 shadow-2xl border-l border-border dark:border-slate-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit invoice" : "Generate new invoice"}</h3>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">{agreements && editingInvoice?.contract_id ? "Generated from the accepted Agreement payment plan. Confirm every detail before sending." : "Compile itemized work and apply any required tax adjustments."}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setDrawerOpen(false)}
-                    aria-label="Close invoice editor"
-                    title="Close invoice editor"
-                    className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
+      <section className="rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Invoice workspace</p><h2 className="mt-1 text-xl font-semibold">All invoices</h2></div><div className="flex flex-wrap gap-2"><label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search invoices, clients…" className="w-56 pl-9" aria-label="Search invoices" /></label><Select value={status} onChange={(event) => setStatus(event.target.value)} className="w-36"><option value="all">All statuses</option><option value="draft">Drafts</option><option value="sent">Sent</option><option value="overdue">Overdue</option><option value="partially_paid">Partial</option><option value="paid">Paid</option></Select></div></div>
+        {loading ? <div className="p-10 text-center text-sm text-muted-foreground">Loading invoices…</div> : !invoices.length ? <div className="p-10 text-center"><FileText className="mx-auto h-8 w-8 text-muted-foreground/50" /><p className="mt-3 font-semibold">No invoices match this view</p><p className="mt-1 text-sm text-muted-foreground">Create a draft in the invoice workspace to get started.</p><Link href="/workflow/invoices/new" className="mt-4 inline-flex"><Button className="gap-2"><Plus className="h-4 w-4" /> Create invoice</Button></Link></div> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-5 py-3">Invoice</th><th className="px-5 py-3">Client / project</th><th className="px-5 py-3">Due</th><th className="px-5 py-3 text-right">Amount due</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-border">{invoices.map((invoice) => <tr id={`invoice-${invoice.id}`} key={invoice.id} className="transition hover:bg-muted/20"><td className="px-5 py-4"><p className="font-semibold">{invoice.invoice_number}</p><p className="mt-1 text-xs text-muted-foreground">Issued {dateLabel(invoice.issue_date)}</p></td><td className="px-5 py-4"><p className="font-medium">{invoice.client_name || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{invoice.project_title || "General services"}</p></td><td className="px-5 py-4 text-muted-foreground">{dateLabel(invoice.due_date)}</td><td className="px-5 py-4 text-right"><p className="font-semibold">{formatConverted(Number(invoice.outstanding), invoice.currency) || `${invoice.currency} ${Number(invoice.outstanding).toFixed(2)}`}</p>{Number(invoice.amount_paid) > 0 ? <p className="mt-1 text-[11px] text-emerald-600">{formatConverted(Number(invoice.amount_paid), invoice.currency) || `${invoice.currency} ${Number(invoice.amount_paid).toFixed(2)}`} paid</p> : null}{invoice.currency !== displayCurrency ? <p className="mt-1 text-[11px] font-medium text-muted-foreground">Originally {formatMoney(Number(invoice.total), invoice.currency)}</p> : null}</td><td className="px-5 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize ${statusClass(invoice.status)}`}>{statusLabel(invoice.status)}</span></td><td className="relative px-5 py-4 text-right"><div className="flex justify-end gap-2">{invoice.status === "draft" ? <Link href={`/workflow/invoices/new?invoiceId=${encodeURIComponent(invoice.id)}`}><Button size="sm" variant="outline">Review</Button></Link> : null}<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${invoice.invoice_number}`} onClick={(event) => { setMenuRect(event.currentTarget.getBoundingClientRect()); setOpenMenu(openMenu === invoice.id ? null : invoice.id); }}><MoreVertical className="h-4 w-4" /></Button></div>{openMenu === invoice.id ? <DropdownPortal triggerRect={menuRect} onClose={() => setOpenMenu(null)}><div className="w-48 rounded-xl border border-border bg-card p-1 shadow-xl"><Button className="w-full justify-start gap-2" variant="ghost" onClick={() => { openPdf(invoice); setOpenMenu(null); }}><Download className="h-4 w-4" /> Download PDF</Button>{["sent", "viewed", "overdue", "partially_paid"].includes(invoice.status) ? <Button className="w-full justify-start gap-2 text-emerald-700" variant="ghost" onClick={() => { setOpenMenu(null); void recordPayment(invoice); }}><CheckCircle className="h-4 w-4" /> Record payment</Button> : null}{["draft", "overdue"].includes(invoice.status) ? <Button className="w-full justify-start gap-2 text-blue-700" variant="ghost" onClick={() => { setOpenMenu(null); void sendInvoice(invoice); }}><Send className="h-4 w-4" /> Send invoice</Button> : null}{invoice.status === "draft" && !invoice.contract_id ? <Button className="w-full justify-start gap-2 text-red-700" variant="ghost" onClick={() => { setOpenMenu(null); void deleteInvoice(invoice); }}><Trash2 className="h-4 w-4" /> Delete draft</Button> : null}</div></DropdownPortal> : null}</td></tr>)}</tbody></table></div>}
+      </section>
 
-                <form onSubmit={handleSave} className="flex flex-col gap-4 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
-                  {agreements && editingInvoice?.contract_id ? <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100"><p className="font-bold">Agreement-generated draft — not sent</p><p className="mt-0.5 text-blue-900/80 dark:text-blue-200/80">The amount and trigger came from {editingInvoice.contract_title || "the accepted Agreement"}. Your edits affect this invoice only; the accepted Agreement record stays unchanged.</p><Link href={`/workflow/contracts/${editingInvoice.contract_id}`} className="mt-1 inline-flex font-bold underline">Open source Agreement</Link></div> : null}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-foreground">Invoice number *</label>
-                      <Input
-                        type="text"
-                        required
-                        value={invoiceNumber}
-                        onChange={(e) => setInvoiceNumber(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 font-mono"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-foreground">Issue date</label>
-                      <Input
-                        type="date"
-                        value={issueDate}
-                        onChange={(e) => setIssueDate(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-foreground">Due date</label>
-                      <Input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-foreground">Recipient client</label>
-                      <Select
-                        value={clientId}
-                        onChange={(e) => { setClientId(e.target.value); setProjectId(""); }}
-                        disabled={Boolean(editingInvoice?.contract_id)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
-                      >
-                        <option value="">Select client</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-foreground">Link project</label>
-                      <Select
-                        value={projectId}
-                        onChange={(e) => { const value = e.target.value; setProjectId(value); const project = projects.find((item) => item.id === value); if (project?.currency) setCurrency(project.currency); }}
-                        disabled={Boolean(editingInvoice?.contract_id)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
-                      >
-                        <option value="">Select project (optional)</option>
-                        {projects.filter((project) => !clientId || project.client_id === clientId).map(p => (
-                          <option key={p.id} value={p.id}>{p.title}</option>
-                        ))}
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-foreground">Currency</label>
-                    <Input type="text" maxLength={3} value={currency} disabled={Boolean(editingInvoice?.contract_id)} onChange={(e) => setCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))} placeholder="USD" />
-                  </div>
-
-                  {/* Line Items List */}
-                  <div className="flex flex-col gap-3.5 border-t border-b border-dashed border-border dark:border-slate-800 py-4 my-2">
-                    <div className="flex justify-between items-center px-1">
-                      <span className="text-xs font-bold text-foreground">Invoice line items</span>
-                      <Button
-                        type="button"
-                        onClick={handleAddItem}
-                        disabled={Boolean(editingInvoice?.contract_id)}
-                        className="text-[10px] font-bold text-primary dark:text-blue-400 hover:underline flex items-center gap-0.5"
-                      >
-                        <Plus className="h-3 w-3" />
-                        <span>Add item</span>
-                      </Button>
-                    </div>
-
-                    <div className="flex flex-col gap-3 max-h-[180px] overflow-y-auto">
-                      {items.map((item, idx) => (
-                        <div key={idx} className="flex gap-2 items-center">
-                          <Input
-                            type="text"
-                            required
-                            placeholder="Item description..."
-                            value={item.description}
-                            onChange={(e) => handleItemChange(idx, "description", e.target.value)}
-                            className="flex-1 px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
-                          />
-                          <Input
-                            type="number"
-                            required
-                            disabled={Boolean(editingInvoice?.contract_id)}
-                            placeholder="Qty"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
-                            className="w-14 px-2 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-center text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
-                          />
-                          <Input
-                            type="number"
-                            required
-                            disabled={Boolean(editingInvoice?.contract_id)}
-                            placeholder="Rate"
-                            value={item.unit_price}
-                            onChange={(e) => handleItemChange(idx, "unit_price", e.target.value)}
-                            className="w-20 px-2 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => handleRemoveItem(idx)}
-                            disabled={items.length === 1 || Boolean(editingInvoice?.contract_id)}
-                            className="p-2 text-muted-foreground dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-foreground">Tax rate (%)</label>
-                      <Input
-                        type="number"
-                        placeholder="E.g. 5"
-                        value={taxRate}
-                        onChange={(e) => setTaxRate(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1 bg-background dark:bg-slate-800 p-2.5 rounded-lg border border-border dark:border-slate-700 justify-between text-right">
-                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground dark:text-slate-400 uppercase">
-                        <span>Subtotal:</span>
-                        <span>{formatCurrency(calculateSubtotal(), currency)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-black text-foreground dark:text-slate-200 border-t border-slate-200 dark:border-slate-700 pt-1.5 mt-1">
-                        <span>Grand total:</span>
-                        <span>{formatCurrency(calculateTotal(), currency)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-foreground">Payment notes</label>
-                    <Textarea
-                      rows={2}
-                      placeholder="Add bank transfer instructions, terms..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none"
-                    />
-                  </div>
-                </form>
-              </div>
-
-              <div className="flex items-center gap-2 border-t border-border dark:border-slate-800 pt-4 mt-6">
-                <Button
-                  type="button"
-                  onClick={() => setDrawerOpen(false)}
-                  variant="outline"
-                  size="default"
-                  className="w-1/3"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  variant="default"
-                  size="default"
-                  className="w-2/3"
-                >
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                  <span>{editingId ? "Save reviewed draft" : "Generate invoice"}</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Portal>
-      )}
+      <p className="text-center text-xs text-muted-foreground">All totals are calculated from the server-side invoice and payment ledger. {ratesStatus === "ready" ? `Converted to ${displayCurrency} for display.` : "Original currencies are shown while exchange rates load."}</p>
     </div>
   );
 }

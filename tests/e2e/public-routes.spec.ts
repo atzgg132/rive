@@ -20,6 +20,7 @@ const publicRoutes = [
   "/reset-password",
   "/roadmap",
   "/terms",
+  "/waitlist",
 ];
 
 function captureRuntimeErrors(page: Page) {
@@ -63,20 +64,23 @@ test("marketing page advertises current connections without a demo CTA", async (
 });
 
 test("login password visibility control works", async ({ page }) => {
-  await page.goto("/login");
-  const password = page.locator('input[type="password"]');
+  await page.goto("/login", { waitUntil: "networkidle" });
+  const password = page.locator("#login-password");
   const showPassword = page.getByRole("button", { name: "show password" });
 
   await expect(password).toHaveCount(1);
   await expect(showPassword).toHaveCount(1);
+  await expect(showPassword).toBeEnabled();
   await password.fill("temporary-password");
   await showPassword.click();
-  await expect(page.locator('input[type="text"]')).toHaveValue("temporary-password");
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(password).toHaveValue("temporary-password");
 
   const hidePassword = page.getByRole("button", { name: "hide password" });
   await expect(hidePassword).toHaveCount(1);
   await hidePassword.click();
-  await expect(page.locator('input[type="password"]')).toHaveValue("temporary-password");
+  await expect(password).toHaveAttribute("type", "password");
+  await expect(password).toHaveValue("temporary-password");
 });
 
 test("registration password visibility control works for invited users", async ({ page }) => {
@@ -88,6 +92,12 @@ test("registration password visibility control works for invited users", async (
   await expect(showPassword).toHaveCount(1);
   await showPassword.click();
   await expect(page.locator('input[type="text"]')).toHaveCount(2);
+});
+
+test("legacy waitlist URL gracefully redirects to open signup", async ({ page }) => {
+  await page.goto("/waitlist", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/register$/);
+  await expect(page.getByRole("heading", { name: "Create your Rive workspace" })).toBeVisible();
 });
 
 test("an unpublished or unknown portfolio URL explains why it is unavailable", async ({ page }) => {

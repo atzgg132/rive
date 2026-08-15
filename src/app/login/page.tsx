@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationRequired, setVerificationRequired] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +22,7 @@ export default function LoginPage() {
     
     setLoading(true);
     setError("");
+    setVerificationRequired(false);
 
     try {
       const res = await fetch("/api/auth/login", {
@@ -37,6 +39,7 @@ export default function LoginPage() {
         return;
       } else {
         setError(data.message || "Invalid credentials. Please try again.");
+        setVerificationRequired(data.code === "EMAIL_NOT_VERIFIED");
       }
     } catch {
       setError("Connection error. Check your network and try again.");
@@ -68,6 +71,7 @@ export default function LoginPage() {
           {error && (
             <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-semibold">
               {error}
+              {verificationRequired && <Link href={`/register?email=${encodeURIComponent(email)}`} className="mt-2 block font-bold underline">Request a fresh verification email</Link>}
             </div>
           )}
 

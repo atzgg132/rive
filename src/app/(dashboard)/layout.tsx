@@ -36,6 +36,7 @@ import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
 import { ACTIVATION_GOAL_NAV_PATHS, type ActivationPlan } from "@/lib/activation";
 import { GuidedExperience, openHelpFromMobileShell } from "@/components/dashboard/GuidedExperience";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 interface UserProfile {
   id: string;
@@ -204,6 +205,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const moreNavLinks = progressiveReveal ? allNavLinks.filter((link) => !navLinks.includes(link)) : [];
   const moreToolsActive = moreNavLinks.some((link) => pathname === link.href || pathname.startsWith(link.href + "/"));
   const moreToolsExpanded = moreToolsOpen || moreToolsActive;
+  const feedbackContext = pathname.startsWith("/workflow/invoices") || pathname.startsWith("/workflow/revenue")
+    ? { promptKey: "invoice_workflow", module: "invoices", triggerEvent: "invoice_workflow_opened", label: "Invoice feedback" }
+    : pathname.startsWith("/calendar")
+      ? { promptKey: "calendar_workflow", module: "calendar", triggerEvent: "calendar_opened", label: "Calendar feedback" }
+      : { promptKey: "workspace_general", module: "workspace", triggerEvent: "workspace_viewed", label: "Share feedback" };
 
   const renderNavLink = (link: (typeof allNavLinks)[number], mobile = false) => {
     const Icon = link.icon;
@@ -450,6 +456,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Command Palette Wrapper ── */}
       <CommandPalette open={commandPaletteOpen} setOpen={setCommandPaletteOpen} agreementsEnabled={agreementsEnabled} />
+      {user ? <div className="fixed bottom-4 right-4 z-40"><FeedbackWidget {...feedbackContext} /></div> : null}
     </div>
     </CurrencyProvider>
     </FeatureAvailabilityProvider>

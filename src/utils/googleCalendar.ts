@@ -351,6 +351,7 @@ async function upsertGoogleEvent(
     recurrenceRule: event.recurrence?.join("\n") || null,
     recurringMasterId: event.recurringEventId || null,
     source,
+    dataOrigin: "imported",
     deletedAt: null,
   };
   const local = mapping

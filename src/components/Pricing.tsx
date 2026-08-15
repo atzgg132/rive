@@ -8,7 +8,7 @@ const plans = [
   {
     name: "Starter",
     price: "Free",
-    priceNote: "during early access",
+    priceNote: "while open beta is running",
     description: "Everything you need to run client work and business operations in one place.",
     features: [
         "Clients, projects, tasks, and calendar",
@@ -18,7 +18,7 @@ const plans = [
         "One public portfolio with analytics",
         "Guided onboarding and data import",
     ],
-    cta: "Join the waitlist",
+    cta: "Create a free account",
     ctaStyle: "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50",
     highlighted: false,
     checkColor: "text-slate-400 dark:text-slate-500",
@@ -35,7 +35,7 @@ const plans = [
       "Expanded customization",
       "Priority support",
     ],
-    cta: "Join the early-access list",
+    cta: "Create a free account",
     ctaStyle:
       "bg-gradient-to-r from-blue-600 to-sky-500 text-white hover:from-blue-700 hover:to-sky-600 shadow-lg shadow-blue-600/20",
     highlighted: true,
@@ -76,7 +76,7 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
             style={{ fontFamily: "var(--font-display)" }}
           >
             Start with the complete workspace. <br />
-            <span className="text-blue-700 dark:text-blue-400">Free during early access.</span>
+            <span className="text-blue-700 dark:text-blue-400">Free during open beta.</span>
           </h2>
           <p
             className="text-slate-600 dark:text-slate-300 text-lg max-w-xl mx-auto font-normal leading-relaxed"
@@ -146,7 +146,7 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
 
               {/* CTA */}
               <Button
-                onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+                onClick={() => { window.location.href = "/register"; }}
                 className={`w-full py-3 rounded-xl font-bold text-sm transition-[background-color] duration-200 ${plan.ctaStyle}`}
                 style={{ fontFamily: "var(--font-display)" }}
               >

@@ -103,8 +103,8 @@ export default function Navbar() {
           >
             Log in
           </Link>
-          <Button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+          <Link
+            href="/register"
             className="text-[13px] font-semibold px-5 py-2.5 rounded-xl text-white transition-[transform] duration-200 hover:-translate-y-px"
             style={{
               fontFamily: "var(--font-display)",
@@ -112,8 +112,8 @@ export default function Navbar() {
               boxShadow: "0 4px 20px rgba(29,78,216,0.18)",
             }}
           >
-            Join the waitlist
-          </Button>
+            Create free account
+          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -154,16 +154,14 @@ export default function Navbar() {
             </a>
           ))}
           <Link href="/login" onClick={() => setMenuOpen(false)} className="rounded-xl border border-slate-200 px-3 py-3 text-center text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Log in</Link>
-          <Button
-            onClick={() => {
-              setMenuOpen(false);
-              window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }));
-            }}
-            className="w-full text-sm font-semibold px-5 py-3 rounded-xl text-white mt-1"
+          <Link
+            href="/register"
+            onClick={() => setMenuOpen(false)}
+            className="w-full text-center text-sm font-semibold px-5 py-3 rounded-xl text-white mt-1"
             style={{ background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)" }}
           >
-            Join the waitlist
-          </Button>
+            Create free account
+          </Link>
         </div>
       )}
     </nav>

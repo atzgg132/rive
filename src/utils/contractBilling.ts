@@ -3,6 +3,8 @@ import "server-only";
 import { prisma } from "@/utils/db";
 import { addDays, createNotification } from "@/utils/contracts";
 import { sendInvoiceReadyEmail } from "@/utils/email";
+import { nextInvoiceNumber } from "@/utils/invoiceNumber";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 function isEligible(item: {
   triggerType: string;
@@ -28,11 +30,6 @@ function eligibilityDate(item: {
   if (item.triggerType === "milestone_due") return item.triggerDate || item.milestone?.dueDate || now;
   if (item.triggerType === "milestone_completed" && item.milestone?.completedAt) return item.milestone.completedAt;
   return now;
-}
-
-function invoiceNumberFor(occurrenceId: string, date: Date): string {
-  const datePart = date.toISOString().slice(0, 10).replaceAll("-", "");
-  return `RIVE-${datePart}-${occurrenceId.replaceAll("-", "").toUpperCase()}`;
 }
 
 export async function processContractBilling(input: { userId?: string; contractId?: string; limit?: number } = {}) {
@@ -74,18 +71,20 @@ export async function processContractBilling(input: { userId?: string; contractI
 
     try {
       const invoice = await prisma.$transaction(async (tx) => {
+        const invoiceNumber = await nextInvoiceNumber(tx, occurrence.contract.userId, "RIVE", now);
         const created = await tx.invoice.create({
           data: {
             userId: occurrence.contract.userId,
             clientId: occurrence.contract.clientId,
             projectId: occurrence.contract.projectId,
-            invoiceNumber: invoiceNumberFor(occurrence.id, now),
+            invoiceNumber,
             status: "draft",
             currency: item.currency,
             subtotal: item.amount,
             taxRate: 0,
             taxAmount: 0,
             total: item.amount,
+            dataOrigin: "user",
             issueDate: now,
             dueDate: addDays(eligibleAt, item.dueDays),
             notes: `Draft generated from accepted Agreement “${occurrence.contract.title}”. Review the Agreement and invoice before sending.`,
@@ -98,6 +97,7 @@ export async function processContractBilling(input: { userId?: string; contractI
         return created;
       });
       drafted += 1;
+      await recordProductEvent({ userId: occurrence.contract.userId, eventName: PRODUCT_EVENTS.invoiceCreated, module: "invoices", entityType: "invoice", entityId: invoice.id, dataOrigin: "user", properties: { generatedFrom: "agreement_billing" } });
       await createNotification({ userId: occurrence.contract.userId, type: "invoice_review", title: "Draft invoice ready for review", message: `${invoice.invoiceNumber} was generated from ${occurrence.contract.title}.`, href: `/workflow/revenue?invoiceId=${encodeURIComponent(invoice.id)}` }).catch(() => undefined);
       await sendInvoiceReadyEmail({ to: occurrence.contract.user.email, clientName: occurrence.contract.client.name, invoiceNumber: invoice.invoiceNumber, total: invoice.total.toString(), currency: invoice.currency, dueDate: invoice.dueDate }).catch(() => undefined);
     } catch (error) {

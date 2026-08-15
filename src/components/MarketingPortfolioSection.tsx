@@ -38,7 +38,7 @@ export default function MarketingPortfolioSection() {
           </div>
 
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+            onClick={() => { window.location.href = "/register"; }}
             className="group mt-9 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950"
           >
             Build your portfolio

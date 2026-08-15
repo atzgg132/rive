@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 // GET /api/workflow/clients
 export async function GET(req: NextRequest) {
@@ -122,10 +123,14 @@ export async function POST(req: NextRequest) {
         avatarColor,
         notes: notes || null,
         tags: tags || [],
-        status: "active"
+        status: "active",
+        dataOrigin: "user"
       }
     });
-    await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstClientCreated, { clientId: client.id });
+    await Promise.all([
+      recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstClientCreated, { clientId: client.id }),
+      recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.clientCreated, module: "clients", entityType: "client", entityId: client.id, dataOrigin: "user" }),
+    ]);
 
     // Formatting for frontend compatibility
     const formattedClient = {

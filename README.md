@@ -4,16 +4,21 @@ Rive is the operating system for independent work: projects, clients, revenue, e
 
 ## Local development
 
-Copy `.env.example` to `.env.local`, configure `DATABASE_URL`, then run:
+Copy `.env.example` to `.env.local`, start the bundled PostgreSQL service, and run the tracked migrations:
 
 ```bash
 npm install
+docker compose up -d db
 npm run db:generate
-npm run db:push
+npm run db:migrate
 npm run dev
 ```
 
+For the bundled database, use `DATABASE_URL="postgresql://rive:rive_local@localhost:5432/rive"` in `.env.local`. If Docker is unavailable, use any reachable PostgreSQL 14+ instance with the same migration commands; the app does not silently fall back to an in-memory database.
+
 Open [http://localhost:3000](http://localhost:3000).
+
+For the open-beta signup flow, keep `EMAIL_PROVIDER="console"` during local development. Registering an account prints the email-verification link in the server terminal. See [`docs/open-beta-local-testing.md`](docs/open-beta-local-testing.md) for the complete smoke-test checklist, including admin funnel and invoice PDF checks.
 
 For a local session against the AWS development database, authenticate with the AWS CLI once and use the SSM tunnel commands below. The tunnel keeps the development URL in process memory and does not write it to `.env.local`:
 

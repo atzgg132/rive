@@ -1,7 +1,12 @@
 import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 
 type InvoiceLineItem = { description: string; quantity: string | number; unit_price: string | number; amount?: string | number };
-type InvoicePdfData = { invoice_number: string; issue_date: string; due_date?: string | null; client_name?: string | null; project_title?: string | null; items?: InvoiceLineItem[]; subtotal: string | number; tax_rate: string | number; tax_amount: string | number; total: string | number; notes?: string | null };
+type InvoicePdfData = { invoice_number: string; issue_date: string; due_date?: string | null; currency?: string; client_name?: string | null; project_title?: string | null; items?: InvoiceLineItem[]; subtotal: string | number; discount_rate?: string | number; discount_amount?: string | number; tax_rate: string | number; tax_amount: string | number; total: string | number; amount_paid?: string | number; outstanding?: string | number; notes?: string | null };
+
+function money(value: string | number, currency = "USD"): string {
+  try { return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 2 }).format(Number(value) || 0); }
+  catch { return `${currency} ${Number(value || 0).toFixed(2)}`; }
+}
 
 // Define styles
 const styles = StyleSheet.create({
@@ -27,7 +32,7 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoicePdfData }) => (
       <View style={styles.header}>
         <View>
           <Text style={styles.logo}>rive.</Text>
-          <Text style={styles.muted}>The Freelance OS</Text>
+          <Text style={styles.muted}>Connected business workspace</Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
           <Text style={styles.title}>INVOICE</Text>
@@ -61,8 +66,8 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoicePdfData }) => (
           <View key={i} style={styles.row}>
             <Text style={styles.col1}>{item.description}</Text>
             <Text style={styles.col2}>{item.quantity}</Text>
-            <Text style={styles.col3}>${Number(item.unit_price).toFixed(2)}</Text>
-            <Text style={styles.col4}>${Number(item.amount ?? Number(item.quantity) * Number(item.unit_price)).toFixed(2)}</Text>
+            <Text style={styles.col3}>{money(item.unit_price, invoice.currency)}</Text>
+            <Text style={styles.col4}>{money(item.amount ?? Number(item.quantity) * Number(item.unit_price), invoice.currency)}</Text>
           </View>
         ))}
       </View>
@@ -70,18 +75,26 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoicePdfData }) => (
       <View style={{ width: "50%", alignSelf: "flex-end" }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
           <Text>Subtotal</Text>
-          <Text>${Number(invoice.subtotal).toFixed(2)}</Text>
+          <Text>{money(invoice.subtotal, invoice.currency)}</Text>
         </View>
+        {Number(invoice.discount_amount || 0) > 0 && (
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+            <Text>Discount{Number(invoice.discount_rate || 0) > 0 ? ` (${invoice.discount_rate}%)` : ""}</Text>
+            <Text>-{money(invoice.discount_amount || 0, invoice.currency)}</Text>
+          </View>
+        )}
         {Number(invoice.tax_rate) > 0 && (
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
             <Text>Tax ({Number(invoice.tax_rate)}%)</Text>
-            <Text>${Number(invoice.tax_amount).toFixed(2)}</Text>
+            <Text>{money(invoice.tax_amount, invoice.currency)}</Text>
           </View>
         )}
         <View style={styles.totalRow}>
-          <Text style={styles.totalText}>Total Due</Text>
-          <Text style={styles.totalText}>${Number(invoice.total).toFixed(2)}</Text>
+          <Text style={styles.totalText}>Total</Text>
+          <Text style={styles.totalText}>{money(invoice.total, invoice.currency)}</Text>
         </View>
+        {Number(invoice.amount_paid || 0) > 0 && <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}><Text>Paid</Text><Text>{money(invoice.amount_paid || 0, invoice.currency)}</Text></View>}
+        {invoice.outstanding !== undefined && <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}><Text style={{ fontWeight: "bold" }}>Amount due</Text><Text style={{ fontWeight: "bold" }}>{money(invoice.outstanding, invoice.currency)}</Text></View>}
       </View>
 
       {invoice.notes && (

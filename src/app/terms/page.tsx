@@ -6,7 +6,7 @@ const font  = { fontFamily: "var(--font-body)" };
 const toc = [
   { id: "acceptance",  label: "1. acceptance of terms" },
   { id: "service",     label: "2. description of service" },
-  { id: "waitlist",    label: "3. waitlist & alpha access" },
+  { id: "access",      label: "3. open beta access" },
   { id: "conduct",     label: "4. user conduct" },
   { id: "ip",          label: "5. intellectual property" },
   { id: "disclaimer",  label: "6. disclaimers & liability" },
@@ -55,17 +55,17 @@ export default function TermsPage() {
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 md:p-10 transition-colors">
 
               <Section id="acceptance" title="1. Acceptance of terms">
-                <p>By accessing the rive. website, joining the waitlist, or using any part of the rive. platform (collectively, the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, please do not use the Service.</p>
+                <p>By accessing the rive. website, creating an account, or using any part of the rive. platform (collectively, the &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, please do not use the Service.</p>
               </Section>
 
               <Section id="service" title="2. Description of service">
                 <p>Rive is an early-stage operating workspace for digital service providers and small service businesses. The platform includes tools for client management, project delivery, invoicing, expenses, calendar planning, and public portfolios.</p>
-                <p>Features, functionality, and availability may change at any time without notice during the alpha phase. rive. makes no guarantees about uptime, feature completeness, or suitability for any particular purpose during this stage.</p>
+                <p>Features, functionality, and availability may change at any time while the product is in open beta. rive. makes no guarantees about uptime, feature completeness, or suitability for any particular purpose during this stage.</p>
               </Section>
 
-              <Section id="waitlist" title="3. Waitlist and alpha access">
-                <p>Joining the rive. waitlist indicates your interest in early access. It does not constitute a guarantee of access, a reservation, or a contractual right to use the platform.</p>
-                <p>Alpha access is granted at rive.&apos;s sole discretion in batches. We reserve the right to modify, delay, or cancel waitlist invitations at any time.</p>
+              <Section id="access" title="3. Open beta access">
+                <p>Rive is currently available to anyone who visits the site, creates an account, and verifies their email. The workspace is offered free during open beta.</p>
+                <p>Open-beta access may be modified, suspended, or ended as we improve the product. We will make reasonable efforts to communicate material changes.</p>
               </Section>
 
               <Section id="conduct" title="4. User conduct">
@@ -85,12 +85,12 @@ export default function TermsPage() {
               </Section>
 
               <Section id="disclaimer" title="6. Disclaimers and limitation of liability">
-                <p>The Service is provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind, express or implied. During the alpha phase, we make no warranties about reliability, accuracy, fitness for a particular purpose, or non-infringement.</p>
+                <p>The Service is provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind, express or implied. During open beta, we make no warranties about reliability, accuracy, fitness for a particular purpose, or non-infringement.</p>
                 <p>To the fullest extent permitted by law, rive. shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Service, even if we have been advised of the possibility of such damages.</p>
               </Section>
 
               <Section id="termination" title="7. Termination">
-                <p>rive. reserves the right to suspend or terminate your access to the Service at any time, for any reason, without notice. During the alpha phase in particular, access may be revoked as we iterate on the platform.</p>
+                <p>rive. reserves the right to suspend or terminate your access to the Service at any time, for any reason, without notice. During open beta in particular, access may be revoked as we iterate on the platform.</p>
                 <p>Upon termination, provisions that by their nature should survive (including IP, disclaimers, and governing law) will remain in effect.</p>
               </Section>
 
@@ -99,7 +99,7 @@ export default function TermsPage() {
               </Section>
 
               <Section id="changes" title="9. Changes to terms">
-                <p>We may revise these Terms at any time. Material changes will be communicated to waitlist members via email. The &quot;last updated&quot; date at the top of this page reflects the most recent revision. Continued use of the Service after changes constitutes acceptance.</p>
+                <p>We may revise these Terms at any time. Material changes will be communicated through the Service or by email. The &quot;last updated&quot; date at the top of this page reflects the most recent revision. Continued use of the Service after changes constitutes acceptance.</p>
               </Section>
 
               <Section id="contact" title="10. Contact">

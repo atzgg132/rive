@@ -1,82 +1,43 @@
 "use client";
 
 import { Button, Input, Select } from "@/components/ui";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, Globe, Lock, Loader2, RefreshCw, TrendingUp, Zap } from "lucide-react";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Globe, ArrowRight, Zap, Lock, Clock, Loader2,
-  RefreshCw, TrendingUp,
-} from "lucide-react";
-import { submitToWaitlist } from "@/utils/api";
-
-// ── Currency definitions (all supported by Frankfurter ECB) ──
 const CURRENCIES = [
-  { code: "USD", flag: "🇺🇸", name: "US Dollar"        },
-  { code: "EUR", flag: "🇪🇺", name: "Euro"              },
-  { code: "GBP", flag: "🇬🇧", name: "British Pound"     },
-  { code: "INR", flag: "🇮🇳", name: "Indian Rupee"      },
-  { code: "CAD", flag: "🇨🇦", name: "Canadian Dollar"   },
-  { code: "AUD", flag: "🇦🇺", name: "Australian Dollar" },
-  { code: "SGD", flag: "🇸🇬", name: "Singapore Dollar"  },
-  { code: "JPY", flag: "🇯🇵", name: "Japanese Yen"      },
-  { code: "CHF", flag: "🇨🇭", name: "Swiss Franc"       },
-  { code: "BRL", flag: "🇧🇷", name: "Brazilian Real"    },
-  { code: "HKD", flag: "🇭🇰", name: "Hong Kong Dollar"  },
-  { code: "MXN", flag: "🇲🇽", name: "Mexican Peso"      },
-  { code: "ZAR", flag: "🇿🇦", name: "South African Rand"},
-  { code: "CNY", flag: "🇨🇳", name: "Chinese Yuan"      },
-  { code: "KRW", flag: "🇰🇷", name: "Korean Won"        },
-  { code: "MYR", flag: "🇲🇾", name: "Malaysian Ringgit" },
-  { code: "PHP", flag: "🇵🇭", name: "Philippine Peso"   },
-  { code: "IDR", flag: "🇮🇩", name: "Indonesian Rupiah" },
-  { code: "THB", flag: "🇹🇭", name: "Thai Baht"         },
-  { code: "TRY", flag: "🇹🇷", name: "Turkish Lira"      },
-];
+  ["USD", "US Dollar"], ["EUR", "Euro"], ["GBP", "British Pound"], ["INR", "Indian Rupee"],
+  ["CAD", "Canadian Dollar"], ["AUD", "Australian Dollar"], ["SGD", "Singapore Dollar"], ["JPY", "Japanese Yen"],
+  ["CHF", "Swiss Franc"], ["BRL", "Brazilian Real"], ["HKD", "Hong Kong Dollar"], ["MXN", "Mexican Peso"],
+  ["ZAR", "South African Rand"], ["CNY", "Chinese Yuan"], ["KRW", "Korean Won"], ["MYR", "Malaysian Ringgit"],
+  ["PHP", "Philippine Peso"], ["IDR", "Indonesian Rupiah"], ["THB", "Thai Baht"], ["TRY", "Turkish Lira"],
+] as const;
 
-const FEE_RATE    = 0.005; // 0.5%
-const COOLDOWN_S  = 15;    // seconds between refreshes
-const FRANKFURTER = "/api/rates";
+const FEE_RATE = 0.005;
 
-// Format numbers nicely
-function fmt(n: number, code: string): string {
-  if (!isFinite(n)) return "—";
-  const decimals = ["JPY", "KRW", "IDR"].includes(code) ? 0 : 2;
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(n);
+function formatAmount(value: number, currency: string) {
+  const decimals = ["JPY", "KRW", "IDR"].includes(currency) ? 0 : 2;
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
 }
 
 export default function RemitSection() {
-  const [email, setEmail]         = useState("");
-  const [formState, setFormState] = useState<"idle"|"loading"|"success"|"already-joined">("idle");
-
-  // Currency state
   const [fromCode, setFromCode] = useState("USD");
-  const [toCode,   setToCode]   = useState("INR");
-  const [amount,   setAmount]   = useState(1000);
-
-  // Rates: { [currencyCode]: rate relative to base }
-  const [rates,       setRates]       = useState<Record<string, number>>({});
-  const [ratesState,  setRatesState]  = useState<"idle"|"loading"|"error">("idle");
+  const [toCode, setToCode] = useState("INR");
+  const [amount, setAmount] = useState(1000);
+  const [rates, setRates] = useState<Record<string, number>>({});
+  const [ratesState, setRatesState] = useState<"idle" | "loading" | "error">("idle");
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
-  const [cooldown,    setCooldown]    = useState(0);
-  const cooldownRef  = useRef<NodeJS.Timeout | null>(null);
-  const intervalRef  = useRef<NodeJS.Timeout | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch live rates from local API proxy
   const fetchRates = useCallback(async () => {
     setRatesState("loading");
     try {
-      const res  = await fetch(FRANKFURTER);
-      if (!res.ok) throw new Error("bad response");
-      const result = await res.json();
-      if (!result.success) throw new Error("Proxy error");
-      const json = result.data;
-      // Frankfurter returns rates relative to the `from` currency
-      // Add the base itself as rate = 1
-      const allRates: Record<string, number> = { [json.base]: 1, ...json.rates };
-      setRates(allRates);
+      const response = await fetch("/api/rates", { cache: "no-store" });
+      if (!response.ok) throw new Error("Rate request failed");
+      const result = await response.json();
+      if (!result.success) throw new Error("Rate proxy failed");
+      setRates({ [result.data.base]: 1, ...result.data.rates });
       setLastFetched(new Date());
       setRatesState("idle");
     } catch {
@@ -84,279 +45,53 @@ export default function RemitSection() {
     }
   }, []);
 
-  // Initial fetch on mount
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchRates();
-    // Auto-refresh every 60 seconds silently
-    intervalRef.current = setInterval(fetchRates, 60_000);
+    const initialFetch = window.setTimeout(() => void fetchRates(), 0);
+    const interval = setInterval(() => void fetchRates(), 60_000);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      window.clearTimeout(initialFetch);
+      clearInterval(interval);
       if (cooldownRef.current) clearInterval(cooldownRef.current);
     };
   }, [fetchRates]);
 
-  // Manual refresh — with 15s cooldown
-  const handleRefresh = () => {
+  const rate = rates[fromCode] && rates[toCode] ? rates[toCode] / rates[fromCode] : null;
+  const fee = amount * FEE_RATE;
+  const received = rate === null ? null : (amount - fee) * rate;
+  const refresh = () => {
     if (cooldown > 0 || ratesState === "loading") return;
-    fetchRates();
-    setCooldown(COOLDOWN_S);
-    cooldownRef.current = setInterval(() => {
-      setCooldown(prev => {
-        if (prev <= 1) {
-          clearInterval(cooldownRef.current!);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  // Compute the conversion
-  const getRate = (from: string, to: string): number | null => {
-    if (!rates[from] || !rates[to]) return null;
-    // rates are all vs USD base. Convert: to / from
-    return rates[to] / rates[from];
-  };
-
-  const rate       = getRate(fromCode, toCode);
-  const feeAmount  = amount * FEE_RATE;
-  const netAmount  = amount - feeAmount;
-  const received   = rate !== null ? netAmount * rate : null;
-
-  const fromCurrency = CURRENCIES.find(c => c.code === fromCode)!;
-
-  // Seconds since last fetch
-  const [ageSeconds, setAgeSeconds] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (lastFetched) setAgeSeconds(Math.floor((Date.now() - lastFetched.getTime()) / 1000));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [lastFetched]);
-
-  const ageLabel = !lastFetched ? "" :
-    ageSeconds < 5  ? "just now" :
-    ageSeconds < 60 ? `${ageSeconds}s ago` :
-    `${Math.floor(ageSeconds / 60)}m ago`;
-
-  // Waitlist form
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || formState === "loading") return;
-    setFormState("loading");
-    const res = await submitToWaitlist(email, "remit");
-    setFormState(res.alreadyJoined ? "already-joined" : res.success ? "success" : "idle");
+    void fetchRates();
+    setCooldown(15);
+    cooldownRef.current = setInterval(() => setCooldown((value) => {
+      if (value <= 1) {
+        if (cooldownRef.current) clearInterval(cooldownRef.current);
+        return 0;
+      }
+      return value - 1;
+    }), 1000);
   };
 
   return (
     <section id="remit" className="relative overflow-hidden bg-background py-20 dark:bg-background sm:py-28">
-      {/* Background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-50/20 to-transparent" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-blue-100/10 rounded-full blur-[130px]" />
-      </div>
-      <div
-        className="absolute inset-0 opacity-[0.3] pointer-events-none"
-        style={{ backgroundImage: "radial-gradient(circle, rgba(29,78,216,0.07) 1px, transparent 1px)", backgroundSize: "42px 42px" }}
-      />
-
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-
-          {/* ── Left: Content ─────────────────────────── */}
-          <div className="flex flex-col gap-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 bg-blue-50/50 text-xs font-semibold text-blue-600 w-fit">
-              <Globe className="w-3 h-3 shrink-0" />
-              <span style={{ fontFamily: "var(--font-body)" }}>Concept preview</span>
-            </div>
-
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white" style={{ fontFamily: "var(--font-display)" }}>
-              Remit{" "}
-              <span className="text-blue-700 dark:text-blue-400">Payments</span>
-              <br />
-              <span className="text-2xl font-medium text-slate-500 dark:text-slate-400 sm:text-3xl">By Rive.</span>
-            </h2>
-
-            <p className="text-slate-600 dark:text-slate-300 text-[1.05rem] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
-              Remit is our long-term direction for simpler international service payments.
-              The calculator below is a rate preview, not a live transfer product.
-            </p>
-
-            {/* Feature pills */}
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                { icon: Zap,         label: "Faster payouts",       sub: "Planned capability" },
-                { icon: Lock,        label: "Secure by design",     sub: "Core requirement" },
-                { icon: TrendingUp,  label: "Clear pricing",        sub: "No hidden markups" },
-              ].map(({ icon: Icon, label, sub }) => (
-                <div key={label} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-center shadow-sm dark:shadow-none transition-colors">
-                  <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  <p className="text-slate-800 dark:text-slate-200 text-xs font-bold leading-tight" style={{ fontFamily: "var(--font-display)" }}>{label}</p>
-                  <p className="text-slate-400 dark:text-slate-500 text-[10px]" style={{ fontFamily: "var(--font-body)" }}>{sub}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Waitlist form */}
-            {formState === "idle" || formState === "loading" ? (
-              <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-3 sm:flex-row">
-                <Input
-                  type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="your@email.com" required disabled={formState === "loading"}
-                  className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-500/50 transition-[border-color,opacity] duration-200 disabled:opacity-60"
-                  style={{ fontFamily: "var(--font-body)" }}
-                />
-                <Button type="submit" disabled={formState === "loading"}
-                  className="group inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-sky-600 transition-[transform,opacity] duration-200 shadow-lg shadow-blue-600/15 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
-                  style={{ fontFamily: "var(--font-display)" }}>
-                  {formState === "loading"
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Checking...</span></>
-                    : <>Join the waitlist <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
-                  }
-                </Button>
-              </form>
-            ) : formState === "success" ? (
-              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-medium text-sm mt-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span style={{ fontFamily: "var(--font-body)" }}>You&apos;re on the Remit early-access list. We&apos;ll reach out when there is something meaningful to test.</span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium text-sm mt-2">
-                <Clock className="w-4 h-4 shrink-0 text-blue-500 dark:text-blue-400" />
-                <span style={{ fontFamily: "var(--font-body)" }}>Already on the list — you&apos;ll be first to know when Remit launches.</span>
-              </div>
-            )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-blue-50/20 to-transparent" />
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 sm:px-8 lg:grid-cols-2 lg:gap-16">
+        <div className="flex flex-col gap-6">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-blue-50/50 px-3.5 py-1.5 text-xs font-semibold text-blue-600"><Globe className="h-3 w-3" />Concept preview</div>
+          <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">Remit <span className="text-blue-700 dark:text-blue-400">Payments</span><br /><span className="text-2xl font-medium text-slate-500 dark:text-slate-400 sm:text-3xl">By Rive.</span></h2>
+          <p className="text-[1.05rem] leading-relaxed text-slate-600 dark:text-slate-300">Remit is our long-term direction for simpler international service payments. The calculator below is a rate preview, not a live transfer product.</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[{ icon: Zap, label: "Faster payouts", sub: "Planned capability" }, { icon: Lock, label: "Secure by design", sub: "Core requirement" }, { icon: TrendingUp, label: "Clear pricing", sub: "No hidden markups" }].map(({ icon: Icon, label, sub }) => <div key={label} className="flex flex-col items-center gap-2 rounded-xl border border-slate-100 bg-white p-4 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900"><Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" /><p className="text-xs font-bold text-slate-800 dark:text-slate-200">{label}</p><p className="text-[10px] text-slate-400 dark:text-slate-500">{sub}</p></div>)}
           </div>
+          <div className="mt-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center"><Link href="/register" className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/15 transition hover:-translate-y-px">Create a free account <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></Link><span className="text-xs font-medium text-slate-400">Remit remains a future product direction.</span></div>
+        </div>
 
-          {/* ── Right: Live currency widget ────────────── */}
-          <div className="relative">
-            <div className="relative rounded-3xl border border-slate-100 bg-white p-4 shadow-xl transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-7">
-
-              {/* Widget header */}
-              <div className="mb-5 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200" style={{ fontFamily: "var(--font-display)" }}>Exchange-rate preview</p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
-                    {ratesState === "loading" ? (
-                      <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Fetching rates...</span>
-                    ) : ratesState === "error" ? (
-                      <span className="text-red-400">Rate fetch failed</span>
-                    ) : lastFetched ? (
-                      <span>live ECB rates · updated {ageLabel}</span>
-                    ) : "—"}
-                  </p>
-                </div>
-                {/* Refresh button */}
-                <Button
-                  onClick={handleRefresh}
-                  disabled={cooldown > 0 || ratesState === "loading"}
-                  title={cooldown > 0 ? `Refresh available in ${cooldown}s` : "Refresh rates"}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed transition-[border-color,color,background-color,opacity] duration-200"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${ratesState === "loading" ? "animate-spin" : ""}`} />
-                  {cooldown > 0 ? `${cooldown}s` : "Refresh"}
-                </Button>
-              </div>
-
-              {/* You send */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-700/60 p-4 mb-2 transition-colors">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>You send</p>
-                <div className="flex min-w-0 items-center gap-3">
-                  <Select
-                    value={fromCode}
-                    onChange={e => setFromCode(e.target.value)}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-[border-color] shrink-0"
-                    style={{ fontFamily: "var(--font-display)", width: "9rem" }}
-                  >
-                    {CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
-                    ))}
-                  </Select>
-                  <Input
-                    type="number" min="1" step="any"
-                    value={amount}
-                    onChange={e => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="min-w-0 flex-1 bg-transparent text-right text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 outline-none border-none w-0"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  />
-                </div>
-              </div>
-
-              {/* Fee row */}
-              <div className="flex flex-wrap items-center justify-between gap-2 px-2 sm:px-4 py-2 mb-2">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <div className="w-px h-4 bg-blue-200 dark:bg-blue-800" />
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500" style={{ fontFamily: "var(--font-body)" }}>
-                    Rive fee preview (0.5%) — <span className="text-slate-600 dark:text-slate-300 font-semibold">{fromCurrency.flag} {fmt(feeAmount, fromCode)} {fromCode}</span>
-                  </span>
-                </div>
-                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full" style={{ fontFamily: "var(--font-body)" }}>
-                  Indicative
-                </span>
-              </div>
-
-              {/* Rate arrow */}
-              <div className="flex items-center justify-center my-1">
-                <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100/60 dark:border-blue-900/50 flex items-center justify-center">
-                  <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400 rotate-90" />
-                </div>
-              </div>
-
-              {/* They receive */}
-              <div className="bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-100/50 dark:border-blue-900/40 p-4 mb-4 transition-colors">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest font-bold" style={{ fontFamily: "var(--font-body)" }}>They receive</p>
-                <div className="flex min-w-0 items-center gap-3">
-                  <Select
-                    value={toCode}
-                    onChange={e => setToCode(e.target.value)}
-                    className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/50 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-blue-400 transition-[border-color] shrink-0"
-                    style={{ fontFamily: "var(--font-display)", width: "9rem" }}
-                  >
-                    {CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{c.flag} {c.code}</option>
-                    ))}
-                  </Select>
-                  <span
-                    className={`min-w-0 flex-1 overflow-hidden text-ellipsis text-right text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400 transition-[opacity] duration-300 ${ratesState === "loading" ? "opacity-40" : "opacity-100"}`}
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    {received !== null ? fmt(received, toCode) : "—"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Live rate line */}
-              {rate !== null && (
-                <div className="flex flex-wrap items-center justify-between gap-1 px-1 mb-4">
-                  <span className="text-[11px] text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-                    1 {fromCode} = {fmt(rate, toCode)} {toCode}
-                  </span>
-                  <span className="text-[11px] text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-                    via ECB · ~30s settlement
-                  </span>
-                </div>
-              )}
-
-              <Button
-                onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition-[box-shadow,transform] hover:-translate-y-px"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Coming soon — join the waitlist
-              </Button>
-
-              {/* Powered by */}
-              <p className="text-center text-[10px] text-slate-300 mt-3" style={{ fontFamily: "var(--font-body)" }}>
-                rates from European Central Bank · indicative only
-              </p>
-            </div>
-
-            {/* Glow */}
-            <div className="absolute inset-0 bg-blue-500/[0.02] rounded-3xl blur-2xl -z-10 scale-110 pointer-events-none" />
-          </div>
-
+        <div className="relative rounded-3xl border border-slate-100 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-7">
+          <div className="mb-5 flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-slate-400">Rate preview</p><p className="mt-1 text-xs text-slate-400">Indicative only · rates from ECB</p></div><Button type="button" variant="ghost" size="sm" onClick={refresh} disabled={cooldown > 0 || ratesState === "loading"} className="gap-1.5 text-xs text-slate-500"><RefreshCw className={`h-3.5 w-3.5 ${ratesState === "loading" ? "animate-spin" : ""}`} />{cooldown > 0 ? `${cooldown}s` : "Refresh"}</Button></div>
+          <div className="grid gap-4 sm:grid-cols-2"><div><label className="text-xs font-bold text-slate-500">You send</label><div className="mt-1 flex gap-2"><Input type="number" min="0" value={amount} onChange={(event) => setAmount(Math.max(0, Number(event.target.value) || 0))} /><Select value={fromCode} onChange={(event) => setFromCode(event.target.value)}>{CURRENCIES.map(([code, name]) => <option key={code} value={code}>{code} · {name}</option>)}</Select></div></div><div><label className="text-xs font-bold text-slate-500">Recipient receives</label><div className="mt-1 flex gap-2"><Input readOnly value={received === null ? "—" : formatAmount(received, toCode)} /><Select value={toCode} onChange={(event) => setToCode(event.target.value)}>{CURRENCIES.map(([code, name]) => <option key={code} value={code}>{code} · {name}</option>)}</Select></div></div></div>
+          <div className="mt-5 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60"><div className="flex justify-between text-xs text-slate-500"><span>Indicative rate</span><span>{rate === null ? "Unavailable" : `1 ${fromCode} = ${formatAmount(rate, toCode)} ${toCode}`}</span></div><div className="mt-2 flex justify-between text-xs text-slate-500"><span>Illustrative Rive fee</span><span>{formatAmount(fee, fromCode)} {fromCode}</span></div><div className="mt-3 flex justify-between border-t border-slate-200 pt-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:text-white"><span>Net amount</span><span>{formatAmount(Math.max(0, amount - fee), fromCode)} {fromCode}</span></div></div>
+          {ratesState === "error" && <p className="mt-3 flex items-center gap-2 text-xs text-amber-600"><Loader2 className="h-3 w-3" />Rates are temporarily unavailable.</p>}
+          <Link href="/register" className="mt-5 block w-full rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 py-3.5 text-center text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:shadow-lg">Explore the free workspace</Link>
+          <p className="mt-3 text-center text-[10px] text-slate-300">{lastFetched ? "Rates refreshed" : "Fetching rates..."}</p>
         </div>
       </div>
     </section>

@@ -1,11 +1,9 @@
 "use client";
 
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
 
-import { useState } from "react";
-import { ArrowRight, Zap, BarChart3, Users, Shield, Loader2, Clock } from "lucide-react";
-
-import { submitToWaitlist } from "@/utils/api";
+import Link from "next/link";
+import { ArrowRight, Zap, BarChart3, Users, Shield } from "lucide-react";
 
 const floatingStats = [
   { icon: Shield, label: "Projects, deadlines, and next actions in one delivery view.", value: "Deliver on time" },
@@ -15,23 +13,6 @@ const floatingStats = [
 ];
 
 export default function Hero() {
-  const [email, setEmail]   = useState("");
-  const [formState, setFormState] = useState<"idle" | "loading" | "success" | "already-joined">("idle");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || formState === "loading") return;
-    setFormState("loading");
-    const res = await submitToWaitlist(email, "waitlist");
-    if (res.alreadyJoined) {
-      setFormState("already-joined");
-    } else if (res.success) {
-      setFormState("success");
-    } else {
-      setFormState("idle");
-    }
-  };
-
   return (
     <section className="relative flex flex-col items-center overflow-hidden bg-background px-4 pb-16 pt-32 dark:bg-background sm:px-6 sm:pb-20 sm:pt-36">
 
@@ -63,7 +44,7 @@ export default function Hero() {
           className="text-xs font-medium tracking-wide"
           style={{ fontFamily: "var(--font-body)", color: "#1D4ED8" }}
         >
-          Early access is open
+          Open beta is live
         </span>
       </div>
 
@@ -89,50 +70,10 @@ export default function Hero() {
 
       {/* ── CTA row ─────────────────────────────────── */}
       <div className="relative mb-12 flex w-full max-w-xl flex-col items-center gap-4">
-        {formState === "idle" || formState === "loading" ? (
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full">
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-              disabled={formState === "loading"}
-              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 disabled:opacity-60"
-              style={{
-                fontFamily: "var(--font-body)",
-              }}
-            />
-            <Button
-              type="submit"
-              disabled={formState === "loading"}
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-sm transition-[transform,opacity] duration-200 hover:-translate-y-px whitespace-nowrap shrink-0 disabled:opacity-75"
-              style={{
-                fontFamily: "var(--font-display)",
-                background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
-                boxShadow: "0 8px 30px rgba(29,78,216,0.18)",
-              }}
-            >
-              {formState === "loading" ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /><span>Checking...</span></>
-              ) : (
-                <>Join the waitlist <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
-              )}
-            </Button>
-          </form>
-        ) : formState === "success" ? (
-          <div className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl text-emerald-700 font-medium text-sm animate-fade-in"
-            style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            You&apos;re on the list. We&apos;ll email you when your access is ready.
-          </div>
-        ) : (
-          <div className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl text-blue-700 font-medium text-sm animate-fade-in"
-            style={{ background: "rgba(29,78,216,0.07)", border: "1px solid rgba(29,78,216,0.15)" }}>
-            <Clock className="w-4 h-4 shrink-0 text-blue-500" />
-            You&apos;re already on the list. We&apos;ll notify you when your access is ready.
-          </div>
-        )}
+        <Link href="/register" className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_30px_rgba(29,78,216,0.18)] transition hover:-translate-y-px sm:w-auto">
+          Create a free account <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+        <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Open signup · no invitation required · verify your email to start</p>
       </div>
 
       {/* ── Stats bar ───────────────────────────────── */}
@@ -252,7 +193,7 @@ export default function Hero() {
                     One invoice is overdue, and two project deadlines are approaching.
                   </p>
                   <Button
-                    onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+                    onClick={() => window.location.href = "/register"}
                     className="text-[10px] font-bold mt-auto text-left text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                     style={{ fontFamily: "var(--font-display)" }}
                   >

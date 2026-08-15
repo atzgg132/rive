@@ -8,7 +8,6 @@ import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import Modal from "@/components/Modal";
 
 const navLinks = [
   { label: "Features", href: "/#features" },
@@ -19,7 +18,6 @@ const navLinks = [
 
 export default function PageShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-background dark:bg-background">
@@ -44,7 +42,7 @@ export default function PageShell({ children }: { children: ReactNode }) {
           <div className="hidden items-center gap-2 md:flex">
             <ThemeToggle />
             <Link href="/login" className="rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Log in</Link>
-            <Button onClick={() => setWaitlistOpen(true)} className="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-[13px] font-bold text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700">Join waitlist</Button>
+            <Link href="/register" className="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-[13px] font-bold text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700">Create free account</Link>
           </div>
           <div className="flex items-center gap-2 md:hidden">
             <ThemeToggle />
@@ -57,7 +55,7 @@ export default function PageShell({ children }: { children: ReactNode }) {
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
             {navLinks.map((link) => <Link key={link.label} href={link.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-900">{link.label}</Link>)}
             <Link href="/login" onClick={() => setMenuOpen(false)} className="mt-2 rounded-xl border border-slate-200 px-3 py-3 text-center text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">Log in</Link>
-            <Button onClick={() => { setMenuOpen(false); setWaitlistOpen(true); }} className="rounded-xl bg-blue-600 px-3 py-3 text-sm font-bold text-white">Join waitlist</Button>
+            <Link href="/register" onClick={() => setMenuOpen(false)} className="rounded-xl bg-blue-600 px-3 py-3 text-center text-sm font-bold text-white">Create free account</Link>
           </div>
         </div>}
       </nav>
@@ -82,7 +80,6 @@ export default function PageShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </footer>
-      <Modal isOpen={waitlistOpen} onClose={() => setWaitlistOpen(false)} type="waitlist" />
     </div>
   );
 }

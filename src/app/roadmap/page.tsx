@@ -82,18 +82,18 @@ export default function RoadmapPage() {
             className="mb-4 text-5xl font-bold tracking-tight text-foreground dark:text-white sm:text-6xl"
             style={fontD}
           >
-            Building toward reliable early access.
+            Building toward a reliable open beta.
           </h1>
           <p
             className="mb-5 max-w-2xl text-lg leading-relaxed text-slate-500 dark:text-slate-400"
             style={font}
           >
-            Rive is in private alpha. The core workspace is live; our immediate
+            Rive is open to everyone for free. The core workspace is live; our immediate
             focus is making onboarding, migration, and calendar connections
             dependable with real customer data.
           </p>
           <p className="mb-16 max-w-2xl text-sm text-slate-400 dark:text-slate-500" style={font}>
-            Priorities may change as early-access feedback arrives. We mark work
+            Priorities may change as open-beta feedback arrives. We mark work
             as shipped only when it is available in the product.
           </p>
 

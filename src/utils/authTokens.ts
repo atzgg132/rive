@@ -1,11 +1,12 @@
 import crypto from "crypto";
 import { prisma } from "@/utils/db";
 
-export type AuthTokenType = "waitlist_invite" | "password_reset";
+export type AuthTokenType = "waitlist_invite" | "password_reset" | "email_verification";
 
 const TOKEN_TTLS: Record<AuthTokenType, number> = {
   waitlist_invite: 7 * 24 * 60 * 60 * 1000,
   password_reset: 60 * 60 * 1000,
+  email_verification: 24 * 60 * 60 * 1000,
 };
 
 export function hashAuthToken(token: string): string {

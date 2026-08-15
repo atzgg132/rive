@@ -65,7 +65,7 @@ export default function MarketingConnectionsSection({ googleCalendarEnabled }: M
 
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+          onClick={() => { window.location.href = "/register"; }}
           className="group mt-10 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950"
         >
           Bring your work into Rive

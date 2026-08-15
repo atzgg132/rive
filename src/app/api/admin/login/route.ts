@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateToken } from "@/utils/auth";
 import { verifyPassword } from "@/utils/userAuth";
-import { rateLimit, getRequestIp } from "@/utils/rateLimit";
+import { getRequestIp } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
+import { createAdminSession } from "@/utils/adminSession";
+import { prisma } from "@/utils/db";
+import { hashRequestValue } from "@/utils/contracts";
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
@@ -9,7 +12,7 @@ const PLACEHOLDER_HASH = "PLACEHOLDER_RUN_node_scripts/setup-admin.mjs";
 
 export async function POST(req: NextRequest) {
   const ip = getRequestIp(req);
-  if (!rateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000)) {
+  if (!await durableRateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000)) {
     return NextResponse.json(
       { success: false, message: "Too many attempts. Please wait and try again." },
       { status: 429 }
@@ -36,8 +39,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid credentials." }, { status: 401 });
     }
 
-    const token = generateToken();
-    return NextResponse.json({ success: true, token });
+    const response = NextResponse.json({ success: true, message: "Admin session created." });
+    await createAdminSession(req, response);
+    await prisma.auditEvent.create({ data: { action: "admin.login", targetType: "admin_session", metadata: { username: ADMIN_USERNAME }, ipHash: hashRequestValue(ip) } }).catch((error) => console.warn("Admin access audit failed:", error));
+    return response;
   } catch {
     return NextResponse.json({ success: false, message: "Bad request." }, { status: 400 });
   }

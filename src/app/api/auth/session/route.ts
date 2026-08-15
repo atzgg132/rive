@@ -26,6 +26,9 @@ export async function GET(req: NextRequest) {
         currency: true,
         displayCurrency: true,
         timeZone: true,
+        emailVerifiedAt: true,
+        emailVerificationRequiredAt: true,
+        accountType: true,
         createdAt: true
       }
     });
@@ -49,6 +52,9 @@ export async function GET(req: NextRequest) {
       currency: user.currency,
       display_currency: user.displayCurrency,
       time_zone: user.timeZone,
+      email_verified_at: user.emailVerifiedAt,
+      email_verification_required: Boolean(user.emailVerificationRequiredAt),
+      account_type: user.accountType,
       created_at: user.createdAt
     };
 

@@ -93,7 +93,7 @@ export default function CookiesPage() {
               </Section>
 
               <Section id="changes" title="5. Changes to this policy">
-                <p>We may update this Cookie Policy to reflect changes in the technologies we use or applicable regulations. The &quot;last updated&quot; date at the top indicates the most recent revision. For material changes, we will notify waitlist members by email.</p>
+                <p>We may update this Cookie Policy to reflect changes in the technologies we use or applicable regulations. The &quot;last updated&quot; date at the top indicates the most recent revision. For material changes, we will notify account holders through the Service or by email.</p>
               </Section>
 
               <Section id="contact" title="6. Contact us">

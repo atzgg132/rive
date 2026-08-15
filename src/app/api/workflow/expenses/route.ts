@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 type ProjectValidation =
   | { ok: true; projectId: string | null }
@@ -115,9 +116,11 @@ export async function POST(req: NextRequest) {
         date: date ? new Date(date) : new Date(),
         receiptUrl: receipt_url || null,
         isBillable: is_billable || false,
-        isReimbursed: is_reimbursed || false
+        isReimbursed: is_reimbursed || false,
+        dataOrigin: "user"
       }
     });
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.expenseCreated, module: "expenses", entityType: "expense", entityId: expense.id, dataOrigin: "user" });
 
     const formattedExpense = {
       ...expense,

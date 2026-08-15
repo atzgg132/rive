@@ -336,7 +336,8 @@ for (const theme of ["light", "dark"] as const) {
 }
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
-  test(`public portfolio ${viewport.width}x${viewport.height} visual`, async ({ page }) => {
+    test(`public portfolio ${viewport.width}x${viewport.height} visual`, async ({ page }) => {
+      test.skip(!process.env.DATABASE_URL, "Public portfolio rendering is database-backed and needs a local test database.");
     await page.setViewportSize(viewport);
     await page.clock.setFixedTime(new Date("2026-08-10T09:00:00.000Z"));
     await page.goto("/p/e2e-workspace-portfolio", { waitUntil: "domcontentloaded" });

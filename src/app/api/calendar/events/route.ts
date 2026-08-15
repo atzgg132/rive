@@ -5,6 +5,7 @@ import { ensureDefaultCalendar, getCalendarEvents, isDateOnly, isValidTimeZone }
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { pushEventToGoogle } from "@/utils/googleCalendar";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 async function syncCalendarMutation(userId: string, eventId: string, operation: "create" | "update" | "delete") {
   if (!googleCalendarAvailable()) return false;
@@ -106,9 +107,11 @@ export async function POST(req: NextRequest) {
       clientId: client?.id || null,
       projectId: project?.id || null,
       source: "native",
+      dataOrigin: "user",
     },
   });
   const synced = await syncCalendarMutation(session.userId, event.id, "create");
+  await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.calendarUsed, module: "calendar", entityType: "calendar_event", entityId: event.id, dataOrigin: "user" });
   return NextResponse.json({ success: true, event, synced }, { status: 201 });
 }
 

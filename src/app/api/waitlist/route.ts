@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/utils/db";
-import { sendWaitlistJoinedEmail } from "@/utils/email";
-import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { getRequestIp } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
 
 export async function POST(req: NextRequest) {
   try {
     const ip = getRequestIp(req);
-    if (!rateLimit(`waitlist:${ip}`, 8, 60 * 60 * 1000)) {
+    if (!await durableRateLimit(`legacy-waitlist:${ip}`, 8, 60 * 60 * 1000)) {
       return NextResponse.json(
         { success: false, message: "Too many requests. Please try again later." },
         { status: 429 },
@@ -26,33 +25,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields." }, { status: 400 });
     }
 
-    // Duplicate check
-    const existing = await prisma.waitlist.findUnique({
-      where: { email: normalizedEmail }
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { success: false, message: "email address is already registered." },
-        { status: 409 }
-      );
-    }
-
-    const waitlistEntry = await prisma.waitlist.create({
-      data: {
-        email: normalizedEmail,
-        type: normalizedType
-      }
-    });
-
-    const emailResult = await sendWaitlistJoinedEmail(normalizedEmail, normalizedType);
-
     return NextResponse.json({
-      success: true,
-      message: "successfully joined the waitlist.",
-      emailSent: emailResult.sent,
-      data: waitlistEntry
-    }, { status: 201 });
+      success: false,
+      code: "OPEN_SIGNUP",
+      message: "Rive is now open. Create a free account to get started.",
+      signupUrl: "/register",
+    }, { status: 410 });
   } catch (error) {
     console.error("Waitlist API error:", error);
     return NextResponse.json({

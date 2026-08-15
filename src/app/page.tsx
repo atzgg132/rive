@@ -11,7 +11,6 @@ import Footer from "@/components/Footer";
 import MarketingPortfolioSection from "@/components/MarketingPortfolioSection";
 import MarketingAgreementsSection from "@/components/MarketingAgreementsSection";
 import MarketingConnectionsSection from "@/components/MarketingConnectionsSection";
-import MarketingModalHost from "@/components/MarketingModalHost";
 import { contractsAvailable } from "@/utils/contracts";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
@@ -34,7 +33,6 @@ export default function Home() {
     <Pricing agreementsEnabled={agreementsEnabled} />
     <FinalCTA />
     <Footer />
-    <MarketingModalHost />
   </main>;
 }
 

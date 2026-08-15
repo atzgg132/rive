@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
@@ -305,6 +306,7 @@ export async function POST(req: NextRequest) {
         }
         const client = await transaction.client.create({
           data: {
+            dataOrigin: "imported",
             userId: session.userId,
             name: name.slice(0, 160),
             email: /^\S+@\S+\.\S+$/.test(email) ? email : null,
@@ -348,6 +350,7 @@ export async function POST(req: NextRequest) {
         const currency = value(row, ["currency", "currency_code"]).toUpperCase();
         const project = await transaction.project.create({
           data: {
+            dataOrigin: "imported",
             userId: session.userId,
             clientId,
             title: title.slice(0, 200),
@@ -419,6 +422,7 @@ export async function POST(req: NextRequest) {
         const issueDate = dateValue(value(row, ["issue_date", "invoice_date", "date"])) || new Date();
         const invoice = await transaction.invoice.create({
           data: {
+            dataOrigin: "imported",
             userId: session.userId,
             clientId,
             projectId,
@@ -427,6 +431,7 @@ export async function POST(req: NextRequest) {
             currency: /^[A-Z]{3}$/.test(currency) ? currency : "USD",
             subtotal: total,
             total,
+            amountPaid: status === "paid" ? total : 0,
             issueDate,
             dueDate: dateValue(value(row, ["due_date", "payment_due"])),
             paidDate: status === "paid" ? dateValue(value(row, ["paid_date", "payment_date"])) || issueDate : null,
@@ -485,6 +490,7 @@ export async function POST(req: NextRequest) {
         const currency = value(row, ["currency", "currency_code"]).toUpperCase();
         const expense = await transaction.expense.create({
           data: {
+            dataOrigin: "imported",
             userId: session.userId,
             projectId,
             description: description.slice(0, 500),
@@ -534,6 +540,7 @@ export async function POST(req: NextRequest) {
           onboardingData: { importReport: counts, importedAt: new Date().toISOString() },
         },
       });
+      await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.importCommitted, module: "migration", entityType: "migration", entityId: job.id, dataOrigin: "imported", properties: { total: imported } });
     }
     return counts;
     }, { timeout: 30_000 });

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { PROJECT_PRIORITY_SET, PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
 
 // Shared with the migration engine so imported projects can never carry a
@@ -222,7 +223,8 @@ export async function POST(req: NextRequest) {
           dueDate: parsedDueDate,
           budget: parsedBudget,
           currency: cleanCurrency,
-          tags: cleanTags
+          tags: cleanTags,
+          dataOrigin: "user"
         }
       });
 
@@ -241,7 +243,10 @@ export async function POST(req: NextRequest) {
 
       return proj;
     });
-    await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstProjectCreated, { projectId: project.id });
+    await Promise.all([
+      recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstProjectCreated, { projectId: project.id }),
+      recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.projectCreated, module: "projects", entityType: "project", entityId: project.id, dataOrigin: "user" }),
+    ]);
 
     const formattedProject = {
       ...project,

@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { verifyPassword, generateUserToken, setSessionCookie, hashPassword, passwordNeedsUpgrade } from "@/utils/userAuth";
-import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { getRequestIp } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
 import { sendLoginSuccessEmail } from "@/utils/email";
+import { hashRequestValue } from "@/utils/contracts";
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = getRequestIp(req);
-    if (!rateLimit(`login:${ip}`, 20, 15 * 60 * 1000)) {
-      return NextResponse.json({ success: false, message: "Too many attempts. Please wait and try again." }, { status: 429 });
-    }
-    const { email, password } = await req.json();
+    const { email, password } = await req.json().catch(() => ({}));
     const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     if (!normalizedEmail || typeof password !== "string" || !password) {
       return NextResponse.json({ success: false, message: "Missing email or password." }, { status: 400 });
+    }
+
+    const ip = getRequestIp(req);
+    if (!await durableRateLimit(`auth:login:${ip}`, 20, 15 * 60 * 1000)) {
+      return NextResponse.json({ success: false, message: "Too many attempts. Please wait and try again." }, { status: 429 });
+    }
+    if (!await durableRateLimit(`auth:login:email:${hashRequestValue(normalizedEmail)}`, 10, 15 * 60 * 1000)) {
+      return NextResponse.json({ success: false, message: "Too many attempts. Please wait and try again." }, { status: 429 });
     }
 
     const user = await prisma.user.findUnique({
@@ -28,6 +34,14 @@ export async function POST(req: NextRequest) {
 
     if (!isPasswordCorrect) {
       return NextResponse.json({ success: false, message: "Invalid email or password." }, { status: 401 });
+    }
+
+    if (user.emailVerificationRequiredAt && !user.emailVerifiedAt) {
+      return NextResponse.json({
+        success: false,
+        code: "EMAIL_NOT_VERIFIED",
+        message: "Verify your email before signing in. You can request a fresh verification link from the registration page.",
+      }, { status: 403 });
     }
 
     if (passwordNeedsUpgrade(user.passwordHash)) {

@@ -103,7 +103,7 @@ export default function Features({ agreementsEnabled = true }: { agreementsEnabl
             return (
               <div
                 key={title}
-                onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+                onClick={() => { window.location.href = "/register"; }}
                 className={`relative group rounded-2xl p-7 border transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-blue-900/20 cursor-pointer ${
                   highlight
                     ? "bg-blue-50/50 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/40"

@@ -7,6 +7,7 @@ import { commitMigration } from "@/utils/migration/commit";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 /**
  * Commit a reviewed migration.
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     if (outcome.created.invoices > 0 || outcome.created.expenses > 0) {
       await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { source: "migration" });
     }
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.importCommitted, module: "migration", entityType: "migration", entityId: id, dataOrigin: "imported", properties: { total } });
   }
 
   return NextResponse.json({ success: true, ...outcome, total });

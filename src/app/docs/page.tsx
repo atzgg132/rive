@@ -14,18 +14,19 @@ const sidebarItems = [
   { id: "webhooks", label: "webhooks" },
 ];
 
-const codeSnippet = `POST /api/waitlist
+const codeSnippet = `POST /api/auth/register
 Content-Type: application/json
 
 {
   "email": "you@example.com",
-  "type":  "waitlist"
+  "password": "use-a-strong-password",
+  "name": "Your name"
 }
 
 // 201 Created
 {
   "success": true,
-  "message": "successfully joined the waitlist."
+  "requiresEmailVerification": true
 }`;
 
 export default function DocsPage() {
@@ -44,7 +45,7 @@ export default function DocsPage() {
         <main className="flex-1 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-6" style={font}>Docs</div>
           <h1 className="text-5xl font-bold text-foreground dark:text-white tracking-tight mb-4" style={fontD}>Documentation</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-8 leading-relaxed" style={font}>The essentials for joining the waitlist, using the workspace, and integrating with rive. are below.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-8 leading-relaxed" style={font}>Create a free account, verify your email, and use the connected workspace. The essentials for working with rive. are below.</p>
 
           {/* Code block */}
           <div className="bg-[#0C1E36] rounded-2xl overflow-hidden mb-10">
@@ -68,7 +69,7 @@ export default function DocsPage() {
             </section>
             <section id="api">
               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Api access</h2>
-              <p>The current application API is available under <code className="text-blue-600 dark:text-blue-400">/api</code>. Authenticated workflow requests use the rive session cookie; public waitlist and rates endpoints do not require authentication.</p>
+              <p>The current application API is available under <code className="text-blue-600 dark:text-blue-400">/api</code>. Authenticated workflow requests use the rive session cookie; public rates and invoice links are the deliberate unauthenticated surfaces.</p>
             </section>
             <section id="workflow">
               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Workflow</h2>
@@ -76,16 +77,16 @@ export default function DocsPage() {
             </section>
             <section id="webhooks">
               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Webhooks</h2>
-              <p>Webhook delivery is not enabled in the current release. use the waitlist to request integration access while the event contract is finalized.</p>
+              <p>Webhook delivery is not enabled in the current release. Create a free account to use the workspace while integration contracts are finalized.</p>
             </section>
           </div>
 
           <Button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+            onClick={() => { window.location.href = "/register"; }}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15"
             style={fontD}
           >
-            join waitlist for api access →
+            create a free account →
           </Button>
         </main>
       </div>

@@ -3,7 +3,6 @@
 import { Button, Input } from "@/components/ui";
 import PageShell from "@/components/PageShell";
 import { useState } from "react";
-import { submitToWaitlist } from "@/utils/api";
 import { Loader2, Clock, MessageSquare, Code2, Mail } from "lucide-react";
 
 const font = { fontFamily: "var(--font-body)" };
@@ -17,8 +16,7 @@ export default function CommunityPage() {
     e.preventDefault();
     if (!email || state === "loading") return;
     setState("loading");
-    const res = await submitToWaitlist(email, "waitlist");
-    setState(res.alreadyJoined ? "already-joined" : res.success ? "success" : "idle");
+    window.location.href = "/register";
   };
 
   return (
@@ -51,7 +49,7 @@ export default function CommunityPage() {
                   real-time chat, early previews, feedback loops, and direct access to the team.
                 </p>
                 <Button
-                  onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+                  onClick={() => { window.location.href = "/register"; }}
                   className="w-full py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all duration-200"
                   style={fontD}
                 >
@@ -88,15 +86,15 @@ export default function CommunityPage() {
                 <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground dark:text-white text-lg mb-1" style={fontD}>rive. letter</h3>
+                <h3 className="font-bold text-foreground dark:text-white text-lg mb-1" style={fontD}>Join the open beta</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-5" style={font}>
-                  Monthly product updates, service-business insights, and community stories. No spam.
+                  Create a free account and send us feedback from the workflows you actually use.
                 </p>
 
                 {state === "success" ? (
                   <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-sm font-semibold w-full justify-center" style={font}>
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    subscribed!
+                    account created — thank you for helping shape Rive.
                   </div>
                 ) : state === "already-joined" ? (
                   <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 text-sm font-semibold w-full justify-center" style={font}>
@@ -118,7 +116,7 @@ export default function CommunityPage() {
                       className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-md shadow-blue-600/15 disabled:opacity-75 flex items-center justify-center gap-2"
                       style={fontD}
                     >
-                      {state === "loading" ? <><Loader2 className="w-4 h-4 animate-spin" />Subscribing...</> : "subscribe →"}
+                      {state === "loading" ? <><Loader2 className="w-4 h-4 animate-spin" />Opening registration...</> : "create account →"}
                     </Button>
                   </form>
                 )}
@@ -130,7 +128,7 @@ export default function CommunityPage() {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-sm transition-colors" style={font}>
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              community launches alongside the platform — join the waitlist to be first in.
+              the community is open alongside the product — use it, then tell us what to improve.
             </div>
           </div>
         </div>

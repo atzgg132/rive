@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { calculateInvoice } from "@/utils/invoiceMath";
+import { nextInvoiceNumber } from "@/utils/invoiceNumber";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
 
-const EDITABLE_INVOICE_STATUSES = new Set(["draft", "overdue"]);
+const EDITABLE_INVOICE_STATUSES = new Set(["draft"]);
 const INVOICE_NUMBER_MAX_LENGTH = 80;
 const MAX_LINE_ITEMS = 100;
 
@@ -13,10 +17,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function cleanText(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
-}
-
-function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function parseOptionalDate(value: unknown): Date | null | "invalid" {
@@ -32,21 +32,27 @@ function normalizeItems(value: unknown) {
   return value.map((rawItem, index) => {
     if (!isRecord(rawItem)) throw new Error(`Line item ${index + 1} is invalid.`);
     const description = cleanText(rawItem.description, 240);
-    const quantity = Number(rawItem.quantity);
-    const unitPrice = Number(rawItem.unit_price ?? rawItem.unitPrice);
+    const quantityInput = typeof rawItem.quantity === "number" ? String(rawItem.quantity) : typeof rawItem.quantity === "string" ? rawItem.quantity.trim() : "";
+    const unitPriceValue = rawItem.unit_price ?? rawItem.unitPrice;
+    const unitPriceInput = typeof unitPriceValue === "number" ? String(unitPriceValue) : typeof unitPriceValue === "string" ? unitPriceValue.trim() : "";
+    const quantity = Number(quantityInput);
+    const unitPrice = Number(unitPriceInput);
     if (!description) throw new Error(`Line item ${index + 1} needs a description.`);
     if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1_000_000) throw new Error(`Line item ${index + 1} needs a valid positive quantity.`);
     if (!Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 1_000_000_000) throw new Error(`Line item ${index + 1} has an invalid rate.`);
-    const amount = roundMoney(quantity * unitPrice);
-    if (amount > 1_000_000_000) throw new Error(`Line item ${index + 1} exceeds the supported amount.`);
-    return { description, quantity, unitPrice: roundMoney(unitPrice), amount, sortOrder: index };
+    return { description, quantity: quantityInput, unitPrice: unitPriceInput, amount: 0, sortOrder: index };
   });
 }
 
-function parseTaxRate(value: unknown, fallback = 0): number | "invalid" {
-  if (value === undefined || value === null || value === "") return fallback;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? roundMoney(parsed) : "invalid";
+function parsePercentage(value: unknown, fallback: string | number = 0): string | "invalid" {
+  if (value === undefined || value === null || value === "") return String(fallback);
+  const raw = typeof value === "number" ? String(value) : typeof value === "string" ? value.trim() : "";
+  const parsed = Number(raw);
+  return raw && Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 && /^\d+(?:\.\d+)?$/.test(raw) ? raw : "invalid";
+}
+
+function parseTaxRate(value: unknown, fallback: string | number = 0): string | "invalid" {
+  return parsePercentage(value, fallback);
 }
 
 // GET /api/workflow/invoices
@@ -56,6 +62,7 @@ export async function GET(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
+    await refreshOverdueInvoices(session.userId);
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
@@ -104,13 +111,19 @@ export async function GET(req: NextRequest) {
       currency: i.currency,
       subtotal: i.subtotal.toString(),
       tax_rate: i.taxRate.toString(),
+      discount_rate: i.discountRate.toString(),
+      discount_amount: i.discountAmount.toString(),
       tax_amount: i.taxAmount.toString(),
       total: i.total.toString(),
+      amount_paid: i.amountPaid.toString(),
+      outstanding: i.total.sub(i.amountPaid).toString(),
       issue_date: i.issueDate,
       due_date: i.dueDate,
       paid_date: i.paidDate,
       sent_at: i.sentAt,
       reviewed_at: i.reviewedAt,
+      viewed_at: i.viewedAt,
+      voided_at: i.voidedAt,
       notes: i.notes,
       created_at: i.createdAt,
       updated_at: i.updatedAt,
@@ -148,8 +161,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     if (!isRecord(body)) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
 
-    const invoiceNumber = cleanText(body.invoice_number, INVOICE_NUMBER_MAX_LENGTH);
-    if (!invoiceNumber) return NextResponse.json({ success: false, message: "Invoice number is required." }, { status: 400 });
+    const requestedInvoiceNumber = cleanText(body.invoice_number, INVOICE_NUMBER_MAX_LENGTH);
 
     let computedItems: ReturnType<typeof normalizeItems>;
     try {
@@ -157,14 +169,12 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Invalid invoice line items." }, { status: 400 });
     }
-    const subtotal = roundMoney(computedItems.reduce((sum, item) => sum + item.amount, 0));
-    if (subtotal <= 0) return NextResponse.json({ success: false, message: "Invoice subtotal must be greater than zero." }, { status: 400 });
-
     const projectId = cleanText(body.project_id, 80) || null;
     let clientId = cleanText(body.client_id, 80) || null;
-    const [linkedProject, owner] = await Promise.all([
+    const [linkedProject, owner, invoiceProfile] = await Promise.all([
       projectId ? prisma.project.findFirst({ where: { id: projectId, userId: session.userId }, select: { id: true, clientId: true, currency: true } }) : null,
       prisma.user.findUnique({ where: { id: session.userId }, select: { currency: true } }),
+      prisma.invoiceProfile.findUnique({ where: { userId: session.userId }, select: { invoicePrefix: true } }),
     ]);
     if (projectId && !linkedProject) return NextResponse.json({ success: false, message: "Project not found or unauthorized." }, { status: 404 });
     if (!owner) return NextResponse.json({ success: false, message: "Workspace owner not found." }, { status: 404 });
@@ -177,15 +187,22 @@ export async function POST(req: NextRequest) {
     if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ success: false, message: "Use a valid three-letter invoice currency." }, { status: 400 });
     const taxRate = parseTaxRate(body.tax_rate);
     if (taxRate === "invalid") return NextResponse.json({ success: false, message: "Tax rate must be between 0 and 100." }, { status: 400 });
+    const discountRate = parsePercentage(body.discount_rate);
+    if (discountRate === "invalid") return NextResponse.json({ success: false, message: "Discount rate must be between 0 and 100." }, { status: 400 });
     const issueDateInput = parseOptionalDate(body.issue_date);
     const dueDate = parseOptionalDate(body.due_date);
     if (issueDateInput === "invalid" || dueDate === "invalid") return NextResponse.json({ success: false, message: "Use valid invoice dates." }, { status: 400 });
     const issueDate = issueDateInput || new Date();
     if (dueDate && dueDate < issueDate) return NextResponse.json({ success: false, message: "Invoice due date cannot be before its issue date." }, { status: 400 });
-    const taxAmount = roundMoney(subtotal * (taxRate / 100));
-    const total = roundMoney(subtotal + taxAmount);
+    let calculation: ReturnType<typeof calculateInvoice>;
+    try {
+      calculation = calculateInvoice(computedItems.map((item) => ({ description: item.description, quantity: String(item.quantity), unitPrice: String(item.unitPrice), sortOrder: item.sortOrder })), String(taxRate), currency, String(discountRate));
+    } catch (error) {
+      return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Invalid invoice amounts." }, { status: 400 });
+    }
 
     const invoice = await prisma.$transaction(async (tx) => {
+      const invoiceNumber = requestedInvoiceNumber || await nextInvoiceNumber(tx, session.userId, invoiceProfile?.invoicePrefix || "INV", issueDate);
       const existing = await tx.invoice.findUnique({
         where: {
           unique_user_invoice_number: {
@@ -207,17 +224,20 @@ export async function POST(req: NextRequest) {
           invoiceNumber,
           status: "draft",
           currency,
-          subtotal,
-          taxRate,
-          taxAmount,
-          total,
+          subtotal: calculation.subtotal,
+          taxRate: calculation.taxRate,
+          discountRate: calculation.discountRate,
+          discountAmount: calculation.discountAmount,
+          taxAmount: calculation.taxAmount,
+          total: calculation.total,
+          dataOrigin: "user",
           issueDate,
           dueDate,
           notes: cleanText(body.notes, 10_000) || null,
         }
       });
 
-      const lineItems = computedItems.map((item) => ({
+      const lineItems = calculation.items.map((item) => ({
         invoiceId: inv.id,
         description: item.description,
         quantity: item.quantity,
@@ -232,6 +252,7 @@ export async function POST(req: NextRequest) {
 
       return inv;
     });
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.invoiceCreated, module: "invoices", entityType: "invoice", entityId: invoice.id, dataOrigin: "user" });
 
     return NextResponse.json({
       success: true,
@@ -267,26 +288,28 @@ export async function PUT(req: NextRequest) {
     if (requestedStatus === "sent") {
       return NextResponse.json({ success: false, message: "Use the explicit invoice send action so delivery is recorded before the invoice becomes sent." }, { status: 409 });
     }
+    if (requestedStatus === "paid" || requestedStatus === "partially_paid") {
+      return NextResponse.json({ success: false, message: "Use the payment action so the payment ledger and invoice status stay consistent." }, { status: 409 });
+    }
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: { id },
-      include: { billingOccurrence: true },
+      include: { billingOccurrence: true, items: { orderBy: { sortOrder: "asc" } } },
     });
 
     if (!existingInvoice || existingInvoice.userId !== session.userId) {
       return NextResponse.json({ success: false, message: "Invoice not found or unauthorized." }, { status: 404 });
     }
 
-    const contentFields = ["client_id", "project_id", "invoice_number", "currency", "tax_rate", "notes", "due_date", "issue_date", "items"];
+    const contentFields = ["client_id", "project_id", "invoice_number", "currency", "tax_rate", "discount_rate", "notes", "due_date", "issue_date", "items"];
     const contentEditRequested = contentFields.some((field) => Object.prototype.hasOwnProperty.call(body, field));
     if (!contentEditRequested && !requestedStatus) return NextResponse.json({ success: false, message: "No invoice changes were provided." }, { status: 400 });
     if (contentEditRequested && !EDITABLE_INVOICE_STATUSES.has(existingInvoice.status)) {
       return NextResponse.json({ success: false, message: "Issued, paid, cancelled, or in-flight invoices are immutable. Create a corrective invoice instead." }, { status: 409 });
     }
     if (requestedStatus && requestedStatus !== existingInvoice.status) {
-      const mayMarkPaid = requestedStatus === "paid" && !["cancelled", "sending"].includes(existingInvoice.status);
       const mayCancelDraft = requestedStatus === "cancelled" && existingInvoice.status === "draft";
-      if (!mayMarkPaid && !mayCancelDraft) return NextResponse.json({ success: false, message: `Invoice cannot move from ${existingInvoice.status} to ${requestedStatus} through this action.` }, { status: 409 });
+      if (!mayCancelDraft) return NextResponse.json({ success: false, message: `Invoice cannot move from ${existingInvoice.status} to ${requestedStatus} through this action.` }, { status: 409 });
     }
 
     const targetProjectId = body.project_id !== undefined ? cleanText(body.project_id, 80) || null : existingInvoice.projectId;
@@ -309,6 +332,8 @@ export async function PUT(req: NextRequest) {
     if (!/^[A-Z]{3}$/.test(nextCurrency)) return NextResponse.json({ success: false, message: "Use a valid three-letter invoice currency." }, { status: 400 });
     const taxRate = parseTaxRate(body.tax_rate, Number(existingInvoice.taxRate));
     if (taxRate === "invalid") return NextResponse.json({ success: false, message: "Tax rate must be between 0 and 100." }, { status: 400 });
+    const discountRate = parsePercentage(body.discount_rate, Number(existingInvoice.discountRate));
+    if (discountRate === "invalid") return NextResponse.json({ success: false, message: "Discount rate must be between 0 and 100." }, { status: 400 });
     const issueDateInput = body.issue_date !== undefined ? parseOptionalDate(body.issue_date) : existingInvoice.issueDate;
     const dueDate = body.due_date !== undefined ? parseOptionalDate(body.due_date) : existingInvoice.dueDate;
     if (issueDateInput === "invalid" || dueDate === "invalid") return NextResponse.json({ success: false, message: "Use valid invoice dates." }, { status: 400 });
@@ -323,36 +348,47 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Invalid invoice line items." }, { status: 400 });
       }
     }
-    const subtotal = computedItems ? roundMoney(computedItems.reduce((sum, item) => sum + item.amount, 0)) : Number(existingInvoice.subtotal);
-    if (subtotal <= 0) return NextResponse.json({ success: false, message: "Invoice subtotal must be greater than zero." }, { status: 400 });
+    let calculation: ReturnType<typeof calculateInvoice> | null = null;
+    const pricingEditRequested = Boolean(computedItems)
+      || Object.prototype.hasOwnProperty.call(body, "tax_rate")
+      || Object.prototype.hasOwnProperty.call(body, "discount_rate")
+      || Object.prototype.hasOwnProperty.call(body, "currency");
+    if (pricingEditRequested) {
+      try {
+        const sourceItems = computedItems || existingInvoice.items.map((item) => ({ description: item.description, quantity: item.quantity.toString(), unitPrice: item.unitPrice.toString(), sortOrder: item.sortOrder }));
+        calculation = calculateInvoice(sourceItems.map((item) => ({ description: item.description, quantity: String(item.quantity), unitPrice: String(item.unitPrice), sortOrder: item.sortOrder })), String(taxRate), nextCurrency, String(discountRate));
+      } catch (error) {
+        return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Invalid invoice amounts." }, { status: 400 });
+      }
+    }
+    const subtotal = calculation?.subtotal || existingInvoice.subtotal;
 
     if (existingInvoice.billingOccurrence) {
       if (targetClientId !== existingInvoice.clientId || targetProjectId !== existingInvoice.projectId || nextCurrency !== existingInvoice.currency) {
         return NextResponse.json({ success: false, message: "Client, project, and currency come from the executed contract and cannot be changed on this generated invoice." }, { status: 409 });
       }
-      if (Math.abs(subtotal - Number(existingInvoice.subtotal)) >= 0.01) {
+      if (calculation && (!calculation.subtotal.equals(existingInvoice.subtotal) || !calculation.discountRate.equals(existingInvoice.discountRate))) {
         return NextResponse.json({ success: false, message: "The contracted fee cannot be changed on its generated invoice. Amend the contract or create a separate adjustment invoice." }, { status: 409 });
       }
     }
 
-    const taxAmount = roundMoney(subtotal * (taxRate / 100));
-    const total = roundMoney(subtotal + taxAmount);
     const dataToUpdate: Prisma.InvoiceUncheckedUpdateInput = contentEditRequested ? {
       clientId: targetClientId,
       projectId: targetProjectId,
       invoiceNumber,
       currency: nextCurrency,
-      taxRate,
-      taxAmount,
+      taxRate: calculation?.taxRate ?? existingInvoice.taxRate,
+      discountRate: calculation?.discountRate ?? existingInvoice.discountRate,
+      discountAmount: calculation?.discountAmount ?? existingInvoice.discountAmount,
+      taxAmount: calculation?.taxAmount ?? existingInvoice.taxAmount,
       subtotal,
-      total,
+      total: calculation?.total ?? existingInvoice.total,
       notes: body.notes !== undefined ? cleanText(body.notes, 10_000) || null : existingInvoice.notes,
       issueDate,
       dueDate,
       reviewedAt: new Date(),
     } : {};
     if (requestedStatus) dataToUpdate.status = requestedStatus;
-    if (requestedStatus === "paid" && existingInvoice.status !== "paid") dataToUpdate.paidDate = new Date();
     if (requestedStatus === "cancelled") dataToUpdate.paidDate = null;
 
     await prisma.$transaction(async (tx) => {
@@ -378,7 +414,7 @@ export async function PUT(req: NextRequest) {
           data: dataToUpdate
         });
         
-        await tx.invoiceItem.createMany({ data: computedItems.map((item) => ({
+        await tx.invoiceItem.createMany({ data: calculation!.items.map((item) => ({
           invoiceId: id,
           description: item.description,
           quantity: item.quantity,
@@ -434,8 +470,8 @@ export async function DELETE(req: NextRequest) {
     if (existingInvoice.billingOccurrence) {
       return NextResponse.json({ success: false, message: "A milestone-linked invoice is retained with its contract billing record and cannot be deleted." }, { status: 409 });
     }
-    if (["sent", "paid"].includes(existingInvoice.status)) {
-      return NextResponse.json({ success: false, message: "Sent or paid invoices cannot be deleted; retain them for the audit trail." }, { status: 409 });
+    if (existingInvoice.sentAt || existingInvoice.sentSnapshot || ["sent", "viewed", "overdue", "partially_paid", "paid", "voided"].includes(existingInvoice.status)) {
+      return NextResponse.json({ success: false, message: "Issued invoices cannot be deleted; retain them for the audit trail." }, { status: 409 });
     }
 
     await prisma.$transaction(async (tx) => {

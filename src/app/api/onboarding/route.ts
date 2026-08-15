@@ -9,7 +9,9 @@ import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { googleCalendarAvailable, zohoBooksAvailable } from "@/utils/connectorConfig";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_STARTING_PATHS } from "@/lib/activation";
+import { nextInvoiceNumber } from "@/utils/invoiceNumber";
 
 const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
@@ -188,6 +190,16 @@ export async function PATCH(req: NextRequest) {
   }
   if (body.step > 0 || body.status === "in_progress") {
     await recordActivationEvent(session.userId, ACTIVATION_EVENTS.onboardingStarted, { step: Number(body.step) || 0 });
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.onboardingStarted, module: "onboarding", properties: { step: Number(body.step) || 0 } });
+  }
+  if (typeof body.goal === "string" && GOALS.includes(body.goal)) {
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.goalSelected, module: "onboarding", properties: { goal: body.goal } });
+  }
+  if (typeof body.startingPath === "string" && ACTIVATION_STARTING_PATHS.includes(body.startingPath as typeof ACTIVATION_STARTING_PATHS[number])) {
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.startingPathSelected, module: "onboarding", properties: { startingPath: body.startingPath } });
+  }
+  if (body.status === "complete" || body.status === "skipped") {
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.onboardingCompleted, module: "onboarding", dedupeKey: `onboarding_completed:${session.userId}` });
   }
   return NextResponse.json({ success: true, user });
 }
@@ -221,6 +233,7 @@ export async function POST(req: NextRequest) {
         email: typeof body.clientEmail === "string" && /^\S+@\S+\.\S+$/.test(body.clientEmail.trim()) ? body.clientEmail.trim().toLowerCase() : null,
         avatarColor: "#2563EB",
         tags: [],
+        dataOrigin: "user",
       },
     });
     const project = await transaction.project.create({
@@ -233,11 +246,12 @@ export async function POST(req: NextRequest) {
         budget: Number.isFinite(amount) && amount > 0 ? amount : null,
         currency,
         tags: [],
+        dataOrigin: "user",
       },
     });
     let invoice = null;
     if (Number.isFinite(amount) && amount > 0) {
-      const invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+      const invoiceNumber = await nextInvoiceNumber(transaction, session.userId, "INV", new Date());
       invoice = await transaction.invoice.create({
         data: {
           userId: session.userId,
@@ -248,6 +262,7 @@ export async function POST(req: NextRequest) {
           currency,
           subtotal: amount,
           total: amount,
+          dataOrigin: "user",
           dueDate,
           items: {
             create: {
@@ -271,6 +286,10 @@ export async function POST(req: NextRequest) {
     ensurePrefilledPortfolio(session.userId),
     recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstClientCreated, { clientId: result.client.id }),
     recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstProjectCreated, { projectId: result.project.id }),
+    recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.clientCreated, module: "clients", entityType: "client", entityId: result.client.id, dataOrigin: "user" }),
+    recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.projectCreated, module: "projects", entityType: "project", entityId: result.project.id, dataOrigin: "user" }),
+    ...(result.invoice ? [recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.invoiceCreated, module: "invoices", entityType: "invoice", entityId: result.invoice.id, dataOrigin: "user" })] : []),
+    recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.onboardingCompleted, module: "onboarding", dedupeKey: `onboarding_completed:${session.userId}` }),
   ]);
 
   return NextResponse.json({ success: true, result }, { status: 201 });

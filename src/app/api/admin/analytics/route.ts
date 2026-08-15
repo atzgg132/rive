@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { verifyToken } from "@/utils/auth";
+import { hasAdminSession } from "@/utils/adminSession";
+import { getAdminMetrics } from "@/utils/adminMetrics";
+
+function utcDayStart(now: Date, daysAgo: number): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo));
+}
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get("x-admin-token");
-  if (!verifyToken(token)) {
+  if (!await hasAdminSession(req)) {
     return NextResponse.json({ success: false, message: "unauthorised." }, { status: 401 });
   }
 
@@ -12,7 +16,10 @@ export async function GET(req: NextRequest) {
     const now = new Date();
     const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const ago14d = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const days = Array.from({ length: 14 }, (_, index) => {
+      const start = utcDayStart(now, 13 - index);
+      return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000), day: start.toISOString().slice(0, 10) };
+    });
 
     const [
       totalSignups,
@@ -23,8 +30,9 @@ export async function GET(req: NextRequest) {
       totalViews,
       rawTypeBreakdown,
       rawTopPaths,
-      rawSignups,
-      rawViews
+      signupsByDay,
+      viewsByDay,
+      productFunnel,
     ] = await Promise.all([
       prisma.waitlist.count(),
       prisma.waitlist.count({ where: { createdAt: { gte: ago24h } } }),
@@ -32,95 +40,39 @@ export async function GET(req: NextRequest) {
       prisma.waitlist.count({ where: { type: "remit" } }),
       prisma.waitlist.count({ where: { status: "approved" } }),
       prisma.pageView.count(),
-      prisma.waitlist.groupBy({
-        by: ["type"],
-        _count: { id: true },
-        orderBy: { _count: { id: "desc" } }
+      prisma.waitlist.groupBy({ by: ["type"], _count: { id: true }, orderBy: { _count: { id: "desc" } } }),
+      prisma.pageView.groupBy({ by: ["path"], _count: { id: true }, orderBy: { _count: { id: "desc" } }, take: 10 }),
+      Promise.all(days.map((day) => prisma.waitlist.count({ where: { createdAt: { gte: day.start, lt: day.end } } }))),
+      Promise.all(days.map((day) => prisma.pageView.count({ where: { visitedAt: { gte: day.start, lt: day.end } } }))),
+      getAdminMetrics().catch((error) => {
+        console.warn("Product funnel metrics unavailable until the open-beta migration is applied.", error instanceof Error ? error.message : error);
+        return null;
       }),
-      prisma.pageView.groupBy({
-        by: ["path"],
-        _count: { id: true },
-        orderBy: { _count: { id: "desc" } },
-        take: 10
-      }),
-      prisma.waitlist.findMany({
-        where: { createdAt: { gte: ago14d } },
-        select: { createdAt: true },
-        orderBy: { createdAt: "asc" }
-      }),
-      prisma.pageView.findMany({
-        where: { visitedAt: { gte: ago14d } },
-        select: { visitedAt: true },
-        orderBy: { visitedAt: "asc" }
-      })
     ]);
-
-    // Format type breakdown to match legacy structure
-    const typeBreakdown = rawTypeBreakdown.map((item) => ({
-      type: item.type,
-      count: item._count.id
-    }));
-
-    // Format top paths to match legacy structure
-    const topPaths = rawTopPaths.map((item) => ({
-      path: item.path,
-      views: item._count.id
-    }));
-
-    // Group signups by day in JS (database-agnostic)
-    const signupsMap = new Map<string, number>();
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().split("T")[0];
-      signupsMap.set(key, 0);
-    }
-    rawSignups.forEach((row) => {
-      const dateStr = new Date(row.createdAt).toISOString().split("T")[0];
-      if (signupsMap.has(dateStr)) {
-        signupsMap.set(dateStr, (signupsMap.get(dateStr) || 0) + 1);
-      }
-    });
-    const signupsPerDay = Array.from(signupsMap.entries()).map(([day, count]) => ({ day, count }));
-
-    // Group views by day in JS
-    const viewsMap = new Map<string, number>();
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().split("T")[0];
-      viewsMap.set(key, 0);
-    }
-    rawViews.forEach((row) => {
-      const dateStr = new Date(row.visitedAt).toISOString().split("T")[0];
-      if (viewsMap.has(dateStr)) {
-        viewsMap.set(dateStr, (viewsMap.get(dateStr) || 0) + 1);
-      }
-    });
-    const viewsPerDay = Array.from(viewsMap.entries()).map(([day, count]) => ({ day, count }));
 
     return NextResponse.json({
       success: true,
       data: {
+        // These fields are retained for old admin clients; the active product
+        // dashboard reads productFunnel instead of treating the waitlist as a
+        // live acquisition funnel.
         totalSignups,
         last24h,
         last7d,
         remitInterest,
         approvedCount,
         totalViews,
-        topPaths,
-        signupsPerDay,
-        viewsPerDay,
-        typeBreakdown
-      }
-    });
+        topPaths: rawTopPaths.map((item) => ({ path: item.path, views: item._count.id })),
+        signupsPerDay: days.map((day, index) => ({ day: day.day, count: signupsByDay[index] || 0 })),
+        viewsPerDay: days.map((day, index) => ({ day: day.day, count: viewsByDay[index] || 0 })),
+        typeBreakdown: rawTypeBreakdown.map((item) => ({ type: item.type, count: item._count.id })),
+        productFunnel,
+      },
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error: unknown) {
     console.error("Analytics fetch error:", error);
-    return NextResponse.json({
-      success: false,
-      message: "Internal server error.",
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack || "" : ""
-    }, { status: 500 });
+    // Never return stack traces or provider/database details through an admin
+    // API. The server log retains the diagnostic context.
+    return NextResponse.json({ success: false, message: "Analytics are temporarily unavailable." }, { status: 503 });
   }
 }

@@ -258,12 +258,12 @@ export default function AboutPage() {
           </p>
           <Button
             onClick={() =>
-              window.dispatchEvent(new CustomEvent('open-modal', { detail: 'waitlist' }))
+              window.location.href = "/register"
             }
             className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-base hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/20 hover:-translate-y-px"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            join the waitlist
+            create a free account
           </Button>
         </div>
       </section>

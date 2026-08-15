@@ -23,6 +23,7 @@ import { durableRateLimit } from "@/utils/durableRateLimit";
 import { createNotification } from "@/utils/contracts";
 import { processContractBilling } from "@/utils/contractBilling";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 async function resolveLink(token: string) {
   return prisma.contractReviewLink.findUnique({
@@ -236,6 +237,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const executed = await prisma.contract.findUnique({ where: { id: link!.contractId }, include: { client: { select: { name: true, email: true } } } });
       if (executed) {
         await recordActivationEvent(executed.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { contractId: executed.id, workflow: "contract_executed" });
+        await recordProductEvent({ userId: executed.userId, eventName: PRODUCT_EVENTS.agreementAccepted, module: "agreements", entityType: "contract", entityId: executed.id, source: "public_acceptance", dedupeKey: `agreement_accepted:${executed.id}` });
         await processContractBilling({ userId: executed.userId, contractId: executed.id, limit: 100 }).catch((billingError) => console.error("Immediate contract billing check failed:", billingError));
         await createNotification({ userId: executed.userId, type: "contract_executed", title: "Agreement accepted", message: `${executed.title} has both parties’ acceptance recorded.`, href: `/workflow/contracts/${executed.id}` }).catch(() => undefined);
         const artifactUrl = `${(process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")}/api/public/contracts/artifact/${encodeURIComponent(completion.artifactToken || "")}`;

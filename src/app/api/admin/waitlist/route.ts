@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
-import { verifyToken } from "@/utils/auth";
+import { hasAdminSession } from "@/utils/adminSession";
 import { getWaitlistOperationalDetails } from "@/utils/waitlistAdmin";
 
 const SORT_FIELDS = {
@@ -18,8 +18,7 @@ function positiveInteger(value: string | null, fallback: number): number {
 }
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get("x-admin-token");
-  if (!verifyToken(token)) {
+  if (!await hasAdminSession(req)) {
     return NextResponse.json({ success: false, message: "unauthorised." }, { status: 401 });
   }
 

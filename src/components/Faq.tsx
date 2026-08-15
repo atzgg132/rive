@@ -9,7 +9,7 @@ const faqs = [
   },
   {
     question: "Can I use rive. today?",
-    answer: "rive. is in early access. We admit users in manageable batches so we can maintain a reliable product and learn directly from the people using it.",
+    answer: "Rive is open to everyone today. The workspace is free while we learn from real workflows and improve the product with direct user feedback.",
   },
   {
     question: "What happens after a client accepts an Agreement?",

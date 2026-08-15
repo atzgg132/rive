@@ -7,6 +7,7 @@ import { prisma } from "@/utils/db";
 export type EmailType =
   | "waitlist_joined"
   | "waitlist_invite"
+  | "email_verification"
   | "registration_complete"
   | "password_reset"
   | "password_changed"
@@ -26,10 +27,10 @@ export type EmailResult = {
   reason?: "not_configured" | "delivery_failed";
 };
 
-type EmailProvider = "disabled" | "smtp" | "zoho" | "ses";
+type EmailProvider = "disabled" | "console" | "smtp" | "zoho" | "ses";
 
 const requestedProvider = (process.env.EMAIL_PROVIDER || "smtp").toLowerCase();
-const emailProvider: EmailProvider = ["disabled", "smtp", "zoho", "ses"].includes(requestedProvider)
+const emailProvider: EmailProvider = ["disabled", "console", "smtp", "zoho", "ses"].includes(requestedProvider)
   ? requestedProvider as EmailProvider
   : "disabled";
 const smtpHost = process.env.SMTP_HOST || "";
@@ -73,7 +74,7 @@ const replyTo = process.env.EMAIL_REPLY_TO || "hello@rive.work";
 export function getEmailConfigurationStatus() {
   return {
     provider: emailProvider,
-    configured: Boolean(ses || transporter),
+    configured: emailProvider === "console" || Boolean(ses || transporter),
     smtpHost: transporter ? smtpHost : undefined,
     smtpPort: transporter ? smtpPort : undefined,
     smtpSecure: transporter ? smtpSecure : undefined,
@@ -89,11 +90,12 @@ export function getEmailConfigurationStatus() {
           ]
         : emailProvider === "disabled"
           ? ["EMAIL_PROVIDER"]
-          : ["EMAIL_PROVIDER"],
+        : [],
   };
 }
 
 export async function verifyEmailTransport(): Promise<{ ok: boolean; message: string }> {
+  if (emailProvider === "console") return { ok: true, message: "Console email delivery is enabled for local development." };
   if (transporter) {
     try {
       await transporter.verify();
@@ -202,6 +204,17 @@ async function deliver({
   text: string;
   replyToAddress?: string;
 }): Promise<EmailResult> {
+  if (emailProvider === "console") {
+    const messageId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    console.info(`\n[email:console] ${type} -> ${to}\nSubject: ${subject}\n\n${text}\n`);
+    await prisma.emailDelivery
+      .create({
+        data: { recipient: to, type, status: "local", providerMessageId: messageId },
+      })
+      .catch((error) => console.error("email: failed to record local delivery", error));
+    return { sent: true, messageId };
+  }
+
   if (!ses && !transporter) {
     console.warn(`email: ${type} skipped because an email provider is not configured`);
     await prisma.emailDelivery
@@ -592,6 +605,7 @@ export function sendInvoiceSentEmail(input: {
   currency: string;
   dueDate: Date | null;
   senderName: string;
+  publicUrl?: string;
 }): Promise<EmailResult> {
   const due = input.dueDate
     ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
@@ -607,10 +621,12 @@ export function sendInvoiceSentEmail(input: {
       title: `Invoice ${input.invoiceNumber}`,
       intro: `${input.senderName} sent an invoice for your review and payment.`,
       body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeClientName}, ${safeSenderName} sent this invoice for your review and payment.<br><br>Amount due: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
+      action: input.publicUrl ? "View invoice" : undefined,
+      actionUrl: input.publicUrl,
       aside: "The invoice email is a delivery notice. Please verify the sender and payment details using a trusted channel before paying.",
       recipient: input.to,
     }),
-    text: `Invoice ${input.invoiceNumber} from ${input.senderName}.\n\nAmount due: ${input.currency} ${input.total}\nDue: ${due}\n\nVerify payment details through a trusted channel before paying.`,
+    text: `Invoice ${input.invoiceNumber} from ${input.senderName}.\n\nAmount due: ${input.currency} ${input.total}\nDue: ${due}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}\n\nVerify payment details through a trusted channel before paying.`,
   });
 }
 
@@ -641,4 +657,43 @@ export function sendContractVoidRequestedEmail(input: {
     }),
     text: `${input.requesterName} requested to void “${input.contractTitle}”.\n\nReason: ${input.note}\n\nReview the void request: ${input.voidUrl}\n\nThe Agreement stays accepted until you confirm.`,
   });
+}
+
+export type PreparedEmail = {
+  to: string;
+  type: EmailType;
+  subject: string;
+  html: string;
+  text: string;
+  replyToAddress?: string;
+};
+
+export async function deliverPreparedEmail(email: PreparedEmail): Promise<EmailResult> {
+  return deliver(email);
+}
+
+export function buildEmailVerificationEmail(to: string, name: string, token: string): PreparedEmail {
+  const firstName = name.trim().split(/\s+/)[0] || "there";
+  const verifyUrl = `${appUrl}/verify-email?token=${encodeURIComponent(token)}`;
+  const intro = `One quick step, ${firstName}: verify your email so we can keep your Rive workspace secure.`;
+  return {
+    to,
+    type: "email_verification",
+    subject: "Verify your Rive email address",
+    html: baseTemplate({
+      eyebrow: "finish setting up",
+      title: "Verify your email address.",
+      intro,
+      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Your account is ready. Verify this email address to open your workspace. The link expires in 24 hours and works only once.</p>`,
+      action: "Verify my email",
+      actionUrl: verifyUrl,
+      aside: "If you did not create a Rive account, you can safely ignore this message.",
+      recipient: to,
+    }),
+    text: `Verify your Rive email address\n\n${intro}\n\nVerify your email: ${verifyUrl}\n\nThis link expires in 24 hours and works once. If you did not create this account, ignore this message.`,
+  };
+}
+
+export function sendEmailVerificationEmail(to: string, name: string, token: string): Promise<EmailResult> {
+  return deliver(buildEmailVerificationEmail(to, name, token));
 }

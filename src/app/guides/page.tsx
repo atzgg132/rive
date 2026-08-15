@@ -53,14 +53,14 @@ export default function GuidesPage() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 text-center max-w-md mx-auto transition-colors">
             <h3 className="text-xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Be first to learn</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-5" style={font}>
-              join the waitlist and we&apos;ll send you guides as soon as they&apos;re published.
+              create a free account and use the workspace while we keep publishing practical guides.
             </p>
             <Button
-              onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+              onClick={() => { window.location.href = "/register"; }}
               className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15"
               style={fontD}
             >
-              join the waitlist →
+              create a free account →
             </Button>
           </div>
         </div>

@@ -18,57 +18,79 @@ model Waitlist {
 }
 
 model PageView {
-  id        Int      @id @default(autoincrement())
-  path      String
-  referrer  String?
-  userAgent String?  @map("user_agent")
-  visitedAt DateTime @default(now()) @map("visited_at")
+  id             Int      @id @default(autoincrement())
+  path           String
+  referrer       String?
+  referrerDomain String?  @map("referrer_domain")
+  userAgent      String?  @map("user_agent")
+  anonymousId    String?  @map("anonymous_id")
+  sessionId      String?  @map("session_id")
+  userId         String?  @map("user_id")
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  utmSource      String?  @map("utm_source")
+  utmMedium      String?  @map("utm_medium")
+  utmCampaign    String?  @map("utm_campaign")
+  landingPath    String?  @map("landing_path")
+  visitedAt      DateTime @default(now()) @map("visited_at")
 
   @@index([visitedAt])
+  @@index([anonymousId, visitedAt])
+  @@index([userId, visitedAt])
+  @@index([utmSource, visitedAt])
   @@map("page_views")
 }
 
 model User {
-  id                    String                 @id @default(uuid())
-  email                 String                 @unique
-  name                  String?
-  avatarUrl             String?                @map("avatar_url")
-  passwordHash          String                 @map("password_hash")
-  sessionVersion        Int                    @default(0) @map("session_version")
-  plan                  String                 @default("free")
-  onboardingStatus      String                 @default("complete") @map("onboarding_status")
-  onboardingStep        Int                    @default(0) @map("onboarding_step")
-  businessType          String?                @map("business_type")
-  businessTypes         String[]               @default([]) @map("business_types")
-  profession            String?
-  currency              String                 @default("USD")
-  displayCurrency       String                 @default("USD") @map("display_currency")
-  timeZone              String                 @default("UTC") @map("time_zone")
-  onboardingData        Json?                  @map("onboarding_data")
-  createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @updatedAt @map("updated_at")
-  clients               Client[]
-  projects              Project[]
-  invoices              Invoice[]
-  expenses              Expense[]
-  portfolio             Portfolio?
-  authTokens            AuthToken[]
-  calendars             Calendar[]
-  calendarEvents        CalendarEvent[]
-  calendarConnections   CalendarConnection[]
-  calendarSubscriptions CalendarSubscription[]
-  tasks                 Task[]
-  importJobs            ImportJob[]
-  importMappings        ImportMapping[]
-  connectorConnections  ConnectorConnection[]
-  syncRuns              SyncRun[]
-  auditEvents           AuditEvent[]
-  contracts             Contract[]
-  contractSigners       ContractSigner[]       @relation("ContractSignerUser")
-  contractEvents        ContractEvent[]        @relation("ContractEventActor")
-  contractComments      ContractComment[]      @relation("ContractCommentAuthor")
-  notifications         Notification[]
-  migrationEvents       MigrationEvent[]
+  id                          String                 @id @default(uuid())
+  email                       String                 @unique
+  name                        String?
+  avatarUrl                   String?                @map("avatar_url")
+  passwordHash                String                 @map("password_hash")
+  sessionVersion              Int                    @default(0) @map("session_version")
+  plan                        String                 @default("free")
+  emailVerifiedAt             DateTime?              @map("email_verified_at")
+  emailVerificationRequiredAt DateTime?              @map("email_verification_required_at")
+  accountType                 String                 @default("customer") @map("account_type")
+  onboardingStatus            String                 @default("complete") @map("onboarding_status")
+  onboardingStep              Int                    @default(0) @map("onboarding_step")
+  businessType                String?                @map("business_type")
+  businessTypes               String[]               @default([]) @map("business_types")
+  profession                  String?
+  currency                    String                 @default("USD")
+  displayCurrency             String                 @default("USD") @map("display_currency")
+  timeZone                    String                 @default("UTC") @map("time_zone")
+  onboardingData              Json?                  @map("onboarding_data")
+  createdAt                   DateTime               @default(now()) @map("created_at")
+  updatedAt                   DateTime               @updatedAt @map("updated_at")
+  clients                     Client[]
+  projects                    Project[]
+  invoices                    Invoice[]
+  expenses                    Expense[]
+  portfolio                   Portfolio?
+  authTokens                  AuthToken[]
+  calendars                   Calendar[]
+  calendarEvents              CalendarEvent[]
+  calendarConnections         CalendarConnection[]
+  calendarSubscriptions       CalendarSubscription[]
+  tasks                       Task[]
+  importJobs                  ImportJob[]
+  importMappings              ImportMapping[]
+  connectorConnections        ConnectorConnection[]
+  syncRuns                    SyncRun[]
+  auditEvents                 AuditEvent[]
+  contracts                   Contract[]
+  contractSigners             ContractSigner[]       @relation("ContractSignerUser")
+  contractEvents              ContractEvent[]        @relation("ContractEventActor")
+  contractComments            ContractComment[]      @relation("ContractCommentAuthor")
+  notifications               Notification[]
+  migrationEvents             MigrationEvent[]
+  pageViews                   PageView[]
+  productEvents               ProductEvent[]
+  feedback                    Feedback[]
+  feedbackPromptStates        FeedbackPromptState[]
+  attribution                 UserAttribution?
+  invoiceProfile              InvoiceProfile?
+  invoiceNumberSequence       InvoiceNumberSequence?
 
   @@map("users")
 }
@@ -87,6 +109,163 @@ model AuthToken {
   @@index([email, type, createdAt])
   @@index([expiresAt])
   @@map("auth_tokens")
+}
+
+model EmailOutbox {
+  id               String    @id @default(uuid())
+  recipient        String
+  type             String
+  encryptedPayload String    @map("encrypted_payload")
+  status           String    @default("queued")
+  attempts         Int       @default(0)
+  availableAt      DateTime  @default(now()) @map("available_at")
+  lastError        String?   @map("last_error")
+  processedAt      DateTime? @map("processed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, availableAt])
+  @@index([recipient, type, createdAt])
+  @@map("email_outbox")
+}
+
+model AdminSession {
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  lastSeenAt DateTime? @map("last_seen_at")
+  revokedAt  DateTime? @map("revoked_at")
+  ipHash     String?   @map("ip_hash")
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([expiresAt, revokedAt])
+  @@map("admin_sessions")
+}
+
+model UserAttribution {
+  id                    String   @id @default(uuid())
+  userId                String   @unique @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstTouchSource      String?  @map("first_touch_source")
+  firstTouchMedium      String?  @map("first_touch_medium")
+  firstTouchCampaign    String?  @map("first_touch_campaign")
+  firstTouchReferrer    String?  @map("first_touch_referrer")
+  firstTouchLandingPage String?  @map("first_touch_landing_page")
+  lastTouchSource       String?  @map("last_touch_source")
+  lastTouchMedium       String?  @map("last_touch_medium")
+  lastTouchCampaign     String?  @map("last_touch_campaign")
+  lastTouchReferrer     String?  @map("last_touch_referrer")
+  lastTouchLandingPage  String?  @map("last_touch_landing_page")
+  referralSource        String?  @map("referral_source")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([firstTouchSource, createdAt])
+  @@index([lastTouchSource, createdAt])
+  @@map("user_attributions")
+}
+
+model InvoiceProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName        String?  @map("business_name")
+  contactName         String?  @map("contact_name")
+  email               String?
+  phone               String?
+  address             String?
+  taxId               String?  @map("tax_id")
+  logoUrl             String?  @map("logo_url")
+  defaultCurrency     String   @default("USD") @map("default_currency")
+  invoicePrefix       String   @default("INV") @map("invoice_prefix")
+  paymentInstructions String?  @map("payment_instructions")
+  defaultTerms        String?  @map("default_terms")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("invoice_profiles")
+}
+
+model InvoiceNumberSequence {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prefix     String   @default("INV")
+  nextNumber Int      @default(1) @map("next_number")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("invoice_number_sequences")
+}
+
+model ProductEvent {
+  id           String   @id @default(uuid())
+  userId       String?  @map("user_id")
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  anonymousId  String?  @map("anonymous_id")
+  sessionId    String?  @map("session_id")
+  eventName    String   @map("event_name")
+  eventVersion Int      @default(1) @map("event_version")
+  occurredAt   DateTime @default(now()) @map("occurred_at")
+  environment  String   @default("local")
+  module       String?
+  entityType   String?  @map("entity_type")
+  entityId     String?  @map("entity_id")
+  dataOrigin   String?  @map("data_origin")
+  source       String?
+  requestId    String?  @map("request_id")
+  dedupeKey    String?  @unique @map("dedupe_key")
+  properties   Json?
+
+  @@index([userId, occurredAt])
+  @@index([anonymousId, occurredAt])
+  @@index([eventName, occurredAt])
+  @@index([environment, occurredAt])
+  @@index([module, occurredAt])
+  @@map("product_events")
+}
+
+model Feedback {
+  id             String   @id @default(uuid())
+  userId         String?  @map("user_id")
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  anonymousId    String?  @map("anonymous_id")
+  promptKey      String?  @map("prompt_key")
+  feedbackType   String   @default("general") @map("feedback_type")
+  module         String?
+  triggerEvent   String?  @map("trigger_event")
+  rating         Int?
+  body           String?
+  contactAllowed Boolean  @default(false) @map("contact_allowed")
+  status         String   @default("new")
+  tags           String[] @default([])
+  context        Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@index([module, createdAt])
+  @@map("feedback")
+}
+
+model FeedbackPromptState {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptKey    String    @map("prompt_key")
+  shownAt      DateTime? @map("shown_at")
+  dismissedAt  DateTime? @map("dismissed_at")
+  snoozedUntil DateTime? @map("snoozed_until")
+  respondedAt  DateTime? @map("responded_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([userId, promptKey])
+  @@index([userId, snoozedUntil])
+  @@map("feedback_prompt_states")
 }
 
 model EmailDelivery {
@@ -117,6 +296,7 @@ model Client {
   notes           String?
   tags            String[]
   status          String           @default("active")
+  dataOrigin      String?          @map("data_origin")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   projects        Project[]
@@ -147,6 +327,7 @@ model Project {
   externalContractLabel String?     @map("external_contract_label")
   externalContractUrl   String?     @map("external_contract_url")
   contractDecisionAt    DateTime?   @map("contract_decision_at")
+  dataOrigin            String?     @map("data_origin")
   tags                  String[]
   createdAt             DateTime    @default(now()) @map("created_at")
   updatedAt             DateTime    @updatedAt @map("updated_at")
@@ -246,6 +427,7 @@ model CalendarEvent {
   recurrenceRule    String?                @map("recurrence_rule")
   recurringMasterId String?                @map("recurring_master_id")
   source            String                 @default("native")
+  dataOrigin        String?                @map("data_origin")
   sourceRevision    Int                    @default(1) @map("source_revision")
   clientId          String?                @map("client_id")
   projectId         String?                @map("project_id")
@@ -262,6 +444,7 @@ model CalendarEvent {
   @@index([userId, startDate])
   @@index([calendarId, deletedAt])
   @@index([projectId])
+  @@index([userId, dataOrigin, createdAt])
   @@index([taskId])
   @@map("calendar_events")
 }
@@ -391,6 +574,8 @@ model Invoice {
   currency          String                     @default("USD")
   subtotal          Decimal                    @default(0) @db.Decimal(12, 2)
   taxRate           Decimal                    @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  discountRate      Decimal                    @default(0) @map("discount_rate") @db.Decimal(5, 2)
+  discountAmount    Decimal                    @default(0) @map("discount_amount") @db.Decimal(12, 2)
   taxAmount         Decimal                    @default(0) @map("tax_amount") @db.Decimal(12, 2)
   total             Decimal                    @default(0) @db.Decimal(12, 2)
   issueDate         DateTime                   @default(now()) @map("issue_date")
@@ -399,11 +584,20 @@ model Invoice {
   notes             String?
   sentAt            DateTime?                  @map("sent_at")
   reviewedAt        DateTime?                  @map("reviewed_at")
+  amountPaid        Decimal                    @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  publicTokenHash   String?                    @unique @map("public_token_hash")
+  sentSnapshot      Json?                      @map("sent_snapshot")
+  sentSnapshotAt    DateTime?                  @map("sent_snapshot_at")
+  viewedAt          DateTime?                  @map("viewed_at")
+  voidedAt          DateTime?                  @map("voided_at")
+  dataOrigin        String?                    @map("data_origin")
   createdAt         DateTime                   @default(now()) @map("created_at")
   updatedAt         DateTime                   @updatedAt @map("updated_at")
   items             InvoiceItem[]
   billingOccurrence ContractBillingOccurrence?
   deliveries        InvoiceDelivery[]
+  payments          InvoicePayment[]
+  events            InvoiceEvent[]
 
   @@unique([userId, invoiceNumber], name: "unique_user_invoice_number")
   @@index([userId, createdAt])
@@ -428,6 +622,38 @@ model InvoiceItem {
   @@map("invoice_items")
 }
 
+model InvoicePayment {
+  id             String   @id @default(uuid())
+  invoiceId      String   @map("invoice_id")
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount         Decimal  @db.Decimal(12, 2)
+  paidAt         DateTime @default(now()) @map("paid_at")
+  method         String   @default("manual")
+  reference      String?
+  notes          String?
+  idempotencyKey String?  @map("idempotency_key")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([invoiceId, idempotencyKey])
+  @@index([invoiceId, paidAt])
+  @@map("invoice_payments")
+}
+
+model InvoiceEvent {
+  id        String   @id @default(uuid())
+  invoiceId String   @map("invoice_id")
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  userId    String?  @map("user_id")
+  eventType String   @map("event_type")
+  metadata  Json?
+  ipHash    String?  @map("ip_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([invoiceId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("invoice_events")
+}
+
 model Expense {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
@@ -442,6 +668,7 @@ model Expense {
   receiptUrl   String?  @map("receipt_url")
   isBillable   Boolean  @default(false) @map("is_billable")
   isReimbursed Boolean  @default(false) @map("is_reimbursed")
+  dataOrigin   String?  @map("data_origin")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -798,39 +1025,39 @@ model PortfolioView {
 }
 
 model Contract {
-  id                 String                      @id @default(uuid())
-  userId             String                      @map("user_id")
-  user               User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId           String                      @map("client_id")
-  client             Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  projectId          String?                     @map("project_id")
-  project            Project?                    @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  title              String
-  status             String                      @default("draft")
-  provider           String                      @default("local")
-  providerEnvelopeId String?                     @map("provider_envelope_id")
-  governingLaw       String                      @default("India") @map("governing_law")
-  jurisdiction       String?
-  currency           String                      @default("USD")
-  reviewExpiresAt    DateTime?                   @map("review_expires_at")
-  finalizedAt        DateTime?                   @map("finalized_at")
-  executedAt         DateTime?                   @map("executed_at")
-  voidedAt           DateTime?                   @map("voided_at")
-  voidRequestedAt    DateTime?                   @map("void_requested_at")
-  voidRequestedByRole String?                    @map("void_requested_by_role")
-  voidRequestNote    String?                     @map("void_request_note")
-  voidConfirmNote    String?                     @map("void_confirm_note")
-  createdAt          DateTime                    @default(now()) @map("created_at")
-  updatedAt          DateTime                    @updatedAt @map("updated_at")
-  versions           ContractVersion[]
-  signers            ContractSigner[]
-  reviewLinks        ContractReviewLink[]
-  comments           ContractComment[]
-  events             ContractEvent[]
-  artifacts          ContractArtifact[]
-  paymentPlanItems   ContractPaymentPlanItem[]
-  billingOccurrences ContractBillingOccurrence[]
-  contractSignatures ContractSignature[]
+  id                  String                      @id @default(uuid())
+  userId              String                      @map("user_id")
+  user                User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId            String                      @map("client_id")
+  client              Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  projectId           String?                     @map("project_id")
+  project             Project?                    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title               String
+  status              String                      @default("draft")
+  provider            String                      @default("local")
+  providerEnvelopeId  String?                     @map("provider_envelope_id")
+  governingLaw        String                      @default("India") @map("governing_law")
+  jurisdiction        String?
+  currency            String                      @default("USD")
+  reviewExpiresAt     DateTime?                   @map("review_expires_at")
+  finalizedAt         DateTime?                   @map("finalized_at")
+  executedAt          DateTime?                   @map("executed_at")
+  voidedAt            DateTime?                   @map("voided_at")
+  voidRequestedAt     DateTime?                   @map("void_requested_at")
+  voidRequestedByRole String?                     @map("void_requested_by_role")
+  voidRequestNote     String?                     @map("void_request_note")
+  voidConfirmNote     String?                     @map("void_confirm_note")
+  createdAt           DateTime                    @default(now()) @map("created_at")
+  updatedAt           DateTime                    @updatedAt @map("updated_at")
+  versions            ContractVersion[]
+  signers             ContractSigner[]
+  reviewLinks         ContractReviewLink[]
+  comments            ContractComment[]
+  events              ContractEvent[]
+  artifacts           ContractArtifact[]
+  paymentPlanItems    ContractPaymentPlanItem[]
+  billingOccurrences  ContractBillingOccurrence[]
+  contractSignatures  ContractSignature[]
 
   @@index([userId, status, updatedAt])
   @@index([clientId, status])
@@ -990,12 +1217,12 @@ model ContractArtifact {
   contentHash  String          @map("content_hash")
   generatedAt  DateTime        @default(now()) @map("generated_at")
 
-  @@index([contractId, generatedAt])
   // One artifact per (contract, version, type) — e.g. a single evidence PDF per
   // accepted version. Defense-in-depth: correctness currently rests on the
   // optimistic signing → executed transaction ordering; this makes a duplicate
   // artifact write impossible even if that ordering ever races.
   @@unique([contractId, versionId, artifactType], name: "unique_contract_artifact_per_version_type")
+  @@index([contractId, generatedAt])
   @@map("contract_artifacts")
 }
 

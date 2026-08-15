@@ -236,10 +236,10 @@ async function installOnboardingMocks(page: Page, state: MockState) {
 }
 
 test.describe("goal-aware activation", () => {
-  test("registration enters onboarding with the chosen starting context available", async ({ page }) => {
+  test("registration pauses at email verification before onboarding", async ({ page }) => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 0 };
     await installOnboardingMocks(page, state);
-    await page.route("**/api/auth/register**", async (route) => route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ success: true }) }));
+    await page.route("**/api/auth/register**", async (route) => route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ success: true, requiresEmailVerification: true }) }));
     await page.goto("/register?invite=test-invite", { waitUntil: "networkidle" });
     await page.getByLabel("Full name").fill("Activation Tester");
     await page.getByLabel("Email address").fill("activation@rive.test");
@@ -247,8 +247,9 @@ test.describe("goal-aware activation", () => {
     const createAccountButton = page.locator("form").getByRole("button", { name: "Create Account" });
     await expect(createAccountButton).toBeEnabled();
     await createAccountButton.click();
-    await expect(page).toHaveURL(/\/onboarding/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Tell us enough to personalize everything else." })).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/register\?invite=test-invite$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Your account is ready. Check your inbox for the verification link.", { exact: true })).toBeVisible();
   });
 
   test("an incomplete user returns to the saved onboarding step after login", async ({ page }) => {

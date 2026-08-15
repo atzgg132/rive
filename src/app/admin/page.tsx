@@ -1,668 +1,129 @@
 "use client";
 
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Activity, AlertCircle, BarChart3, ChevronLeft, ChevronRight, Clock3, Loader2, LogOut, MessageSquare, RefreshCw, Search, Shield, Users, Zap } from "lucide-react";
 import { Button, Input, Select } from "@/components/ui";
-
-import { useState, useEffect, useCallback } from "react";
-import {
-  Users, Eye, TrendingUp, Zap, LogOut, Search, RefreshCw,
-  ChevronLeft, ChevronRight, Mail, Clock, Shield, Loader2,
-  AlertCircle, CheckCircle2, XCircle, ChevronUp, ChevronDown,
-  Filter, CheckCheck, Send, UserCheck,
-} from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { RiveLogo } from "@/components/RiveLogo";
+import RiveLogo from "@/components/RiveLogo";
 import PasswordInput from "@/components/PasswordInput";
 
-// ── Types ────────────────────────────────────────────────
-type Analytics = {
-  totalSignups: number; last24h: number; last7d: number;
-  remitInterest: number; approvedCount: number; totalViews: number;
-  topPaths: { path: string; views: number }[];
-  signupsPerDay: { day: string; count: number }[];
-  viewsPerDay:   { day: string; count: number }[];
-  typeBreakdown: { type: string; count: number }[];
+type Funnel = {
+  definitionVersion: string;
+  generatedAt: string;
+  signups: { total: number; verified: number; last24h: number; last7d: number; daily: Array<{ day: string; count: number }> };
+  qualification: { qualified: number; rate: number | null; sourceBreakdown: Array<{ source: string; signups: number; qualified: number }> };
+  activation: { activated: number; rate: number | null; native: number; migration: number; portfolio: number; pathBreakdown: Array<{ path: string; count: number }> };
+  deepActivation: { deeplyActivated: number; rateAmongActivated: number | null; averageModules: number; usersWithTwoActiveDays: number; connectedWorkflows: number };
+  realData: { users: number; records: number };
+  activeUsers: { wau: number; mau: number };
+  retention: { available: boolean; numerator: number; denominator: number; rate: number | null; definition: string };
+  workflowDepth: { averageModules: number; buckets: Array<{ label: string; count: number }> };
+  reliability: { productEvents24h: number; failedEmails24h: number; queuedEmails: number };
+};
+type UserRow = { id: string; email: string; name: string | null; createdAt: string; emailVerified: boolean; onboardingStatus: string; businessType: string | null; profession: string | null; goal: string | null; startingPath: string | null; qualified: boolean; realData: boolean; attribution: { firstTouchSource: string | null; lastTouchSource: string | null; firstTouchMedium: string | null; firstTouchCampaign: string | null; referralSource: string | null } | null; lastActivity: { at: string; eventName: string; module: string | null } | null };
+type FeedbackRow = { id: string; promptKey: string | null; feedbackType: string; module: string | null; rating: number | null; body: string | null; contactAllowed: boolean; status: string; createdAt: string; user: { email: string; name: string | null } | null };
+type LegacyRow = { id: number; email: string; type: string; status: string; created_at: string; registered: boolean };
+type Tab = "overview" | "funnel" | "users" | "feedback" | "reliability" | "legacy";
+
+const tabs: Array<{ id: Tab; label: string; icon: typeof BarChart3 }> = [
+  { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "funnel", label: "Funnel", icon: Zap },
+  { id: "users", label: "Users", icon: Users },
+  { id: "feedback", label: "Feedback", icon: MessageSquare },
+  { id: "reliability", label: "Reliability", icon: AlertCircle },
+  { id: "legacy", label: "Legacy waitlist", icon: Clock3 },
+];
+
+const fmt = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value);
+const rate = (value: number | null) => value === null ? "—" : `${value}%`;
+const ago = (value: string | null | undefined) => {
+  if (!value) return "—";
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
 };
 
-type WaitlistEntry = {
-  id: number; email: string; type: string;
-  status: "pending" | "approved"; created_at: string;
-  registered: boolean; registered_at: string | null;
-  invite_status: "not_sent" | "active" | "delivery_failed" | "expired" | "revoked" | "registered";
-  invite_expires_at: string | null;
-  latest_delivery_status: string | null;
-  latest_delivery_at: string | null;
-};
+function Loading() { return <div className="grid min-h-40 place-items-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>; }
+function Empty({ text }: { text: string }) { return <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>; }
 
-type SortField = "email" | "type" | "status" | "created_at";
-type SortOrder = "ASC" | "DESC";
-
-const API = "";
-
-// ── Helpers ───────────────────────────────────────────────
-function fmt(n: number) { return n >= 1000 ? (n/1000).toFixed(1)+"k" : String(n); }
-
-function timeAgo(d: string) {
-  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
-  if (s < 60)  return "just now";
-  if (s < 3600) return `${Math.floor(s/60)}m ago`;
-  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
-  return `${Math.floor(s/86400)}d ago`;
+function Panel({ title, eyebrow, action, children }: { title: string; eyebrow?: string; action?: ReactNode; children: ReactNode }) {
+  return <section className="rounded-2xl border border-border bg-card shadow-sm"><div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4"><div>{eyebrow ? <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p> : null}<h2 className="mt-1 text-base font-semibold">{title}</h2></div>{action}</div><div className="p-5">{children}</div></section>;
 }
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  if (!data.length) return null;
-  const max = Math.max(...data, 1);
-  const w = 80, h = 28, p = 2;
-  const pts = data.map((v, i) =>
-    `${p+(i/Math.max(data.length-1,1))*(w-p*2)},${p+(1-v/max)*(h-p*2)}`
-  ).join(" ");
-  const last = pts.split(" ").at(-1)!.split(",");
-  return (
-    <svg width={w} height={h} className="overflow-visible">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx={last[0]} cy={last[1]} r="3" fill={color}/>
-    </svg>
-  );
-}
-
-function MiniBarChart({ data, label }: { data:{day:string;count:number}[]; label:string }) {
-  if (!data.length) return <div className="text-slate-400 text-sm py-8 text-center" style={{fontFamily:"Outfit,sans-serif"}}>No data yet</div>;
-  const max = Math.max(...data.map(d=>d.count), 1);
-  return (
-    <div>
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={{fontFamily:"Outfit,sans-serif"}}>{label}</p>
-      <div className="flex items-end gap-1.5 h-20">
-        {data.map((d,i) => (
-          <div key={i} className="flex-1 flex flex-col items-center group relative">
-            <div className="w-full bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-400 dark:hover:bg-blue-500 transition-colors rounded-t-sm cursor-default"
-              style={{height:`${(d.count/max)*100}%`,minHeight:d.count>0?"4px":"0"}}
-              title={`${d.day}: ${d.count}`}/>
-            <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" style={{fontFamily:"Outfit,sans-serif"}}>{d.count}</div>
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-between mt-1">
-        <span className="text-[10px] text-slate-300" style={{fontFamily:"Outfit,sans-serif"}}>{data[0]?.day?.slice(5)}</span>
-        <span className="text-[10px] text-slate-300" style={{fontFamily:"Outfit,sans-serif"}}>{data.at(-1)?.day?.slice(5)}</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Login ─────────────────────────────────────────────────
-function LoginScreen({ onLogin }: { onLogin: (t:string)=>void }) {
-  const [username,setUsername] = useState("");
-  const [password,setPassword] = useState("");
-  const [state,setState]       = useState<"idle"|"loading"|"error">("idle");
-  const [err,setErr]           = useState("");
-
-  const submit = async (e:React.FormEvent) => {
-    e.preventDefault(); setState("loading"); setErr("");
+function Login({ onLogin }: { onLogin: () => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  async function submit(event: FormEvent) {
+    event.preventDefault(); setLoading(true); setError("");
     try {
-      const r = await fetch(`${API}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,password})});
-      const d = await r.json();
-      if (d.success) { onLogin(d.token); }
-      else { setErr(d.message||"invalid credentials."); setState("error"); }
-    } catch { setErr("cannot reach server — make sure it is running on port 5000."); setState("error"); }
-  };
-
-  const F = {fontFamily:"Outfit,sans-serif"};
-  return (
-    <div className="min-h-screen bg-background dark:bg-background flex items-center justify-center p-4 transition-colors relative">
-      <div className="absolute top-6 right-6 z-50">
-        <ThemeToggle />
-      </div>
-      <div className="w-full max-w-sm">
-        <div className="flex justify-center mb-8">
-          <RiveLogo height={36} className="text-foreground dark:text-white" />
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none p-8 transition-colors">
-          <div className="text-center mb-7">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400"/>
-            </div>
-            <h1 className="text-2xl font-bold text-foreground dark:text-white" style={F}>Admin portal</h1>
-            <p className="text-slate-400 text-sm mt-1" style={F}>rive. internal dashboard</p>
-          </div>
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>Username</label>
-              <Input value={username} onChange={e=>setUsername(e.target.value)} required autoFocus placeholder="Admin1"
-                className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
-            </div>
-            <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide" style={F}>Password</label>
-              <PasswordInput value={password} onChange={e=>setPassword(e.target.value)} required placeholder="••••••••••"
-                className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all" style={F}/>
-            </div>
-            {state==="error" && (
-              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm" style={F}>
-                <AlertCircle className="w-4 h-4 shrink-0"/>{err}
-              </div>
-            )}
-            <Button type="submit" disabled={state==="loading"}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15 disabled:opacity-75 flex items-center justify-center gap-2 mt-1" style={F}>
-              {state==="loading"?<><Loader2 className="w-4 h-4 animate-spin"/>Authenticating...</>:"sign in →"}
-            </Button>
-          </form>
-          <p className="text-center text-slate-300 text-xs mt-5" style={F}>Session not persisted — log in each visit.</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Stat Card ─────────────────────────────────────────────
-function StatCard({icon:Icon,label,value,sub,sparkData,color,bgColor,borderColor,sparkColor}:{
-  icon:React.ElementType;label:string;value:string|number;sub:string;
-  sparkData?:number[];color:string;bgColor:string;borderColor:string;sparkColor:string;
-}) {
-  const F = {fontFamily:"Outfit,sans-serif"};
-  return (
-    <div className={`bg-white dark:bg-slate-900 rounded-2xl border ${borderColor} dark:border-slate-800 shadow-sm p-6 flex flex-col gap-4 transition-colors`}>
-      <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-xl ${bgColor} dark:bg-opacity-20 flex items-center justify-center shrink-0`}>
-          <Icon className={`w-5 h-5 ${color}`}/>
-        </div>
-        {sparkData && <Sparkline data={sparkData} color={sparkColor}/>}
-      </div>
-      <div>
-        <p className="text-3xl font-bold text-foreground dark:text-white" style={F}>{value}</p>
-        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5" style={F}>{label}</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1" style={F}>{sub}</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Sort header cell ──────────────────────────────────────
-function SortTh({field,label,sortField,sortOrder,onSort}:{
-  field:SortField;label:string;sortField:SortField;sortOrder:SortOrder;onSort:(f:SortField)=>void;
-}) {
-  const active = sortField === field;
-  const F = {fontFamily:"Outfit,sans-serif"};
-  return (
-    <th className="text-left px-6 py-3 cursor-pointer select-none group" onClick={()=>onSort(field)}>
-      <div className="flex items-center gap-1">
-        <span className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${active?"text-blue-600":"text-slate-400 group-hover:text-slate-600"}`} style={F}>{label}</span>
-        <span className="flex flex-col gap-0">
-          <ChevronUp   className={`w-2.5 h-2.5 -mb-0.5 ${active&&sortOrder==="ASC"  ?"text-blue-600":"text-slate-300"}`}/>
-          <ChevronDown className={`w-2.5 h-2.5           ${active&&sortOrder==="DESC" ?"text-blue-600":"text-slate-300"}`}/>
-        </span>
-      </div>
-    </th>
-  );
-}
-
-// ── Status badge ──────────────────────────────────────────
-function StatusBadge({status}:{status:"pending"|"approved"}) {
-  return status==="approved"
-    ? <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><CheckCircle2 className="w-3 h-3"/>Approved</span>
-    : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 text-[11px] font-bold" style={{fontFamily:"Outfit,sans-serif"}}><Clock className="w-3 h-3"/>Pending</span>;
-}
-
-function InviteBadge({entry}:{entry:WaitlistEntry}) {
-  const F = {fontFamily:"Outfit,sans-serif"};
-  if(entry.registered) {
-    return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400" style={F}><UserCheck className="w-3 h-3"/>Registered</span>;
+      const response = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.message || "Invalid credentials.");
+      onLogin();
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not sign in."); }
+    finally { setLoading(false); }
   }
-  if(entry.invite_status==="active") {
-    const retryFailed = entry.latest_delivery_status==="failed" || entry.latest_delivery_status==="skipped";
-    return <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${retryFailed?"text-amber-700 dark:text-amber-400":"text-blue-600 dark:text-blue-400"}`} style={F}>
-      {retryFailed?<AlertCircle className="w-3 h-3"/>:<Mail className="w-3 h-3"/>}
-      {retryFailed?"Invite active · retry failed":"Invite active"}
-    </span>;
-  }
-  if(entry.invite_status==="delivery_failed") {
-    return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 dark:text-red-400" style={F}><AlertCircle className="w-3 h-3"/>Delivery failed</span>;
-  }
-  if(entry.invite_status==="expired") {
-    return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400" style={F}><Clock className="w-3 h-3"/>Invite expired</span>;
-  }
-  return <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400" style={F}><Mail className="w-3 h-3"/>{entry.status==="approved"?"Invite unavailable":"Not invited"}</span>;
+  return <main className="grid min-h-screen place-items-center bg-background p-5"><div className="w-full max-w-sm"><div className="mb-8 flex justify-center"><RiveLogo height={38} /></div><form onSubmit={submit} className="rounded-3xl border border-border bg-card p-8 shadow-xl"><div className="mb-7 text-center"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary"><Shield className="h-6 w-6" /></div><h1 className="text-2xl font-bold">Admin control room</h1><p className="mt-1 text-sm text-muted-foreground">Open beta product operations</p></div><label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Username<Input value={username} onChange={(event) => setUsername(event.target.value)} required autoFocus className="mt-2" /></label><label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Password<PasswordInput value={password} onChange={(event) => setPassword(event.target.value)} required className="mt-2" /></label>{error ? <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}<Button type="submit" disabled={loading} className="w-full">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{loading ? "Signing in…" : "Sign in"}</Button><p className="mt-5 text-center text-xs text-muted-foreground">Session is protected by an HttpOnly cookie.</p></form><div className="mt-4 flex justify-end"><ThemeToggle /></div></div></main>;
 }
 
-// ── Dashboard ─────────────────────────────────────────────
-function Dashboard({ token, onLogout }:{ token:string; onLogout:()=>void }) {
-  const [analytics,  setAnalytics]  = useState<Analytics|null>(null);
-  const [waitlist,   setWaitlist]   = useState<WaitlistEntry[]>([]);
-  const [total,      setTotal]      = useState(0);
-  const [page,       setPage]       = useState(1);
-  const [search,     setSearch]     = useState("");
-  const [searchInput,setSearchInput]= useState("");
-  const [filterStatus,setFilterStatus] = useState<"all"|"pending"|"approved">("all");
-  const [filterType,  setFilterType]   = useState("all");
-  const [sortField,  setSortField]  = useState<SortField>("created_at");
-  const [sortOrder,  setSortOrder]  = useState<SortOrder>("DESC");
-  const [approving,  setApproving]  = useState<Set<number>>(new Set());
-  const [notice, setNotice] = useState<{kind:"success"|"warning"|"error";message:string}|null>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [limit, setLimit]    = useState(20);
-  const F = {fontFamily:"Outfit,sans-serif"};
-  const headers = {"x-admin-token":token,"Content-Type":"application/json"} as const;
-
-  const fetchAnalytics = useCallback(async()=>{
-    try {
-      const r = await fetch(`${API}/api/admin/analytics`,{headers});
-      const d = await r.json();
-      if(d.success) setAnalytics(d.data);
-    } catch{}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[token]);
-
-  const fetchWaitlist = useCallback(async()=>{
-    try {
-      const p = new URLSearchParams({
-        page:String(page), limit:String(limit), search,
-        status:filterStatus, type:filterType,
-        sort:sortField, order:sortOrder,
-      });
-      const r = await fetch(`${API}/api/admin/waitlist?${p}`,{headers});
-      const d = await r.json();
-      if(d.success){ setWaitlist(d.data); setTotal(d.total); }
-    } catch{}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[token,page,limit,search,filterStatus,filterType,sortField,sortOrder]);
-
-  const refresh = async()=>{
-    setRefreshing(true);
-    await Promise.all([fetchAnalytics(),fetchWaitlist()]);
-    setRefreshing(false);
-  };
-
-  useEffect(()=>{
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true); Promise.all([fetchAnalytics(),fetchWaitlist()]).finally(()=>setLoading(false));
-  },[fetchAnalytics,fetchWaitlist]);
-  useEffect(()=>{ const i=setInterval(refresh,30000); return()=>clearInterval(i);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[token,page,search,filterStatus,filterType,sortField,sortOrder]);
-
-  const handleSearch = (e:React.FormEvent)=>{ e.preventDefault(); setSearch(searchInput); setPage(1); };
-  const handleClear  = ()=>{ setSearch(""); setSearchInput(""); setPage(1); };
-
-  const handleSort = (field:SortField)=>{
-    if(sortField===field) setSortOrder(o=>o==="ASC"?"DESC":"ASC");
-    else { setSortField(field); setSortOrder("ASC"); }
-    setPage(1);
-  };
-
-  const handleWaitlistAction = async (entry:WaitlistEntry, action:"approve"|"revoke"|"resend")=>{
-    setApproving(s=>new Set(s).add(entry.id));
-    setNotice(null);
-    try {
-      const body = action==="resend"
-        ? {action:"resend_invite"}
-        : {status:action==="approve"?"approved":"pending"};
-      const r = await fetch(`${API}/api/admin/waitlist/${entry.id}`,{method:"PATCH",headers,body:JSON.stringify(body)});
-      const d = await r.json();
-      if(!r.ok || !d.success) {
-        setNotice({kind:"error",message:d.message||"The waitlist entry could not be updated."});
-      } else {
-        setNotice({
-          kind:d.emailSent===false&&(action==="approve"||action==="resend")?"warning":"success",
-          message:d.message||"Waitlist entry updated.",
-        });
-      }
-      await Promise.all([fetchWaitlist(),fetchAnalytics()]);
-    } catch {
-      setNotice({kind:"error",message:"The server could not be reached. Refresh and try again."});
-    }
-    setApproving(s=>{ const n=new Set(s); n.delete(entry.id); return n; });
-  };
-
-  const totalPages = Math.ceil(total/limit);
-
-  // Collect unique types for the type filter
-  const knownTypes = ["all","waitlist","remit","login","demo"];
-
-  if(loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin"/>
-        <p className="text-slate-400 text-sm" style={F}>Loading dashboard...</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-background dark:bg-background transition-colors">
-      {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-background/90 dark:bg-background/90 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <RiveLogo height={32} className="text-foreground dark:text-white" />
-            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"/>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>Admin</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button onClick={refresh} disabled={refreshing}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium disabled:opacity-50" style={F}>
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing?"animate-spin":""}`}/>
-              {refreshing?"refreshing...":"refresh"}
-            </Button>
-            <Button onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-red-200 dark:hover:border-red-900/50 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" style={F}>
-              <LogOut className="w-3.5 h-3.5"/>sign out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-
-        {/* Title */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground dark:text-white" style={F}>Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-0.5 flex items-center gap-2" style={F}>
-            live data · auto-refreshes every 30s
-            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"/>Live</span>
-          </p>
-        </div>
-
-        {notice && (
-          <div role="status" aria-live="polite" className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
-            notice.kind==="success"
-              ?"border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300"
-              :notice.kind==="warning"
-                ?"border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
-                :"border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
-          }`} style={F}>
-            <span className="flex items-center gap-2">
-              {notice.kind==="success"?<CheckCircle2 className="w-4 h-4 shrink-0"/>:<AlertCircle className="w-4 h-4 shrink-0"/>}
-              {notice.message}
-            </span>
-            <Button variant="ghost" size="icon-sm" aria-label="Dismiss message" onClick={()=>setNotice(null)} className="shrink-0 opacity-70 hover:opacity-100"><XCircle className="w-4 h-4"/></Button>
-          </div>
-        )}
-
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard icon={Eye}        label="page views"       value={fmt(analytics?.totalViews??0)}     sub="all time" sparkData={analytics?.viewsPerDay.map(d=>d.count)} sparkColor="#3B82F6" color="text-blue-600" bgColor="bg-blue-50" borderColor="border-blue-100"/>
-          <StatCard icon={Users}      label="total signups"    value={fmt(analytics?.totalSignups??0)}   sub={`+${analytics?.last24h??0} today · +${analytics?.last7d??0} this week`} sparkData={analytics?.signupsPerDay.map(d=>d.count)} sparkColor="#10B981" color="text-emerald-600" bgColor="bg-emerald-50" borderColor="border-emerald-100"/>
-          <StatCard icon={CheckCheck} label="approved"         value={analytics?.approvedCount??0}       sub={`${analytics?.totalSignups?Math.round(((analytics.approvedCount??0)/analytics.totalSignups)*100):0}% approval rate`} color="text-sky-600" bgColor="bg-sky-50" borderColor="border-sky-100" sparkColor="#0EA5E9"/>
-          <StatCard icon={TrendingUp} label="last 24h"         value={analytics?.last24h??0}             sub={`${analytics?.last7d??0} in past 7 days`} color="text-purple-600" bgColor="bg-purple-50" borderColor="border-purple-100" sparkColor="#8B5CF6"/>
-          <StatCard icon={Zap}        label="remit interest"   value={analytics?.remitInterest??0}       sub="from remit section" color="text-amber-600" bgColor="bg-amber-50" borderColor="border-amber-100" sparkColor="#F59E0B"/>
-        </div>
-
-        {/* Charts */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors"><MiniBarChart data={analytics?.signupsPerDay??[]} label="signups — last 14 days"/></div>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors"><MiniBarChart data={analytics?.viewsPerDay??[]}   label="page views — last 14 days"/></div>
-        </div>
-
-        {/* Top pages + type breakdown */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>Top pages by views</p>
-            {analytics?.topPaths.length ? analytics.topPaths.map((p,i)=>{
-              const max = analytics.topPaths[0].views;
-              return (
-                <div key={p.path} className="flex items-center gap-3 mb-2">
-                  <span className="text-xs text-slate-300 font-bold w-4 text-right shrink-0" style={F}>{i+1}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-slate-600 truncate" style={F}>{p.path||"/"}</span>
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-2 shrink-0" style={F}>{p.views}</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full"><div className="h-full bg-blue-400 rounded-full" style={{width:`${(p.views/max)*100}%`}}/></div>
-                  </div>
-                </div>
-              );
-            }) : <div className="text-slate-400 text-sm py-8 text-center" style={F}>No page views yet</div>}
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 transition-colors">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4" style={F}>Signup source breakdown</p>
-            {analytics?.typeBreakdown.length ? analytics.typeBreakdown.map(t=>{
-              const ttl = analytics.typeBreakdown.reduce((s,x)=>s+x.count,0);
-              const pct = ttl>0?Math.round((t.count/ttl)*100):0;
-              const colors:Record<string,string>={waitlist:"bg-blue-500",login:"bg-purple-500",demo:"bg-amber-500",remit:"bg-emerald-500"};
-              return (
-                <div key={t.type} className="flex items-center gap-3 mb-3">
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-16 shrink-0" style={F}>{t.type}</span>
-                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${colors[t.type]??"bg-slate-400"} transition-all duration-500`} style={{width:`${pct}%`}}/>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-xs font-bold text-slate-600" style={F}>{t.count}</span>
-                    <span className="text-[10px] text-slate-400" style={F}>({pct}%)</span>
-                  </div>
-                </div>
-              );
-            }) : <div className="text-slate-400 text-sm py-8 text-center" style={F}>No signups yet</div>}
-          </div>
-        </div>
-
-        {/* ── Waitlist table ─────────────────────────── */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-
-          {/* Table controls */}
-          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h2 className="font-bold text-foreground dark:text-white text-lg" style={F}>Waitlist</h2>
-                <p className="text-slate-400 text-xs mt-0.5" style={F}>
-                  {total} entries · page {page} of {Math.max(totalPages,1)}
-                </p>
-              </div>
-              {/* Search */}
-              <form onSubmit={handleSearch} className="flex gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
-                  <Input value={searchInput} onChange={e=>setSearchInput(e.target.value)} placeholder="Search emails..."
-                    className="pl-8 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all w-52" style={F}/>
-                </div>
-                <Button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors" style={F}>Search</Button>
-                {search && <Button type="button" onClick={handleClear} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors" style={F}>Clear</Button>}
-              </form>
-            </div>
-
-            {/* Filter row */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0"/>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest" style={F}>Filter:</span>
-
-              {/* Status filter */}
-              <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
-                {(["all","pending","approved"] as const).map(s=>(
-                  <Button key={s} onClick={()=>{setFilterStatus(s);setPage(1);}}
-                    className={`px-3 py-1.5 transition-colors ${filterStatus===s?"bg-blue-600 text-white":"text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`} style={F}>
-                    {s}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Type filter */}
-              <Select value={filterType} onChange={e=>{setFilterType(e.target.value);setPage(1);}}
-                className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 focus:outline-none focus:border-blue-400 transition-all" style={F}>
-                {knownTypes.map(t=><option key={t} value={t}>{t==="all"?"all sources":t}</option>)}
-              </Select>
-
-              {/* Active filter indicators */}
-              {(filterStatus!=="all"||filterType!=="all"||search) && (
-                <Button onClick={()=>{setFilterStatus("all");setFilterType("all");handleClear();}}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors" style={F}>
-                  <XCircle className="w-3 h-3"/>reset all
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-50 dark:border-slate-800/50">
-                  <th className="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest" style={F}>#</th>
-                  <SortTh field="email"      label="email"     sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
-                  <SortTh field="type"       label="source"    sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
-                  <SortTh field="status"     label="status"    sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
-                  <SortTh field="created_at" label="signed up" sortField={sortField} sortOrder={sortOrder} onSort={handleSort}/>
-                  <th className="text-right px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest" style={F}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {waitlist.length===0 ? (
-                  <tr><td colSpan={6} className="text-center py-16 text-slate-400 text-sm" style={F}>
-                    {search?`no results for "${search}"`:"no entries match the current filters"}
-                  </td></tr>
-                ) : waitlist.map((entry,i)=>{
-                  const isApproving = approving.has(entry.id);
-                  return (
-                    <tr key={entry.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-3.5 text-xs text-slate-300 font-bold" style={F}>{(page-1)*limit+i+1}</td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center shrink-0">
-                            <Mail className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400"/>
-                          </div>
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200" style={F}>{entry.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          entry.type==="waitlist"?"bg-blue-50 text-blue-600 border border-blue-100":
-                          entry.type==="remit"   ?"bg-emerald-50 text-emerald-600 border border-emerald-100":
-                          entry.type==="login"   ?"bg-purple-50 text-purple-600 border border-purple-100":
-                          "bg-amber-50 text-amber-600 border border-amber-100"
-                        }`} style={F}>{entry.type}</span>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex flex-col items-start gap-1.5">
-                          <StatusBadge status={entry.status}/>
-                          <InviteBadge entry={entry}/>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-1.5 text-slate-400">
-                          <Clock className="w-3.5 h-3.5 shrink-0"/>
-                          <span className="text-xs font-medium" style={F}>{timeAgo(entry.created_at)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5 text-right">
-                        {entry.registered ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300" style={F}>
-                            <UserCheck className="h-3 w-3"/>
-                            Registered
-                          </span>
-                        ) : entry.status === "approved" ? (
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => handleWaitlistAction(entry, "resend")}
-                              disabled={isApproving}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
-                              style={F}
-                            >
-                              {isApproving ? <Loader2 className="h-3 w-3 animate-spin"/> : <><Send className="h-3 w-3"/>Resend</>}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => handleWaitlistAction(entry, "revoke")}
-                              disabled={isApproving}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                              style={F}
-                            >
-                              <XCircle className="h-3 w-3"/>
-                              Revoke
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            onClick={() => handleWaitlistAction(entry, "approve")}
-                            disabled={isApproving}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
-                            style={F}
-                          >
-                            {isApproving ? <Loader2 className="h-3 w-3 animate-spin"/> : <><CheckCircle2 className="h-3 w-3"/>Approve</>}
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination + per-page selector */}
-          <div className="px-6 py-4 border-t border-slate-50 dark:border-slate-800/50 flex flex-wrap items-center justify-between gap-3">
-            {/* Left: entry range + per-page picker */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-400" style={F}>
-                {total === 0 ? "0 entries" : `${(page-1)*limit+1}–${Math.min(page*limit,total)} of ${total}`}
-              </span>
-              <div className="h-3.5 w-px bg-slate-200"/>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium" style={F}>Per page</span>
-                <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs font-bold">
-                  {[10,20,50,100].map(n=>(
-                    <Button key={n} onClick={()=>{ setLimit(n); setPage(1); }}
-                      className={`px-3 py-1.5 transition-colors ${limit===n?"bg-blue-600 text-white":"text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"}`} style={F}>
-                      {n}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {/* Right: page nav */}
-            {totalPages>1 && (
-              <div className="flex items-center gap-2">
-                <Button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}
-                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                  <ChevronLeft className="w-4 h-4"/>
-                </Button>
-                {Array.from({length:Math.min(5,totalPages)},(_,i)=>{
-                  const pg=Math.max(1,Math.min(page-2,totalPages-4))+i;
-                  return (
-                    <Button key={pg} onClick={()=>setPage(pg)}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${pg===page?"bg-blue-600 text-white":"border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600"}`} style={F}>
-                      {pg}
-                    </Button>
-                  );
-                })}
-                <Button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages}
-                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-200 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                  <ChevronRight className="w-4 h-4"/>
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-
-      </main>
-    </div>
-  );
+function Metric({ label, value, detail, tone = "blue" }: { label: string; value: string | number; detail: string; tone?: "blue" | "green" | "amber" | "purple" }) {
+  const colors = { blue: "text-blue-600 bg-blue-50 border-blue-100", green: "text-emerald-600 bg-emerald-50 border-emerald-100", amber: "text-amber-600 bg-amber-50 border-amber-100", purple: "text-violet-600 bg-violet-50 border-violet-100" };
+  return <div className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className={`mb-5 grid h-10 w-10 place-items-center rounded-xl ${colors[tone]}`}><Activity className="h-5 w-5" /></div><p className="text-3xl font-bold tracking-tight">{value}</p><p className="mt-1 text-sm font-semibold">{label}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>;
 }
 
-// ── Root ──────────────────────────────────────────────────
+function Overview({ funnel, refresh }: { funnel: Funnel | null; refresh: () => void }) {
+  if (!funnel) return <Loading />;
+  const stages = [["Registered", funnel.signups.total, "100%"], ["Qualified", funnel.qualification.qualified, rate(funnel.qualification.rate)], ["Activated", funnel.activation.activated, rate(funnel.activation.rate)], ["Deeply activated", funnel.deepActivation.deeplyActivated, rate(funnel.deepActivation.rateAmongActivated)]] as Array<[string, number, string]>;
+  return <div className="space-y-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-primary">Product operations / open beta</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Know where the product is earning trust.</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Qualified users show intent. Activated users complete a real value path. Deep activation requires repeat, cross-module behavior.</p></div><Button variant="outline" size="sm" onClick={refresh} className="gap-2"><RefreshCw className="h-3.5 w-3.5" /> Refresh</Button></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Signups" value={fmt(funnel.signups.total)} detail={`+${funnel.signups.last24h} today · +${funnel.signups.last7d} this week`} /><Metric label="Qualified" value={fmt(funnel.qualification.qualified)} detail={`${rate(funnel.qualification.rate)} of signups`} tone="purple" /><Metric label="Activated" value={fmt(funnel.activation.activated)} detail={`${rate(funnel.activation.rate)} of qualified`} tone="green" /><Metric label="Deeply activated" value={fmt(funnel.deepActivation.deeplyActivated)} detail={`${rate(funnel.deepActivation.rateAmongActivated)} of activated`} tone="amber" /><Metric label="Real-data users" value={fmt(funnel.realData.users)} detail={`${fmt(funnel.realData.records)} classified records`} /></div><div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"><Panel title="The north-star funnel" eyebrow="Union-based cutover metrics"><div className="space-y-4">{stages.map(([label, value, detail], index) => <div key={label} className="flex items-center gap-4"><div className="w-28 text-sm font-medium">{label}</div><div className="h-3 flex-1 overflow-hidden rounded-full bg-muted"><div className={`h-full rounded-full ${["bg-slate-400", "bg-blue-500", "bg-emerald-500", "bg-violet-500"][index]}`} style={{ width: `${funnel.signups.total ? Math.max(2, value / funnel.signups.total * 100) : 0}%` }} /></div><div className="w-20 text-right text-sm font-semibold">{fmt(value)} <span className="text-xs font-normal text-muted-foreground">{detail}</span></div></div>)}</div><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">WAU / MAU</p><p className="mt-1 text-lg font-bold">{funnel.activeUsers.wau} / {funnel.activeUsers.mau}</p></div><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">W1 retention</p><p className="mt-1 text-lg font-bold">{funnel.retention.available ? rate(funnel.retention.rate) : "Not available"}</p></div><div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Avg modules</p><p className="mt-1 text-lg font-bold">{funnel.deepActivation.averageModules}</p></div></div></Panel><Panel title="Activation paths" eyebrow="Union, not additive"><div className="space-y-4">{funnel.activation.pathBreakdown.length ? funnel.activation.pathBreakdown.map((item) => <div key={item.path} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0"><span className="capitalize text-sm font-medium">{item.path}</span><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">{item.count}</span></div>) : <Empty text="No qualified users have activated yet." />}</div></Panel></div><p className="text-xs text-muted-foreground">Definition contract {funnel.definitionVersion} · generated {new Date(funnel.generatedAt).toLocaleString()}. Unknown-origin legacy records are intentionally excluded from real-data counts.</p></div>;
+}
+
+function FunnelTab({ funnel }: { funnel: Funnel | null }) {
+  if (!funnel) return <Loading />;
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Funnel & cohort diagnostics</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Find the leak before adding more features.</h1></div><div className="grid gap-6 xl:grid-cols-2"><Panel title="Acquisition source → qualification"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="pb-3">Source</th><th className="pb-3">Signups</th><th className="pb-3">Qualified</th><th className="pb-3">Rate</th></tr></thead><tbody className="divide-y divide-border">{funnel.qualification.sourceBreakdown.map((row) => <tr key={row.source}><td className="py-3 font-medium">{row.source}</td><td className="py-3">{row.signups}</td><td className="py-3">{row.qualified}</td><td className="py-3 font-semibold">{rate(row.signups ? Math.round(row.qualified / row.signups * 1000) / 10 : null)}</td></tr>)}</tbody></table>{!funnel.qualification.sourceBreakdown.length ? <Empty text="No acquisition data yet." /> : null}</div></Panel><Panel title="Workflow depth"><div className="space-y-4">{funnel.workflowDepth.buckets.map((bucket) => <div key={bucket.label}><div className="mb-1 flex justify-between text-sm"><span>{bucket.label}</span><span className="font-semibold">{bucket.count}</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-blue-500" style={{ width: `${funnel.qualification.qualified ? bucket.count / funnel.qualification.qualified * 100 : 0}%` }} /></div></div>)}<p className="pt-2 text-xs text-muted-foreground">Deep activation requires 3+ meaningful modules, 2 active days, and a connected workflow.</p></div></Panel><Panel title="Retention & activity"><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">WAU</p><p className="mt-1 text-2xl font-bold">{funnel.activeUsers.wau}</p></div><div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">MAU</p><p className="mt-1 text-2xl font-bold">{funnel.activeUsers.mau}</p></div><div className="rounded-xl border border-border p-4 sm:col-span-2"><p className="text-xs text-muted-foreground">W1 retention</p><p className="mt-1 text-2xl font-bold">{funnel.retention.available ? rate(funnel.retention.rate) : "Cohort not mature"}</p><p className="mt-1 text-xs text-muted-foreground">{funnel.retention.definition}</p></div></div></Panel><Panel title="Activation path breakdown"><div className="space-y-3">{[["Native workflow", funnel.activation.native], ["Migration", funnel.activation.migration], ["Portfolio", funnel.activation.portfolio]].map(([label, value]) => <div key={String(label)} className="flex justify-between rounded-xl bg-muted/50 px-4 py-3 text-sm"><span>{label}</span><span className="font-bold">{value}</span></div>)}</div></Panel></div></div>;
+}
+
+function UsersTab() {
+  const [users, setUsers] = useState<UserRow[]>([]); const [search, setSearch] = useState(""); const [page, setPage] = useState(1); const [total, setTotal] = useState(0); const [selected, setSelected] = useState<UserRow | null>(null); const [timeline, setTimeline] = useState<Array<{ id: string; kind: string; type: string; module: string | null; at: string }>>([]);
+  const load = useCallback(() => { void fetch(`/api/admin/users?page=${page}&search=${encodeURIComponent(search)}`, { cache: "no-store" }).then((response) => response.json()).then((data) => { if (data?.success) { setUsers(data.data); setTotal(data.total); } }).catch(() => undefined); }, [page, search]);
+  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer); }, [load]);
+  const open = (user: UserRow) => { setSelected(user); setTimeline([]); void fetch(`/api/admin/users/${user.id}`, { cache: "no-store" }).then((response) => response.json()).then((data) => { if (data?.success) setTimeline(data.timeline); }).catch(() => undefined); };
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">User explorer</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Inspect the journey, not just the count.</h1></div><Panel title="Accounts" action={<div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search email or name" className="w-56 pl-9" /></div>}><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="pb-3">Account</th><th className="pb-3">Source</th><th className="pb-3">Qualification</th><th className="pb-3">Real data</th><th className="pb-3">Last activity</th></tr></thead><tbody className="divide-y divide-border">{users.map((user) => <tr key={user.id} className="cursor-pointer hover:bg-muted/40" onClick={() => open(user)}><td className="py-3"><p className="font-semibold">{user.name || "Unnamed"}</p><p className="text-xs text-muted-foreground">{user.email}</p></td><td className="py-3">{user.attribution?.firstTouchSource || user.attribution?.lastTouchSource || "uncaptured"}</td><td className="py-3">{user.qualified ? <span className="text-emerald-600">Qualified</span> : <span className="text-muted-foreground">Not yet</span>}</td><td className="py-3">{user.realData ? <span className="text-blue-600">Yes</span> : "No"}</td><td className="py-3">{ago(user.lastActivity?.at)}</td></tr>)}</tbody></table>{!users.length ? <Empty text="No users match this search." /> : null}</div><div className="mt-5 flex items-center justify-between text-xs text-muted-foreground"><span>{total} accounts</span><div className="flex items-center gap-2"><Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft className="h-4 w-4" /></Button><span>Page {page}</span><Button variant="outline" size="sm" disabled={page * 25 >= total} onClick={() => setPage((value) => value + 1)}><ChevronRight className="h-4 w-4" /></Button></div></div></Panel>{selected ? <Panel title={selected.email} eyebrow="User timeline" action={<Button variant="ghost" size="sm" onClick={() => setSelected(null)}>Close</Button>}><div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]"><div className="space-y-2 text-sm"><p><span className="text-muted-foreground">Goal:</span> {selected.goal || "—"}</p><p><span className="text-muted-foreground">Starting path:</span> {selected.startingPath || "—"}</p><p><span className="text-muted-foreground">Source:</span> {selected.attribution?.firstTouchSource || "—"}</p><p><span className="text-muted-foreground">Verified:</span> {selected.emailVerified ? "Yes" : "No"}</p></div><div className="max-h-80 space-y-2 overflow-y-auto">{timeline.map((event) => <div key={event.id} className="rounded-xl border border-border px-3 py-2"><div className="flex justify-between gap-3"><span className="text-sm font-medium">{event.type}</span><span className="text-xs text-muted-foreground">{ago(event.at)}</span></div><p className="mt-1 text-xs text-muted-foreground">{event.module || event.kind}</p></div>)}{!timeline.length ? <Empty text="No timeline events yet." /> : null}</div></div></Panel> : null}</div>;
+}
+
+function FeedbackTab() {
+  const [items, setItems] = useState<FeedbackRow[]>([]); const [status, setStatus] = useState("all"); const [loading, setLoading] = useState(true);
+  const load = useCallback(() => { setLoading(true); void fetch(`/api/admin/feedback?status=${status}`, { cache: "no-store" }).then((response) => response.json()).then((data) => { if (data?.success) setItems(data.data); }).finally(() => setLoading(false)); }, [status]);
+  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer); }, [load]);
+  const update = (id: string, next: string) => { void fetch("/api/admin/feedback", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: next }) }).then(() => load()); };
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Voice of customer</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Feedback that can become product decisions.</h1><p className="mt-2 text-sm text-muted-foreground">Triage signal by workflow and intent; this is not a generic survey warehouse.</p></div><Panel title="Inbox" action={<Select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option><option value="new">New</option><option value="reviewing">Reviewing</option><option value="planned">Planned</option><option value="closed">Closed</option></Select>}>{loading ? <Loading /> : <div className="space-y-3">{items.map((item) => <article key={item.id} className="rounded-2xl border border-border p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-semibold">{item.user?.name || item.user?.email || "Anonymous account"}</p><p className="mt-1 text-xs text-muted-foreground">{item.promptKey || item.feedbackType} · {item.module || "workspace"} · {ago(item.createdAt)}</p></div><div className="flex items-center gap-2">{item.rating ? <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">{item.rating}/5</span> : null}<Select value={item.status} onChange={(event) => update(item.id, event.target.value)}><option value="new">New</option><option value="reviewing">Reviewing</option><option value="planned">Planned</option><option value="closed">Closed</option></Select></div></div>{item.body ? <p className="mt-4 whitespace-pre-line text-sm leading-6 text-foreground/80">{item.body}</p> : null}<p className="mt-3 text-xs text-muted-foreground">{item.contactAllowed ? "Contact permitted" : "No contact permission"}</p></article>)}{!items.length ? <Empty text="No feedback has arrived yet." /> : null}</div>}</Panel></div>;
+}
+
+function Reliability({ funnel }: { funnel: Funnel | null }) {
+  if (!funnel) return <Loading />;
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Reliability & instrumentation</p><h1 className="mt-1 text-3xl font-bold tracking-tight">A free product still needs operational truth.</h1></div><div className="grid gap-4 sm:grid-cols-3"><Metric label="Product events / 24h" value={funnel.reliability.productEvents24h} detail="Append-only analytics writes" /><Metric label="Failed emails / 24h" value={funnel.reliability.failedEmails24h} detail="Delivery needs attention" tone="amber" /><Metric label="Queued email jobs" value={funnel.reliability.queuedEmails} detail="Outbox backlog" tone="purple" /></div><Panel title="Operating rules"><div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2"><p className="rounded-xl bg-muted/50 p-4">Analytics failures never block a business mutation. Inspect event freshness and dedupe before trusting a percentage.</p><p className="rounded-xl bg-muted/50 p-4">New records carry data origin. Unknown-origin legacy rows stay excluded until explicitly classified.</p><p className="rounded-xl bg-muted/50 p-4">Verification is enforced only for new accounts with a verification-required timestamp; existing accounts remain usable.</p><p className="rounded-xl bg-muted/50 p-4">Invoice sends freeze a snapshot and append delivery/view/payment history.</p></div></Panel></div>;
+}
+
+function LegacyTab() {
+  const [items, setItems] = useState<LegacyRow[]>([]); const [loading, setLoading] = useState(true);
+  useEffect(() => { void fetch("/api/admin/waitlist?page=1&limit=50", { cache: "no-store" }).then((response) => response.json()).then((data) => { if (data?.success) setItems(data.data || []); }).finally(() => setLoading(false)); }, []);
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-muted-foreground">Historical compatibility</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Legacy waitlist archive</h1><p className="mt-2 text-sm text-muted-foreground">No new visitors enter this funnel. Keep it for audit, migration, and old links.</p></div><Panel title="Archived entries">{loading ? <Loading /> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="pb-3">Email</th><th className="pb-3">Original source</th><th className="pb-3">Status</th><th className="pb-3">Created</th></tr></thead><tbody className="divide-y divide-border">{items.map((item) => <tr key={item.id}><td className="py-3">{item.email}</td><td className="py-3">{item.type}</td><td className="py-3">{item.registered ? "Registered" : item.status}</td><td className="py-3">{ago(item.created_at)}</td></tr>)}</tbody></table>{!items.length ? <Empty text="No legacy entries." /> : null}</div>}</Panel></div>;
+}
+
+function Dashboard({ onLogout }: { onLogout: () => void }) {
+  const [tab, setTab] = useState<Tab>("overview"); const [funnel, setFunnel] = useState<Funnel | null>(null); const [loading, setLoading] = useState(true);
+  const load = useCallback(() => { setLoading(true); void fetch("/api/admin/analytics", { credentials: "same-origin", cache: "no-store" }).then((response) => response.json()).then((data) => { if (data?.success) setFunnel(data.data.productFunnel); }).finally(() => setLoading(false)); }, []);
+  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer); }, [load]);
+  const content = loading && !funnel ? <Loading /> : tab === "overview" ? <Overview funnel={funnel} refresh={load} /> : tab === "funnel" ? <FunnelTab funnel={funnel} /> : tab === "users" ? <UsersTab /> : tab === "feedback" ? <FeedbackTab /> : tab === "reliability" ? <Reliability funnel={funnel} /> : <LegacyTab />;
+  return <div className="min-h-screen bg-background"><header className="sticky top-0 z-20 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-8"><div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4"><div className="flex items-center gap-5"><RiveLogo height={28} /><span className="hidden h-5 w-px bg-border sm:block" /><span className="hidden text-sm font-semibold text-muted-foreground sm:block">Admin control room</span></div><div className="flex items-center gap-2"><span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:block">Open beta</span><Button variant="ghost" size="sm" onClick={onLogout} className="gap-2"><LogOut className="h-4 w-4" /> Sign out</Button></div></div></header><div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-8 lg:flex-row"><aside className="lg:w-52 lg:shrink-0"><nav className="flex gap-2 overflow-x-auto lg:flex-col">{tabs.map(({ id, label, icon: Icon }) => <Button key={id} variant={tab === id ? "default" : "ghost"} size="sm" onClick={() => setTab(id)} className="justify-start whitespace-nowrap"><Icon className="h-4 w-4" />{label}</Button>)}</nav></aside><main className="min-w-0 flex-1">{content}</main></div></div>;
+}
+
 export default function AdminPage() {
-  const [token, setToken] = useState<string|null>(null);
-
-  // Load token from sessionStorage on mount (if page is reloaded)
-  useEffect(() => {
-    const saved = sessionStorage.getItem("rive_admin_token");
-    if (saved) { // eslint-disable-next-line react-hooks/set-state-in-effect
-      setToken(saved);
-    }
-  }, []);
-
-  const handleLogin = (newToken: string) => {
-    sessionStorage.setItem("rive_admin_token", newToken);
-    setToken(newToken);
-  };
-
-  const handleLogout = async () => {
-    if (token) {
-      try { await fetch(`${API}/api/admin/logout`,{method:"POST",headers:{"x-admin-token":token}}); }
-      catch {}
-    }
-    sessionStorage.removeItem("rive_admin_token");
-    setToken(null);
-  };
-
-  return token ? <Dashboard token={token} onLogout={handleLogout}/> : <LoginScreen onLogin={handleLogin}/>;
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  useEffect(() => { void fetch("/api/admin/analytics", { credentials: "same-origin", cache: "no-store" }).then((response) => setAuthenticated(response.ok)).catch(() => setAuthenticated(false)); }, []);
+  if (authenticated === null) return <Loading />;
+  return authenticated ? <Dashboard onLogout={async () => { await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined); setAuthenticated(false); }} /> : <Login onLogin={() => setAuthenticated(true)} />;
 }

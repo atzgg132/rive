@@ -1,70 +1,107 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
-import { hashPassword, generateUserToken, setSessionCookie } from "@/utils/userAuth";
-import { findValidAuthToken } from "@/utils/authTokens";
-import { sendRegistrationCompleteEmail } from "@/utils/email";
-import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { hashPassword } from "@/utils/userAuth";
+import { findValidAuthToken, prepareAuthToken } from "@/utils/authTokens";
+import { buildEmailVerificationEmail } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
+import { durableRateLimit } from "@/utils/durableRateLimit";
+import { getRequestIp } from "@/utils/rateLimit";
+import { hashRequestValue } from "@/utils/contracts";
+import { attributionFromRequest, saveUserAttribution } from "@/utils/attribution";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+
+function validEmail(value: unknown): value is string {
+  return typeof value === "string" && /^\S+@\S+\.\S+$/.test(value.trim());
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json().catch(() => ({}));
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const name = typeof body?.name === "string" ? body.name.trim().slice(0, 160) : "";
+    const password = typeof body?.password === "string" ? body.password : "";
+    const inviteToken = typeof body?.inviteToken === "string" ? body.inviteToken.trim() : "";
+    const honeypot = typeof body?.website === "string" ? body.website.trim() : "";
+
+    // Keep automated form posts from consuming database work. The field is
+    // intentionally absent from the visible form and is not surfaced in the
+    // response, so legitimate clients remain unaffected.
+    if (honeypot) {
+      return NextResponse.json({ success: true, requiresEmailVerification: true, message: "Account created. Check your email to verify your address before entering Rive." }, { status: 201 });
+    }
+
+    if (!validEmail(email) || password.length < 8 || !name) {
+      return NextResponse.json({ success: false, message: "Enter your name, a valid email, and a password of at least 8 characters." }, { status: 400 });
+    }
+
     const ip = getRequestIp(req);
-    if (!rateLimit(`register:${ip}`, 10, 60 * 60 * 1000)) {
+    const allowed = await durableRateLimit(`auth:register:${ip}`, 12, 60 * 60 * 1000);
+    if (!allowed) {
       return NextResponse.json(
         { success: false, message: "Too many attempts. Please try again later." },
         { status: 429 },
       );
     }
-
-    const { email, password, name, inviteToken } = await req.json();
-    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-    const normalizedName = typeof name === "string" ? name.trim() : "";
-    if (
-      !normalizedEmail ||
-      !/^\S+@\S+\.\S+$/.test(normalizedEmail) ||
-      typeof password !== "string" ||
-      password.length < 8 ||
-      !normalizedName ||
-      typeof inviteToken !== "string"
-    ) {
-      return NextResponse.json({ success: false, message: "Missing required fields." }, { status: 400 });
-    }
-
-    const invitation = await findValidAuthToken(inviteToken, "waitlist_invite");
-    if (!invitation || invitation.email !== normalizedEmail) {
-      return NextResponse.json(
-        { success: false, message: "This invitation is invalid or has expired. Please request a new invitation." },
-        { status: 403 },
-      );
-    }
-
-    const waitlistEntry = await prisma.waitlist.findUnique({ where: { email: normalizedEmail } });
-    if (!waitlistEntry || waitlistEntry.status !== "approved") {
-      return NextResponse.json({ success: false, message: "This invitation is no longer active." }, { status: 403 });
+    if (!await durableRateLimit(`auth:register:email:${hashRequestValue(email)}`, 4, 24 * 60 * 60 * 1000)) {
+      return NextResponse.json({ success: false, message: "Too many signup attempts for this address. Please try again later." }, { status: 429 });
     }
 
     const existing = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-      select: { id: true },
+      where: { email },
+      select: { id: true, emailVerifiedAt: true, emailVerificationRequiredAt: true },
     });
     if (existing) {
-      return NextResponse.json({ success: false, message: "Email is already registered." }, { status: 409 });
+      return NextResponse.json({
+        success: false,
+        code: existing.emailVerificationRequiredAt && !existing.emailVerifiedAt ? "EMAIL_NOT_VERIFIED" : "EMAIL_ALREADY_REGISTERED",
+        message: existing.emailVerificationRequiredAt && !existing.emailVerifiedAt
+          ? "This email already has an account waiting for verification. Check your inbox or request a new verification email."
+          : "Email is already registered. Try logging in instead.",
+      }, { status: 409 });
     }
 
+    // Old invitation links remain useful as referral context, but are no longer
+    // an access gate. A malformed or expired legacy token must not block open signup.
+    const legacyInvitation = inviteToken ? await findValidAuthToken(inviteToken, "waitlist_invite") : null;
+    const { anonymousId, attribution: rawAttribution } = attributionFromRequest(req);
+    // Direct traffic is still a captured acquisition source. This fallback is
+    // important for API clients and browsers that arrive without the tracker
+    // cookie, so qualified-user reporting does not silently lose signups.
+    const attribution = {
+      source: rawAttribution.source || "direct",
+      medium: rawAttribution.medium || "none",
+      campaign: rawAttribution.campaign,
+      referrer: rawAttribution.referrer,
+      landingPage: rawAttribution.landingPage || "/register",
+      firstSource: rawAttribution.firstSource || rawAttribution.source || "direct",
+      firstMedium: rawAttribution.firstMedium || rawAttribution.medium || "none",
+      firstCampaign: rawAttribution.firstCampaign || rawAttribution.campaign,
+      firstReferrer: rawAttribution.firstReferrer || rawAttribution.referrer,
+      firstLandingPage: rawAttribution.firstLandingPage || rawAttribution.landingPage || "/register",
+      lastSource: rawAttribution.lastSource || rawAttribution.source || "direct",
+      lastMedium: rawAttribution.lastMedium || rawAttribution.medium || "none",
+      lastCampaign: rawAttribution.lastCampaign || rawAttribution.campaign,
+      lastReferrer: rawAttribution.lastReferrer || rawAttribution.referrer,
+      lastLandingPage: rawAttribution.lastLandingPage || rawAttribution.landingPage || "/register",
+      referralSource: rawAttribution.referralSource,
+    };
+    const referralSource = legacyInvitation?.email === email ? "legacy_waitlist_invite" : attribution.referralSource;
     const passwordHash = hashPassword(password);
-    const user = await prisma.$transaction(async (transaction) => {
-      const claimed = await transaction.authToken.updateMany({
-        where: { id: invitation.id, usedAt: null, expiresAt: { gt: new Date() } },
-        data: { usedAt: new Date() },
-      });
-      if (claimed.count !== 1) throw new Error("INVITATION_ALREADY_USED");
+    const requiredAt = new Date();
+    const preparedVerification = prepareAuthToken({ email, type: "email_verification" });
+    const verificationEmail = buildEmailVerificationEmail(email, name, preparedVerification.token);
 
-      return transaction.user.create({
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
         data: {
-          email: normalizedEmail,
+          email,
           passwordHash,
-          name: normalizedName,
+          name,
           plan: "free",
+          accountType: "customer",
+          emailVerificationRequiredAt: requiredAt,
           onboardingStatus: "new",
           onboardingStep: 0,
           timeZone: "UTC",
@@ -75,33 +112,66 @@ export async function POST(req: NextRequest) {
           email: true,
           name: true,
           plan: true,
-          sessionVersion: true,
+          emailVerifiedAt: true,
+          emailVerificationRequiredAt: true,
         },
       });
+
+      await tx.authToken.updateMany({
+        where: { email, type: "email_verification", usedAt: null },
+        data: { usedAt: requiredAt },
+      });
+      await tx.authToken.create({
+        data: { ...preparedVerification.data, userId: created.id },
+      });
+      await enqueueEmail(verificationEmail, tx);
+      await saveUserAttribution(created.id, { ...attribution, referralSource }, tx);
+      await recordProductEvent({
+        userId: created.id,
+        anonymousId,
+        eventName: PRODUCT_EVENTS.signupCompleted,
+        module: "auth",
+        dedupeKey: `signup_completed:${created.id}`,
+        properties: { accountType: "customer" },
+      }, tx);
+      await recordProductEvent({
+        userId: created.id,
+        anonymousId,
+        eventName: PRODUCT_EVENTS.emailVerificationSent,
+        module: "auth",
+        dedupeKey: `email_verification_sent:${created.id}`,
+        properties: { delivery: "outbox" },
+      }, tx);
+
+      if (legacyInvitation?.email === email) {
+        await tx.authToken.updateMany({
+          where: { id: legacyInvitation.id, usedAt: null },
+          data: { usedAt: requiredAt },
+        });
+      }
+      return created;
     });
 
     await recordActivationEvent(user.id, ACTIVATION_EVENTS.registered);
-    const sessionToken = generateUserToken(user.id, user.email, user.plan, user.sessionVersion);
-    const emailResult = await sendRegistrationCompleteEmail(user.email, user.name || normalizedName);
-    const response = NextResponse.json(
-      {
-        success: true,
-        message: "Registration successful.",
-        emailSent: emailResult.sent,
-        user,
-      },
-      { status: 201 },
-    );
-    setSessionCookie(response, sessionToken);
-    return response;
-  } catch (error: unknown) {
-    console.error("Registration error:", error);
-    if (error instanceof Error && error.message === "INVITATION_ALREADY_USED") {
-      return NextResponse.json({ success: false, message: "This invitation has already been used." }, { status: 409 });
+
+    // Console delivery is immediate and intentionally local-only, making the
+    // verification link practical to test without a real inbox. SMTP/SES jobs
+    // remain queued for the cron/worker endpoint and do not block signup.
+    if ((process.env.EMAIL_PROVIDER || "smtp").toLowerCase() === "console") {
+      await processEmailOutbox(1);
     }
-    return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Internal server error." },
-      { status: 500 },
-    );
+
+    return NextResponse.json({
+      success: true,
+      requiresEmailVerification: true,
+      message: "Account created. Check your email to verify your address before entering Rive.",
+      user,
+    }, { status: 201 });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ success: false, message: "Email is already registered. Try logging in instead." }, { status: 409 });
+    }
+    console.error("Registration error:", error);
+    return NextResponse.json({ success: false, message: "Unable to create your account right now. Please try again." }, { status: 500 });
   }
 }

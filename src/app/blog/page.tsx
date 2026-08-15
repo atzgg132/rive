@@ -3,7 +3,6 @@
 import { Button, Input } from "@/components/ui";
 import PageShell from "@/components/PageShell";
 import { useState } from "react";
-import { submitToWaitlist } from "@/utils/api";
 import { Loader2, Clock } from "lucide-react";
 
 const font = { fontFamily: "var(--font-body)" };
@@ -31,8 +30,7 @@ export default function BlogPage() {
     e.preventDefault();
     if (!email || subState === "loading") return;
     setSubState("loading");
-    const res = await submitToWaitlist(email, "waitlist");
-    setSubState(res.alreadyJoined ? "already-joined" : res.success ? "success" : "idle");
+    window.location.href = "/register";
   };
 
   const featured = posts[0];
@@ -75,11 +73,11 @@ export default function BlogPage() {
 
           {/* Subscribe */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 text-center max-w-md mx-auto transition-colors">
-            <h3 className="text-xl font-bold text-foreground dark:text-white mb-1" style={fontD}>Stay updated</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-5" style={font}>Get new posts in your inbox. no spam, ever.</p>
+            <h3 className="text-xl font-bold text-foreground dark:text-white mb-1" style={fontD}>Use the product while it is open</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-5" style={font}>Create a free account and help shape the next product updates.</p>
             {subState === "success" ? (
               <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-sm font-semibold" style={font}>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> subscribed! we&apos;ll email you when we publish.
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> thanks — create an account to send product feedback.
               </div>
             ) : subState === "already-joined" ? (
               <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 text-sm font-semibold" style={font}>
@@ -91,7 +89,7 @@ export default function BlogPage() {
                   className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 transition-all disabled:opacity-60" style={font} />
                 <Button type="submit" disabled={subState === "loading"}
                   className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15 disabled:opacity-75 inline-flex items-center gap-2" style={fontD}>
-                  {subState === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : "subscribe"}
+                  {subState === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : "create account"}
                 </Button>
               </form>
             )}

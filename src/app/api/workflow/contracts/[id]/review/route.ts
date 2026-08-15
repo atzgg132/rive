@@ -3,6 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { sendContractReviewEmail } from "@/utils/email";
 import { assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, transitionContractStatus } from "@/utils/contracts";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 function appUrl(): string {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const email = body.sendEmail === true && contract.client.email
       ? await sendContractReviewEmail({ to: contract.client.email, clientName: contract.client.name, ownerName: contract.user.name || session.email, contractTitle: contract.title, reviewUrl, expiresAt })
       : null;
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.agreementReviewed, module: "agreements", entityType: "contract", entityId: id, source: "owner_review" });
     return NextResponse.json({ success: true, reviewUrl, expiresAt, email: email ? { sent: email.sent, reason: email.reason } : null, message: body.sendEmail === true ? "Review link created and email attempted." : "Review link created." });
   } catch (error) {
     console.error("Contract review link error:", error);

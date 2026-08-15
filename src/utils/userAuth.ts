@@ -110,9 +110,10 @@ export async function getSessionUser(req: NextRequest): Promise<UserSession | nu
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { email: true, plan: true, sessionVersion: true },
+      select: { email: true, plan: true, sessionVersion: true, emailVerifiedAt: true, emailVerificationRequiredAt: true },
     });
     if (!user || user.sessionVersion !== session.sessionVersion) return null;
+    if (user.emailVerificationRequiredAt && !user.emailVerifiedAt) return null;
     return { ...session, email: user.email, plan: user.plan };
   } catch {
     return null;

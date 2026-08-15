@@ -28,9 +28,9 @@ export default function APIRefPage() {
         <div className="relative max-w-3xl mx-auto px-8">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>Api reference</div>
           <h1 className="text-5xl font-bold text-foreground dark:text-white tracking-tight mb-3" style={fontD}>Api reference</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-4 leading-relaxed" style={font}>The current application API is organized under <code>/api</code> And powers the workspace, waitlist, analytics, and rates features.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-4 leading-relaxed" style={font}>The current application API is organized under <code>/api</code> and powers the workspace, product analytics, public invoice links, and rates features.</p>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 text-amber-700 dark:text-amber-300 text-xs font-bold mb-12" style={font}>
-            🔒 api access requires an invitation
+            email verification is required for workspace access
           </div>
 
           {/* Endpoints */}
@@ -47,11 +47,11 @@ export default function APIRefPage() {
           </div>
 
           <Button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+            onClick={() => { window.location.href = "/register"; }}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15"
             style={fontD}
           >
-            join waitlist for api access →
+            create a free account →
           </Button>
         </div>
       </section>

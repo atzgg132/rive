@@ -9,7 +9,7 @@ const fontD = { fontFamily: "var(--font-display)" };
 const roles = [
   { title: "senior full-stack engineer", type: "remote · full-time · equity + salary", desc: "build the core platform. own critical infrastructure. work with node, next.js, postgres, and ai." },
   { title: "product designer", type: "remote · full-time · equity + salary", desc: "define the look and feel of rive. from the ground up. own design systems, user flows, and brand." },
-  { title: "growth & community lead", type: "remote · full-time · equity + salary", desc: "grow the waitlist, build the community, and shape how the world discovers rive." },
+  { title: "growth & community lead", type: "remote · full-time · equity + salary", desc: "grow the open-beta community, build feedback loops, and shape how the world discovers rive." },
 ];
 
 const values = [
@@ -55,7 +55,7 @@ export default function CareersPage() {
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-lg" style={font}>{role.desc}</p>
                 </div>
                 <Button
-                  onClick={() => window.dispatchEvent(new CustomEvent("open-modal", { detail: "waitlist" }))}
+                  onClick={() => { window.location.href = "/register"; }}
                   className="shrink-0 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15 whitespace-nowrap"
                   style={fontD}
                 >
