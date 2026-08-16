@@ -207,6 +207,7 @@ model ProductEvent {
   sessionId    String?  @map("session_id")
   eventName    String   @map("event_name")
   eventVersion Int      @default(1) @map("event_version")
+  schemaVersion Int     @default(1) @map("schema_version")
   occurredAt   DateTime @default(now()) @map("occurred_at")
   environment  String   @default("local")
   module       String?
@@ -224,6 +225,24 @@ model ProductEvent {
   @@index([environment, occurredAt])
   @@index([module, occurredAt])
   @@map("product_events")
+}
+
+model ProductEventIssue {
+  id            String   @id @default(uuid())
+  eventName     String   @map("event_name")
+  eventVersion  Int      @default(1) @map("event_version")
+  schemaVersion Int      @default(1) @map("schema_version")
+  environment   String
+  userId        String?  @map("user_id")
+  anonymousId   String?  @map("anonymous_id")
+  requestId     String?  @map("request_id")
+  reason        String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([environment, createdAt])
+  @@index([eventName, createdAt])
+  @@map("product_event_issues")
 }
 
 model Feedback {

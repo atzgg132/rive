@@ -1,3 +1,10 @@
+import {
+  REAL_DATA_EVENT_NAMES,
+  REAL_DATA_ORIGINS,
+} from "@/lib/analytics/eventContracts";
+
+export { PRODUCT_EVENT_NAMES, REAL_DATA_EVENT_NAMES, REAL_DATA_ORIGINS } from "@/lib/analytics/eventContracts";
+
 /**
  * Versioned product-funnel rules. Keep the admin dashboard, user explorer, and
  * future warehouse export on this contract instead of re-implementing it in
@@ -6,15 +13,6 @@
 export const FUNNEL_DEFINITION_VERSION = "v1";
 
 export const INTERNAL_ACCOUNT_TYPES = new Set(["internal", "test", "demo", "e2e", "synthetic"]);
-export const REAL_DATA_ORIGINS = new Set(["user", "imported"]);
-export const REAL_DATA_EVENT_NAMES = new Set([
-  "client_created",
-  "project_created",
-  "invoice_created",
-  "expense_created",
-  "import_committed",
-  "portfolio_published",
-]);
 export const MEANINGFUL_PRODUCT_EVENTS = new Set([
   "workspace_viewed",
   ...REAL_DATA_EVENT_NAMES,

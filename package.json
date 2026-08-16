@@ -27,6 +27,7 @@
     "db:migrate:status": "prisma migrate status",
     "email:verify": "node --env-file=.env.local scripts/verify-email.mjs",
     "db:seed:freelancer-demo": "node --env-file=.env.local scripts/seed-freelancer-demo.mjs",
+    "analytics:backfill": "node scripts/backfill-product-events.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

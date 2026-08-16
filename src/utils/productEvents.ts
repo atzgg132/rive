@@ -2,44 +2,22 @@ import "server-only";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
+import {
+  PRODUCT_EVENT_SCHEMA_VERSION,
+  type ProductEventName,
+  validateProductEvent,
+} from "@/lib/analytics/eventContracts";
 
-export const PRODUCT_EVENTS = {
-  pageViewed: "page_viewed",
-  landingViewed: "landing_viewed",
-  signupStarted: "signup_started",
-  signupCompleted: "signup_completed",
-  emailVerificationSent: "email_verification_sent",
-  emailVerified: "email_verified",
-  onboardingStarted: "onboarding_started",
-  onboardingCompleted: "onboarding_completed",
-  goalSelected: "goal_selected",
-  startingPathSelected: "starting_path_selected",
-  clientCreated: "client_created",
-  projectCreated: "project_created",
-  invoiceCreated: "invoice_created",
-  invoiceSent: "invoice_sent",
-  calendarUsed: "calendar_used",
-  expenseCreated: "expense_created",
-  importReviewCompleted: "import_review_completed",
-  importCommitted: "import_committed",
-  portfolioPublished: "portfolio_published",
-  agreementReviewed: "agreement_reviewed",
-  agreementAccepted: "agreement_accepted",
-  workspaceViewed: "workspace_viewed",
-  feedbackPromptShown: "feedback_prompt_shown",
-  feedbackSubmitted: "feedback_submitted",
-  invoiceViewed: "invoice_viewed",
-  paymentRecorded: "payment_recorded",
-} as const;
-
-export type ProductEventName = (typeof PRODUCT_EVENTS)[keyof typeof PRODUCT_EVENTS] | (string & {});
+export { PRODUCT_EVENT_SCHEMA_VERSION, PRODUCT_EVENTS } from "@/lib/analytics/eventContracts";
+export type { ProductEventName } from "@/lib/analytics/eventContracts";
 
 export type ProductEventInput = {
   userId?: string | null;
   anonymousId?: string | null;
   sessionId?: string | null;
-  eventName: ProductEventName;
+  eventName: ProductEventName | (string & {});
   eventVersion?: number;
+  schemaVersion?: number;
   occurredAt?: Date;
   module?: string | null;
   entityType?: string | null;
@@ -52,6 +30,12 @@ export type ProductEventInput = {
 };
 
 type EventDbClient = typeof prisma | Prisma.TransactionClient;
+
+export type ProductEventWriteResult = {
+  accepted: boolean;
+  duplicate?: boolean;
+  reason?: "invalid_contract" | "invalid_event_name" | "database_error";
+};
 
 const forbiddenPropertyKey = /(email|password|token|secret|authorization|cookie|invoice|content|body|phone|address|payload|credential)/i;
 
@@ -84,8 +68,40 @@ export function analyticsEnvironment(): string {
   return (process.env.APP_ENV || process.env.NODE_ENV || "local").toLowerCase();
 }
 
-export async function recordProductEvent(input: ProductEventInput, client: EventDbClient = prisma): Promise<void> {
-  if (!input.eventName || input.eventName.length > 120) return;
+async function recordProductEventIssue(input: ProductEventInput, reasons: string[], client: EventDbClient): Promise<void> {
+  try {
+    const issueClient = (client as unknown as {
+      productEventIssue?: { create(args: { data: Record<string, unknown> }): Promise<unknown> };
+    }).productEventIssue;
+    if (!issueClient) return;
+    await issueClient.create({
+      data: {
+        eventName: input.eventName || "<missing>",
+        eventVersion: input.eventVersion ?? 1,
+        schemaVersion: input.schemaVersion ?? PRODUCT_EVENT_SCHEMA_VERSION,
+        environment: analyticsEnvironment(),
+        userId: input.userId || null,
+        anonymousId: input.anonymousId || null,
+        requestId: input.requestId || null,
+        reason: reasons.join(",").slice(0, 500),
+      },
+    });
+  } catch (error) {
+    // Contract monitoring is best-effort and must never block product work.
+    console.warn("product event contract issue could not be recorded:", error instanceof Error ? error.message : error);
+  }
+}
+
+export async function recordProductEvent(input: ProductEventInput, client: EventDbClient = prisma): Promise<ProductEventWriteResult> {
+  if (!input.eventName || input.eventName.length > 120) {
+    await recordProductEventIssue(input, ["missing_or_long_event_name"], client);
+    return { accepted: false, reason: "invalid_event_name" };
+  }
+  const validation = validateProductEvent(input);
+  if (!validation.ok) {
+    await recordProductEventIssue(input, validation.reasons, client);
+    return { accepted: false, reason: "invalid_contract" };
+  }
   try {
     await client.productEvent.create({
       data: {
@@ -93,7 +109,8 @@ export async function recordProductEvent(input: ProductEventInput, client: Event
         anonymousId: input.anonymousId || null,
         sessionId: input.sessionId || null,
         eventName: input.eventName,
-        eventVersion: input.eventVersion || 1,
+        eventVersion: input.eventVersion ?? validation.contract.version,
+        schemaVersion: input.schemaVersion ?? PRODUCT_EVENT_SCHEMA_VERSION,
         occurredAt: input.occurredAt || new Date(),
         environment: analyticsEnvironment(),
         module: input.module || null,
@@ -106,9 +123,11 @@ export async function recordProductEvent(input: ProductEventInput, client: Event
         properties: sanitizeEventProperties(input.properties),
       },
     });
+    return { accepted: true };
   } catch (error) {
     // Product analytics must never make a successful business mutation fail.
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return;
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return { accepted: true, duplicate: true };
     console.warn("product event could not be recorded:", error instanceof Error ? error.message : error);
+    return { accepted: false, reason: "database_error" };
   }
 }
