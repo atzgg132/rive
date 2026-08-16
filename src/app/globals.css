@@ -46,9 +46,10 @@
   --color-blue-border: #E2EAF4;   /* Delicate light-blue border */
   
   /* Font families — Outfit loaded via Next.js with Outfit Fallback */
-  --font-display: Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
-  --font-body:    Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
-  --font-hero:    Outfit, "Outfit Fallback", var(--font-sans), sans-serif;
+  --font-sans:    "Outfit Variable";
+  --font-display: "Outfit Variable", var(--font-sans), sans-serif;
+  --font-body:    "Outfit Variable", var(--font-sans), sans-serif;
+  --font-hero:    "Outfit Variable", var(--font-sans), sans-serif;
 
   /* Shared motion curves — reuse these instead of hand-typing new cubic-beziers. */
   --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);   /* strong ease-out for UI/marketing entrances */

@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
+import "@fontsource-variable/outfit/wght.css";
 import "./globals.css";
 import PageViewTracker from "@/components/PageViewTracker";
 import { ThemeProvider } from "@/components/ThemeProvider";
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["300", "400", "500", "600", "700", "800"],
-  display: "swap",
-  fallback: ["Outfit Fallback", "system-ui", "sans-serif"],
-});
 
 export const metadata: Metadata = {
   title: "Rive — Connected client, project, contract and financial operations",
@@ -45,7 +37,6 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfit.variable}`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
