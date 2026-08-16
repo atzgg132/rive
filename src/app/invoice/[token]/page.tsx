@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 type InvoiceSnapshot = {
@@ -53,7 +54,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
         <div className="border-b border-slate-100 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white sm:px-10">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
-              {snapshot.sender.logoUrl ? <img src={snapshot.sender.logoUrl} alt="" className="mb-5 h-10 max-w-40 object-contain object-left" /> : <p className="mb-5 text-xl font-bold tracking-tight">{snapshot.sender.name}</p>}
+              {snapshot.sender.logoUrl ? <Image loader={({ src }) => src} unoptimized src={snapshot.sender.logoUrl} width={160} height={40} alt="" className="mb-5 h-10 max-w-40 object-contain object-left" /> : <p className="mb-5 text-xl font-bold tracking-tight">{snapshot.sender.name}</p>}
               <p className="text-sm text-blue-100">{snapshot.sender.email}{snapshot.sender.phone ? ` · ${snapshot.sender.phone}` : ""}</p>
             </div>
             <div className="text-right">

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Zap, BarChart3, Users, Shield } from "lucide-react";
 
 const floatingStats = [
@@ -13,6 +14,7 @@ const floatingStats = [
 ];
 
 export default function Hero() {
+  const router = useRouter();
   return (
     <section className="relative flex flex-col items-center overflow-hidden bg-background px-4 pb-16 pt-32 dark:bg-background sm:px-6 sm:pb-20 sm:pt-36">
 
@@ -193,7 +195,7 @@ export default function Hero() {
                     One invoice is overdue, and two project deadlines are approaching.
                   </p>
                   <Button
-                    onClick={() => window.location.href = "/register"}
+                    onClick={() => router.push("/register")}
                     className="text-[10px] font-bold mt-auto text-left text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                     style={{ fontFamily: "var(--font-display)" }}
                   >

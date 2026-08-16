@@ -1,6 +1,7 @@
 import "server-only";
 
 import { PRODUCT_EVENT_NAMES, PRODUCT_EVENT_SCHEMA_VERSION, REAL_DATA_EVENT_NAMES } from "@/lib/analytics/eventContracts";
+import { evaluateFunnelQuality, type FunnelQualityAlert } from "@/lib/analytics/funnelQuality";
 import { prisma } from "@/utils/db";
 import {
   acquisitionSource,
@@ -118,6 +119,7 @@ export type AdminMetrics = {
     eventLagMinutes: number | null;
     uncapturedSignups: number;
     uncapturedSignupRate: number | null;
+    alerts: FunnelQualityAlert[];
   };
 };
 
@@ -366,6 +368,12 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   ];
   const uncapturedSignups = customerUsers.filter((user) => sourceFrom(user) === "uncaptured").length;
 
+  const qualityData = {
+    ...quality,
+    schemaVersion: PRODUCT_EVENT_SCHEMA_VERSION,
+    uncapturedSignups,
+    uncapturedSignupRate: pct(uncapturedSignups, customerUsers.length),
+  };
   const metrics: AdminMetrics = {
     definitionVersion: FUNNEL_DEFINITION_VERSION,
     generatedAt: now.toISOString(),
@@ -385,10 +393,12 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     workflowDepth: { averageModules, buckets },
     reliability: { productEvents24h, failedEmails24h, queuedEmails },
     quality: {
-      ...quality,
-      schemaVersion: PRODUCT_EVENT_SCHEMA_VERSION,
-      uncapturedSignups,
-      uncapturedSignupRate: pct(uncapturedSignups, customerUsers.length),
+      ...qualityData,
+      alerts: evaluateFunnelQuality({
+        signups: { total: customerUsers.length, last24h: customerUsers.filter((user) => user.createdAt >= ago24h).length, last7d: customerUsers.filter((user) => user.createdAt >= ago7d).length },
+        reliability: { productEvents24h, failedEmails24h, queuedEmails },
+        quality: qualityData,
+      }),
     },
   };
 

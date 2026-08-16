@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui";
 
 import { Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const plans = [
   {
@@ -61,6 +62,7 @@ const plans = [
 ];
 
 export default function Pricing({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
+  const router = useRouter();
   return (
     <section id="pricing" className="relative bg-background dark:bg-background py-28 overflow-hidden">
       {/* Background */}
@@ -146,7 +148,7 @@ export default function Pricing({ agreementsEnabled = true }: { agreementsEnable
 
               {/* CTA */}
               <Button
-                onClick={() => { window.location.href = "/register"; }}
+                onClick={() => router.push("/register")}
                 className={`w-full py-3 rounded-xl font-bold text-sm transition-[background-color] duration-200 ${plan.ctaStyle}`}
                 style={{ fontFamily: "var(--font-display)" }}
               >

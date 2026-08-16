@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui";
 import PageShell from "@/components/PageShell";
+import { useRouter } from "next/navigation";
 
 const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
@@ -30,6 +31,7 @@ Content-Type: application/json
 }`;
 
 export default function DocsPage() {
+  const router = useRouter();
   return (
     <PageShell>
       <div className="max-w-7xl mx-auto px-8 py-16 flex gap-10 min-h-[80vh]">
@@ -82,7 +84,7 @@ export default function DocsPage() {
           </div>
 
           <Button
-            onClick={() => { window.location.href = "/register"; }}
+            onClick={() => router.push("/register")}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15"
             style={fontD}
           >

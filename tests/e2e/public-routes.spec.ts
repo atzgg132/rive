@@ -65,6 +65,9 @@ test("marketing page advertises current connections without a demo CTA", async (
 
 test("login password visibility control works", async ({ page }) => {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
+  // The control is server-rendered, so wait for the client bundle to hydrate
+  // before asserting an interaction rather than racing React's event binding.
+  await page.waitForLoadState("load");
   const password = page.locator("#login-password");
   const showPassword = page.getByRole("button", { name: "show password" });
 

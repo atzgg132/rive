@@ -4,11 +4,13 @@ import { Button, Input } from "@/components/ui";
 import PageShell from "@/components/PageShell";
 import { useState } from "react";
 import { Loader2, Clock, MessageSquare, Code2, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 export default function CommunityPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "success" | "already-joined">("idle");
 
@@ -16,7 +18,7 @@ export default function CommunityPage() {
     e.preventDefault();
     if (!email || state === "loading") return;
     setState("loading");
-    window.location.href = "/register";
+    router.push("/register");
   };
 
   return (
@@ -49,7 +51,7 @@ export default function CommunityPage() {
                   real-time chat, early previews, feedback loops, and direct access to the team.
                 </p>
                 <Button
-                  onClick={() => { window.location.href = "/register"; }}
+                  onClick={() => router.push("/register")}
                   className="w-full py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all duration-200"
                   style={fontD}
                 >

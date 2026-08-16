@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "next-env.d.ts",
+    // Generated/user-owned artifacts are not application source.
+    "pitch-deck/**",
   ]),
 ]);
 

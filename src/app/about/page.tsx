@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui";
 import PageShell from '@/components/PageShell';
 import { Hammer, Eye, Shield } from 'lucide-react';
+import { useRouter } from "next/navigation";
 
 const values = [
   {
@@ -50,6 +51,7 @@ const avatarGradients = [
 ];
 
 export default function AboutPage() {
+  const router = useRouter();
   return (
     <PageShell>
       {/* ── Hero ────────────────────────────────────────── */}
@@ -258,7 +260,7 @@ export default function AboutPage() {
           </p>
           <Button
             onClick={() =>
-              window.location.href = "/register"
+              router.push("/register")
             }
             className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-base hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/20 hover:-translate-y-px"
             style={{ fontFamily: 'var(--font-display)' }}

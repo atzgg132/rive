@@ -82,6 +82,14 @@ locals {
         { environment = "dev", path = "/api/contracts/maintenance" },
       ]
     }
+    funnel_quality = {
+      expression = "rate(15 minutes)"
+      targets = [
+        { environment = "prod", path = "/api/cron/funnel-quality" },
+        { environment = "test", path = "/api/cron/funnel-quality" },
+        { environment = "dev", path = "/api/cron/funnel-quality" },
+      ]
+    }
   }
 }
 

@@ -4,6 +4,7 @@ import { Button, Input } from "@/components/ui";
 import PageShell from "@/components/PageShell";
 import { useState } from "react";
 import { Loader2, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
@@ -23,6 +24,7 @@ const posts = [
 ];
 
 export default function BlogPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [subState, setSubState] = useState<"idle"|"loading"|"success"|"already-joined">("idle");
 
@@ -30,7 +32,7 @@ export default function BlogPage() {
     e.preventDefault();
     if (!email || subState === "loading") return;
     setSubState("loading");
-    window.location.href = "/register";
+    router.push("/register");
   };
 
   const featured = posts[0];

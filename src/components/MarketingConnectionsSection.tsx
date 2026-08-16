@@ -1,12 +1,14 @@
 "use client";
 
 import { ArrowRight, CalendarDays, CheckCircle2, FileSpreadsheet, Rss } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type MarketingConnectionsSectionProps = {
   googleCalendarEnabled: boolean;
 };
 
 export default function MarketingConnectionsSection({ googleCalendarEnabled }: MarketingConnectionsSectionProps) {
+  const router = useRouter();
   const connections = [
     {
       icon: FileSpreadsheet,
@@ -65,7 +67,7 @@ export default function MarketingConnectionsSection({ googleCalendarEnabled }: M
 
         <button
           type="button"
-          onClick={() => { window.location.href = "/register"; }}
+          onClick={() => router.push("/register")}
           className="group mt-10 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950"
         >
           Bring your work into Rive

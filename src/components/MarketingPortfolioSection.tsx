@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, BarChart3, FileUp, Globe2, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const benefits = [
   [Globe2, "A polished public URL"],
@@ -10,6 +11,7 @@ const benefits = [
 ] as const;
 
 export default function MarketingPortfolioSection() {
+  const router = useRouter();
   return (
     <section id="portfolio" className="relative overflow-hidden bg-[#edf4ff] py-20 dark:bg-[#0b172b] sm:py-28">
       <div className="pointer-events-none absolute -right-40 top-8 h-96 w-96 rounded-full bg-blue-400/15 blur-3xl" />
@@ -38,7 +40,7 @@ export default function MarketingPortfolioSection() {
           </div>
 
           <button
-            onClick={() => { window.location.href = "/register"; }}
+            onClick={() => router.push("/register")}
             className="group mt-9 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950"
           >
             Build your portfolio

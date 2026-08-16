@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui";
 import PageShell from "@/components/PageShell";
 import { FolderOpen, Globe, Zap, Users, Briefcase, BarChart3 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
@@ -17,6 +18,7 @@ const guides = [
 ];
 
 export default function GuidesPage() {
+  const router = useRouter();
   return (
     <PageShell>
       <section className="relative py-24 overflow-hidden">
@@ -56,7 +58,7 @@ export default function GuidesPage() {
               create a free account and use the workspace while we keep publishing practical guides.
             </p>
             <Button
-              onClick={() => { window.location.href = "/register"; }}
+              onClick={() => router.push("/register")}
               className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15"
               style={fontD}
             >

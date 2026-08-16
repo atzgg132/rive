@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Bot,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const features = [
   {
@@ -64,6 +65,7 @@ const features = [
 ];
 
 export default function Features({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
+  const router = useRouter();
   const visibleFeatures = agreementsEnabled
     ? features
     : features.filter((feature) => feature.title !== "Contracts & acceptance");
@@ -103,7 +105,7 @@ export default function Features({ agreementsEnabled = true }: { agreementsEnabl
             return (
               <div
                 key={title}
-                onClick={() => { window.location.href = "/register"; }}
+                onClick={() => router.push("/register")}
                 className={`relative group rounded-2xl p-7 border transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-blue-900/20 cursor-pointer ${
                   highlight
                     ? "bg-blue-50/50 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/40"

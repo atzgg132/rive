@@ -8,6 +8,7 @@ import {
   FileSignature,
   MessageSquareText,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const outcomes = [
   {
@@ -35,6 +36,7 @@ const outcomes = [
 const stages = ["Draft", "Review", "Acceptance", "Billing active"] as const;
 
 export default function MarketingAgreementsSection() {
+  const router = useRouter();
   return (
     <section id="agreements" data-testid="marketing-agreements-section" className="relative overflow-hidden bg-white py-24 dark:bg-slate-950 sm:py-32">
       <div className="pointer-events-none absolute -left-40 top-1/4 h-[28rem] w-[28rem] rounded-full bg-blue-600/[0.06] blur-3xl dark:bg-blue-600/20" />
@@ -70,7 +72,7 @@ export default function MarketingAgreementsSection() {
           </div>
 
           <button
-            onClick={() => { window.location.href = "/register"; }}
+            onClick={() => router.push("/register")}
             className="group mt-10 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950 dark:shadow-black/20"
           >
             See the contract workflow
