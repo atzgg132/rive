@@ -1,0 +1,31 @@
+# Canonical Caddy configuration for the Rive host.
+#
+# This file is the single source of truth for routing. It is consumed twice:
+#   * compute.tf embeds it in the instance bootstrap, for a rebuilt host;
+#   * scripts/apply-caddy-config.sh pushes it to the running host.
+#
+# The bootstrap path only executes on first boot, and aws_instance.app ignores
+# user_data changes so an edit here never replaces production. Changing routing
+# on the live host therefore means running the script — editing this file alone
+# changes nothing that is currently serving traffic.
+
+{
+  email hello@rive.work
+  admin off
+}
+
+# Sessions cookies are host-only by design, so a login on the apex would not be
+# sent to www. Redirect rather than serving the app on both names.
+rive.work {
+  redir https://www.rive.work{uri} permanent
+}
+
+www.rive.work {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:3000
+}
+
+dev.rive.work {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:3002
+}

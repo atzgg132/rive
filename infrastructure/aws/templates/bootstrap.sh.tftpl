@@ -17,21 +17,11 @@ if ! swapon --show | grep -q /swapfile; then
   echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
 fi
 
+# Routing lives in caddy/Caddyfile so the bootstrap and the live host share one
+# source. This branch only runs when an instance is built from scratch; changing
+# routing on the running host is scripts/apply-caddy-config.sh.
 cat >/opt/rive/Caddyfile <<'CADDY'
-{
-  email hello@rive.work
-  admin off
-}
-
-${prod_hostname} {
-  encode zstd gzip
-  reverse_proxy 127.0.0.1:3000
-}
-
-${dev_hostname} {
-  encode zstd gzip
-  reverse_proxy 127.0.0.1:3002
-}
+${caddyfile}
 CADDY
 
 docker rm -f rive-proxy >/dev/null 2>&1 || true

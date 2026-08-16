@@ -11,8 +11,6 @@ locals {
     prod = "768m"
     dev  = "384m"
   }
-  hostnames = {
-    prod = "www.${var.domain_name}, ${var.domain_name}"
-    dev  = "dev.${var.domain_name}"
-  }
+  # Hostnames are declared in caddy/Caddyfile, which is the single source of truth
+  # for routing and is shared by the bootstrap and the live-apply script.
 }

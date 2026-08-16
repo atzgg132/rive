@@ -28,8 +28,7 @@ resource "aws_instance" "app" {
     repository_url   = aws_ecr_repository.app.repository_url
     db_endpoint      = aws_db_instance.postgres.address
     db_master_secret = aws_db_instance.postgres.master_user_secret[0].secret_arn
-    prod_hostname    = local.hostnames.prod
-    dev_hostname     = local.hostnames.dev
+    caddyfile        = file("${path.module}/caddy/Caddyfile")
     prod_memory      = local.memory_limits.prod
     dev_memory       = local.memory_limits.dev
   })
