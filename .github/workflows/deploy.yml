@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - test
       - dev
   workflow_dispatch:
 
@@ -66,12 +65,12 @@ jobs:
       - run: npm run test:unit
       - run: npx tsc --noEmit --incremental false
       - run: npm run lint
+      # dev is the only pre-production gate now that test is retired, so it runs
+      # the same browser suite as main rather than deploying less-verified code.
       - name: Install Playwright browser
-        if: github.ref_name == 'main'
         run: npx playwright install --with-deps chromium
       - run: npm run build
       - name: Run E2E tests
-        if: github.ref_name == 'main'
         env:
           PLAYWRIGHT_SERVER: production
           PLAYWRIGHT_WORKERS: 4

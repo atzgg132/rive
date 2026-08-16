@@ -74,7 +74,9 @@ test.describe("admin session lifecycle", () => {
     await page.getByLabel("Password", { exact: true }).fill("not-the-admin-password");
     await page.getByRole("button", { name: "Sign in securely" }).click();
 
-    await expect(page.getByRole("alert")).toContainText("Invalid credentials.");
+    // Target the error itself: Next renders an always-present, empty
+    // <div role="alert" id="__next-route-announcer__">, so getByRole("alert") is ambiguous.
+    await expect(page.getByTestId("admin-login-error")).toContainText("Invalid credentials.");
     await expect(page.getByRole("button", { name: "Sign in securely" })).toBeEnabled();
 
     const stored = (await context.cookies()).find((cookie) => cookie.name === ADMIN_SESSION_COOKIE);
