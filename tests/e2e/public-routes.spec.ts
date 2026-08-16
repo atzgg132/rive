@@ -64,7 +64,7 @@ test("marketing page advertises current connections without a demo CTA", async (
 });
 
 test("login password visibility control works", async ({ page }) => {
-  await page.goto("/login", { waitUntil: "networkidle" });
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
   const password = page.locator("#login-password");
   const showPassword = page.getByRole("button", { name: "show password" });
 

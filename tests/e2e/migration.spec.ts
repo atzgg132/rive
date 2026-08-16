@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -18,14 +18,6 @@ import { Pool } from "pg";
  */
 
 const FIXTURES = join(process.cwd(), "tests", "fixtures", "migration");
-
-/**
- * The session token for the CURRENT test's fresh user. Set by `authenticate`
- * (which each test calls once with its own context); the API-request tests
- * reuse it so the browser session and the `request` calls act as the same
- * tenant.
- */
-let currentSessionToken: string | undefined;
 
 /**
  * Build a session token for a FRESH disposable user.
@@ -62,7 +54,7 @@ async function getSessionToken() {
   const pool = new Pool({ connectionString: parsed.toString(), ssl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   try {
-    const email = `migration-e2e-${Date.now()}-${process.pid}@example.invalid`;
+    const email = `migration-e2e-${randomUUID()}@example.invalid`;
     const user = await prisma.user.create({
       data: {
         email,
@@ -95,15 +87,15 @@ async function getSessionToken() {
   }
 }
 
-async function authenticate(context: BrowserContext, baseURL: string) {
+async function authenticate(context: BrowserContext, baseURL: string): Promise<string> {
   const url = new URL(baseURL);
   // Fresh user per test: the browser session and any `request` API calls in
   // the same test must share it.
-  currentSessionToken = await getSessionToken();
+  const sessionToken = await getSessionToken();
   await context.addCookies([
     {
       name: "rive_session",
-      value: currentSessionToken,
+      value: sessionToken,
       domain: url.hostname,
       path: "/",
       httpOnly: true,
@@ -111,12 +103,7 @@ async function authenticate(context: BrowserContext, baseURL: string) {
       sameSite: "Lax",
     },
   ]);
-}
-
-/** The current test's session token (set by authenticate). */
-function getCurrentSessionToken(): string {
-  if (!currentSessionToken) throw new Error("authenticate() must run before using the session token.");
-  return currentSessionToken;
+  return sessionToken;
 }
 
 function fixture(name: string) {
@@ -277,21 +264,21 @@ test.describe("migration", () => {
   });
 
   test("committing twice does not import anything twice", async ({ context, page, baseURL, request }) => {
-    await authenticate(context, baseURL!);
+    const sessionToken = await authenticate(context, baseURL!);
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
 
     const { migrationId, planHash } = await uploadAndAnalyze(page, ["clients-standard.csv"]);
 
     const first = await request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash },
-      headers: { cookie: `rive_session=${getCurrentSessionToken()}` },
+      headers: { cookie: `rive_session=${sessionToken}` },
     });
     expect(first.status()).toBe(200);
     const firstBody = await first.json();
 
     const second = await request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash },
-      headers: { cookie: `rive_session=${getCurrentSessionToken()}` },
+      headers: { cookie: `rive_session=${sessionToken}` },
     });
     // The second attempt is refused outright rather than creating duplicates.
     expect(second.status()).toBe(409);
@@ -299,13 +286,13 @@ test.describe("migration", () => {
   });
 
   test("a stale plan hash is refused", async ({ context, page, baseURL, request }) => {
-    await authenticate(context, baseURL!);
+    const sessionToken = await authenticate(context, baseURL!);
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
 
     const { migrationId } = await uploadAndAnalyze(page, ["clients-standard.csv"]);
     const response = await request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash: "0".repeat(64) },
-      headers: { cookie: `rive_session=${getCurrentSessionToken()}` },
+      headers: { cookie: `rive_session=${sessionToken}` },
     });
     expect(response.status()).toBe(409);
     expect((await response.json()).message).toMatch(/changed since you reviewed it/i);
@@ -398,16 +385,15 @@ test.describe("migration", () => {
   });
 
   test("a refresh during an in-flight commit lands on the finishing screen, not the analysis screen", async ({ context, page, baseURL, request }) => {
-    await authenticate(context, baseURL!);
+    const sessionToken = await authenticate(context, baseURL!);
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
 
     const { migrationId, planHash } = await uploadAndAnalyze(page, ["clients-standard.csv"]);
 
     // Fire the commit request but don't await it — the server is now committing.
-    const token = getCurrentSessionToken();
     const commitPromise = request.post(`/api/migrations/${migrationId}/commit`, {
       data: { planHash },
-      headers: { cookie: `rive_session=${token}` },
+      headers: { cookie: `rive_session=${sessionToken}` },
     });
 
     // Wait until the commit has actually claimed the migration (status
@@ -415,7 +401,7 @@ test.describe("migration", () => {
     // ahead of it.
     await expect(async () => {
       const probe = await request.get(`/api/migrations/${migrationId}`, {
-        headers: { cookie: `rive_session=${token}` },
+        headers: { cookie: `rive_session=${sessionToken}` },
       });
       if (probe.ok()) {
         const body = await probe.json().catch(() => null);

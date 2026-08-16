@@ -2,16 +2,31 @@ import { defineConfig, devices } from "@playwright/test";
 
 const port = Number(process.env.PLAYWRIGHT_PORT || 3000);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${port}`;
+const isCI = Boolean(process.env.CI);
+const configuredWorkers = Number.parseInt(process.env.PLAYWRIGHT_WORKERS || "", 10);
+const workers = Number.isInteger(configuredWorkers) && configuredWorkers > 0
+  ? configuredWorkers
+  : isCI
+    ? 4
+    : 2;
+const useProductionServer = process.env.PLAYWRIGHT_SERVER === "production";
+const productionServerEnv = useProductionServer
+  ? {
+      ...(process.env as Record<string, string>),
+      HOSTNAME: "127.0.0.1",
+      PORT: String(port),
+    }
+  : undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
   snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
-  workers: 2,
+  retries: isCI ? 1 : 0,
+  workers,
   timeout: 60_000,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: isCI ? [["line"]] : [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
     trace: "retain-on-failure",
@@ -36,7 +51,10 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+        command: useProductionServer
+          ? "npm run start:e2e"
+          : `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+        env: productionServerEnv,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

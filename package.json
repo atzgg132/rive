@@ -16,6 +16,7 @@
     "test": "npm run test:e2e",
     "test:unit": "node --experimental-strip-types --import ./tests/helpers/module-loader.mjs --test tests/domain/*.test.mjs",
     "test:e2e": "playwright test",
+    "start:e2e": "node scripts/start-e2e-server.mjs",
     "test:visual": "playwright test tests/e2e/visual-regression.spec.ts",
     "test:integration": "playwright test tests/e2e/release-critical.spec.ts",
     "test:e2e:headed": "playwright test --headed",

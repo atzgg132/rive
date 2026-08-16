@@ -40,10 +40,16 @@ jobs:
       CALENDAR_ENCRYPTION_KEY: ci-calendar-encryption-key
       CRON_SECRET: ci-cron-secret
       APP_URL: http://127.0.0.1:3000
+      APP_ENV: test
+      EMAIL_PROVIDER: ses
+      AWS_REGION: ap-south-1
+      ESIGN_PROVIDER: local
+      CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION: "true"
+      CONTRACTS_RECORDED_ACCEPTANCE_ENABLED: "true"
       E2E_USER_EMAIL: e2e-workspace@rive.test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -54,6 +60,10 @@ jobs:
       - run: npx tsc --noEmit --incremental false
       - run: npm run lint
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
       - run: npm run build
+      - name: Run E2E tests
+        env:
+          PLAYWRIGHT_SERVER: production
+          PLAYWRIGHT_WORKERS: 4
+        run: npm run test:e2e
       - run: npm audit --omit=dev

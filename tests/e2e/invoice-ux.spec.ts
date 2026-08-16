@@ -18,7 +18,7 @@ test.describe("invoice workspace UX", () => {
   test("desktop editor exposes the review-first layout and discount math", async ({ page }) => {
     await mockInvoiceWorkspace(page);
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/workflow/invoices/new", { waitUntil: "networkidle" });
+    await page.goto("/workflow/invoices/new", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Create a polished invoice" })).toBeVisible();
     await page.getByRole("combobox", { name: "Client" }).selectOption("client-1");
     await page.getByLabel("Line item 1 description").fill("Product strategy sprint");
@@ -33,7 +33,7 @@ test.describe("invoice workspace UX", () => {
   test("mobile editor remains usable without horizontal overflow", async ({ page }) => {
     await mockInvoiceWorkspace(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/workflow/invoices/new", { waitUntil: "networkidle" });
+    await page.goto("/workflow/invoices/new", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Create a polished invoice" })).toBeVisible();
     const geometry = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
     expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
