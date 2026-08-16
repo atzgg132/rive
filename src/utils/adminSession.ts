@@ -5,9 +5,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getRequestIp } from "@/utils/rateLimit";
 import { verifyToken as verifyLegacyToken } from "@/utils/auth";
+import {
+  ADMIN_SESSION_COOKIE,
+  ADMIN_SESSION_COOKIE_PATH,
+  ADMIN_SESSION_TTL_MS,
+  LEGACY_ADMIN_SESSION_COOKIE_PATH,
+} from "@/utils/adminSessionCookie";
 
-export const ADMIN_SESSION_COOKIE = "rive_admin_session";
-const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+export { ADMIN_SESSION_COOKIE, ADMIN_SESSION_COOKIE_PATH };
+
+function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: ADMIN_SESSION_COOKIE_PATH,
+  };
+}
+
+function clearLegacyScopedCookie(response: NextResponse): void {
+  response.cookies.set({
+    name: ADMIN_SESSION_COOKIE,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    expires: new Date(0),
+    path: LEGACY_ADMIN_SESSION_COOKIE_PATH,
+  });
+}
 
 function hash(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -27,14 +52,12 @@ export async function createAdminSession(req: NextRequest, response: NextRespons
       userAgent: req.headers.get("user-agent")?.slice(0, 500) || null,
     },
   });
+  clearLegacyScopedCookie(response);
   response.cookies.set({
+    ...sessionCookieOptions(),
     name: ADMIN_SESSION_COOKIE,
     value: token,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
     maxAge: ADMIN_SESSION_TTL_MS / 1000,
-    path: "/admin",
   });
 }
 
@@ -59,5 +82,6 @@ export async function hasAdminSession(req: NextRequest): Promise<boolean> {
 export async function revokeAdminSession(req: NextRequest, response: NextResponse): Promise<void> {
   const cookie = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   if (cookie) await prisma.adminSession.updateMany({ where: { tokenHash: hash(cookie), revokedAt: null }, data: { revokedAt: new Date() } }).catch(() => undefined);
-  response.cookies.set({ name: ADMIN_SESSION_COOKIE, value: "", httpOnly: true, expires: new Date(0), sameSite: "lax", path: "/admin" });
+  clearLegacyScopedCookie(response);
+  response.cookies.set({ ...sessionCookieOptions(), name: ADMIN_SESSION_COOKIE, value: "", expires: new Date(0) });
 }

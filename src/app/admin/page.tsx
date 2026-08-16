@@ -83,7 +83,7 @@ function FunnelUnavailable({ message, retry, loading }: { message: string; retry
   return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Product operations</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">The control room is online; funnel data needs a retry.</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">The session is valid, but the measurement query did not return a complete snapshot. Existing account and feedback tabs remain available.</p></div><LoadError message={message} onRetry={retry} loading={loading} /></div>;
 }
 
-function Login({ onLogin }: { onLogin: () => void }) {
+function Login({ onLogin, notice = "" }: { onLogin: () => void; notice?: string }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -105,7 +105,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
     }
   }
 
-  return <main className="grid min-h-screen place-items-center bg-background px-5 py-8"><div className="w-full max-w-sm"><div className="mb-8 flex justify-center"><RiveLogo height={38} /></div><form onSubmit={submit} className="rounded-3xl border border-border bg-card p-8 shadow-xl"><div className="mb-7 text-center"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary"><Shield className="h-6 w-6" /></div><h1 className="text-2xl font-bold text-card-foreground">Admin workspace</h1><p className="mt-1 text-sm text-muted-foreground">Product operations and funnel quality</p></div><label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Username<Input value={username} onChange={(event) => setUsername(event.target.value)} required autoComplete="username" autoFocus className="mt-2" /></label><label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Password<PasswordInput value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" className="mt-2" /></label>{error ? <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p> : null}<Button type="submit" variant="default" size="lg" disabled={loading} className="w-full">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}{loading ? "Signing in…" : "Sign in securely"}</Button><p className="mt-5 text-center text-xs text-muted-foreground">Protected by an HttpOnly session cookie.</p></form><div className="mt-4 flex justify-end"><ThemeToggle /></div></div></main>;
+  return <main className="grid min-h-screen place-items-center bg-background px-5 py-8"><div className="w-full max-w-sm"><div className="mb-8 flex justify-center"><RiveLogo height={38} /></div><form onSubmit={submit} className="rounded-3xl border border-border bg-card p-8 shadow-xl"><div className="mb-7 text-center"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary"><Shield className="h-6 w-6" /></div><h1 className="text-2xl font-bold text-card-foreground">Admin workspace</h1><p className="mt-1 text-sm text-muted-foreground">Product operations and funnel quality</p></div>{notice && !error ? <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status" data-testid="admin-session-notice">{notice}</p> : null}<label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Username<Input value={username} onChange={(event) => setUsername(event.target.value)} required autoComplete="username" autoFocus className="mt-2" /></label><label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Password<PasswordInput value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" className="mt-2" /></label>{error ? <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p> : null}<Button type="submit" variant="default" size="lg" disabled={loading} className="w-full">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}{loading ? "Signing in…" : "Sign in securely"}</Button><p className="mt-5 text-center text-xs text-muted-foreground">Protected by an HttpOnly session cookie.</p></form><div className="mt-4 flex justify-end"><ThemeToggle /></div></div></main>;
 }
 
 function Metric({ label, value, detail, tone = "blue" }: { label: string; value: string | number; detail: string; tone?: "blue" | "green" | "amber" | "purple" }) {
@@ -239,7 +239,7 @@ function LegacyTab() {
   return <div className="space-y-6"><div><p className="text-sm font-semibold text-muted-foreground">Historical compatibility</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Legacy waitlist archive</h1><p className="mt-2 text-sm text-muted-foreground">No new visitors enter this funnel. Keep it for audit, migration, and old links.</p></div><Panel title="Archived entries">{error ? <LoadError message={error} onRetry={load} loading={loading} /> : loading ? <Loading label="Loading legacy archive" /> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="pb-3">Email</th><th className="pb-3">Original source</th><th className="pb-3">Status</th><th className="pb-3">Created</th></tr></thead><tbody className="divide-y divide-border">{items.map((item) => <tr key={item.id}><td className="py-3">{item.email}</td><td className="py-3">{item.type}</td><td className="py-3">{item.registered ? "Registered" : item.status}</td><td className="py-3">{ago(item.created_at)}</td></tr>)}</tbody></table>{!items.length ? <Empty text="No legacy entries." /> : null}</div>}</Panel></div>;
 }
 
-function Dashboard({ onLogout }: { onLogout: () => void }) {
+function Dashboard({ onLogout, onSessionExpired }: { onLogout: () => void; onSessionExpired: () => void }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [funnel, setFunnel] = useState<Funnel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,8 +251,11 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     try {
       const response = await fetchAdmin("/api/admin/analytics", { credentials: "same-origin", cache: "no-store" });
       const data = await response.json().catch(() => null);
+      // A 401 here means the session itself died, so hand the user back to the
+      // login form with a reason instead of revoking again and re-rendering the
+      // dashboard, which is what turned one expiry into a redirect loop.
       if (response.status === 401) {
-        onLogout();
+        onSessionExpired();
         return;
       }
       if (!response.ok || !data?.success) throw new Error(data?.message || "Funnel metrics could not be loaded.");
@@ -263,7 +266,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     } finally {
       setLoading(false);
     }
-  }, [onLogout]);
+  }, [onSessionExpired]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
@@ -285,6 +288,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [sessionError, setSessionError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const checkSession = useCallback(async () => {
     setSessionError("");
@@ -306,10 +310,20 @@ export default function AdminPage() {
 
   const handleLogout = useCallback(async () => {
     await fetchAdmin("/api/admin/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined);
+    setNotice("You have been signed out.");
+    setAuthenticated(false);
+  }, []);
+
+  // Expiry is not a sign-out: the cookie is already dead, so re-POSTing logout
+  // only adds a failing request between the user and the login form.
+  const handleSessionExpired = useCallback(() => {
+    setNotice("Your admin session expired. Sign in again to continue.");
     setAuthenticated(false);
   }, []);
 
   if (sessionError) return <main className="grid min-h-screen place-items-center bg-background px-5"><div className="w-full max-w-md"><RiveLogo height={38} /><div className="mt-6"><LoadError message={sessionError} onRetry={() => void checkSession()} /></div></div></main>;
   if (authenticated === null) return <Loading label="Checking admin session" />;
-  return authenticated ? <Dashboard onLogout={handleLogout} /> : <Login onLogin={() => setAuthenticated(true)} />;
+  return authenticated
+    ? <Dashboard onLogout={handleLogout} onSessionExpired={handleSessionExpired} />
+    : <Login notice={notice} onLogin={() => { setNotice(""); setAuthenticated(true); }} />;
 }
