@@ -91,17 +91,27 @@ test.describe("admin session lifecycle", () => {
     await page.getByLabel("Password", { exact: true }).fill(adminPassword!);
     await page.getByRole("button", { name: "Sign in securely" }).click();
 
-    expect((await loginResponse).status()).toBe(200);
+    const response = await loginResponse;
+    expect(response.status()).toBe(200);
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
-    const cookie = (await context.cookies()).find((entry) => entry.name === ADMIN_SESSION_COOKIE);
-    expect(cookie, "the admin session cookie must be stored by the browser").toBeTruthy();
-    expect(cookie!.value).not.toBe("");
-    expect(cookie!.httpOnly).toBe(true);
-    expect(cookie!.sameSite).toBe("Lax");
+    const setCookies = (await response.headersArray())
+      .filter((header) => header.name.toLowerCase() === "set-cookie" && header.value.startsWith(`${ADMIN_SESSION_COOKIE}=`))
+      .map((header) => header.value);
+    expect(setCookies.some((value) => /Path=\/(;|$)/.test(value)), `expected a Path=/ session cookie, got ${setCookies.join(" | ")}`).toBe(true);
+    // The pre-fix cookie is retired in the same response so it cannot linger for a
+    // full TTL and shadow the real one on /admin requests.
+    expect(setCookies.some((value) => /Path=\/admin/.test(value) && /Max-Age=0|Expires=Thu, 01 Jan 1970/.test(value))).toBe(true);
+
+    const stored = (await context.cookies()).filter((entry) => entry.name === ADMIN_SESSION_COOKIE);
+    expect(stored, "only the correctly scoped session cookie should survive").toHaveLength(1);
+    const cookie = stored[0];
+    expect(cookie.value).not.toBe("");
+    expect(cookie.httpOnly).toBe(true);
+    expect(cookie.sameSite).toBe("Lax");
     // The regression itself: "/admin" does not path-match "/api/admin/...", so a
     // session scoped there is stored and then withheld from every check that reads it.
-    expect(cookie!.path).toBe("/");
+    expect(cookie.path).toBe("/");
   });
 
   test("authorises the session check and every protected admin API", async () => {

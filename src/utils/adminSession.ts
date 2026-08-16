@@ -23,15 +23,22 @@ function sessionCookieOptions() {
   };
 }
 
-function clearLegacyScopedCookie(response: NextResponse): void {
-  response.cookies.set({
-    name: ADMIN_SESSION_COOKIE,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    expires: new Date(0),
-    path: LEGACY_ADMIN_SESSION_COOKIE_PATH,
-  });
+// NextResponse.cookies keys its pending cookies by name alone and rewrites the
+// whole Set-Cookie header on every call, so it cannot express two cookies that
+// share a name and differ only by path. Appending the expiry directly is the only
+// way to retire the old scope alongside the new cookie — and it has to happen
+// after every response.cookies.set() call, which would otherwise drop it.
+function expireLegacyScopedCookie(response: NextResponse): void {
+  const attributes = [
+    `${ADMIN_SESSION_COOKIE}=`,
+    `Path=${LEGACY_ADMIN_SESSION_COOKIE_PATH}`,
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    "Max-Age=0",
+    "HttpOnly",
+    "SameSite=Lax",
+  ];
+  if (process.env.NODE_ENV === "production") attributes.push("Secure");
+  response.headers.append("set-cookie", attributes.join("; "));
 }
 
 function hash(value: string): string {
@@ -52,13 +59,13 @@ export async function createAdminSession(req: NextRequest, response: NextRespons
       userAgent: req.headers.get("user-agent")?.slice(0, 500) || null,
     },
   });
-  clearLegacyScopedCookie(response);
   response.cookies.set({
     ...sessionCookieOptions(),
     name: ADMIN_SESSION_COOKIE,
     value: token,
     maxAge: ADMIN_SESSION_TTL_MS / 1000,
   });
+  expireLegacyScopedCookie(response);
 }
 
 export async function hasAdminSession(req: NextRequest): Promise<boolean> {
@@ -82,6 +89,6 @@ export async function hasAdminSession(req: NextRequest): Promise<boolean> {
 export async function revokeAdminSession(req: NextRequest, response: NextResponse): Promise<void> {
   const cookie = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   if (cookie) await prisma.adminSession.updateMany({ where: { tokenHash: hash(cookie), revokedAt: null }, data: { revokedAt: new Date() } }).catch(() => undefined);
-  clearLegacyScopedCookie(response);
   response.cookies.set({ ...sessionCookieOptions(), name: ADMIN_SESSION_COOKIE, value: "", expires: new Date(0) });
+  expireLegacyScopedCookie(response);
 }
