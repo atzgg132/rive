@@ -42,7 +42,6 @@ Google Cloud configuration:
 7. Add these exact redirect URIs:
    - `http://localhost:3000/api/calendar/connections/google/callback`
    - `https://dev.rive.work/api/calendar/connections/google/callback`
-   - `https://test.rive.work/api/calendar/connections/google/callback`
    - `https://www.rive.work/api/calendar/connections/google/callback`
 8. While the consent screen is in testing, add every person who needs to test as a Google OAuth test user.
 9. Before broad launch, submit the consent screen for Google verification. Calendar event access is a sensitive scope and an unverified production app will be constrained.
@@ -94,7 +93,6 @@ Create a **Server-based Application** in the Zoho API Console and register:
 
 - `http://localhost:3000/api/connectors/zoho-books/callback`
 - `https://dev.rive.work/api/connectors/zoho-books/callback`
-- `https://test.rive.work/api/connectors/zoho-books/callback`
 - `https://www.rive.work/api/connectors/zoho-books/callback`
 
 Provide these secrets independently for each environment:

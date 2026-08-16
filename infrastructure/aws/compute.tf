@@ -29,10 +29,8 @@ resource "aws_instance" "app" {
     db_endpoint      = aws_db_instance.postgres.address
     db_master_secret = aws_db_instance.postgres.master_user_secret[0].secret_arn
     prod_hostname    = local.hostnames.prod
-    test_hostname    = local.hostnames.test
     dev_hostname     = local.hostnames.dev
     prod_memory      = local.memory_limits.prod
-    test_memory      = local.memory_limits.test
     dev_memory       = local.memory_limits.dev
   })
 
@@ -41,6 +39,21 @@ resource "aws_instance" "app" {
     aws_ssm_parameter.database_url,
     aws_iam_role_policy.app,
   ]
+
+  # This host is a pet, not cattle: releases reach it through SSM and Docker, and
+  # Caddy's certificates plus /opt/rive live on its root volume. Without these
+  # ignores Terraform replaces the running production server whenever Amazon
+  # publishes a new Amazon Linux image behind the SSM alias, or whenever the
+  # bootstrap template changes — an outage nobody asked for, triggered by an
+  # unrelated apply.
+  #
+  # Rebuilding the box is therefore a deliberate act. To roll a new AMI or a new
+  # bootstrap script, drop the matching entry here (or run
+  # `terraform apply -replace=aws_instance.app`) during a planned window, and
+  # expect Caddy to re-issue certificates on first boot.
+  lifecycle {
+    ignore_changes = [ami, user_data]
+  }
 
   tags = {
     Name = "rive-app"

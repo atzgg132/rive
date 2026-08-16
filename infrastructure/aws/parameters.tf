@@ -30,7 +30,7 @@ locals {
       "${environment}/CONTRACTS_ENABLED"                = "true"
       "${environment}/ESIGN_PROVIDER"                   = "rive"
       # Keep the alpha recorded-acceptance workflow available in every
-      # deployed environment so dev/test do not silently diverge from the
+      # deployed environment so dev does not silently diverge from the
       # public product structure. The local/demo provider remains rejected by
       # the application in production.
       "${environment}/CONTRACTS_RECORDED_ACCEPTANCE_ENABLED"        = "true"

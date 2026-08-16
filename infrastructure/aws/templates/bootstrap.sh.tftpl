@@ -28,11 +28,6 @@ ${prod_hostname} {
   reverse_proxy 127.0.0.1:3000
 }
 
-${test_hostname} {
-  encode zstd gzip
-  reverse_proxy 127.0.0.1:3001
-}
-
 ${dev_hostname} {
   encode zstd gzip
   reverse_proxy 127.0.0.1:3002
@@ -60,7 +55,6 @@ REPOSITORY_URL="${repository_url}"
 
 case "$ENVIRONMENT" in
   prod) PORT=3000; MEMORY="${prod_memory}" ;;
-  test) PORT=3001; MEMORY="${test_memory}" ;;
   dev) PORT=3002; MEMORY="${dev_memory}" ;;
   *) echo "Unknown environment: $ENVIRONMENT" >&2; exit 2 ;;
 esac
@@ -139,7 +133,7 @@ MASTER_USER=$(jq -r .username <<<"$MASTER_SECRET")
 MASTER_PASSWORD=$(jq -r .password <<<"$MASTER_SECRET")
 export PGPASSWORD="$MASTER_PASSWORD"
 
-for ENVIRONMENT in prod test dev; do
+for ENVIRONMENT in prod dev; do
   DB_USER="rive_$ENVIRONMENT"
   DB_NAME="rive_$ENVIRONMENT"
   DB_PASSWORD=$(aws ssm get-parameter \

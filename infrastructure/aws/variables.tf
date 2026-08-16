@@ -126,7 +126,6 @@ variable "environment_domains" {
   type = map(string)
   default = {
     prod = "https://www.rive.work"
-    test = "https://test.rive.work"
     dev  = "https://dev.rive.work"
   }
 }

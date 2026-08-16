@@ -4,9 +4,13 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier                      = "rive-postgres"
-  engine                          = "postgres"
-  engine_version                  = "17.6"
+  identifier = "rive-postgres"
+  engine     = "postgres"
+  # Track the major version only. auto_minor_version_upgrade is on, so AWS moves
+  # the instance forward on its own (it is already on 17.9); pinning an exact
+  # minor made every plan propose a downgrade back to 17.6, which RDS cannot
+  # perform and which would fail the apply.
+  engine_version                  = "17"
   instance_class                  = var.db_instance_class
   allocated_storage               = 20
   max_allocated_storage           = 50
@@ -32,6 +36,11 @@ resource "aws_db_instance" "postgres" {
 
   lifecycle {
     prevent_destroy = true
+    # AWS owns the minor version while auto_minor_version_upgrade is on, so
+    # Terraform must not keep proposing to modify a healthy production database
+    # back to whatever this file happens to say. Major upgrades stay deliberate:
+    # drop this ignore, set the target major, and apply in a planned window.
+    ignore_changes = [engine_version]
   }
 }
 

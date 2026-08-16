@@ -37,10 +37,8 @@ resource "aws_lambda_function" "job_runner" {
   environment {
     variables = {
       PROD_APP_URL     = var.environment_domains.prod
-      TEST_APP_URL     = var.environment_domains.test
       DEV_APP_URL      = var.environment_domains.dev
       PROD_CRON_SECRET = random_password.cron["prod"].result
-      TEST_CRON_SECRET = random_password.cron["test"].result
       DEV_CRON_SECRET  = random_password.cron["dev"].result
     }
   }
@@ -62,7 +60,6 @@ locals {
     nonprod_sync = {
       expression = "rate(15 minutes)"
       targets = [
-        { environment = "test", path = "/api/calendar/sync-outbox" },
         { environment = "dev", path = "/api/calendar/sync-outbox" },
       ]
     }
@@ -70,7 +67,6 @@ locals {
       expression = "rate(6 hours)"
       targets = [
         { environment = "prod", path = "/api/calendar/maintenance" },
-        { environment = "test", path = "/api/calendar/maintenance" },
         { environment = "dev", path = "/api/calendar/maintenance" },
       ]
     }
@@ -78,7 +74,6 @@ locals {
       expression = "rate(15 minutes)"
       targets = [
         { environment = "prod", path = "/api/contracts/maintenance" },
-        { environment = "test", path = "/api/contracts/maintenance" },
         { environment = "dev", path = "/api/contracts/maintenance" },
       ]
     }
@@ -86,7 +81,6 @@ locals {
       expression = "rate(15 minutes)"
       targets = [
         { environment = "prod", path = "/api/cron/funnel-quality" },
-        { environment = "test", path = "/api/cron/funnel-quality" },
         { environment = "dev", path = "/api/cron/funnel-quality" },
       ]
     }

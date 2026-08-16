@@ -118,11 +118,16 @@ the database password to an environment file.
 | Branch | Runtime environment | Domain | Trigger |
 | --- | --- | --- | --- |
 | `dev` | `dev` | `dev.rive.work` | push |
-| `test` | `test` | `test.rive.work` | push |
 | `main` | `prod` | `rive.work` | push after checks |
 
-Promote the same reviewed commit from `dev` to `test`, then merge it to `main`.
-Images are tagged with the Git SHA and are never overwritten.
+Promote the same reviewed commit from `dev` to `main`. Both branches run the
+full lint, type, unit and Playwright suites before deploying, so `dev` is a real
+gate rather than a staging copy. Images are tagged with the Git SHA and are
+never overwritten.
+
+The `test` environment was retired: it had drifted behind `main` without being
+promoted through, and a stage nobody promotes through is a stale public surface
+rather than a safety net.
 
 ## Cloudflare records
 
@@ -132,7 +137,6 @@ records using the Terraform `application_public_ip` output:
 | Type | Name | Target | Proxy during validation |
 | --- | --- | --- | --- |
 | A | `dev` | application public IP | DNS only |
-| A | `test` | application public IP | DNS only |
 | A | `@` | application public IP | DNS only until cutover |
 | A | `www` | application public IP | DNS only until cutover |
 

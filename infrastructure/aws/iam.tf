@@ -135,7 +135,6 @@ data "aws_iam_policy_document" "github_assume" {
       variable = "token.actions.githubusercontent.com:sub"
       values = [
         "repo:${var.github_repository}:ref:refs/heads/main",
-        "repo:${var.github_repository}:ref:refs/heads/test",
         "repo:${var.github_repository}:ref:refs/heads/dev",
         "repo:${var.github_repository}:environment:*",
       ]
