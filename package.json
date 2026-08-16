@@ -9,7 +9,7 @@
     "db:migrate:status:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action status",
     "contracts:smoke:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action smoke",
     "contracts:cleanup-smoke:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action cleanup-smoke",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test:domain": "node --experimental-strip-types --import ./tests/helpers/module-loader.mjs --test tests/domain/*.test.mjs",
