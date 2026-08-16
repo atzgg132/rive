@@ -113,17 +113,32 @@ function LegacyTab() {
   return <div className="space-y-6"><div><p className="text-sm font-semibold text-muted-foreground">Historical compatibility</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Legacy waitlist archive</h1><p className="mt-2 text-sm text-muted-foreground">No new visitors enter this funnel. Keep it for audit, migration, and old links.</p></div><Panel title="Archived entries">{loading ? <Loading /> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="pb-3">Email</th><th className="pb-3">Original source</th><th className="pb-3">Status</th><th className="pb-3">Created</th></tr></thead><tbody className="divide-y divide-border">{items.map((item) => <tr key={item.id}><td className="py-3">{item.email}</td><td className="py-3">{item.type}</td><td className="py-3">{item.registered ? "Registered" : item.status}</td><td className="py-3">{ago(item.created_at)}</td></tr>)}</tbody></table>{!items.length ? <Empty text="No legacy entries." /> : null}</div>}</Panel></div>;
 }
 
-function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<Tab>("overview"); const [funnel, setFunnel] = useState<Funnel | null>(null); const [loading, setLoading] = useState(true);
+function Dashboard({ onLogout, initialFunnel = null }: { onLogout: () => void; initialFunnel?: Funnel | null }) {
+  const [tab, setTab] = useState<Tab>("overview"); const [funnel, setFunnel] = useState<Funnel | null>(initialFunnel); const [loading, setLoading] = useState(!initialFunnel);
   const load = useCallback(() => { setLoading(true); void fetch("/api/admin/analytics", { credentials: "same-origin", cache: "no-store" }).then((response) => response.json()).then((data) => { if (data?.success) setFunnel(data.data.productFunnel); }).finally(() => setLoading(false)); }, []);
-  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer); }, [load]);
+  useEffect(() => {
+    if (initialFunnel) return;
+    const timer = window.setTimeout(load, 0);
+    return () => window.clearTimeout(timer);
+  }, [initialFunnel, load]);
   const content = loading && !funnel ? <Loading /> : tab === "overview" ? <Overview funnel={funnel} refresh={load} /> : tab === "funnel" ? <FunnelTab funnel={funnel} /> : tab === "users" ? <UsersTab /> : tab === "feedback" ? <FeedbackTab /> : tab === "reliability" ? <Reliability funnel={funnel} /> : <LegacyTab />;
   return <div className="min-h-screen bg-background"><header className="sticky top-0 z-20 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-8"><div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4"><div className="flex items-center gap-5"><RiveLogo height={28} /><span className="hidden h-5 w-px bg-border sm:block" /><span className="hidden text-sm font-semibold text-muted-foreground sm:block">Admin control room</span></div><div className="flex items-center gap-2"><span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:block">Open beta</span><Button variant="ghost" size="sm" onClick={onLogout} className="gap-2"><LogOut className="h-4 w-4" /> Sign out</Button></div></div></header><div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-8 lg:flex-row"><aside className="lg:w-52 lg:shrink-0"><nav className="flex gap-2 overflow-x-auto lg:flex-col">{tabs.map(({ id, label, icon: Icon }) => <Button key={id} variant={tab === id ? "default" : "ghost"} size="sm" onClick={() => setTab(id)} className="justify-start whitespace-nowrap"><Icon className="h-4 w-4" />{label}</Button>)}</nav></aside><main className="min-w-0 flex-1">{content}</main></div></div>;
 }
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-  useEffect(() => { void fetch("/api/admin/analytics", { credentials: "same-origin", cache: "no-store" }).then((response) => setAuthenticated(response.ok)).catch(() => setAuthenticated(false)); }, []);
+  const [initialFunnel, setInitialFunnel] = useState<Funnel | null>(null);
+  useEffect(() => {
+    void fetch("/api/admin/analytics", { credentials: "same-origin", cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (response.ok && data?.success) setInitialFunnel(data.data?.productFunnel || null);
+        setAuthenticated(response.ok);
+      })
+      .catch(() => setAuthenticated(false));
+  }, []);
   if (authenticated === null) return <Loading />;
-  return authenticated ? <Dashboard onLogout={async () => { await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined); setAuthenticated(false); }} /> : <Login onLogin={() => setAuthenticated(true)} />;
+  return authenticated
+    ? <Dashboard initialFunnel={initialFunnel} onLogout={async () => { await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined); setInitialFunnel(null); setAuthenticated(false); }} />
+    : <Login onLogin={() => { setInitialFunnel(null); setAuthenticated(true); }} />;
 }

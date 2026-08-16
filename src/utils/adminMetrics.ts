@@ -44,7 +44,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   const customerUsers = users.filter((user) => !INTERNAL_ACCOUNT_TYPES.has(user.accountType));
   const qualifiedUsers = customerUsers.filter((user) => isQualifiedUser(user));
   const effectiveVerifiedCount = customerUsers.filter((user) => !user.emailVerificationRequiredAt || Boolean(user.emailVerifiedAt)).length;
-  const qualifiedIds = qualifiedUsers.map((user) => user.id);
+  const qualifiedIdSet = new Set(qualifiedUsers.map((user) => user.id));
   const customerIds = customerUsers.map((user) => user.id);
   const eventSince = customerUsers.reduce((earliest, user) => user.createdAt < earliest ? user.createdAt : earliest, ago30d);
   const [clients, projects, invoices, expenses, calendarEvents, importJobs, portfolios, events, productEvents24h, failedEmails24h, queuedEmails] = await Promise.all([
@@ -73,19 +73,24 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   for (const row of portfolios) { if (!portfoliosByUser.has(row.userId)) portfoliosByUser.set(row.userId, []); portfoliosByUser.get(row.userId)!.push(row); }
   for (const row of events) { if (!row.userId) continue; if (!eventsByUser.has(row.userId)) eventsByUser.set(row.userId, []); eventsByUser.get(row.userId)!.push(row); }
 
-  const pathCounts = new Map<string, number>(); const sourceSignup = new Map<string, number>(); const sourceQualified = new Map<string, number>(); const activationPath = new Map<string, number>();
-  const activeWeek = new Set<string>(); const activeMonth = new Set<string>(); const moduleCounts: number[] = []; const activeDaysCounts: number[] = []; let nativeCount = 0; let migrationCount = 0; let portfolioCount = 0; let activated = 0; let deep = 0; let twoActiveDays = 0; let connected = 0; let realDataUsers = 0; let realDataRecords = 0;
-  const retentionDenominatorUsers = qualifiedUsers.filter((user) => user.createdAt <= new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)); let retentionNumerator = 0;
+  const sourceSignup = new Map<string, number>(); const sourceQualified = new Map<string, number>(); const activationPath = new Map<string, number>();
+  const activeWeek = new Set<string>(); const activeMonth = new Set<string>(); const moduleCounts: number[] = []; let nativeCount = 0; let migrationCount = 0; let portfolioCount = 0; let activated = 0; let deep = 0; let twoActiveDays = 0; let connected = 0; let realDataUsers = 0; let realDataRecords = 0;
+  const retentionDenominatorUsers = qualifiedUsers.filter((user) => user.createdAt <= new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000));
+  const retentionDenominatorIdSet = new Set(retentionDenominatorUsers.map((user) => user.id));
+  let retentionNumerator = 0;
 
   for (const user of customerUsers) {
     const source = sourceFrom(user); addToMap(sourceSignup, source);
     const userEvents = eventsByUser.get(user.id) || [];
-    const isQualified = qualifiedIds.includes(user.id);
+    const isQualified = qualifiedIdSet.has(user.id);
     for (const event of userEvents) {
       if (isQualified && isMeaningfulProductEvent(event)) { if (event.occurredAt >= ago7d) activeWeek.add(user.id); if (event.occurredAt >= ago30d) activeMonth.add(user.id); }
-      if (event.eventName === "page_viewed") { const props = isRecord(event.properties) ? event.properties : {}; const path = typeof props.path === "string" ? props.path : "/"; if (path.startsWith("/")) addToMap(pathCounts, path); }
     }
-    if (isQualified && retentionDenominatorUsers.some((candidate) => candidate.id === user.id) && userEvents.some((event) => isMeaningfulProductEvent(event) && event.occurredAt >= new Date(user.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000) && event.occurredAt < new Date(user.createdAt.getTime() + 14 * 24 * 60 * 60 * 1000))) retentionNumerator += 1;
+    if (isQualified && retentionDenominatorIdSet.has(user.id)) {
+      const retentionStart = new Date(user.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const retentionEnd = new Date(user.createdAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+      if (userEvents.some((event) => isMeaningfulProductEvent(event) && event.occurredAt >= retentionStart && event.occurredAt < retentionEnd)) retentionNumerator += 1;
+    }
     if (isQualified) addToMap(sourceQualified, source);
     const userClients = clientsByUser.get(user.id) || []; const userProjects = projectsByUser.get(user.id) || []; const userInvoices = invoicesByUser.get(user.id) || []; const userExpenses = expensesByUser.get(user.id) || []; const userCalendar = calendarByUser.get(user.id) || []; const userImports = importsByUser.get(user.id) || []; const userPortfolios = portfoliosByUser.get(user.id) || [];
     const realRecords = [...userClients, ...userProjects, ...userInvoices, ...userExpenses, ...userCalendar].filter((record) => within(record.createdAt, user.createdAt, 3650));
@@ -108,7 +113,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     if (isActivated) { activated += 1; if (native) { nativeCount += 1; addToMap(activationPath, "native", 1); } if (migration) { migrationCount += 1; addToMap(activationPath, "migration", 1); } if (portfolio) { portfolioCount += 1; addToMap(activationPath, "portfolio", 1); } }
     const meaningful = userEvents.filter((event) => isMeaningfulProductEvent(event) && within(event.occurredAt, user.createdAt, 14));
     const modules = new Set(meaningful.map((event) => event.module || event.eventName)); const activeDays = new Set(meaningful.map((event) => dayKey(event.occurredAt))); const deepProjects = userProjects.filter((project) => within(project.createdAt, user.createdAt, 14)); const connectedWorkflow = deepProjects.some((project) => userInvoices.some((invoice) => within(invoice.createdAt, user.createdAt, 14) && invoice.projectId === project.id) || userExpenses.some((expense) => within(expense.createdAt, user.createdAt, 14) && expense.projectId === project.id) || userCalendar.some((event) => within(event.createdAt, user.createdAt, 14) && event.projectId === project.id));
-    moduleCounts.push(modules.size); activeDaysCounts.push(activeDays.size); if (activeDays.size >= 2) twoActiveDays += 1; if (connectedWorkflow) connected += 1; if (isActivated && modules.size >= 3 && activeDays.size >= 2 && connectedWorkflow) deep += 1;
+    moduleCounts.push(modules.size); if (activeDays.size >= 2) twoActiveDays += 1; if (connectedWorkflow) connected += 1; if (isActivated && modules.size >= 3 && activeDays.size >= 2 && connectedWorkflow) deep += 1;
   }
   const sourceBreakdown = Array.from(new Set([...sourceSignup.keys(), ...sourceQualified.keys()])).map((source) => ({ source, signups: sourceSignup.get(source) || 0, qualified: sourceQualified.get(source) || 0 })).sort((a, b) => b.signups - a.signups);
   const daily: Array<{ day: string; count: number }> = []; for (let i = 13; i >= 0; i -= 1) { const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000); const key = dayKey(date); daily.push({ day: key, count: customerUsers.filter((user) => dayKey(user.createdAt) === key).length }); }
