@@ -108,11 +108,14 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
+  const includeLegacy = new URL(req.url).searchParams.get("includeLegacy") === "true";
   const [legacy, funnelResult] = await Promise.all([
-    withTimeout(readLegacyAnalytics(now), 10_000).catch((error) => {
-      console.warn("Legacy admin analytics timed out:", error instanceof Error ? error.message : error);
-      return emptyLegacyAnalytics(now);
-    }),
+    includeLegacy
+      ? withTimeout(readLegacyAnalytics(now), 10_000).catch((error) => {
+        console.warn("Legacy admin analytics timed out:", error instanceof Error ? error.message : error);
+        return emptyLegacyAnalytics(now);
+      })
+      : Promise.resolve(emptyLegacyAnalytics(now)),
     withTimeout(getAdminMetrics(), 10_000)
       .then((productFunnel) => ({ productFunnel, status: "ready" as const }))
       .catch((error) => {
