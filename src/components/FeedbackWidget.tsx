@@ -11,6 +11,13 @@ type Props = {
   label?: string;
 };
 
+/* `promptKey` is derived from the current path, so this component's effect
+   re-runs every time the visitor moves between dashboard sections. One
+   automatic prompt per page load is the most anyone should meet. The server's
+   cooldown is the durable rule; this only stops a second modal appearing a few
+   seconds after the first was closed. Module scope, so it resets on reload. */
+let promptedThisSession = false;
+
 export default function FeedbackWidget({ promptKey = "workspace_general", module = "workspace", triggerEvent = "workspace_viewed", label = "Share feedback" }: Props) {
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
@@ -20,10 +27,16 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    if (promptedThisSession) return;
     const timer = window.setTimeout(() => {
       void fetch(`/api/feedback/prompt?promptKey=${encodeURIComponent(promptKey)}`, { credentials: "same-origin", cache: "no-store" })
         .then((response) => response.json())
-        .then((data) => { if (data?.success && data.available) setOpen(true); })
+        .then((data) => {
+          if (data?.success && data.available) {
+            promptedThisSession = true;
+            setOpen(true);
+          }
+        })
         .catch(() => undefined);
     }, 4_500);
     return () => window.clearTimeout(timer);
