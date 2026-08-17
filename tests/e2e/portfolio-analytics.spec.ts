@@ -452,6 +452,18 @@ test.describe("portfolio view attribution and analytics", () => {
     await expect(page.getByText("Top projects")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText("Alpha rebuild")).toBeVisible({ timeout: 20_000 });
 
+    // The chart describes itself, carries a scale, and answers a tap with a count.
+    const chart = page.getByRole("img", { name: /Daily views from/i });
+    await expect(chart).toBeVisible({ timeout: 20_000 });
+
+    const bars = page.locator("[data-traffic-bar]");
+    expect(await bars.count()).toBeGreaterThan(0);
+    await expect(page.locator("[data-traffic-tooltip]")).toHaveCount(0);
+    await bars.last().click();
+    const tooltip = page.locator("[data-traffic-tooltip]");
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText(/\d+ views?/);
+
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
@@ -464,5 +476,32 @@ test.describe("portfolio view attribution and analytics", () => {
     // The range control must actually re-query.
     await page.getByRole("button", { name: "7 days" }).click();
     await expect(page.getByText("Last 7 days")).toBeVisible({ timeout: 20_000 });
+  });
+
+  test("a long range stays readable on a phone without the page scrolling sideways", async ({ page, context, request }) => {
+    const { portfolio, slug, token } = await publishedPortfolio("chart-wide");
+
+    await visit(request, `/p/${slug}`, { ip: uniqueIp() });
+    await waitForViews(portfolio.id, 1);
+
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: /Analytics/i }).click();
+
+    // 90 days of bars is far more than fits on a phone; the plot scrolls inside
+    // its own container rather than pushing the page sideways.
+    await page.getByRole("button", { name: "90 days" }).click();
+    await expect(page.getByRole("img", { name: /Daily views from/i })).toBeVisible({ timeout: 20_000 });
+    expect(await page.locator("[data-traffic-bar]").count()).toBeGreaterThan(60);
+
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(
+      dimensions.scrollWidth,
+      `a 90-day chart overflows the page by ${dimensions.scrollWidth - dimensions.clientWidth}px at 390px`,
+    ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
   });
 });

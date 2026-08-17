@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Inbox, Info, RefreshCw, Users } from "lucide-react";
 import { Badge, Button, EmptyState, Skeleton } from "@/components/ui";
+import PortfolioTrafficChart from "@/components/portfolio/PortfolioTrafficChart";
 import {
   PORTFOLIO_ANALYTICS_RANGES,
   type PortfolioAnalyticsPayload,
@@ -27,9 +28,6 @@ const RANGE_LABELS: Record<PortfolioAnalyticsRange, string> = {
 
 const numberFormat = new Intl.NumberFormat();
 
-function formatDay(day: string) {
-  return new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
-}
 
 /** Movement against the previous period, or nothing when there is nothing honest to show. */
 function Movement({ change, suffix = "%", inverse = false }: { change: number | null; suffix?: string; inverse?: boolean }) {
@@ -191,7 +189,6 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
 
   const { totals, changes, projects, timeline, inquiries } = analytics;
   const hasViews = totals.views > 0;
-  const timelineMax = Math.max(...timeline.map((day) => day.views), 1);
   const unconverted = projects.filter((project) => project.unconverted);
 
   return (
@@ -259,7 +256,11 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h3 className="font-bold text-foreground">Traffic over time</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">Daily views across your portfolio and case studies.</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Views per day across your portfolio and case studies.{" "}
+              <span className="hidden sm:inline">Hover a bar for its count.</span>
+              <span className="sm:hidden">Tap a bar for its count.</span>
+            </p>
           </div>
         </div>
         {!hasViews ? (
@@ -269,23 +270,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
             description={published ? "Share your portfolio link to start seeing traffic here." : "Publish your portfolio so visitors can reach it."}
           />
         ) : (
-          <>
-            <div className="flex h-40 items-end gap-px sm:h-48 sm:gap-1" role="img" aria-label={`Daily views: ${numberFormat.format(totals.views)} in total`}>
-              {timeline.map((day) => (
-                <div key={day.day} className="group relative flex h-full min-w-0 flex-1 items-end">
-                  <div
-                    className="w-full rounded-t bg-primary/70 transition group-hover:bg-primary"
-                    style={{ height: `${Math.max((day.views / timelineMax) * 100, day.views ? 4 : 1)}%` }}
-                    title={`${formatDay(day.day)}: ${day.views} view${day.views === 1 ? "" : "s"}`}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 flex justify-between text-[10px] text-muted-foreground">
-              <span>{timeline[0] ? formatDay(timeline[0].day) : ""}</span>
-              <span>{timeline.at(-1) ? formatDay(timeline.at(-1)!.day) : ""}</span>
-            </div>
-          </>
+          <PortfolioTrafficChart points={timeline} totalViews={totals.views} />
         )}
       </section>
 
@@ -302,7 +287,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
             <EmptyState
               icon={<BarChart3 className="h-4 w-4" />}
               title="No case-study views yet"
-              description="Case studies are counted separately from your portfolio page. Link to one directly, or give a project a full write-up to draw readers in."
+              description="A case study is counted only when someone opens its own page, separately from your portfolio. Your own visits are never counted, so opening one while signed in will not appear here — share the link or open it signed out to see this fill in."
             />
           </div>
         ) : (
@@ -359,12 +344,24 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
         />
       </div>
 
-      <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-3 text-[11px] leading-4 text-muted-foreground">
-        <Users className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>
-          <strong className="font-semibold text-foreground">Visitor figures are estimates.</strong> {analytics.estimateNote}
-        </span>
-      </p>
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-3 text-[11px] leading-4 text-muted-foreground">
+        <p className="flex items-start gap-2">
+          <Users className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            <strong className="font-semibold text-foreground">Visitor figures are estimates.</strong> {analytics.estimateNote}
+          </span>
+        </p>
+        {/* Owners kept concluding analytics was broken while testing their own
+            portfolio. It was working; it was declining to count them. */}
+        <p className="flex items-start gap-2">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            <strong className="font-semibold text-foreground">Your own visits are not counted.</strong> Views from this account, from
+            known bots, and from the editor preview are all excluded, so these figures stay a measure of other people&apos;s interest.
+            Repeat views of the same page by one visitor count once within half an hour.
+          </span>
+        </p>
+      </div>
 
       {inquiries.notificationFailures > 0 && (
         <p role="alert" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
