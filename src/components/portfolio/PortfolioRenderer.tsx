@@ -6,6 +6,7 @@ import {
   getVisiblePractices,
   resolveProjectCoverImage,
   resolveProjectPlayableCover,
+  templateEyebrow,
   type PortfolioContent,
   type PortfolioMediaSettings,
   type PortfolioPractice,
@@ -30,7 +31,6 @@ type Props = {
 };
 
 type TemplateProfile = {
-  eyebrow: string;
   workTitle: string;
   servicesTitle: string;
   heroClass: string;
@@ -38,11 +38,17 @@ type TemplateProfile = {
   projectsClass: string;
   visual: boolean;
   numbered: boolean;
+  /** Creator work reads as something to watch, so its card affordance is a play
+   *  triangle rather than an arrow. This used to be decided by comparing the
+   *  eyebrow copy to the string "Creator portfolio" — which meant editing that
+   *  line, as owners now can, would silently swap the icon on every card. */
+  playIcon?: boolean;
 };
 
+/** The hero tagline lives in `PORTFOLIO_TEMPLATES` — it is owner-editable, so it
+ *  belongs with the template's public identity rather than its layout classes. */
 const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
   "minimal-pro": {
-    eyebrow: "Independent practice",
     workTitle: "A considered selection of work.",
     servicesTitle: "How I create value.",
     heroClass: "lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]",
@@ -52,7 +58,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: true,
   },
   "visual-studio": {
-    eyebrow: "Selected visual practice",
     workTitle: "Stories, frames, and finished work.",
     servicesTitle: "Creative capabilities.",
     heroClass: "lg:grid-cols-[minmax(0,0.8fr)_minmax(420px,1.2fr)]",
@@ -62,7 +67,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: false,
   },
   "digital-builder": {
-    eyebrow: "Designing and shipping",
     workTitle: "Products built to perform.",
     servicesTitle: "From idea to shipped outcome.",
     heroClass: "lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]",
@@ -72,7 +76,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: true,
   },
   "expert-profile": {
-    eyebrow: "Independent expertise",
     workTitle: "Experience applied to real outcomes.",
     servicesTitle: "Ways I can support you.",
     heroClass: "lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]",
@@ -82,7 +85,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: false,
   },
   creator: {
-    eyebrow: "Creator portfolio",
     workTitle: "Worth watching, reading, and sharing.",
     servicesTitle: "Ways we can collaborate.",
     heroClass: "lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)]",
@@ -90,9 +92,9 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     projectsClass: "md:grid-cols-2 lg:grid-cols-12",
     visual: true,
     numbered: false,
+    playIcon: true,
   },
   agency: {
-    eyebrow: "Independent studio",
     workTitle: "Partnerships with measurable impact.",
     servicesTitle: "A focused team for ambitious work.",
     heroClass: "lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]",
@@ -290,7 +292,7 @@ function ProjectCard({
             label={projectLinkLabel}
             className="absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-white text-slate-950 shadow-xl transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
-            {profile.eyebrow === "Creator portfolio" ? <Play className="h-4 w-4 fill-current" /> : <ArrowUpRight className="h-4 w-4" />}
+            {profile.playIcon ? <Play className="h-4 w-4 fill-current" /> : <ArrowUpRight className="h-4 w-4" />}
           </ProjectLink>
         )}
       </div>
@@ -400,6 +402,9 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
   const dark = theme.mode === "dark";
   const practices = getVisiblePractices(content);
   const activePractice = activePracticeSlug ? practices.find((practice) => practice.slug === activePracticeSlug) : undefined;
+  /* Practice name first — on a practice page that line is the subject of the
+     page. Then the owner's own tagline, then the template's default. */
+  const heroTagline = activePractice?.name || content.tagline?.trim() || templateEyebrow(templateKey);
   const scopeId = activePractice?.id ?? null;
   const visiblePracticeIds = new Set(practices.map((practice) => practice.id));
   /* With no practices this is the identity filter, so a portfolio that has
@@ -486,7 +491,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           <div className="relative z-10 self-center">
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--portfolio-accent)]">
-                <Sparkles className="h-3.5 w-3.5" /> {activePractice?.name || profile.eyebrow}
+                <Sparkles className="h-3.5 w-3.5" /> {heroTagline}
               </span>
               {content.availability && (
                 <span className="inline-flex items-center gap-2 rounded-full border border-[var(--portfolio-border)] bg-[var(--portfolio-card)] px-3 py-1.5 text-[10px] font-bold text-[var(--portfolio-muted)]">

@@ -118,6 +118,16 @@ export type PortfolioTestimonial = {
 export type PortfolioContent = {
   name: string;
   profileImageUrl: string;
+  /**
+   * The small line above the headline. Blank falls back to the template's own.
+   *
+   * It used to be template-only and unreachable, which meant a `visual-studio`
+   * portfolio announced "SELECTED VISUAL PRACTICE" to its owner with no way to
+   * change it and nothing saying where it came from — and, because Practices is
+   * a real feature here meaning "a discipline you run", it read as a Practices
+   * setting leaking onto the public page. It is not. It is now the owner's line.
+   */
+  tagline: string;
   headline: string;
   bio: string;
   location: string;
@@ -140,18 +150,31 @@ export type PortfolioTheme = {
   radius: "soft" | "sharp";
 };
 
+/**
+ * `eyebrow` is the default for `content.tagline` — the line above the headline.
+ *
+ * None of them say "practice" any more. That word already means something
+ * specific in this product, and two of these defaults were using it in the
+ * generic professional sense on the owner's own public page.
+ */
 export const PORTFOLIO_TEMPLATES = [
-  { key: "minimal-pro", name: "Minimal pro", description: "A crisp, editorial portfolio for any independent professional.", accent: "#2563EB" },
-  { key: "visual-studio", name: "Visual studio", description: "Media-first storytelling for photographers, filmmakers, and designers.", accent: "#DB2777" },
-  { key: "digital-builder", name: "Digital builder", description: "Case-study focused for developers, product designers, and makers.", accent: "#7C3AED" },
-  { key: "expert-profile", name: "Expert profile", description: "Trust-first presentation for consultants, CAs, coaches, and advisors.", accent: "#059669" },
-  { key: "creator", name: "Creator", description: "A bold home for creators, YouTubers, and independent media brands.", accent: "#EA580C" },
-  { key: "agency", name: "Studio / agency", description: "Structured service and case-study pages for small teams.", accent: "#0891B2" },
+  { key: "minimal-pro", name: "Minimal pro", description: "A crisp, editorial portfolio for any independent professional.", accent: "#2563EB", eyebrow: "Independent professional" },
+  { key: "visual-studio", name: "Visual studio", description: "Media-first storytelling for photographers, filmmakers, and designers.", accent: "#DB2777", eyebrow: "Selected visual work" },
+  { key: "digital-builder", name: "Digital builder", description: "Case-study focused for developers, product designers, and makers.", accent: "#7C3AED", eyebrow: "Designing and shipping" },
+  { key: "expert-profile", name: "Expert profile", description: "Trust-first presentation for consultants, CAs, coaches, and advisors.", accent: "#059669", eyebrow: "Independent expertise" },
+  { key: "creator", name: "Creator", description: "A bold home for creators, YouTubers, and independent media brands.", accent: "#EA580C", eyebrow: "Creator portfolio" },
+  { key: "agency", name: "Studio / agency", description: "Structured service and case-study pages for small teams.", accent: "#0891B2", eyebrow: "Independent studio" },
 ] as const;
+
+/** The tagline a portfolio shows when its owner has not written one. */
+export function templateEyebrow(templateKey: string): string {
+  return (PORTFOLIO_TEMPLATES.find((template) => template.key === templateKey) || PORTFOLIO_TEMPLATES[0]).eyebrow;
+}
 
 export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
   name: "",
   profileImageUrl: "",
+  tagline: "",
   headline: "",
   bio: "",
   location: "",
@@ -319,6 +342,7 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
     ...DEFAULT_PORTFOLIO_CONTENT,
     ...input,
     name: clearLegacyStarterCopy(input.name),
+    tagline: text(input.tagline),
     headline: clearLegacyStarterCopy(input.headline),
     bio: clearLegacyStarterCopy(input.bio),
     location: clearLegacyStarterCopy(input.location),
@@ -436,6 +460,7 @@ export function getPublicPortfolioContent(value: unknown): PortfolioContent {
 
 const MAX_INLINE_IMAGE_LENGTH = 7_000_000;
 const MAX_TEXT_LENGTH = 5_000;
+export const MAX_TAGLINE_LENGTH = 80;
 /* HTTPS only. This accepted http:// while every rejection message promised
    HTTPS, and the app's own CSP allows only `https:` for img-src and media-src —
    so an http:// link saved cleanly and then silently failed to load on the
@@ -662,6 +687,10 @@ export function validatePortfolioContent(value: unknown): string | null {
     }
   }
   if (input.contactEmail !== undefined && (typeof input.contactEmail !== "string" || input.contactEmail.length > 320 || (input.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.contactEmail)))) return "Enter a valid contact email.";
+  /* A short, uppercased, letter-spaced line in the hero. Capped tightly because
+     the constraint here is the layout, not storage — a paragraph in this slot
+     wraps over the headline on every template. */
+  if (input.tagline !== undefined && (typeof input.tagline !== "string" || input.tagline.length > MAX_TAGLINE_LENGTH)) return `Keep the tagline under ${MAX_TAGLINE_LENGTH} characters.`;
   return null;
 }
 

@@ -200,14 +200,41 @@ test.describe("portfolio studio", () => {
 
     /* Desktop is the case that broke, and the one whose height depends on the
        scale: it renders at 1440px and is scaled into a 416px column. */
+    const inlineWidth = (await page.locator('iframe[title$="portfolio preview"]').boundingBox())?.width ?? 0;
     await page.getByRole("button", { name: "Desktop preview" }).click();
     await expectPreviewHasRoom(page);
+
+    /* Desktop in a 416px column renders at 27%, which is honest and unreadable,
+       so choosing it promotes the preview to the overlay instead of shrinking
+       it into the pane. */
+    const overlay = page.getByRole("dialog", { name: /full-screen portfolio preview/i });
+    await expect(overlay).toBeVisible();
+    await expect(page.locator('iframe[title$="portfolio preview"]'), "the overlay must move the frame, not add one").toHaveCount(1);
+
+    const inspectWidth = (await page.locator('iframe[title$="portfolio preview"]').boundingBox())?.width ?? 0;
+    expect(inspectWidth, "desktop in the overlay must be materially bigger than desktop in the pane").toBeGreaterThan(inlineWidth * 1.5);
+
+    // Dismissable by keyboard alone, with focus handed back to what opened it.
+    await page.keyboard.press("Escape");
+    await expect(overlay).toBeHidden();
+    await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
+
+    // Mobile is the ambient mode and stays inline — no overlay, no interruption.
+    await page.getByRole("button", { name: "Mobile preview" }).click();
+    await expect(overlay).toBeHidden();
+    await expectPreviewHasRoom(page);
+
+    // And the overlay is reachable deliberately, not only as a side effect.
+    await page.locator("[data-portfolio-preview-inspect]").click();
+    await expect(overlay).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(overlay).toBeHidden();
 
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
     }));
-    expect(dimensions.scrollWidth, "the two-pane studio must not scroll the page sideways").toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    expect(dimensions.scrollWidth, "the two-pane studio must not scroll the page sideways, including after the overlay closes").toBeLessThanOrEqual(dimensions.clientWidth + 1);
   });
 
   test("playback settings stay hidden until a project has media", async ({ page, context }) => {

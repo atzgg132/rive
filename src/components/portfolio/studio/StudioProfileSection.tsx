@@ -2,7 +2,7 @@
 
 import { Button, Input, Textarea } from "@/components/ui";
 import { Upload } from "lucide-react";
-import type { PortfolioContent } from "@/utils/portfolio";
+import { MAX_TAGLINE_LENGTH, templateEyebrow, type PortfolioContent } from "@/utils/portfolio";
 import { inputClass, labelClass, sectionClass } from "@/components/portfolio/studio/studioStyles";
 
 /* Validated portfolio uploads and remote image hosts cannot use a static Next image allowlist. */
@@ -11,6 +11,7 @@ import { inputClass, labelClass, sectionClass } from "@/components/portfolio/stu
 type Props = {
   content: PortfolioContent;
   slug: string;
+  templateKey: string;
   saving: boolean;
   onUpdateContent: (update: Partial<PortfolioContent>) => void;
   onUpdateSlug: (value: string) => void;
@@ -21,6 +22,7 @@ type Props = {
 export default function StudioProfileSection({
   content,
   slug,
+  templateKey,
   saving,
   onUpdateContent,
   onUpdateSlug,
@@ -52,6 +54,14 @@ export default function StudioProfileSection({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-2"><span className={labelClass}>Display name</span><Input className={inputClass} value={content.name || ""} placeholder="Your name" onChange={(event) => onUpdateContent({ name: event.target.value })} /></label>
         <label className="flex flex-col gap-2"><span className={labelClass}>Public URL</span><div className="flex items-center"><span className="rounded-l-xl border border-r-0 border-border bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800">/p/</span><Input className={`${inputClass} rounded-l-none`} value={slug} placeholder="your-name" onChange={(event) => onUpdateSlug(event.target.value)} /></div></label>
+        {/* Above the headline here because it is above the headline there. The
+            placeholder is the template's own line, so the field explains where
+            that text on the live site is coming from just by existing. */}
+        <label className="flex flex-col gap-2 sm:col-span-2">
+          <span className={labelClass}>Tagline <span className="font-normal normal-case tracking-normal text-slate-400">the small line above your headline</span></span>
+          <Input className={inputClass} value={content.tagline || ""} maxLength={MAX_TAGLINE_LENGTH} placeholder={templateEyebrow(templateKey)} onChange={(event) => onUpdateContent({ tagline: event.target.value })} />
+          <span className="text-[11px] leading-4 text-slate-500 dark:text-slate-400">Leave it blank to use your template&apos;s wording — currently &ldquo;{templateEyebrow(templateKey)}&rdquo;.</span>
+        </label>
         <label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>Headline</span><Input className={inputClass} value={content.headline || ""} placeholder="e.g. product designer and developer building clear, useful products" onChange={(event) => onUpdateContent({ headline: event.target.value })} /></label>
         <label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>About</span><Textarea rows={4} className={inputClass} value={content.bio || ""} placeholder="Tell people what you do, who you help, and what makes your work different." onChange={(event) => onUpdateContent({ bio: event.target.value })} /></label>
         <label className="flex flex-col gap-2"><span className={labelClass}>Location</span><Input className={inputClass} value={content.location || ""} placeholder="e.g. Bengaluru, India · working worldwide" onChange={(event) => onUpdateContent({ location: event.target.value })} /></label>

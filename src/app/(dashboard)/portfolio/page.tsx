@@ -209,6 +209,7 @@ export default function PortfolioDashboardPage() {
             <StudioProfileSection
               content={content}
               slug={slug}
+              templateKey={templateKey}
               saving={saving}
               onUpdateContent={updateContent}
               onUpdateSlug={updateSlug}
@@ -261,6 +262,7 @@ export default function PortfolioDashboardPage() {
               device={previewDevice}
               onDeviceChange={setPreviewDevice}
               frameClassName="h-[calc(100vh-12rem)]"
+              liveSiteUrl={savedPublicUrl}
             />
           </div>
         </aside>
