@@ -77,6 +77,25 @@ function studioContent() {
   };
 }
 
+/**
+ * A preview that exists but has no room is not a preview.
+ *
+ * The pane height rides on `frameClassName`. When the frame became absolutely
+ * positioned, the container's `flex-1` — `flex: 1 1 0%` — beat that height for
+ * the item's main size in an auto-height column, and the whole preview
+ * collapsed to a 20px strip. Every existing assertion still passed: the iframe
+ * was present, correctly titled, and exactly one of it. Only its size was a lie.
+ */
+async function expectPreviewHasRoom(page: import("@playwright/test").Page) {
+  const box = await page.locator('iframe[title$="portfolio preview"]').boundingBox();
+  expect(box, "the preview frame must be laid out, not display:none").not.toBeNull();
+  expect(
+    box?.height ?? 0,
+    `the live preview rendered ${Math.round(box?.height ?? 0)}px tall — it has collapsed`,
+  ).toBeGreaterThan(300);
+  expect(box?.width ?? 0).toBeGreaterThan(200);
+}
+
 async function studioUser(label: string) {
   const user = await db.prisma.user.create({
     data: {
@@ -164,6 +183,8 @@ test.describe("portfolio studio", () => {
     await page.getByRole("button", { name: "Mobile preview" }).click();
     await expect(page.locator('iframe[title="mobile portfolio preview"]')).toHaveCount(1);
     await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
+
+    await expectPreviewHasRoom(page);
   });
 
   test("side-by-side preview appears on a wide screen, and only there", async ({ page, context }) => {
@@ -175,6 +196,12 @@ test.describe("portfolio studio", () => {
     // Editing and seeing are on screen together, with a single frame.
     await expect(page.getByText("Live preview")).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
+    await expectPreviewHasRoom(page);
+
+    /* Desktop is the case that broke, and the one whose height depends on the
+       scale: it renders at 1440px and is scaled into a 416px column. */
+    await page.getByRole("button", { name: "Desktop preview" }).click();
+    await expectPreviewHasRoom(page);
 
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,

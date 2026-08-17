@@ -22,6 +22,16 @@ import type { PortfolioContent, PortfolioTheme } from "@/utils/portfolio";
  * Each device now renders at its true width and is scaled down to fit. Media
  * queries inside the frame fire against a real 1440px viewport, and what you
  * see is the desktop layout, just smaller.
+ *
+ * The height is load-bearing and was briefly wrong. `frameClassName` carries the
+ * pane height (`h-[calc(100vh-12rem)]`), and it used to sit on the iframe, which
+ * was an in-flow child and so gave the column its size. Moving the frame to
+ * `position: absolute` removed the only in-flow content, at which point
+ * `flex-1` — `flex: 1 1 0%` — beat the height property for the item's main size
+ * in a column whose own height is auto. Base size zero, no free space to grow
+ * into, and the preview collapsed to a 20px strip. So: no `flex-1` here. The
+ * height class is the definite height, and the frame takes `100 / scale`
+ * percent of it so it re-fits on any resize without waiting for a measurement.
  */
 
 export type PreviewDevice = "desktop" | "tablet" | "mobile";
@@ -66,7 +76,7 @@ export default function PortfolioLivePreview({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(false);
-  const [shell, setShell] = useState({ width: 0, height: 0 });
+  const [shellWidth, setShellWidth] = useState(0);
 
   const post = useCallback(() => {
     frameRef.current?.contentWindow?.postMessage(
@@ -84,12 +94,12 @@ export default function PortfolioLivePreview({
     return () => window.clearTimeout(timer);
   }, [post, device]);
 
-  // The scale depends on how much room the pane actually has, which changes
-  // with the window, the tab, and the side pane appearing.
+  /* Only the width is measured. The height comes from CSS below, so a resized
+     window re-fits the frame during layout rather than a frame later. */
   useEffect(() => {
     const element = shellRef.current;
     if (!element) return;
-    const measure = () => setShell({ width: element.clientWidth, height: element.clientHeight });
+    const measure = () => setShellWidth(element.clientWidth);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -99,7 +109,7 @@ export default function PortfolioLivePreview({
   const deviceWidth = DEVICE_WIDTH[device];
   // Never scale up: a 390px phone in a 900px pane should stay life-sized rather
   // than becoming a blurry billboard.
-  const scale = shell.width > 0 ? Math.min(1, shell.width / deviceWidth) : 1;
+  const scale = shellWidth > 0 ? Math.min(1, shellWidth / deviceWidth) : 1;
   const scaledWidth = deviceWidth * scale;
   const percent = Math.round(scale * 100);
 
@@ -132,17 +142,19 @@ export default function PortfolioLivePreview({
         </div>
       )}
 
-      <div className={`min-h-0 flex-1 overflow-hidden rounded-2xl border border-border bg-muted/40 p-2 sm:p-3 ${frameClassName}`}>
+      <div data-portfolio-preview-pane className={`overflow-hidden rounded-2xl border border-border bg-muted/40 p-2 sm:p-3 ${frameClassName}`}>
         <div ref={shellRef} className="relative h-full w-full overflow-hidden">
           <div
             className={`absolute top-0 origin-top-left overflow-hidden bg-white shadow-xl dark:bg-slate-900 ${FRAME_RADIUS[device]}`}
             style={{
               width: `${deviceWidth}px`,
-              // Divided by the scale so the frame still fills the pane once
-              // shrunk — a scaled-down desktop shows more page, not a letterbox.
-              height: shell.height > 0 ? `${shell.height / scale}px` : "100%",
+              /* Divided by the scale so the frame still fills the pane once
+                 shrunk — a scaled-down desktop shows more page, not a letterbox.
+                 A percentage rather than measured pixels, so it stays correct
+                 between a resize and the observer firing. */
+              height: `${100 / scale}%`,
               transform: `scale(${scale})`,
-              left: `${Math.max(0, (shell.width - scaledWidth) / 2)}px`,
+              left: `${Math.max(0, (shellWidth - scaledWidth) / 2)}px`,
             }}
           >
             <iframe
