@@ -64,7 +64,7 @@ export default function PortfolioDashboardPage() {
   const [tab, setTab] = useState<"edit" | "preview" | "analytics" | "inquiries">("edit");
   const [unreadInquiries, setUnreadInquiries] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
+  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("mobile");
   /* Tracked in JS rather than hidden with CSS: a `hidden` pane still mounts its
      iframe, which would put two previews in the DOM, load /portfolio-preview
      twice on every visit, and make any selector matching the frame ambiguous. */

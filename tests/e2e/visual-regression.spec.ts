@@ -364,7 +364,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
     expect(editorMetrics.shellHeight).toBeLessThan(680);
 
     await page.getByRole("button", { name: "Preview", exact: true }).click();
-    const previewMetrics = await page.locator('iframe[title="desktop portfolio preview"]').evaluate((frame) => ({
+    const previewMetrics = await page.locator('iframe[title$="portfolio preview"]').evaluate((frame) => ({
       height: frame.getBoundingClientRect().height,
       minHeight: getComputedStyle(frame).minHeight,
     }));
