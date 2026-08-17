@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowUpRight, Check, Clock3, Mail, UserRound } from "lucide-react";
 import type { CSSProperties } from "react";
-import type { PortfolioContent, PortfolioProject, PortfolioTheme } from "@/utils/portfolio";
+import { resolveProjectCoverImage, type PortfolioContent, type PortfolioProject, type PortfolioTheme } from "@/utils/portfolio";
 import PortfolioMediaBlock, { PortfolioMediaGallery } from "@/components/portfolio/media/PortfolioMediaBlock";
 
 /* Portfolio owners can supply validated data URLs and arbitrary HTTPS image hosts. */
@@ -25,6 +25,7 @@ function safeExternalUrl(value: string): string | null {
 export default function PortfolioCaseStudy({ content, project, portfolioSlug, theme }: Props) {
   const dark = theme.mode === "dark";
   const projectUrl = safeExternalUrl(project.url);
+  const coverImage = resolveProjectCoverImage(project);
   const allMedia = (project.media || []).filter((item) => item.url);
   // Documents get their own section so a PDF viewer never lands mid-gallery.
   const media = allMedia.filter((item) => item.kind !== "document");
@@ -100,8 +101,10 @@ export default function PortfolioCaseStudy({ content, project, portfolioSlug, th
 
         <section className="mx-auto max-w-7xl px-5 sm:px-10 lg:px-14">
           <div className="relative min-h-72 overflow-hidden rounded-[var(--case-radius-large)] bg-[var(--case-soft)] sm:min-h-[520px]">
-            {project.imageUrl ? (
-              <img src={project.imageUrl} alt={`${project.title} cover`} className="absolute inset-0 h-full w-full object-cover" />
+            {/* A poster frame counts here: this slot is a plain image, so a
+                still lifted from a video still beats a placeholder numeral. */}
+            {coverImage ? (
+              <img src={coverImage} alt={`${project.title} cover`} className="absolute inset-0 h-full w-full object-cover" />
             ) : (
               <div className="absolute inset-0 grid place-items-center">
                 <span className="text-8xl font-black tracking-[-0.08em] text-[var(--case-border)] sm:text-9xl">01</span>

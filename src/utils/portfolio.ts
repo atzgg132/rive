@@ -369,6 +369,54 @@ export function belongsToPractice(item: { practiceId?: string }, practiceId: str
   return practiceId === null || item.practiceId === practiceId;
 }
 
+/**
+ * The best still image a project can offer, most deliberate choice first.
+ *
+ * "Cover" used to mean literally `imageUrl`, so a project that had photos in
+ * its media but no explicit cover was treated as having no image at all — the
+ * card reached past the photos for a video or embed, and the case study fell
+ * back to a placeholder numeral. An embed is the worst possible cover: it is a
+ * third-party iframe that cannot be cropped and usually arrives wearing someone
+ * else's play button and branding.
+ *
+ * Order: the cover the owner set, then a photo they uploaded, then a poster
+ * frame captured from a video. Managed media URLs are already stored as
+ * servable paths, so every one of these can go straight into an `img` tag.
+ *
+ * `allowPosterFrame` exists for the card, which prefers to mount the player
+ * itself over showing that player's poster as a flat image.
+ */
+export function resolveProjectCoverImage(
+  project: Pick<PortfolioProject, "imageUrl" | "media">,
+  options: { allowPosterFrame?: boolean } = {},
+): string {
+  const explicit = project.imageUrl?.trim();
+  if (explicit) return explicit;
+
+  const media = (project.media || []).filter((item) => item?.url?.trim());
+  const photo = media.find((item) => item.kind === "image");
+  if (photo) return photo.url.trim();
+
+  if (options.allowPosterFrame === false) return "";
+  const posterFrame = media.find(
+    (item) => (item.kind === "video" || item.kind === "embed") && item.posterUrl?.trim(),
+  );
+  return posterFrame?.posterUrl?.trim() || "";
+}
+
+/**
+ * The media item a card should mount a player for, once it is established that
+ * no still cover exists. Native video is preferred over an embed: it is ours to
+ * size and mute, where an embed is an iframe that behaves however its provider
+ * decides to.
+ */
+export function resolveProjectPlayableCover(
+  project: Pick<PortfolioProject, "media">,
+): PortfolioMedia | undefined {
+  const media = (project.media || []).filter((item) => item?.url?.trim());
+  return media.find((item) => item.kind === "video") || media.find((item) => item.kind === "embed");
+}
+
 /** Return only content that is intentionally visible on a published portfolio. */
 export function getPublicPortfolioContent(value: unknown): PortfolioContent {
   const content = mergePortfolioContent(value);

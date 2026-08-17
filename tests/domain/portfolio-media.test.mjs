@@ -6,6 +6,8 @@ import {
   DEFAULT_PORTFOLIO_CONTENT,
   getPublicPortfolioContent,
   mergePortfolioContent,
+  resolveProjectCoverImage,
+  resolveProjectPlayableCover,
   validatePortfolioContent,
   validatePortfolioForPublish,
 } from "../../src/utils/portfolio.ts";
@@ -423,4 +425,69 @@ test("every ambient and player source still resolves to its original provider", 
       assert.equal(rebuilt?.providerId, parsed.providerId, `${mode} id drifted for ${input}`);
     }
   }
+});
+
+/* --------------------------------------------------------------------- */
+/* Project cover resolution                                              */
+/* --------------------------------------------------------------------- */
+
+const photo = { id: "m-photo", kind: "image", url: "/api/public/assets/portfolio/a/b.jpg", alt: "", caption: "" };
+const embed = { id: "m-embed", kind: "embed", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", alt: "", caption: "" };
+const video = { id: "m-video", kind: "video", url: "/api/public/assets/portfolio/a/c.mp4", alt: "", caption: "" };
+
+test("an explicit cover always wins, whatever the media contains", () => {
+  const withCover = project({ imageUrl: "https://cdn.example.com/cover.jpg", media: [embed, photo, video] });
+  assert.equal(resolveProjectCoverImage(withCover), "https://cdn.example.com/cover.jpg");
+  assert.equal(resolveProjectCoverImage(withCover, { allowPosterFrame: false }), "https://cdn.example.com/cover.jpg");
+});
+
+test("a photo in the media beats an embed or a video for the cover", () => {
+  // The reported bug: with no explicit cover, an embed listed before the photo
+  // was taken as the cover, so a third-party iframe stood in for the project.
+  assert.equal(resolveProjectCoverImage(project({ media: [embed, photo] })), photo.url);
+  assert.equal(resolveProjectCoverImage(project({ media: [video, photo] })), photo.url);
+  assert.equal(resolveProjectCoverImage(project({ media: [embed, video, photo] })), photo.url);
+});
+
+test("media order does not decide the cover when a photo exists anywhere", () => {
+  for (const media of [[photo, embed], [embed, photo], [video, embed, photo], [photo, video, embed]]) {
+    assert.equal(resolveProjectCoverImage(project({ media })), photo.url, JSON.stringify(media.map((m) => m.kind)));
+  }
+});
+
+test("a poster frame is used only where a still is genuinely needed", () => {
+  const posterVideo = { ...video, posterUrl: "/api/public/assets/portfolio/a/poster.jpg" };
+  const posterEmbed = { ...embed, posterUrl: "https://img.youtube.com/vi/x/hq.jpg" };
+
+  // Image slots take the poster rather than showing a placeholder.
+  assert.equal(resolveProjectCoverImage(project({ media: [posterVideo] })), posterVideo.posterUrl);
+  assert.equal(resolveProjectCoverImage(project({ media: [posterEmbed] })), posterEmbed.posterUrl);
+
+  // The card declines it, because it would rather mount the player itself.
+  assert.equal(resolveProjectCoverImage(project({ media: [posterVideo] }), { allowPosterFrame: false }), "");
+
+  // A real photo still outranks a poster frame.
+  assert.equal(resolveProjectCoverImage(project({ media: [posterVideo, photo] })), photo.url);
+});
+
+test("a project with nothing to show reports no cover", () => {
+  assert.equal(resolveProjectCoverImage(project()), "");
+  assert.equal(resolveProjectCoverImage(project({ media: [] })), "");
+  assert.equal(resolveProjectCoverImage(project({ imageUrl: "   " })), "");
+  assert.equal(resolveProjectCoverImage(project({ media: [{ ...photo, url: "" }] })), "");
+  assert.equal(resolveProjectCoverImage(project({ media: [{ id: "d", kind: "document", url: "/a/b.pdf", alt: "", caption: "" }] })), "");
+});
+
+test("the card falls back to a player only when there is no still, preferring native video", () => {
+  assert.equal(resolveProjectPlayableCover(project({ media: [embed, video] }))?.id, video.id);
+  assert.equal(resolveProjectPlayableCover(project({ media: [embed] }))?.id, embed.id);
+  assert.equal(resolveProjectPlayableCover(project({ media: [photo] })), undefined);
+  assert.equal(resolveProjectPlayableCover(project()), undefined);
+});
+
+test("cover resolution never reaches for audio or documents", () => {
+  const audio = { id: "m-audio", kind: "audio", url: "/api/public/assets/portfolio/a/d.mp3", alt: "", caption: "" };
+  const doc = { id: "m-doc", kind: "document", url: "/api/public/assets/portfolio/a/e.pdf", alt: "", caption: "" };
+  assert.equal(resolveProjectCoverImage(project({ media: [audio, doc] })), "");
+  assert.equal(resolveProjectPlayableCover(project({ media: [audio, doc] })), undefined);
 });

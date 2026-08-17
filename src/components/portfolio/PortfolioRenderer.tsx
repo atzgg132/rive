@@ -4,6 +4,8 @@ import Link from "next/link";
 import {
   belongsToPractice,
   getVisiblePractices,
+  resolveProjectCoverImage,
+  resolveProjectPlayableCover,
   type PortfolioContent,
   type PortfolioMediaSettings,
   type PortfolioPractice,
@@ -213,12 +215,16 @@ function ProjectCard({
 }) {
   const projectUrl = safeExternalUrl(project.url);
   const projectMedia = (project.media || []).filter((item) => item.url);
-  /* One representative player earns the cover slot; the rest live on the case
-     study so the grid does not turn into a wall of media. A cover image the
-     owner set explicitly still wins, since that is a deliberate choice. */
-  const playableCover = project.imageUrl
-    ? undefined
-    : projectMedia.find((item) => item.kind === "video" || item.kind === "embed");
+  /* A still wins the cover slot whenever the project has one — the owner's own
+     cover first, then a photo from its media. Only when there is no photo at
+     all does one representative player earn the slot; the rest live on the case
+     study so the grid does not turn into a wall of media.
+
+     Poster frames are excluded here: if the only still belongs to a video, the
+     player is the better cover, because it shows that same frame and can be
+     played. */
+  const coverImage = resolveProjectCoverImage(project, { allowPosterFrame: false });
+  const playableCover = coverImage ? undefined : resolveProjectPlayableCover(project);
   const cardAudio = projectMedia.find((item) => item.kind === "audio");
   /* Captions and lightboxes belong on the case study, not on a summary card. */
   const cardMediaSettings: PortfolioMediaSettings = { ...mediaSettings, showCaptions: false, lightbox: false };
@@ -238,11 +244,11 @@ function ProjectCard({
       <div className={`relative overflow-hidden ${isFeature ? "aspect-[4/3] sm:aspect-[16/10]" : "aspect-[16/10]"}`}>
         {playableCover ? (
           <PortfolioMediaBlock media={playableCover} settings={cardMediaSettings} fill />
-        ) : project.imageUrl ? (
+        ) : coverImage ? (
           projectHref ? (
             <ProjectLink href={projectHref} external={projectHrefIsExternal} label={projectLinkLabel} className="block h-full w-full">
               <img
-                src={project.imageUrl}
+                src={coverImage}
                 alt=""
                 loading="lazy"
                 decoding="async"
@@ -251,7 +257,7 @@ function ProjectCard({
             </ProjectLink>
           ) : (
             <img
-              src={project.imageUrl}
+              src={coverImage}
               alt=""
               loading="lazy"
               decoding="async"
@@ -409,7 +415,11 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
   const publicProjects = content.projects.filter((project) => project.visibility !== "private" && inScope(project));
   const publicTestimonials = content.testimonials.filter((testimonial) => testimonial.visibility !== "private" && inScope(testimonial));
   const publicServices = content.services.filter(inScope);
-  const featuredProject = publicProjects.find((project) => project.imageUrl) || publicProjects[0];
+  /* Any project with a usable still can headline, not only one with an explicit
+     cover — otherwise a portfolio whose work lives entirely in project media
+     showed the placeholder while holding perfectly good photographs. */
+  const featuredProject = publicProjects.find((project) => resolveProjectCoverImage(project)) || publicProjects[0];
+  const featuredCoverImage = featuredProject ? resolveProjectCoverImage(featuredProject) : "";
   const visible = (key: PortfolioContent["sections"][number]["key"]) =>
     content.sections.find((section) => section.key === key)?.visible ?? true;
   const contactHref = content.contactEmail ? `mailto:${content.contactEmail}` : null;
@@ -521,9 +531,9 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           <div className="relative min-h-72 self-stretch sm:min-h-96">
             <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-[var(--portfolio-radius-large)] border border-[var(--portfolio-border)] sm:translate-x-5 sm:translate-y-5" />
             <div className="relative h-full min-h-72 overflow-hidden rounded-[var(--portfolio-radius-large)] bg-[var(--portfolio-soft)] sm:min-h-96">
-              {featuredProject?.imageUrl ? (
+              {featuredProject && featuredCoverImage ? (
                 <>
-                  <img src={featuredProject.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={featuredCoverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">Featured work</p>
