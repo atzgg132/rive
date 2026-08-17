@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { useSyncExternalStore } from "react";
+import { ArrowRight, Check, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import type { PortfolioContent } from "@/utils/portfolio";
 
@@ -89,6 +90,52 @@ export function getPortfolioSteps(
   ];
 }
 
+/* Dismissal is keyed by what the list currently says, not by a flag. Put the
+   congratulations away and it stays away for the session — but the moment the
+   advice changes, because a new project needs a cover or the portfolio went back
+   to draft, the key no longer matches and the card returns. Session storage, so
+   a later visit starts clean: this is "not now", not "never again". */
+const DISMISS_KEY = "rive:portfolio-worklist-dismissed";
+
+/* Session storage read through `useSyncExternalStore` rather than an effect.
+   The server has no storage, so the first paint must assume nothing is
+   dismissed; this is the one hook that hydrates from an outside source without
+   a setState-in-effect cascade, and it re-renders every mounted card when one
+   of them is dismissed. */
+let dismissedCache: string | null = null;
+let hydrated = false;
+const listeners = new Set<() => void>();
+
+function getDismissedSnapshot(): string | null {
+  if (!hydrated) {
+    hydrated = true;
+    try {
+      dismissedCache = window.sessionStorage.getItem(DISMISS_KEY);
+    } catch {
+      dismissedCache = null;
+    }
+  }
+  return dismissedCache;
+}
+
+function subscribeToDismissed(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function rememberDismissed(signature: string) {
+  dismissedCache = signature;
+  hydrated = true;
+  try {
+    window.sessionStorage.setItem(DISMISS_KEY, signature);
+  } catch {
+    /* Private mode or a full quota: the card still closes for this render. */
+  }
+  for (const listener of listeners) listener();
+}
+
 export default function PortfolioNextSteps({
   steps,
   onGoTo,
@@ -100,17 +147,36 @@ export default function PortfolioNextSteps({
   const essentials = outstanding.filter((step) => step.essential);
   const optional = outstanding.filter((step) => !step.essential);
   const done = steps.length - outstanding.length;
+  const signature = outstanding.length === 0 ? "complete" : outstanding.map((step) => step.id).join(",");
+
+  const dismissedSignature = useSyncExternalStore(subscribeToDismissed, getDismissedSnapshot, () => null);
+
+  if (dismissedSignature === signature) return null;
+
+  const dismissButton = (
+    <Button
+      type="button"
+      onClick={() => rememberDismissed(signature)}
+      aria-label="Hide this for now"
+      title="Hide this for now"
+      data-portfolio-worklist-dismiss
+      className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-muted-foreground transition hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
+    >
+      <X className="h-3.5 w-3.5" />
+    </Button>
+  );
 
   if (outstanding.length === 0) {
     return (
       <section className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/25">
         <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Your portfolio has everything it needs.</p>
           <p className="mt-0.5 text-xs leading-5 text-emerald-800/80 dark:text-emerald-200/80">
             Keep it current as new work lands — that matters more than anything left on a checklist.
           </p>
         </div>
+        {dismissButton}
       </section>
     );
   }
@@ -126,10 +192,13 @@ export default function PortfolioNextSteps({
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           {essentials.length ? "Next up" : "Worth doing"}
         </p>
-        <p className="text-[11px] text-muted-foreground">
-          {done} of {steps.length} done
-          {essentials.length === 0 && " · essentials complete"}
-        </p>
+        <div className="flex items-center gap-1">
+          <p className="text-[11px] text-muted-foreground">
+            {done} of {steps.length} done
+            {essentials.length === 0 && " · essentials complete"}
+          </p>
+          {dismissButton}
+        </div>
       </div>
 
       <ul className="mt-3 flex flex-col gap-2">
