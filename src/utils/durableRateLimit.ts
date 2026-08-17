@@ -88,6 +88,31 @@ export async function durableRateLimit(key: string, limit: number, windowMs: num
   return (await durableRateLimitResult(key, limit, windowMs)).allowed;
 }
 
+/**
+ * Reads a window without opening or advancing one.
+ *
+ * A UI that only discovers a limit by tripping it makes the person do the work
+ * twice — type the note, send it, and only then be told to come back tomorrow.
+ * This answers "would the next attempt be refused, and for how long" so a
+ * surface can say that up front. It must never write: calling the limiter to
+ * find out whether you are limited would consume the very allowance it reports.
+ */
+export async function peekDurableRateLimit(
+  key: string,
+  limit: number,
+): Promise<{ active: boolean; resetAt: Date | null; retryAfterSeconds: number | null }> {
+  const bucket = await prisma.rateLimitBucket.findUnique({ where: { key }, select: { count: true, resetAt: true } });
+  // An expired window is the same as no window: the next request opens a fresh one.
+  if (!bucket || bucket.resetAt.getTime() <= Date.now() || bucket.count < limit) {
+    return { active: false, resetAt: null, retryAfterSeconds: null };
+  }
+  return {
+    active: true,
+    resetAt: bucket.resetAt,
+    retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt.getTime() - Date.now()) / 1000)),
+  };
+}
+
 // Operational cleanup of expired counter rows. Scoped to rate_limit_buckets
 // only — it never touches business data. Called from the maintenance cron so
 // the table stays bounded without a per-request delete.
