@@ -667,7 +667,7 @@ async function seed(user) {
       },
     });
 
-    const referrers = ["https://www.google.com", "https://www.linkedin.com", "https://www.rive.work", null];
+    const referrers = ["https://www.google.com", "https://www.linkedin.com", null];
     const devices = ["desktop", "mobile", "desktop", "tablet", "mobile"];
     await transaction.portfolioView.createMany({
       data: Array.from({ length: 96 }, (_, index) => ({

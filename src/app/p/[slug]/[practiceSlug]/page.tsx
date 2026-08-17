@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { prisma } from "@/utils/db";
 import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
+import { normalizePortfolioReferrer } from "@/utils/portfolioAnalytics";
 import {
   DEFAULT_PORTFOLIO_THEME,
   getVisiblePractices,
@@ -56,7 +57,7 @@ export default async function PortfolioPracticePage({ params }: Props) {
   const userAgent = requestHeaders.get("user-agent") || "";
   const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
   const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-  const referrer = requestHeaders.get("referer")?.slice(0, 500) || null;
+  const referrer = normalizePortfolioReferrer(requestHeaders.get("referer"));
   const deviceType = /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop";
   after(async () => {
     await prisma.portfolioView.create({

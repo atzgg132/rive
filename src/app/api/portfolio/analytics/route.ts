@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { normalizePortfolioReferrer } from "@/utils/portfolioAnalytics";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
     const referrers = new Map<string, number>();
     const devices = new Map<string, number>();
     views.forEach((view) => {
-      const referrer = view.referrer || "direct";
+      const referrer = normalizePortfolioReferrer(view.referrer) || "direct";
       referrers.set(referrer, (referrers.get(referrer) || 0) + 1);
       const device = view.deviceType || "unknown";
       devices.set(device, (devices.get(device) || 0) + 1);

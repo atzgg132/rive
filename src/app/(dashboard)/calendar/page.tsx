@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, Switch, Textarea, Select } from "@/components/ui";
 
 import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -710,7 +710,7 @@ export default function CalendarPage() {
         <Portal><ModalShell title={editingId ? "edit calendar event" : "new calendar event"} onClose={() => setCreateOpen(false)}>
           <form onSubmit={createEvent} className="space-y-4">
             <label className="block"><span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">Event title</span><Input autoFocus required value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} placeholder="Client call, focused work, review…" className={inputClass} /></label>
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 dark:border-slate-700"><div><p className="text-xs font-bold text-slate-700 dark:text-slate-200">All-day event</p><p className="text-[9px] text-slate-400">Deadlines and date markers</p></div><Button type="button" onClick={() => setDraftAllDay(!draftAllDay)} className={`h-6 w-11 rounded-full p-0.5 ${draftAllDay ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-700"}`}><span className={`block h-5 w-5 rounded-full bg-white transition-transform ${draftAllDay ? "translate-x-5" : ""}`} /></Button></div>
+            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 text-card-foreground transition-colors hover:bg-muted/35"><span><span className="block text-xs font-bold text-slate-700 dark:text-slate-200">All-day event</span><span className="mt-0.5 block text-[9px] text-slate-400">Deadlines and date markers</span></span><Switch aria-label="All-day event" checked={draftAllDay} onCheckedChange={setDraftAllDay} /></label>
             <div className={`grid gap-3 ${draftAllDay ? "" : "sm:grid-cols-3"}`}>
               <label><span className="mb-1.5 block text-[10px] font-bold text-slate-500">Date</span><Input type="date" required value={draftDate} onChange={(event) => setDraftDate(event.target.value)} className={inputClass} /></label>
               {!draftAllDay && <><label><span className="mb-1.5 block text-[10px] font-bold text-slate-500">Starts</span><Input type="time" required value={draftStart} onChange={(event) => setDraftStart(event.target.value)} className={inputClass} /></label><label><span className="mb-1.5 block text-[10px] font-bold text-slate-500">Ends</span><Input type="time" required value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} className={inputClass} /></label></>}

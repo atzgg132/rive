@@ -1,5 +1,6 @@
 import { ArrowUpRight, Check, MapPin, Play, Quote, Sparkles } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
+import Link from "next/link";
 import {
   belongsToPractice,
   getVisiblePractices,
@@ -133,6 +134,34 @@ function SectionHeading({
   );
 }
 
+function ProjectLink({
+  href,
+  external,
+  label,
+  className,
+  children,
+}: {
+  href: string;
+  external: boolean;
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noreferrer" aria-label={label} className={className}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} aria-label={label} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 /** Tabs across a portfolio's disciplines. Only rendered when there is more
  *  than one, so a single-practice portfolio looks exactly as it always has. */
 function PracticeSwitcher({
@@ -194,6 +223,9 @@ function ProjectCard({
   /* Captions and lightboxes belong on the case study, not on a summary card. */
   const cardMediaSettings: PortfolioMediaSettings = { ...mediaSettings, showCaptions: false, lightbox: false };
   const caseStudyUrl = portfolioSlug ? `/p/${portfolioSlug}/work/${encodeURIComponent(project.id)}` : null;
+  const projectHref = caseStudyUrl || projectUrl;
+  const projectHrefIsExternal = !caseStudyUrl && Boolean(projectUrl);
+  const projectLinkLabel = caseStudyUrl ? `Open ${project.title} case study` : `Open ${project.title} project`;
   const isFeature = profile.visual && index === 0;
   const cardClass = isFeature ? "lg:col-span-7" : profile.visual ? "lg:col-span-5" : "";
 
@@ -207,13 +239,25 @@ function ProjectCard({
         {playableCover ? (
           <PortfolioMediaBlock media={playableCover} settings={cardMediaSettings} fill />
         ) : project.imageUrl ? (
-          <img
-            src={project.imageUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
-          />
+          projectHref ? (
+            <ProjectLink href={projectHref} external={projectHrefIsExternal} label={projectLinkLabel} className="block h-full w-full">
+              <img
+                src={project.imageUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+              />
+            </ProjectLink>
+          ) : (
+            <img
+              src={project.imageUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+            />
+          )
         ) : (
           <div className="absolute inset-0 overflow-hidden bg-[var(--portfolio-soft)]">
             <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--portfolio-accent)] opacity-15 blur-3xl" />
@@ -233,10 +277,15 @@ function ProjectCard({
             </span>
           )}
         </div>
-        {!playableCover && profile.visual && projectUrl && (
-          <div className="absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-white text-slate-950 shadow-xl">
+        {!playableCover && profile.visual && projectHref && (
+          <ProjectLink
+            href={projectHref}
+            external={projectHrefIsExternal}
+            label={projectLinkLabel}
+            className="absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-white text-slate-950 shadow-xl transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
             {profile.eyebrow === "Creator portfolio" ? <Play className="h-4 w-4 fill-current" /> : <ArrowUpRight className="h-4 w-4" />}
-          </div>
+          </ProjectLink>
         )}
       </div>
 
@@ -298,21 +347,23 @@ function ProjectCard({
             ))}
           </div>
           {caseStudyUrl ? (
-            <a
+            <ProjectLink
               href={caseStudyUrl}
+              external={false}
+              label={`Read ${project.title} case study`}
               className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[var(--portfolio-ink)] hover:text-[var(--portfolio-accent)]"
             >
               Read case study <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
+            </ProjectLink>
           ) : projectUrl ? (
-            <a
+            <ProjectLink
               href={projectUrl}
-              target="_blank"
-              rel="noreferrer"
+              external
+              label={`Explore ${project.title} project`}
               className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[var(--portfolio-ink)] hover:text-[var(--portfolio-accent)]"
             >
               Explore project <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
+            </ProjectLink>
           ) : null}
         </div>
       </div>

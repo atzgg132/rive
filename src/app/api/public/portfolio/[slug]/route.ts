@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
+import { normalizePortfolioReferrer } from "@/utils/portfolioAnalytics";
 import { getPublicPortfolioContent, isPortfolioPublished } from "@/utils/portfolio";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     const userAgent = req.headers.get("user-agent") || "";
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
     const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-    const referrer = req.headers.get("referer")?.slice(0, 500) || null;
+    const referrer = normalizePortfolioReferrer(req.headers.get("referer"));
     const deviceType = deviceFromUserAgent(userAgent);
     after(async () => {
       await prisma.portfolioView.create({

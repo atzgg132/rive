@@ -312,6 +312,27 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+test("portfolio sticky editor header stays flush with the scroll viewport", async ({ page }) => {
+  await prepareVisualPage(page, "light", { width: 1440, height: 900 });
+  await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+  await page.locator("main").evaluate((main) => { main.scrollTop = 520; });
+  const geometry = await page.evaluate(() => {
+    const main = document.querySelector("main")?.getBoundingClientRect();
+    const header = document.querySelector("[data-portfolio-sticky-header]")?.getBoundingClientRect();
+    return {
+      headerTop: header?.top || 0,
+      mainTop: main?.top || 0,
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    };
+  });
+
+  expect(Math.abs(geometry.headerTop - geometry.mainTop)).toBeLessThanOrEqual(1);
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`mobile shell and onboarding ${theme} visual`, async ({ page }) => {
     await prepareVisualPage(page, theme, { width: 390, height: 844 });

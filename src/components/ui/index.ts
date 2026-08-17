@@ -10,4 +10,5 @@ export * from "@/components/ui/page-header";
 export * from "@/components/ui/select";
 export * from "@/components/ui/separator";
 export * from "@/components/ui/skeleton";
+export * from "@/components/ui/switch";
 export * from "@/components/ui/textarea";

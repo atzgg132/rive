@@ -174,6 +174,50 @@ test.describe("portfolio media and practices", () => {
     }
   });
 
+  test("project covers and arrow controls open the public case study", async ({ request, page }) => {
+    const user = await createTestUser("project-links");
+    const auth = headers(tokenFor(user));
+    try {
+      const created = await json(await request.post("/api/portfolio", { headers: auth, data: {} }));
+      const portfolio = created.portfolio as JsonObject;
+      const slug = String(portfolio.slug);
+      const content = mediaContent({
+        projects: [{
+          id: "clickable-study",
+          title: "Clickable study",
+          description: "A project with navigable cover controls.",
+          role: "Designer",
+          year: "2026",
+          url: "",
+          imageUrl: "https://example.com/clickable-study.jpg",
+          visibility: "public" as const,
+          practiceId: "bake",
+          media: [],
+        }],
+      });
+      const saved = await request.patch("/api/portfolio", {
+        headers: auth,
+        data: { revision: Number(portfolio.revision), content, templateKey: "visual-studio", status: "published" },
+      });
+      expect(saved.status()).toBe(200);
+
+      await page.goto(`/p/${slug}`, { waitUntil: "domcontentloaded" });
+      const caseStudyLinks = page.getByRole("link", { name: "Open Clickable study case study" });
+      await expect(caseStudyLinks).toHaveCount(2);
+
+      await caseStudyLinks.first().click();
+      await expect(page).toHaveURL(new RegExp(`/p/${slug}/work/clickable-study$`));
+      await expect(page.getByRole("heading", { name: "Clickable study" })).toBeVisible();
+
+      await page.goBack({ waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("link", { name: "Open Clickable study case study" }).last()).toBeVisible();
+      await page.getByRole("link", { name: "Open Clickable study case study" }).last().click();
+      await expect(page).toHaveURL(new RegExp(`/p/${slug}/work/clickable-study$`));
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
   test("embeds are re-validated on save, so only allowlisted providers persist", async ({ request }) => {
     const user = await createTestUser("embeds");
     const auth = headers(tokenFor(user));

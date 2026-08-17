@@ -1,7 +1,7 @@
 param(
   [int]$LocalPort = 5433,
   [string]$Region = "ap-south-1",
-  [ValidateSet("dev", "migrate", "status", "smoke", "cleanup-smoke", "inspect-smoke")]
+  [ValidateSet("dev", "migrate", "status", "smoke", "cleanup-smoke", "inspect-smoke", "seed-portfolio")]
   [string]$Action = "dev"
 )
 
@@ -78,6 +78,15 @@ if ($LASTEXITCODE -ne 0 -or -not $remoteUrl -or $remoteUrl -eq "None") {
   throw "The development database URL could not be loaded from SSM."
 }
 
+$assetBucket = aws ssm get-parameter `
+  --region $Region `
+  --name "/rive/dev/ASSET_BUCKET" `
+  --query "Parameter.Value" `
+  --output text
+if ($LASTEXITCODE -ne 0 -or -not $assetBucket -or $assetBucket -eq "None") {
+  throw "The development asset bucket could not be loaded from SSM."
+}
+
 $escapedHost = [Regex]::Escape($databaseHost)
 $localUrl = $remoteUrl -replace "@${escapedHost}:5432/", "@127.0.0.1:${LocalPort}/"
 if ($localUrl -eq $remoteUrl) {
@@ -125,6 +134,8 @@ try {
   $env:DATABASE_SSL_SERVERNAME = $databaseHost
   $env:DATABASE_POOL_MAX = "4"
   $env:NODE_EXTRA_CA_CERTS = $caBundlePath
+  $env:ASSET_BUCKET = $assetBucket
+  $env:AWS_REGION = $Region
 
   Write-Host "Connected securely to the AWS development database through SSM." -ForegroundColor Green
   switch ($Action) {
@@ -134,6 +145,7 @@ try {
     "smoke" { node scripts/smoke-contracts.mjs }
     "cleanup-smoke" { node scripts/cleanup-contract-smoke.mjs }
     "inspect-smoke" { node scripts/inspect-contract-smoke.mjs }
+    "seed-portfolio" { node scripts/seed-portfolio-media.mjs --email=atzgg132@gmail.com --apply }
   }
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } finally {

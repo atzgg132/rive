@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import PortfolioCaseStudy from "@/components/portfolio/PortfolioCaseStudy";
 import { prisma } from "@/utils/db";
+import { normalizePortfolioReferrer } from "@/utils/portfolioAnalytics";
 import { DEFAULT_PORTFOLIO_THEME, getPublicPortfolioContent, isPortfolioPublished, type PortfolioTheme } from "@/utils/portfolio";
 
 type Props = { params: Promise<{ slug: string; projectId: string }> };
@@ -52,7 +53,7 @@ export default async function PortfolioCaseStudyPage({ params }: Props) {
     data: {
       portfolioId: result.portfolio.id,
       visitorHash,
-      referrer: requestHeaders.get("referer")?.slice(0, 500) || null,
+      referrer: normalizePortfolioReferrer(requestHeaders.get("referer")),
       deviceType: /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop",
     },
   });
