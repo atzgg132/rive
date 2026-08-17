@@ -257,9 +257,15 @@ test.describe("portfolio studio", () => {
     });
 
     await page.getByPlaceholder("e.g. A calmer checkout for Acme").fill("Kept local harbour");
-    await expect(page.getByRole("alert")).toContainText(/changed elsewhere/i, { timeout: 15_000 });
+
+    /* Scoped to the studio's own banner rather than role=alert: Next renders an
+       always-present, empty route announcer with that role, so the bare role
+       selector matches two elements and resolves to neither. */
+    await expect(page.locator("[data-portfolio-save-alert]")).toContainText(/changed elsewhere/i, { timeout: 20_000 });
     await expect(page.getByRole("button", { name: "Keep my draft" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Reload latest" })).toBeVisible();
+
+    // The whole point of the prompt: the owner's text is still on screen.
     await expect(page.getByPlaceholder("e.g. A calmer checkout for Acme")).toHaveValue("Kept local harbour");
   });
 });
