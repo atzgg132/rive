@@ -102,7 +102,7 @@ async function studioUser(label: string) {
       seo: { title: "", description: "", indexable: false },
     },
   });
-  return tokenFor(user);
+  return { token: tokenFor(user), user };
 }
 
 test.describe("portfolio studio", () => {
@@ -123,7 +123,7 @@ test.describe("portfolio studio", () => {
   });
 
   test("names the next action and takes you to it", async ({ page, context }) => {
-    await context.addCookies([{ name: "rive_session", value: await studioUser("worklist"), url: baseUrl() }]);
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("worklist")).token, url: baseUrl() }]);
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
 
@@ -147,7 +147,7 @@ test.describe("portfolio studio", () => {
   });
 
   test("shows one preview, never two, and keeps it in step with edits", async ({ page, context }) => {
-    await context.addCookies([{ name: "rive_session", value: await studioUser("preview"), url: baseUrl() }]);
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("preview")).token, url: baseUrl() }]);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
@@ -167,7 +167,7 @@ test.describe("portfolio studio", () => {
   });
 
   test("side-by-side preview appears on a wide screen, and only there", async ({ page, context }) => {
-    await context.addCookies([{ name: "rive_session", value: await studioUser("wide"), url: baseUrl() }]);
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("wide")).token, url: baseUrl() }]);
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
@@ -184,7 +184,7 @@ test.describe("portfolio studio", () => {
   });
 
   test("playback settings stay hidden until a project has media", async ({ page, context }) => {
-    await context.addCookies([{ name: "rive_session", value: await studioUser("media"), url: baseUrl() }]);
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("media")).token, url: baseUrl() }]);
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
 
@@ -196,7 +196,7 @@ test.describe("portfolio studio", () => {
   });
 
   test("the studio still works on a phone", async ({ page, context }) => {
-    await context.addCookies([{ name: "rive_session", value: await studioUser("mobile"), url: baseUrl() }]);
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("mobile")).token, url: baseUrl() }]);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
@@ -211,5 +211,55 @@ test.describe("portfolio studio", () => {
       dimensions.scrollWidth,
       `the studio overflows by ${dimensions.scrollWidth - dimensions.clientWidth}px at 390px`,
     ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  });
+
+  test("typed work survives leaving a section, and autosave never publishes", async ({ page, context }) => {
+    const { token, user } = await studioUser("autosave");
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    const title = page.getByPlaceholder("e.g. A calmer checkout for Acme");
+    await expect(title).toBeVisible();
+    await title.fill("Harbour rebuild, revised");
+
+    await page.getByRole("button", { name: /Appearance/i }).click();
+    await expect(page.getByText("Show the work you want clients to remember", { exact: false })).toHaveCount(0);
+
+    await page.getByRole("button", { name: /Selected work/i }).click();
+    await expect(page.getByPlaceholder("e.g. A calmer checkout for Acme")).toHaveValue("Harbour rebuild, revised");
+
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({
+        where: { userId: user.id },
+        select: { status: true, content: true },
+      });
+      const content = portfolio?.content as { projects?: Array<{ title?: string }> } | null;
+      return {
+        status: portfolio?.status,
+        title: content?.projects?.[0]?.title,
+      };
+    }, { timeout: 15_000 }).toEqual({
+      status: "draft",
+      title: "Harbour rebuild, revised",
+    });
+  });
+
+  test("a stale revision asks the owner to choose instead of overwriting their draft", async ({ page, context }) => {
+    const { token, user } = await studioUser("conflict");
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await db.prisma.portfolio.update({
+      where: { userId: user.id },
+      data: { revision: { increment: 1 } },
+    });
+
+    await page.getByPlaceholder("e.g. A calmer checkout for Acme").fill("Kept local harbour");
+    await expect(page.getByRole("alert")).toContainText(/changed elsewhere/i, { timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Keep my draft" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reload latest" })).toBeVisible();
+    await expect(page.getByPlaceholder("e.g. A calmer checkout for Acme")).toHaveValue("Kept local harbour");
   });
 });
