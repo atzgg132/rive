@@ -452,17 +452,30 @@ test.describe("portfolio view attribution and analytics", () => {
     await expect(page.getByText("Top projects")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText("Alpha rebuild")).toBeVisible({ timeout: 20_000 });
 
-    // The chart describes itself, carries a scale, and answers a tap with a count.
+    // The chart describes itself, carries a scale, and answers a tap with a count
+    // in a readout that cannot be clipped by the plot's own scroll container.
     const chart = page.getByRole("img", { name: /Daily views from/i });
     await expect(chart).toBeVisible({ timeout: 20_000 });
 
+    const readout = page.locator("[data-traffic-readout]");
+    await expect(readout).toBeVisible();
+    // Never empty: with no day selected it falls back to the busiest one.
+    // The count and the word sit in adjacent spans, so no whitespace separates
+    // them in textContent — the gap between them is layout, not a character.
+    await expect(readout).toContainText(/\d+\s*view/i);
+    await expect(readout).toContainText(/busiest day/i);
+
     const bars = page.locator("[data-traffic-bar]");
     expect(await bars.count()).toBeGreaterThan(0);
-    await expect(page.locator("[data-traffic-tooltip]")).toHaveCount(0);
+
+    /* Tapping a day moves the readout onto it and holds it there — asserted on
+       the selection state rather than a formatted date, which would depend on
+       the browser's locale. */
     await bars.last().click();
-    const tooltip = page.locator("[data-traffic-tooltip]");
-    await expect(tooltip).toBeVisible();
-    await expect(tooltip).toContainText(/\d+ views?/);
+    await expect(readout).not.toContainText(/busiest day/i);
+    // The count and the word sit in adjacent spans, so no whitespace separates
+    // them in textContent — the gap between them is layout, not a character.
+    await expect(readout).toContainText(/\d+\s*view/i);
 
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
