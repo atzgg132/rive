@@ -312,7 +312,7 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
-test("portfolio sticky editor header stays flush with the scroll viewport", async ({ page }) => {
+test("portfolio sticky action bar stays flush with the scroll viewport", async ({ page }) => {
   await prepareVisualPage(page, "light", { width: 1440, height: 900 });
   await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
@@ -320,18 +320,46 @@ test("portfolio sticky editor header stays flush with the scroll viewport", asyn
   await page.locator("main").evaluate((main) => { main.scrollTop = 520; });
   const geometry = await page.evaluate(() => {
     const main = document.querySelector("main")?.getBoundingClientRect();
-    const header = document.querySelector("[data-portfolio-sticky-header]")?.getBoundingClientRect();
+    const actions = document.querySelector("[data-portfolio-sticky-actions]")?.getBoundingClientRect();
     return {
-      headerTop: header?.top || 0,
+      actionsTop: actions?.top || 0,
       mainTop: main?.top || 0,
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
     };
   });
 
-  expect(Math.abs(geometry.headerTop - geometry.mainTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(geometry.actionsTop - geometry.mainTop)).toBeLessThanOrEqual(1);
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
 });
+
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
+  test(`portfolio studio avoids viewport-sized bottom whitespace ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await prepareVisualPage(page, "light", viewport);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: "Testimonials" }).click();
+    const editorMetrics = await page.evaluate(() => {
+      const shell = document.querySelector("[data-portfolio-editor-shell]");
+      const shellRect = shell?.getBoundingClientRect();
+      return {
+        shellHeight: shellRect?.height || 0,
+        minHeight: shell ? getComputedStyle(shell).minHeight : "",
+      };
+    });
+    expect(editorMetrics.minHeight).toBe("0px");
+    expect(editorMetrics.shellHeight).toBeLessThan(680);
+
+    await page.getByRole("button", { name: "Preview", exact: true }).click();
+    const previewMetrics = await page.locator('iframe[title="desktop portfolio preview"]').evaluate((frame) => ({
+      height: frame.getBoundingClientRect().height,
+      minHeight: getComputedStyle(frame).minHeight,
+    }));
+    expect(previewMetrics.minHeight).toBe("0px");
+    expect(previewMetrics.height).toBeLessThanOrEqual(viewport.height * 0.75 + 1);
+  });
+}
 
 for (const theme of ["light", "dark"] as const) {
   test(`mobile shell and onboarding ${theme} visual`, async ({ page }) => {

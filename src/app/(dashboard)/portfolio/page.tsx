@@ -433,24 +433,24 @@ export default function PortfolioDashboardPage() {
 
   return (
     <div className="portfolio-editor-panels workspace-page gap-5">
-      <div data-portfolio-sticky-header className="sticky -top-3 z-20 border-b border-border bg-background py-4 backdrop-blur sm:-top-4 md:-top-6 xl:-top-8">
-        <PageHeader
-          className="sm:flex-col xl:flex-row"
-          title={<span className="flex items-center gap-2"><Globe2 className="h-6 w-6 text-primary" /> Portfolio Studio</span>}
-          description="Build a portfolio that makes your work easy to understand and easy to hire."
-          actions={<>
-            {savedPublicUrl && <a href={savedPublicUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-accent"><ExternalLink className="h-4 w-4" /> View live site</a>}
-            <div role="status" aria-live="polite" className={`inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold ${displayedSaveState === "error" ? "bg-destructive/10 text-destructive" : displayedSaveState === "saved" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}><span className={`h-1.5 w-1.5 rounded-full ${displayedSaveState === "error" ? "bg-destructive" : displayedSaveState === "saved" ? "bg-success" : displayedSaveState === "saving" ? "animate-pulse bg-primary" : "bg-warning"}`} /> {displayedSaveState === "saving" ? "Saving…" : displayedSaveState === "error" ? "Save failed" : displayedSaveState === "saved" ? "Saved" : "Unsaved changes"}</div>
-            <Button variant="outline" onClick={() => save()} disabled={saving || !dirty}><Save /> {saving ? "Saving…" : "Save draft"}</Button>
-            <Button data-guide-target="portfolio-publish" onClick={() => save("published")} disabled={saving}><Check /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
-          </>}
-        />
-        {portfolio.status !== "published" && readiness.score < 100 && (
-          <FirstVisitNote>
-            Your profile and selected projects become public proof of work. Fill the essentials first; optional case-study detail can wait.
-          </FirstVisitNote>
-        )}
+      <PageHeader
+        className="sm:flex-col xl:flex-row"
+        title={<span className="flex items-center gap-2"><Globe2 className="h-6 w-6 text-primary" /> Portfolio Studio</span>}
+        description="Build a portfolio that makes your work easy to understand and easy to hire."
+        actions={savedPublicUrl ? <a href={savedPublicUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-accent"><ExternalLink className="h-4 w-4" /> View live site</a> : undefined}
+      />
+
+      <div data-portfolio-sticky-actions className="sticky -top-3 z-20 flex min-h-12 flex-wrap items-center justify-end gap-2 border-y border-border bg-background px-1 py-2 sm:-top-4 sm:px-2 md:-top-6 xl:-top-8">
+        <div role="status" aria-live="polite" className={`mr-auto inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold ${displayedSaveState === "error" ? "bg-destructive/10 text-destructive" : displayedSaveState === "saved" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}><span className={`h-1.5 w-1.5 rounded-full ${displayedSaveState === "error" ? "bg-destructive" : displayedSaveState === "saved" ? "bg-success" : displayedSaveState === "saving" ? "animate-pulse bg-primary" : "bg-warning"}`} /> {displayedSaveState === "saving" ? "Saving…" : displayedSaveState === "error" ? "Save failed" : displayedSaveState === "saved" ? "Saved" : "Unsaved changes"}</div>
+        <Button variant="outline" onClick={() => save()} disabled={saving || !dirty} className="h-9 px-3 text-xs"><Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save draft"}</Button>
+        <Button data-guide-target="portfolio-publish" onClick={() => save("published")} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
+
+      {portfolio.status !== "published" && readiness.score < 100 && (
+        <FirstVisitNote>
+          Your profile and selected projects become public proof of work. Fill the essentials first; optional case-study detail can wait.
+        </FirstVisitNote>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border dark:border-slate-800">
         <div className="flex flex-wrap gap-1"><Button onClick={() => setTab("edit")} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === "edit" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}><LayoutTemplate className="mr-1 inline h-4 w-4" /> Editor</Button><Button onClick={() => setTab("preview")} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === "preview" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}><Eye className="mr-1 inline h-4 w-4" /> Preview</Button><Button onClick={() => setTab("analytics")} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === "analytics" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}><BarChart3 className="mr-1 inline h-4 w-4" /> Analytics</Button></div>
@@ -460,7 +460,7 @@ export default function PortfolioDashboardPage() {
       {recoveryDraft && !dirty && <div role="status" className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold">We found unsaved changes from before this page was reloaded.</p><p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/80">Restore them to continue editing, or discard this local recovery copy.</p></div><div className="flex shrink-0 gap-2"><Button onClick={restoreRecoveryDraft} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white">Restore changes</Button><Button onClick={() => { window.localStorage.removeItem(`rive:portfolio-draft:${portfolio?.id}`); setRecoveryDraft(null); }} className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-800 dark:border-amber-800 dark:text-amber-100">Discard</Button></div></div>}
       {saveError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Keep my draft</Button></div> : <Button onClick={() => save()} disabled={saving || !dirty} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button>}</div>}
 
-      {tab === "edit" && <div className="grid min-h-[680px] overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
+      {tab === "edit" && <div data-portfolio-editor-shell className="grid min-h-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="border-b border-border bg-muted/35 p-4 lg:border-b-0 lg:border-r">
             <nav data-portfolio-section-nav className="grid grid-cols-2 gap-2 sm:grid-cols-6 lg:sticky lg:top-5 lg:grid-cols-1">
             {([
@@ -564,7 +564,7 @@ export default function PortfolioDashboardPage() {
             ref={previewFrameRef}
             src="/portfolio-preview"
             title={`${previewDevice} portfolio preview`}
-            className="block h-[75vh] min-h-[680px] w-full border-0 bg-white"
+            className="block h-[75vh] w-full border-0 bg-white"
             onLoad={() => previewFrameRef.current?.contentWindow?.postMessage({
               type: "rive:portfolio-preview",
               payload: { content, theme, templateKey },
