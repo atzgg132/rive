@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { sendPortfolioInquiryEmail } from "@/utils/email";
-import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { getRequestIp } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
+import { hashRequestValue } from "@/utils/contracts";
 import { isPortfolioPublished, mergePortfolioContent } from "@/utils/portfolio";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,12 +15,19 @@ type RouteContext = {
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { slug } = await params;
   const ip = getRequestIp(request);
-  if (!rateLimit(`portfolio-inquiry:${slug}:${ip}`, 4, 60 * 60 * 1000)) {
-    return NextResponse.json(
-      { success: false, message: "You’ve sent several enquiries. Please try again later." },
-      { status: 429 },
-    );
-  }
+  const throttled = NextResponse.json(
+    { success: false, message: "You’ve sent several enquiries. Please try again later." },
+    { status: 429 },
+  );
+
+  /* Public, unauthenticated, enumerable by slug, and it sends mail from our
+     own domain — exactly what the durable limiter exists for. The process-local
+     one reset on every deploy and was not a boundary worth relying on here.
+     The per-slug ceiling is the one that matters: it bounds how much mail a
+     single portfolio owner can be sent no matter how many addresses the sender
+     appears to come from. */
+  if (!await durableRateLimit(`portfolio-inquiry:slug:${slug}`, 20, 60 * 60 * 1000)) return throttled;
+  if (!await durableRateLimit(`portfolio-inquiry:${slug}:${hashRequestValue(ip)}`, 4, 60 * 60 * 1000)) return throttled;
 
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name.trim() : "";

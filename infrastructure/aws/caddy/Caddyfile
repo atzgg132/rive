@@ -20,12 +20,27 @@ rive.work {
   redir https://www.rive.work{uri} permanent
 }
 
+# Caddy's default is to *append* the socket peer to any inbound
+# X-Forwarded-For, so a caller that sends its own header keeps the leftmost
+# entry. Overwriting instead means the app receives exactly one hop it can
+# trust, and a forged header cannot key a rate limit or land in an audit row.
+# The app also counts hops from the right (see TRUSTED_PROXY_HOPS in
+# src/utils/rateLimit.ts), so the two defences are independent.
+(client_address) {
+  header_up X-Forwarded-For {http.request.remote.host}
+  header_up X-Real-IP {http.request.remote.host}
+}
+
 www.rive.work {
   encode zstd gzip
-  reverse_proxy 127.0.0.1:3000
+  reverse_proxy 127.0.0.1:3000 {
+    import client_address
+  }
 }
 
 dev.rive.work {
   encode zstd gzip
-  reverse_proxy 127.0.0.1:3002
+  reverse_proxy 127.0.0.1:3002 {
+    import client_address
+  }
 }

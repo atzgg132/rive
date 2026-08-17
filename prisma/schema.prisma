@@ -67,6 +67,7 @@ model User {
   invoices                    Invoice[]
   expenses                    Expense[]
   portfolio                   Portfolio?
+  portfolioAssets             PortfolioAsset[]
   authTokens                  AuthToken[]
   calendars                   Calendar[]
   calendarEvents              CalendarEvent[]
@@ -1027,6 +1028,29 @@ model Portfolio {
   views       PortfolioView[]
 
   @@map("portfolios")
+}
+
+/// Manifest for every managed portfolio upload. Uploads go straight to object
+/// storage, so this table is the only record of what exists: it backs the
+/// per-account storage quota, confirms the content signature check, and lets
+/// the sweeper delete objects no portfolio references any more.
+model PortfolioAsset {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key         String    @unique
+  kind        String
+  contentType String    @map("content_type")
+  bytes       Int
+  /// pending -> ready once the uploaded bytes match their declared format.
+  status      String    @default("pending")
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@map("portfolio_assets")
 }
 
 model PortfolioView {

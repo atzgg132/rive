@@ -56,3 +56,8 @@ server/dist/
 *.tfvars
 !*.tfvars.example
 infrastructure/aws/.build/*.zip
+
+# Bytecode from running the Lambda job runner locally. archive_file packages
+# job_runner.py from source, so this is never an input to a deploy.
+__pycache__/
+*.pyc

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendContactMessageEmail } from "@/utils/email";
-import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { getRequestIp } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
+import { hashRequestValue } from "@/utils/contracts";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const allowedSubjects = new Set([
@@ -13,12 +15,17 @@ const allowedSubjects = new Set([
 
 export async function POST(request: NextRequest) {
   const ip = getRequestIp(request);
-  if (!rateLimit(`contact:${ip}`, 5, 60 * 60 * 1000)) {
-    return NextResponse.json(
-      { success: false, message: "Too many messages. Please try again later." },
-      { status: 429 },
-    );
-  }
+  const throttled = NextResponse.json(
+    { success: false, message: "Too many messages. Please try again later." },
+    { status: 429 },
+  );
+
+  /* Public, unauthenticated, and it sends mail from our own domain, so this
+     belongs on the durable limiter. Every message lands in the same inbox, so
+     the global ceiling is what bounds the flood; the per-IP one only stops a
+     single source from consuming it. */
+  if (!await durableRateLimit("contact:global", 60, 60 * 60 * 1000)) return throttled;
+  if (!await durableRateLimit(`contact:${hashRequestValue(ip)}`, 5, 60 * 60 * 1000)) return throttled;
 
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name.trim() : "";

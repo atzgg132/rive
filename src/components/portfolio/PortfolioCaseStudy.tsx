@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowUpRight, Check, Clock3, Mail, UserRound } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { PortfolioContent, PortfolioProject, PortfolioTheme } from "@/utils/portfolio";
+import PortfolioMediaBlock, { PortfolioMediaGallery } from "@/components/portfolio/media/PortfolioMediaBlock";
 
 /* Portfolio owners can supply validated data URLs and arbitrary HTTPS image hosts. */
 /* eslint-disable @next/next/no-img-element */
@@ -24,16 +25,43 @@ function safeExternalUrl(value: string): string | null {
 export default function PortfolioCaseStudy({ content, project, portfolioSlug, theme }: Props) {
   const dark = theme.mode === "dark";
   const projectUrl = safeExternalUrl(project.url);
+  const allMedia = (project.media || []).filter((item) => item.url);
+  // Documents get their own section so a PDF viewer never lands mid-gallery.
+  const media = allMedia.filter((item) => item.kind !== "document");
+  const documents = allMedia.filter((item) => item.kind === "document");
+  const hasPlayable = media.some((item) => item.kind === "video" || item.kind === "audio" || item.kind === "embed");
+  const mediaHeading = hasPlayable ? "Project media" : "Project gallery";
+  const palette = {
+    accent: theme.accent,
+    bg: dark ? "#080b12" : "#f7f7f4",
+    card: dark ? "#11151f" : "#ffffff",
+    soft: dark ? "#181e2a" : "#eeeee9",
+    border: dark ? "#2a3242" : "#dcded8",
+    ink: dark ? "#f7f7f2" : "#111827",
+    muted: dark ? "#a5adba" : "#5f6978",
+    radius: theme.radius === "sharp" ? "0.25rem" : "1.5rem",
+    radiusLarge: theme.radius === "sharp" ? "0.25rem" : "2rem",
+  };
+  /* Media components are shared with the main renderer and read the
+     --portfolio-* tokens, so both names resolve to one palette here. */
   const cssVars = {
-    "--case-accent": theme.accent,
-    "--case-bg": dark ? "#080b12" : "#f7f7f4",
-    "--case-card": dark ? "#11151f" : "#ffffff",
-    "--case-soft": dark ? "#181e2a" : "#eeeee9",
-    "--case-border": dark ? "#2a3242" : "#dcded8",
-    "--case-ink": dark ? "#f7f7f2" : "#111827",
-    "--case-muted": dark ? "#a5adba" : "#5f6978",
-    "--case-radius": theme.radius === "sharp" ? "0.25rem" : "1.5rem",
-    "--case-radius-large": theme.radius === "sharp" ? "0.25rem" : "2rem",
+    "--case-accent": palette.accent,
+    "--case-bg": palette.bg,
+    "--case-card": palette.card,
+    "--case-soft": palette.soft,
+    "--case-border": palette.border,
+    "--case-ink": palette.ink,
+    "--case-muted": palette.muted,
+    "--case-radius": palette.radius,
+    "--case-radius-large": palette.radiusLarge,
+    "--portfolio-accent": palette.accent,
+    "--portfolio-card": palette.card,
+    "--portfolio-soft": palette.soft,
+    "--portfolio-border": palette.border,
+    "--portfolio-ink": palette.ink,
+    "--portfolio-muted": palette.muted,
+    "--portfolio-radius": palette.radius,
+    "--portfolio-radius-large": palette.radiusLarge,
   } as CSSProperties;
 
   return (
@@ -96,20 +124,24 @@ export default function PortfolioCaseStudy({ content, project, portfolioSlug, th
           </section>
         )}
 
-        {project.gallery && project.gallery.length > 0 && (
+        {media.length > 0 && (
           <section className="mx-auto max-w-7xl px-5 pb-20 sm:px-10 sm:pb-28 lg:px-14">
             <div className="mb-8 border-t border-[var(--case-border)] pt-10">
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--case-accent)]">Project gallery</p>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] text-[var(--case-ink)] sm:text-5xl">A Closer look at the work.</h2>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--case-accent)]">{mediaHeading}</p>
+              <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] text-[var(--case-ink)] sm:text-5xl">A closer look at the work.</h2>
             </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              {project.gallery.map((image, index) => (
-                <figure key={image.id} className={`${index % 3 === 0 ? "md:col-span-2" : ""}`}>
-                  <div className={`overflow-hidden rounded-[var(--case-radius)] bg-[var(--case-soft)] ${index % 3 === 0 ? "aspect-[16/9]" : "aspect-[4/3]"}`}>
-                    <img src={image.url} alt={image.alt || `${project.title} project image ${index + 1}`} loading="lazy" decoding="async" className="h-full w-full object-cover" />
-                  </div>
-                  {image.caption && <figcaption className="mt-3 text-xs leading-5 text-[var(--case-muted)]">{image.caption}</figcaption>}
-                </figure>
+            <PortfolioMediaGallery media={media} settings={content.mediaSettings} />
+          </section>
+        )}
+
+        {documents.length > 0 && (
+          <section className="mx-auto max-w-7xl px-5 pb-20 sm:px-10 sm:pb-28 lg:px-14">
+            <div className="mb-8 border-t border-[var(--case-border)] pt-10">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--case-accent)]">Documents</p>
+            </div>
+            <div className="flex flex-col gap-8">
+              {documents.map((document) => (
+                <PortfolioMediaBlock key={document.id} media={document} settings={content.mediaSettings} inline />
               ))}
             </div>
           </section>

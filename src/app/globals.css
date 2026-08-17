@@ -119,8 +119,14 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  /* The design tokens are space-separated RGB channels ("245 248 252"), which
+     is what tailwind.config.js consumes as rgb(var(--token) / <alpha-value>).
+     Wrapping them in hsl() instead reads those channels as hue/saturation/
+     lightness: hsl(245 248 252) resolves to pure yellow, and the foreground
+     token resolved to a muddy brown. Both must use rgb() like every other
+     consumer of these variables. */
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
   overflow-x: hidden;
   line-height: 1.6;
   font-weight: 400;

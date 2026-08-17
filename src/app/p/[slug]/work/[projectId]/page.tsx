@@ -4,15 +4,17 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import PortfolioCaseStudy from "@/components/portfolio/PortfolioCaseStudy";
 import { prisma } from "@/utils/db";
-import { DEFAULT_PORTFOLIO_THEME, isPortfolioPublished, mergePortfolioContent, type PortfolioTheme } from "@/utils/portfolio";
+import { DEFAULT_PORTFOLIO_THEME, getPublicPortfolioContent, isPortfolioPublished, type PortfolioTheme } from "@/utils/portfolio";
 
 type Props = { params: Promise<{ slug: string; projectId: string }> };
 
 async function loadCaseStudy(slug: string, projectId: string) {
   const portfolio = await prisma.portfolio.findUnique({ where: { slug } });
   if (!portfolio || !isPortfolioPublished(portfolio.status)) return null;
-  const content = mergePortfolioContent(portfolio.content);
-  const project = content.projects.find((item) => item.id === projectId && item.visibility !== "private");
+  /* Public content already excludes private projects and anything belonging to
+     a hidden practice, so a direct case-study URL cannot reach either. */
+  const content = getPublicPortfolioContent(portfolio.content);
+  const project = content.projects.find((item) => item.id === projectId);
   if (!project) return null;
   return { portfolio, content, project };
 }
@@ -29,7 +31,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${project.title} · ${content.name}`,
       description: project.description || project.outcome || `A project by ${content.name}.`,
       type: "article",
-      images: project.imageUrl && /^https?:\/\//i.test(project.imageUrl) ? [{ url: project.imageUrl, alt: project.title }] : undefined,
+      // HTTPS only, matching what the content validator now accepts. Scrapers
+      // drop an http:// og:image anyway, so emitting one only produces a card
+      // with a broken preview.
+      images: project.imageUrl && /^https:\/\//i.test(project.imageUrl) ? [{ url: project.imageUrl, alt: project.title }] : undefined,
     },
   };
 }
