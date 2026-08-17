@@ -3,12 +3,14 @@
 import { Button, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, Eye, ExternalLink, Globe2, Layers, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Monitor, Smartphone, Tablet, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
+import { Check, Copy, Eye, ExternalLink, Globe2, Inbox, Layers, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Monitor, Smartphone, Tablet, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_PORTFOLIO_CONTENT, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioMediaSettings, type PortfolioTheme } from "@/utils/portfolio";
 import { uploadImage } from "@/utils/clientUploads";
 import PortfolioProjectEditor from "@/components/portfolio/PortfolioProjectEditor";
 import PortfolioPracticeEditor from "@/components/portfolio/PortfolioPracticeEditor";
+import PortfolioAnalyticsPanel from "@/components/portfolio/PortfolioAnalyticsPanel";
+import PortfolioInquiriesPanel from "@/components/portfolio/PortfolioInquiriesPanel";
 import { FirstVisitNote } from "@/components/dashboard/ActivationCard";
 
 /* Validated portfolio uploads and remote image hosts cannot use a static Next image allowlist. */
@@ -23,16 +25,6 @@ type PortfolioRecord = {
   theme: PortfolioTheme;
   seo: { title?: string; description?: string; indexable?: boolean } | null;
   revision: number;
-};
-
-type Analytics = {
-  totalViews: number;
-  uniqueVisitors: number;
-  averageViewsPerDay: number;
-  peakDay: string | null;
-  timeline: { day: string; count: number }[];
-  referrers: { source: string; count: number }[];
-  devices: { device: string; count: number }[];
 };
 
 type SaveState = "loading" | "saved" | "dirty" | "saving" | "error";
@@ -75,7 +67,7 @@ export default function PortfolioDashboardPage() {
   const [templateKey, setTemplateKey] = useState("minimal-pro");
   const [slug, setSlug] = useState("");
   const [seo, setSeo] = useState({ title: "", description: "", indexable: true });
-  const [tab, setTab] = useState<"edit" | "preview" | "analytics">("edit");
+  const [tab, setTab] = useState<"edit" | "preview" | "analytics" | "inquiries">("edit");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -84,7 +76,7 @@ export default function PortfolioDashboardPage() {
   const [saveError, setSaveError] = useState("");
   const [conflictState, setConflictState] = useState(false);
   const [recoveryDraft, setRecoveryDraft] = useState<PortfolioDraftSnapshot | null>(null);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [unreadInquiries, setUnreadInquiries] = useState(0);
   const [copied, setCopied] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
@@ -173,12 +165,21 @@ export default function PortfolioDashboardPage() {
     return () => window.clearTimeout(initialLoad);
   }, [loadPortfolio]);
 
+  /* The unread count is loaded up front so the tab can carry a badge without
+     the owner having to open it first. A failure here is silent: an absent
+     badge is a far smaller problem than a toast on every studio visit. */
   useEffect(() => {
-    if (tab !== "analytics" || analytics) return;
-    fetch("/api/portfolio/analytics").then((response) => response.json()).then((data) => {
-      if (data.success) setAnalytics(data.analytics);
-    }).catch(() => toast.error("could not load portfolio analytics"));
-  }, [tab, analytics]);
+    let active = true;
+    fetch("/api/portfolio/inquiries?status=new&pageSize=1")
+      .then((response) => response.json())
+      .then((data) => {
+        if (active && data?.success) setUnreadInquiries(data.unread || 0);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (tab !== "preview") return;
@@ -453,7 +454,23 @@ export default function PortfolioDashboardPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border dark:border-slate-800">
-        <div className="flex flex-wrap gap-1"><Button onClick={() => setTab("edit")} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === "edit" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}><LayoutTemplate className="mr-1 inline h-4 w-4" /> Editor</Button><Button onClick={() => setTab("preview")} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === "preview" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}><Eye className="mr-1 inline h-4 w-4" /> Preview</Button><Button onClick={() => setTab("analytics")} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === "analytics" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}><BarChart3 className="mr-1 inline h-4 w-4" /> Analytics</Button></div>
+        <div className="flex flex-wrap gap-1">
+          {([
+            { key: "edit", label: "Editor", icon: LayoutTemplate },
+            { key: "preview", label: "Preview", icon: Eye },
+            { key: "analytics", label: "Analytics", icon: BarChart3 },
+            { key: "inquiries", label: "Enquiries", icon: Inbox },
+          ] as const).map(({ key, label, icon: Icon }) => (
+            <Button key={key} onClick={() => setTab(key)} aria-current={tab === key ? "page" : undefined} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
+              <Icon className="mr-1 inline h-4 w-4" /> {label}
+              {key === "inquiries" && unreadInquiries > 0 && (
+                <span aria-label={`${unreadInquiries} unread`} className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black tabular-nums text-primary-foreground">
+                  {unreadInquiries > 99 ? "99+" : unreadInquiries}
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
         <div className="flex max-w-full flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span className={`h-2 w-2 rounded-full ${portfolio?.status === "published" ? "bg-emerald-500" : "bg-amber-500"}`} /> {portfolio?.status === "published" ? "Published" : "Draft — publish when you are ready"}{dirty && <span className="font-semibold text-amber-700 dark:text-amber-300">· Unsaved changes</span>}{savedPublicUrl && <><span className="hidden truncate sm:inline">· {savedPublicUrl}</span><Button onClick={copyUrl} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Copy live portfolio URL" aria-label="Copy live portfolio URL">{copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}</Button></>}</div>
       </div>
 
@@ -573,17 +590,9 @@ export default function PortfolioDashboardPage() {
         </div>
       </div>}
 
-      {tab === "analytics" && <AnalyticsPanel analytics={analytics} />}
+      {tab === "analytics" && <PortfolioAnalyticsPanel published={portfolio.status === "published"} />}
+
+      {tab === "inquiries" && <PortfolioInquiriesPanel onUnreadChange={setUnreadInquiries} />}
     </div>
   );
-}
-
-function AnalyticsPanel({ analytics }: { analytics: Analytics | null }) {
-  if (!analytics) return <div className="flex min-h-64 items-center justify-center text-sm text-slate-500">Loading portfolio analytics...</div>;
-  const max = Math.max(...analytics.timeline.map((day) => day.count), 1);
-  return <div className="flex flex-col gap-6"><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[["total views", analytics.totalViews, "last 30 days"], ["unique visitors", analytics.uniqueVisitors, "privacy-preserving estimate"], ["avg. daily views", analytics.averageViewsPerDay, "last 30 days"], ["peak day", analytics.peakDay ? new Date(analytics.peakDay).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—", "highest traffic day"]].map(([label, value, sub]) => <div key={String(label)} className="rounded-2xl border border-border bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{label}</div><div className="mt-3 text-3xl font-black text-foreground dark:text-white">{value}</div><div className="mt-1 text-xs text-slate-500 dark:text-slate-500">{sub}</div></div>)}</div><div className="rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900"><div className="mb-6"><h2 className="font-bold text-foreground dark:text-white">Portfolio reach</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Daily public visits over the last 30 days.</p></div><div className="flex h-48 items-end gap-1">{analytics.timeline.map((day) => <div key={day.day} className="group relative flex h-full flex-1 items-end"><div className="w-full rounded-t-md bg-blue-500/80 transition group-hover:bg-blue-400" style={{ height: `${Math.max((day.count / max) * 100, day.count ? 5 : 1)}%` }} title={`${day.day}: ${day.count} views`} /></div>)}</div><div className="mt-3 flex justify-between text-[10px] text-slate-500"><span>{analytics.timeline[0]?.day}</span><span>{analytics.timeline.at(-1)?.day}</span></div></div><div className="grid gap-6 lg:grid-cols-2"><Breakdown title="Top sources" rows={analytics.referrers.map((item) => [item.source, item.count])} /><Breakdown title="Devices" rows={analytics.devices.map((item) => [item.device, item.count])} /></div></div>;
-}
-
-function Breakdown({ title, rows }: { title: string; rows: [string, number][] }) {
-  return <section className="rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900"><h2 className="font-bold text-foreground dark:text-white">{title}</h2><div className="mt-5 flex flex-col gap-3">{rows.length ? rows.map(([label, count]) => <div key={label} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-sm dark:bg-slate-800"><span className="truncate text-slate-600 dark:text-slate-300">{label}</span><span className="font-bold text-foreground dark:text-white">{count}</span></div>) : <p className="text-sm text-slate-500">No data yet</p>}</div></section>;
 }

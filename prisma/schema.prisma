@@ -68,6 +68,7 @@ model User {
   expenses                    Expense[]
   portfolio                   Portfolio?
   portfolioAssets             PortfolioAsset[]
+  portfolioInquiries          PortfolioInquiry[]
   authTokens                  AuthToken[]
   calendars                   Calendar[]
   calendarEvents              CalendarEvent[]
@@ -1021,11 +1022,12 @@ model Portfolio {
   content     Json
   theme       Json
   seo         Json?
-  revision    Int             @default(1)
-  publishedAt DateTime?       @map("published_at")
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  revision    Int                @default(1)
+  publishedAt DateTime?          @map("published_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
   views       PortfolioView[]
+  inquiries   PortfolioInquiry[]
 
   @@map("portfolios")
 }
@@ -1057,6 +1059,14 @@ model PortfolioView {
   id          String    @id @default(uuid())
   portfolioId String    @map("portfolio_id")
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  /// "portfolio" for a landing/practice page, "project" for a case study.
+  /// Rows written before project attribution existed default to "portfolio",
+  /// which is what they were: unattributed views of the portfolio itself.
+  pageType    String    @default("portfolio") @map("page_type")
+  /// The portfolio JSON project identifier, not a database key. Case studies
+  /// live inside Portfolio.content, so this deliberately has no foreign key:
+  /// deleting or renaming a project must never rewrite view history.
+  projectId   String?   @map("project_id")
   visitorHash String?   @map("visitor_hash")
   referrer    String?
   deviceType  String?   @map("device_type")
@@ -1064,7 +1074,55 @@ model PortfolioView {
 
   @@index([portfolioId, viewedAt])
   @@index([portfolioId, visitorHash, viewedAt])
+  @@index([portfolioId, pageType, viewedAt])
+  @@index([portfolioId, projectId, viewedAt])
   @@map("portfolio_views")
+}
+
+/// A prospective client's message from a public portfolio contact form.
+///
+/// Inquiries used to exist only as outbound email, so a delivery failure lost
+/// the lead outright and the owner had no inbox to work from. The record is now
+/// the primary artifact and the notification is a queued side effect.
+model PortfolioInquiry {
+  id                 String    @id @default(uuid())
+  portfolioId        String    @map("portfolio_id")
+  portfolio          Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  /// Denormalized owner. Every owner-facing query filters on it, so tenant
+  /// scoping never needs a join through Portfolio.
+  userId             String    @map("user_id")
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Case study the visitor was reading when they wrote in, when known. A
+  /// content identifier like PortfolioView.projectId, so it survives deletion.
+  sourceProjectId    String?   @map("source_project_id")
+  name               String
+  email              String
+  projectType        String    @map("project_type")
+  message            String
+  /// new -> read -> replied, with archived and spam as terminal shelves.
+  status             String    @default("new")
+  /// queued -> sent, or failed once the outbox exhausts its retries.
+  notificationStatus String    @default("queued") @map("notification_status")
+  notificationError  String?   @map("notification_error")
+  /// Correlates to the EmailOutbox job. Not a foreign key: outbox rows are
+  /// operational and prunable, while the inquiry is kept.
+  outboxId           String?   @map("outbox_id")
+  /// Salted hash only. Raw addresses are never stored.
+  visitorHash        String?   @map("visitor_hash")
+  referrer           String?
+  deviceType         String?   @map("device_type")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  readAt             DateTime? @map("read_at")
+  repliedAt          DateTime? @map("replied_at")
+  archivedAt         DateTime? @map("archived_at")
+
+  @@index([userId, createdAt])
+  @@index([userId, status, createdAt])
+  @@index([portfolioId, createdAt])
+  @@index([portfolioId, sourceProjectId, createdAt])
+  @@index([outboxId])
+  @@map("portfolio_inquiries")
 }
 
 model Contract {

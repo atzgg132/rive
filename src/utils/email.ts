@@ -465,20 +465,31 @@ export function sendContactMessageEmail(input: {
   });
 }
 
-export function sendPortfolioInquiryEmail(input: {
+/**
+ * Built rather than sent, because the enquiry record is committed first and the
+ * notification is queued in the same transaction. The portfolio owner keeps the
+ * lead even when the mail provider is unavailable.
+ */
+export function buildPortfolioInquiryEmail(input: {
   to: string;
   portfolioName: string;
   visitorName: string;
   visitorEmail: string;
   projectType: string;
   message: string;
-}): Promise<EmailResult> {
+  /** Case study the visitor was reading, when the form knew about one. */
+  sourceProjectTitle?: string | null;
+}): PreparedEmail {
   const safeVisitorName = escapeHtml(input.visitorName);
   const safeVisitorEmail = escapeHtml(input.visitorEmail);
   const safeProjectType = escapeHtml(input.projectType);
   const safeMessage = escapeHtml(input.message).replace(/\n/g, "<br>");
+  const sourceTitle = input.sourceProjectTitle?.trim();
+  const sourceRow = sourceTitle
+    ? `<tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">Reading:</strong> ${escapeHtml(sourceTitle)}</td></tr>`
+    : "";
 
-  return deliver({
+  return {
     to: input.to,
     type: "portfolio_inquiry",
     subject: `[Portfolio enquiry] ${input.projectType} — ${input.visitorName}`,
@@ -490,15 +501,16 @@ export function sendPortfolioInquiryEmail(input: {
       body: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">From:</strong> ${safeVisitorName} &lt;${safeVisitorEmail}&gt;</td></tr>
         <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">Project:</strong> ${safeProjectType}</td></tr>
+        ${sourceRow}
         <tr><td style="padding:18px 0 0;color:#42556F;font-size:15px;line-height:25px">${safeMessage}</td></tr>
       </table>`,
       action: "Reply to enquiry",
       actionUrl: `mailto:${encodeURIComponent(input.visitorEmail)}`,
-      aside: "This enquiry came from your public Rive portfolio. Replying to this email will respond directly to the prospective client.",
+      aside: "This enquiry came from your public Rive portfolio, and is saved in your Portfolio Studio inbox. Replying to this email will respond directly to the prospective client.",
       recipient: input.to,
     }),
-    text: `New portfolio enquiry\n\nFrom: ${input.visitorName} <${input.visitorEmail}>\nProject: ${input.projectType}\n\n${input.message}`,
-  });
+    text: `New portfolio enquiry\n\nFrom: ${input.visitorName} <${input.visitorEmail}>\nProject: ${input.projectType}${sourceTitle ? `\nReading: ${sourceTitle}` : ""}\n\n${input.message}`,
+  };
 }
 
 export function sendContractReviewEmail(input: {

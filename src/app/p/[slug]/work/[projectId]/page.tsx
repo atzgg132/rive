@@ -1,10 +1,10 @@
-import { createHash } from "crypto";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import PortfolioCaseStudy from "@/components/portfolio/PortfolioCaseStudy";
 import { prisma } from "@/utils/db";
-import { normalizePortfolioReferrer } from "@/utils/portfolioAnalytics";
+import { portfolioViewRequestContext, recordPortfolioView } from "@/utils/portfolioViews";
 import { DEFAULT_PORTFOLIO_THEME, getPublicPortfolioContent, isPortfolioPublished, type PortfolioTheme } from "@/utils/portfolio";
 
 type Props = { params: Promise<{ slug: string; projectId: string }> };
@@ -45,17 +45,19 @@ export default async function PortfolioCaseStudyPage({ params }: Props) {
   const result = await loadCaseStudy(slug, projectId);
   if (!result) notFound();
 
-  const requestHeaders = await headers();
-  const userAgent = requestHeaders.get("user-agent") || "";
-  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-  const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-  await prisma.portfolioView.create({
-    data: {
+  /* Attributed to the project so per-case-study interest is measurable. The id
+     is the one inside the portfolio content, which is what makes the figure
+     survive a later rename — and `after` keeps the reader from waiting on a
+     write that used to block this page's response. */
+  const viewContext = portfolioViewRequestContext(await headers());
+  after(async () => {
+    await recordPortfolioView({
+      ...viewContext,
       portfolioId: result.portfolio.id,
-      visitorHash,
-      referrer: normalizePortfolioReferrer(requestHeaders.get("referer")),
-      deviceType: /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop",
-    },
+      ownerUserId: result.portfolio.userId,
+      pageType: "project",
+      projectId: result.project.id,
+    });
   });
 
   const theme = (result.portfolio.theme && typeof result.portfolio.theme === "object" ? result.portfolio.theme : DEFAULT_PORTFOLIO_THEME) as PortfolioTheme;

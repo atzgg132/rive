@@ -161,7 +161,10 @@ export default function PortfolioCaseStudy({ content, project, portfolioSlug, th
             <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/70">Like what you see?</p>
             <h2 className="mt-4 max-w-4xl text-3xl font-black leading-[1.02] tracking-[-0.05em] text-white sm:text-6xl">Let&apos;s create the next strong case study together.</h2>
             <div className="mt-8 flex flex-wrap gap-3">
-              {content.contactEmail && <a href={`mailto:${content.contactEmail}`} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3.5 text-sm font-extrabold text-[var(--case-accent)]"><Mail className="h-4 w-4" /> Contact {content.name}</a>}
+              {/* Sends the reader to the enquiry form carrying this project, so
+                  the owner sees which case study prompted the message. The
+                  header keeps a plain mailto for anyone who prefers email. */}
+              {content.contactEmail && <a href={`/p/${portfolioSlug}?project=${encodeURIComponent(project.id)}#contact`} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3.5 text-sm font-extrabold text-[var(--case-accent)]"><Mail className="h-4 w-4" /> Contact {content.name}</a>}
               {projectUrl && <a href={projectUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/30 px-5 py-3.5 text-sm font-extrabold text-white">Visit live project <ArrowUpRight className="h-4 w-4" /></a>}
             </div>
           </div>

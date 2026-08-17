@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { createHash } from "crypto";
 import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { prisma } from "@/utils/db";
 import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
-import { normalizePortfolioReferrer } from "@/utils/portfolioAnalytics";
+import { portfolioViewRequestContext, recordPortfolioView } from "@/utils/portfolioViews";
 import {
   DEFAULT_PORTFOLIO_THEME,
   getVisiblePractices,
@@ -53,15 +52,15 @@ export default async function PortfolioPracticePage({ params }: Props) {
   const result = await loadPractice(slug, practiceSlug);
   if (!result) notFound();
 
-  const requestHeaders = await headers();
-  const userAgent = requestHeaders.get("user-agent") || "";
-  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-  const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-  const referrer = normalizePortfolioReferrer(requestHeaders.get("referer"));
-  const deviceType = /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop";
+  /* A practice page is another way into the same portfolio, not a case study,
+     so it counts as a portfolio-home view. */
+  const viewContext = portfolioViewRequestContext(await headers());
   after(async () => {
-    await prisma.portfolioView.create({
-      data: { portfolioId: result.portfolio.id, visitorHash, referrer, deviceType },
+    await recordPortfolioView({
+      ...viewContext,
+      portfolioId: result.portfolio.id,
+      ownerUserId: result.portfolio.userId,
+      pageType: "portfolio",
     });
   });
 

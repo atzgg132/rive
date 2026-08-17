@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Loader2, Mail } from "lucide-react";
 
 type Props = {
@@ -16,6 +16,16 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  /* A case study links here with ?project=<id>, so the owner can see which work
+     prompted the message. Held in a ref because nothing renders from it — it is
+     read once, at submit. Taken from the URL directly rather than through
+     `useSearchParams`, which would require wrapping this form in a Suspense
+     boundary on every template that renders it. An unrecognised value is simply
+     ignored by the server. */
+  const sourceProjectIdRef = useRef("");
+  useEffect(() => {
+    sourceProjectIdRef.current = new URLSearchParams(window.location.search).get("project")?.slice(0, 120) || "";
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,7 +36,10 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
 
     setSending(true);
     setError("");
-    const form = new FormData(event.currentTarget);
+    // Held onto before the first await: React clears `currentTarget` once the
+    // handler returns, so reaching for it after the request would throw.
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       const response = await fetch(`/api/public/portfolio/${encodeURIComponent(portfolioSlug)}/inquiries`, {
         method: "POST",
@@ -37,12 +50,13 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
           projectType: form.get("projectType"),
           message: form.get("message"),
           website: form.get("website"),
+          sourceProjectId: sourceProjectIdRef.current || undefined,
         }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.message || "Your enquiry could not be sent.");
       setSent(true);
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Your enquiry could not be sent.");
     } finally {

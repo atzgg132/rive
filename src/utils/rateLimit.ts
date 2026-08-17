@@ -59,8 +59,8 @@ function normalizeIp(value: string): string | null {
  * typed. Doing so turns every IP-keyed rate limit into a no-op, because a new
  * value allocates a new bucket.
  */
-export function getRequestIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
+export function getRequestIpFromHeaders(headers: Headers): string {
+  const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
     const hops = forwarded
       .split(",")
@@ -74,8 +74,18 @@ export function getRequestIp(request: Request): string {
     }
   }
 
-  const real = request.headers.get("x-real-ip");
+  const real = headers.get("x-real-ip");
   return (real ? normalizeIp(real) : null) || "unknown";
+}
+
+/**
+ * Server Components only have `headers()`, not a Request, so the derivation
+ * lives in `getRequestIpFromHeaders` and this stays the Request-shaped door
+ * onto it. Both must agree: a visitor identified one way for rate limiting and
+ * another way for analytics would be two different people to us.
+ */
+export function getRequestIp(request: Request): string {
+  return getRequestIpFromHeaders(request.headers);
 }
 
 export function rateLimit(key: string, limit: number, windowMs: number): boolean {

@@ -1,16 +1,9 @@
-import { createHash } from "crypto";
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { normalizePortfolioReferrer } from "@/utils/portfolioAnalytics";
+import { portfolioViewRequestContext, recordPortfolioView } from "@/utils/portfolioViews";
 import { getPublicPortfolioContent, isPortfolioPublished } from "@/utils/portfolio";
 
 export const dynamic = "force-dynamic";
-
-function deviceFromUserAgent(userAgent: string): string {
-  if (/mobile|android|iphone|ipad/i.test(userAgent)) return "mobile";
-  if (/tablet/i.test(userAgent)) return "tablet";
-  return "desktop";
-}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -20,14 +13,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       return NextResponse.json({ success: false, message: "Portfolio not found." }, { status: 404 });
     }
 
-    const userAgent = req.headers.get("user-agent") || "";
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-    const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-    const referrer = normalizePortfolioReferrer(req.headers.get("referer"));
-    const deviceType = deviceFromUserAgent(userAgent);
+    /* Shares the recorder — and therefore the de-duplication window — with the
+       rendered page, so a client that reads this route right after loading
+       /p/[slug] contributes one view rather than two. */
+    const viewContext = portfolioViewRequestContext(req.headers, {
+      previewSearchParam: req.nextUrl.searchParams.get("preview"),
+    });
     after(async () => {
-      await prisma.portfolioView.create({
-        data: { portfolioId: portfolio.id, visitorHash, referrer, deviceType },
+      await recordPortfolioView({
+        ...viewContext,
+        portfolioId: portfolio.id,
+        ownerUserId: portfolio.userId,
+        pageType: "portfolio",
       });
     });
 
