@@ -1,9 +1,10 @@
 "use client";
 
 import { AudioLines, Pause, Play } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { PortfolioMedia, PortfolioMediaSettings } from "@/utils/portfolio";
 import { formatDuration } from "./mediaShared";
+import { claimPortfolioPlayback, onOtherPortfolioPlayback } from "./mediaPlayback";
 
 type Props = {
   media: PortfolioMedia;
@@ -32,6 +33,8 @@ function fallbackPeaks(seed: string, count = 120): number[] {
  */
 export default function MediaAudio({ media, settings, className = "" }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const instanceId = useId();
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -42,6 +45,27 @@ export default function MediaAudio({ media, settings, className = "" }: Props) {
   );
   const total = formatDuration(media.durationSeconds);
   const position = formatDuration(elapsed) || "0:00";
+
+  const stop = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setProgress(0);
+    setElapsed(0);
+  }, []);
+
+  useEffect(() => onOtherPortfolioPlayback(instanceId, stop), [instanceId, stop]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || entry.intersectionRatio < 0.2) stop();
+    }, { threshold: 0.2 });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [stop]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -74,7 +98,11 @@ export default function MediaAudio({ media, settings, className = "" }: Props) {
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) void audio.play().catch(() => undefined);
+    if (audio.paused) {
+      claimPortfolioPlayback(instanceId);
+      audio.loop = false;
+      void audio.play().catch(() => undefined);
+    }
     else audio.pause();
   };
 
@@ -114,7 +142,7 @@ export default function MediaAudio({ media, settings, className = "" }: Props) {
 
   return (
     <figure className={className}>
-      <div className="overflow-hidden rounded-[var(--portfolio-radius)] border border-[var(--portfolio-border)] bg-[var(--portfolio-card)]">
+      <div ref={containerRef} className="overflow-hidden rounded-[var(--portfolio-radius)] border border-[var(--portfolio-border)] bg-[var(--portfolio-card)]">
         <div className="flex items-center gap-4 p-4 sm:gap-5 sm:p-5">
           <button
             type="button"
@@ -172,7 +200,7 @@ export default function MediaAudio({ media, settings, className = "" }: Props) {
           <AudioLines className="hidden h-5 w-5 shrink-0 text-[var(--portfolio-muted)] sm:block" />
         </div>
 
-        <audio ref={audioRef} src={media.url} preload="none" loop={settings.loop} />
+        <audio ref={audioRef} src={media.url} preload="none" />
       </div>
       {settings.showCaptions && media.caption && media.caption !== title && (
         <figcaption className="mt-3 text-xs leading-5 text-[var(--portfolio-muted)]">{media.caption}</figcaption>

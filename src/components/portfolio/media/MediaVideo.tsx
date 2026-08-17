@@ -1,9 +1,10 @@
 "use client";
 
 import { Play } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PortfolioMedia, PortfolioMediaSettings } from "@/utils/portfolio";
 import { MEDIA_SURFACE, formatDuration, motionAllowed } from "./mediaShared";
+import { claimPortfolioPlayback, onOtherPortfolioPlayback } from "./mediaPlayback";
 
 type Props = {
   media: PortfolioMedia;
@@ -21,15 +22,27 @@ type Props = {
 export default function MediaVideo({ media, settings, className = "", fill = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const instanceId = useId();
   /** Whether the visitor has committed to this video. Drives both hiding the
    *  poster overlay and handing over to the element's native controls. */
   const [started, setStarted] = useState(false);
   const duration = formatDuration(media.durationSeconds);
   const aspect = media.aspectRatio && media.aspectRatio > 0 ? media.aspectRatio : 16 / 9;
 
+  const stop = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.pause();
+    video.currentTime = 0;
+    setStarted(false);
+  }, []);
+
   const play = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
+    claimPortfolioPlayback(instanceId);
+    video.muted = false;
+    video.loop = false;
     setStarted(true);
     try {
       await video.play();
@@ -42,7 +55,9 @@ export default function MediaVideo({ media, settings, className = "", fill = fal
       // retry.
       setStarted(false);
     }
-  }, []);
+  }, [instanceId]);
+
+  useEffect(() => onOtherPortfolioPlayback(instanceId, stop), [instanceId, stop]);
 
   /* Depend on the flag itself, not the settings object. Callers build that
      object inline, so using it as a dependency tore the observer down and
@@ -52,32 +67,37 @@ export default function MediaVideo({ media, settings, className = "", fill = fal
   useEffect(() => {
     const container = containerRef.current;
     const video = videoRef.current;
-    if (!container || !video || !autoplayEnabled || !motionAllowed()) return;
+    if (!container || !video) return;
 
     // Playing only while visible keeps an off-screen video from streaming.
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        const visible = entry.isIntersecting && entry.intersectionRatio >= 0.35;
+        if (visible && autoplayEnabled && motionAllowed() && !started) {
           // Same contract as `play`: only claim the video started once it
           // actually did, so a refused autoplay keeps the poster and its
           // play button instead of showing bare controls over a still frame.
-          setStarted(true);
-          video.play().catch(() => setStarted(false));
-        } else if (!video.paused) {
-          video.pause();
+          claimPortfolioPlayback(instanceId);
+          video.muted = true;
+          video.loop = settings.loop;
+          video.play().then(() => setStarted(true)).catch(() => setStarted(false));
+        } else if (!visible) {
+          stop();
         }
       },
-      { threshold: 0.5 },
+      { threshold: 0.35 },
     );
     observer.observe(container);
     return () => observer.disconnect();
-  }, [autoplayEnabled]);
+  }, [autoplayEnabled, instanceId, settings.loop, started, stop]);
 
   const previewOn = () => {
     if (!settings.hoverPreview || started) return;
     const video = videoRef.current;
     if (!video) return;
+    claimPortfolioPlayback(instanceId);
     video.muted = true;
+    video.loop = true;
     void video.play().catch(() => undefined);
   };
 
@@ -103,8 +123,6 @@ export default function MediaVideo({ media, settings, className = "", fill = fal
           poster={media.posterUrl || undefined}
           preload="none"
           playsInline
-          loop={settings.loop || settings.autoplayOnScroll}
-          muted={settings.autoplayOnScroll || settings.hoverPreview}
           controls={started}
           aria-label={media.alt || media.caption || "Project video"}
           className={`h-full w-full ${settings.fit === "contain" ? "object-contain" : "object-cover"}`}

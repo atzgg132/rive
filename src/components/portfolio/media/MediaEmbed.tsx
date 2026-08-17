@@ -1,10 +1,11 @@
 "use client";
 
 import { ExternalLink, Play, Volume2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PortfolioMedia, PortfolioMediaSettings } from "@/utils/portfolio";
 import { EMBED_PROVIDERS, embedSrcFor, parseEmbedInput } from "@/utils/portfolioEmbeds";
 import { MEDIA_SURFACE, motionAllowed } from "./mediaShared";
+import { claimPortfolioPlayback, onOtherPortfolioPlayback } from "./mediaPlayback";
 
 /* Portfolio owners supply validated provider posters. */
 /* eslint-disable @next/next/no-img-element */
@@ -34,6 +35,7 @@ const AUDIO_ROLE = "audio";
 export default function MediaEmbed({ media, settings, className = "", fill = false }: Props) {
   const [mode, setMode] = useState<"poster" | "ambient" | "player">("poster");
   const containerRef = useRef<HTMLDivElement>(null);
+  const instanceId = useId();
 
   /* Revalidate on render: a stored embed is only honoured while it still
      resolves to a provider on the allowlist.
@@ -47,18 +49,26 @@ export default function MediaEmbed({ media, settings, className = "", fill = fal
   const parsed = parseEmbedInput(media.url) || parseEmbedInput(media.sourceUrl || "");
   const autoplayEnabled = settings.autoplayOnScroll;
   const isAudioWidget = parsed?.role === AUDIO_ROLE;
+  const stop = useCallback(() => setMode("poster"), []);
+
+  useEffect(() => onOtherPortfolioPlayback(instanceId, stop), [instanceId, stop]);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !autoplayEnabled || isAudioWidget || !motionAllowed()) return;
+    if (!container) return;
 
     const observer = new IntersectionObserver(([entry]) => {
-      // Never downgrade a player the visitor deliberately opened.
-      setMode((current) => (current === "player" ? current : entry.isIntersecting ? "ambient" : "poster"));
-    }, { threshold: 0.5 });
+      const visible = entry.isIntersecting && entry.intersectionRatio >= 0.35;
+      if (!visible) {
+        stop();
+      } else if (autoplayEnabled && !isAudioWidget && motionAllowed()) {
+        claimPortfolioPlayback(instanceId);
+        setMode((current) => current === "player" ? current : "ambient");
+      }
+    }, { threshold: 0.35 });
     observer.observe(container);
     return () => observer.disconnect();
-  }, [autoplayEnabled, isAudioWidget]);
+  }, [autoplayEnabled, instanceId, isAudioWidget, stop]);
 
   if (!parsed) return null;
 
@@ -69,16 +79,8 @@ export default function MediaEmbed({ media, settings, className = "", fill = fal
   if (isAudioWidget) {
     return (
       <figure className={className}>
-        <div className="overflow-hidden rounded-[var(--portfolio-radius)] border border-[var(--portfolio-border)] bg-[var(--portfolio-card)]">
-          <iframe
-            src={parsed.embedUrl}
-            title={title}
-            loading="lazy"
-            height={media.embedHeight || parsed.embedHeight || 166}
-            className="w-full border-0"
-            allow="encrypted-media; clipboard-write"
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
+        <div ref={containerRef} className="relative overflow-hidden rounded-[var(--portfolio-radius)] border border-[var(--portfolio-border)] bg-[var(--portfolio-card)]" style={{ minHeight: media.embedHeight || parsed.embedHeight || 166 }}>
+          {mode === "player" ? <iframe src={parsed.embedUrl} title={title} height={media.embedHeight || parsed.embedHeight || 166} className="w-full border-0" allow="autoplay; encrypted-media; clipboard-write" referrerPolicy="strict-origin-when-cross-origin" /> : <button type="button" onClick={() => { claimPortfolioPlayback(instanceId); setMode("player"); }} aria-label={`Open ${title} on ${provider.label}`} className="absolute inset-0 flex w-full items-center justify-center gap-3 bg-[var(--portfolio-soft)] px-5 text-sm font-extrabold text-[var(--portfolio-ink)]"><Play className="h-5 w-5 fill-current text-[var(--portfolio-accent)]" /> Play on {provider.label}</button>}
         </div>
         {settings.showCaptions && media.caption && (
           <figcaption className="mt-3 text-xs leading-5 text-[var(--portfolio-muted)]">{media.caption}</figcaption>
@@ -104,7 +106,7 @@ export default function MediaEmbed({ media, settings, className = "", fill = fal
           )}
           <button
             type="button"
-            onClick={() => setMode("player")}
+            onClick={() => { claimPortfolioPlayback(instanceId); setMode("player"); }}
             aria-label={`Play ${title} on ${provider.label}`}
             className="absolute inset-0 grid place-items-center bg-gradient-to-t from-black/50 via-transparent to-transparent"
           >
@@ -132,7 +134,7 @@ export default function MediaEmbed({ media, settings, className = "", fill = fal
                both the affordance and the click target that promotes it. */
             <button
               type="button"
-              onClick={() => setMode("player")}
+              onClick={() => { claimPortfolioPlayback(instanceId); setMode("player"); }}
               aria-label={`Play ${title} with sound on ${provider.label}`}
               className="absolute inset-0 flex items-end justify-start bg-gradient-to-t from-black/40 via-transparent to-transparent p-4 transition"
             >
