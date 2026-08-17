@@ -1,0 +1,215 @@
+import { loadEnvConfig } from "@next/env";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+import { createHmac, randomBytes, randomUUID, scryptSync } from "node:crypto";
+import { checkServerIdentity } from "node:tls";
+import { expect, test } from "@playwright/test";
+import { Pool } from "pg";
+
+/**
+ * The studio's job: get someone from an incomplete portfolio to a credible
+ * published one without them having to work out the order themselves.
+ *
+ * These cover the parts of that journey that are easy to regress — the next
+ * action being present and actually going somewhere, the work coming first,
+ * seeing the result while editing, and configuration staying out of the way
+ * until it applies.
+ */
+
+loadEnvConfig(process.cwd());
+
+const dbChecksEnabled = Boolean(process.env.DATABASE_URL);
+const sessionSecret = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-local-development-session-secret";
+
+type TestDb = { prisma: PrismaClient; pool: Pool };
+let db: TestDb;
+
+function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  return `scrypt:${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+}
+
+function tokenFor(user: { id: string; email: string; plan: string; sessionVersion: number }) {
+  const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const payload = JSON.stringify({ userId: user.id, email: user.email, plan: user.plan, sessionVersion: user.sessionVersion, expiry });
+  const signature = createHmac("sha256", sessionSecret).update(payload).digest("hex");
+  return Buffer.from(`${payload}.${signature}`).toString("base64");
+}
+
+function baseUrl() {
+  return process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${process.env.PLAYWRIGHT_PORT || 3000}`;
+}
+
+function sslConfig() {
+  const sslServerName = process.env.DATABASE_SSL_SERVERNAME || "";
+  return process.env.DATABASE_SSL === "disable" || process.env.DATABASE_URL?.includes("sslmode=disable")
+    ? false
+    : {
+        rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+        ...(sslServerName ? { checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) => checkServerIdentity(sslServerName, certificate) } : {}),
+      };
+}
+
+/** A deliberately incomplete portfolio: a project with no cover, no testimonials. */
+function studioContent() {
+  return {
+    name: "Studio Fixture",
+    profileImageUrl: "",
+    headline: "Independent product designer",
+    bio: "Fixture portfolio for studio tests.",
+    location: "Remote",
+    availability: "Open",
+    contactEmail: "studio@example.invalid",
+    social: [],
+    practices: [],
+    practiceLayout: "unified" as const,
+    mediaSettings: { autoplayOnScroll: false, loop: false, hoverPreview: false, lightbox: true, layout: "grid" as const, fit: "cover" as const, showCaptions: true },
+    projects: [
+      { id: "needs-cover", title: "Harbour rebuild", description: "A project without a cover image.", role: "Design", year: "2026", url: "", imageUrl: "", visibility: "public" as const, media: [] },
+    ],
+    services: [{ id: "s1", title: "Product design", description: "End to end." }],
+    testimonials: [],
+    sections: [
+      { key: "about" as const, visible: true }, { key: "projects" as const, visible: true },
+      { key: "services" as const, visible: true }, { key: "testimonials" as const, visible: false },
+      { key: "contact" as const, visible: true },
+    ],
+  };
+}
+
+async function studioUser(label: string) {
+  const user = await db.prisma.user.create({
+    data: {
+      email: `studio-${label}-${randomUUID()}@rive.test`,
+      name: `Studio ${label}`,
+      passwordHash: hashPassword("studio-test-password"),
+      plan: "pro",
+      onboardingStatus: "complete",
+      businessType: "freelancer",
+      currency: "USD",
+      timeZone: "UTC",
+    },
+    select: { id: true, email: true, plan: true, sessionVersion: true },
+  });
+  await db.prisma.portfolio.create({
+    data: {
+      userId: user.id,
+      slug: `studio-${label}-${randomUUID().slice(0, 8)}`,
+      status: "draft",
+      templateKey: "minimal-pro",
+      content: studioContent(),
+      theme: { accent: "#2563EB", mode: "light", radius: "soft" },
+      seo: { title: "", description: "", indexable: false },
+    },
+  });
+  return tokenFor(user);
+}
+
+test.describe("portfolio studio", () => {
+  test.skip(!dbChecksEnabled, "Requires DATABASE_URL with a migrated test database.");
+  test.setTimeout(120_000);
+
+  test.beforeAll(async () => {
+    const parsed = new URL(process.env.DATABASE_URL as string);
+    for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) parsed.searchParams.delete(parameter);
+    const pool = new Pool({ connectionString: parsed.toString(), ssl: sslConfig() });
+    db = { pool, prisma: new PrismaClient({ adapter: new PrismaPg(pool) }) };
+    await db.prisma.$queryRaw`SELECT 1`;
+  });
+
+  test.afterAll(async () => {
+    await db?.prisma.$disconnect();
+    await db?.pool.end();
+  });
+
+  test("names the next action and takes you to it", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: await studioUser("worklist"), url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    /* The fixture's one project has no cover, so that is the outstanding
+       essential — and it must name the project rather than say "add a cover
+       image", which is useless once there is more than one. */
+    const nextAction = page.getByRole("button", { name: /Add a cover image to Harbour rebuild/i });
+    await expect(nextAction).toBeVisible({ timeout: 20_000 });
+
+    /* The studio opens on the work, not the profile form — asserted through the
+       work panel's own copy, since the nav label alone appears twice. */
+    const workPanel = page.getByText("Show the work you want clients to remember", { exact: false });
+    await expect(workPanel).toBeVisible();
+
+    // Somewhere else, then follow the action back: it must land on the work.
+    await page.getByRole("button", { name: /Appearance/i }).click();
+    await expect(workPanel).toBeHidden();
+
+    await nextAction.click();
+    await expect(workPanel).toBeVisible();
+  });
+
+  test("shows one preview, never two, and keeps it in step with edits", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: await studioUser("preview"), url: baseUrl() }]);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    /* Below the side-by-side breakpoint the editor must not mount a preview at
+       all: a second iframe would load the preview route twice on every visit
+       and make any frame selector ambiguous. */
+    await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
+
+    // Switching device size keeps exactly one frame, retitled.
+    await page.getByRole("button", { name: "Mobile preview" }).click();
+    await expect(page.locator('iframe[title="mobile portfolio preview"]')).toHaveCount(1);
+    await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
+  });
+
+  test("side-by-side preview appears on a wide screen, and only there", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: await studioUser("wide"), url: baseUrl() }]);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    // Editing and seeing are on screen together, with a single frame.
+    await expect(page.getByText("Live preview")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
+
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth, "the two-pane studio must not scroll the page sideways").toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  });
+
+  test("playback settings stay hidden until a project has media", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: await studioUser("media"), url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: /Appearance/i }).click();
+    await expect(page.getByText("Media playback")).toBeVisible();
+    // The fixture has no media, so the seven toggles must not be here yet.
+    await expect(page.getByText(/These settings appear once a project has images/i)).toBeVisible();
+    await expect(page.getByText("Play video automatically as visitors scroll")).toHaveCount(0);
+  });
+
+  test("the studio still works on a phone", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: await studioUser("mobile"), url: baseUrl() }]);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await expect(page.getByRole("button", { name: /Add a cover image to Harbour rebuild/i })).toBeVisible({ timeout: 20_000 });
+
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(
+      dimensions.scrollWidth,
+      `the studio overflows by ${dimensions.scrollWidth - dimensions.clientWidth}px at 390px`,
+    ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  });
+});

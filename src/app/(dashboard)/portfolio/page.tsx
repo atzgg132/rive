@@ -3,7 +3,7 @@
 import { Button, Input, PageHeader, Textarea, Select } from "@/components/ui";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, Eye, ExternalLink, Globe2, Inbox, Layers, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Monitor, Smartphone, Tablet, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
+import { Check, Copy, Eye, ExternalLink, Globe2, Inbox, Layers, LayoutTemplate, Plus, Save, Trash2, BarChart3, Upload, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_PORTFOLIO_CONTENT, DEFAULT_PORTFOLIO_THEME, mergePortfolioContent, normalizeSlug, PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioMediaSettings, type PortfolioTheme } from "@/utils/portfolio";
 import { uploadImage } from "@/utils/clientUploads";
@@ -11,6 +11,8 @@ import PortfolioProjectEditor from "@/components/portfolio/PortfolioProjectEdito
 import PortfolioPracticeEditor from "@/components/portfolio/PortfolioPracticeEditor";
 import PortfolioAnalyticsPanel from "@/components/portfolio/PortfolioAnalyticsPanel";
 import PortfolioInquiriesPanel from "@/components/portfolio/PortfolioInquiriesPanel";
+import PortfolioLivePreview, { type PreviewDevice } from "@/components/portfolio/PortfolioLivePreview";
+import PortfolioNextSteps, { getPortfolioSteps, type StudioSection } from "@/components/portfolio/PortfolioNextSteps";
 import { FirstVisitNote } from "@/components/dashboard/ActivationCard";
 
 /* Validated portfolio uploads and remote image hosts cannot use a static Next image allowlist. */
@@ -78,8 +80,11 @@ export default function PortfolioDashboardPage() {
   const [recoveryDraft, setRecoveryDraft] = useState<PortfolioDraftSnapshot | null>(null);
   const [unreadInquiries, setUnreadInquiries] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
-  const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
+  /* Tracked in JS rather than hidden with CSS: a `hidden` pane still mounts its
+     iframe, which would put two previews in the DOM, load /portfolio-preview
+     twice on every visit, and make any selector matching the frame ambiguous. */
+  const [wideEnoughForSidePreview, setWideEnoughForSidePreview] = useState(false);
   const contentRef = useRef(content);
   const themeRef = useRef(theme);
   const templateKeyRef = useRef(templateKey);
@@ -87,12 +92,18 @@ export default function PortfolioDashboardPage() {
   const seoRef = useRef(seo);
   const editVersionRef = useRef(0);
   const draftHydratedRef = useRef(false);
-  const [editorSection, setEditorSection] = useState<"profile" | "work" | "practices" | "services" | "proof" | "design">("profile");
+  /* Opens on the work, because the work is the portfolio. The old default was
+     the profile form, which put the least differentiating screen first. */
+  const [editorSection, setEditorSection] = useState<StudioSection>("work");
 
   const savedPublicUrl = portfolio?.status === "published"
     ? (typeof window !== "undefined" ? `${window.location.origin}/p/${portfolio.slug}` : `/p/${portfolio.slug}`)
     : null;
   const readiness = getPortfolioReadiness(content, seo, portfolio?.status || "draft");
+  const steps = getPortfolioSteps(content, seo, portfolio?.status || "draft");
+  /* Playback controls stay out of the way until there is media for them to
+     govern — seven toggles are noise on a portfolio with no video in it. */
+  const hasProjectMedia = content.projects.some((project) => (project.media || []).length > 0);
   const displayedSaveState: SaveState = saving ? "saving" : saveError ? "error" : dirty ? "dirty" : saveState === "loading" ? "loading" : "saved";
 
   useEffect(() => {
@@ -181,13 +192,15 @@ export default function PortfolioDashboardPage() {
     };
   }, []);
 
+  /* Preview delivery lives in PortfolioLivePreview, which debounces it. This
+     only decides whether the side-by-side pane exists at all. */
   useEffect(() => {
-    if (tab !== "preview") return;
-    previewFrameRef.current?.contentWindow?.postMessage({
-      type: "rive:portfolio-preview",
-      payload: { content, theme, templateKey },
-    }, window.location.origin);
-  }, [content, previewDevice, tab, templateKey, theme]);
+    const query = window.matchMedia("(min-width: 1536px)");
+    const sync = () => setWideEnoughForSidePreview(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (!dirty) return;
@@ -477,13 +490,22 @@ export default function PortfolioDashboardPage() {
       {recoveryDraft && !dirty && <div role="status" className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold">We found unsaved changes from before this page was reloaded.</p><p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/80">Restore them to continue editing, or discard this local recovery copy.</p></div><div className="flex shrink-0 gap-2"><Button onClick={restoreRecoveryDraft} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white">Restore changes</Button><Button onClick={() => { window.localStorage.removeItem(`rive:portfolio-draft:${portfolio?.id}`); setRecoveryDraft(null); }} className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-800 dark:border-amber-800 dark:text-amber-100">Discard</Button></div></div>}
       {saveError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Keep my draft</Button></div> : <Button onClick={() => save()} disabled={saving || !dirty} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button>}</div>}
 
-      {tab === "edit" && <div data-portfolio-editor-shell className="grid min-h-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
+      {/* Above the shell, not inside a panel: what to do next is true of the
+          whole portfolio, not of whichever section happens to be open. */}
+      {tab === "edit" && <PortfolioNextSteps steps={steps} onGoTo={setEditorSection} />}
+
+      {tab === "edit" && <div className="grid min-h-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_26rem]">
+      <div data-portfolio-editor-shell className="grid min-h-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="border-b border-border bg-muted/35 p-4 lg:border-b-0 lg:border-r">
             <nav data-portfolio-section-nav className="grid grid-cols-2 gap-2 sm:grid-cols-6 lg:sticky lg:top-5 lg:grid-cols-1">
+            {/* Work leads: it is the thing a portfolio is for. Practices keeps a
+                permanent slot because running two disciplines from one portfolio
+                is a genuine differentiator, but its label says plainly who it is
+                for so the majority with one discipline can skip it. */}
             {([
-              { key: "profile", label: "Profile", sub: "Identity and contact", icon: UserRound },
               { key: "work", label: "Selected work", sub: `${content.projects.length} projects`, icon: FolderKanban },
-              { key: "practices", label: "Practices", sub: content.practices.length > 0 ? `${content.practices.length} practices` : "Optional", icon: Layers },
+              { key: "profile", label: "Profile", sub: "Identity and contact", icon: UserRound },
+              { key: "practices", label: "Practices", sub: content.practices.length > 0 ? `${content.practices.length} practices` : "Two disciplines?", icon: Layers },
               { key: "services", label: "Services", sub: `${content.services.length} services`, icon: BriefcaseBusiness },
               { key: "proof", label: "Testimonials", sub: `${content.testimonials.length} added`, icon: Sparkles },
               { key: "design", label: "Appearance", sub: "Theme and visibility", icon: Settings2 },
@@ -496,7 +518,7 @@ export default function PortfolioDashboardPage() {
             <div className="col-span-2 mt-2 border-t border-slate-200 pt-3 dark:border-slate-700 sm:col-span-6 lg:col-span-1">
               <div className="flex items-center justify-between"><span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500"><Sparkles className="h-3.5 w-3.5 text-blue-500" /> Readiness</span><span className="text-xs font-black text-foreground dark:text-white">{readiness.score}%</span></div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${readiness.score}%` }} /></div>
-              <p className="mt-2 text-[10px] leading-4 text-slate-500">{readiness.completed} of {readiness.checks.length} quality signals complete.</p>
+              <p className="mt-2 text-[10px] leading-4 text-slate-500">{readiness.completed} of {readiness.checks.length} signals complete. The worklist above says which.</p>
             </div>
           </nav>
         </aside>
@@ -555,7 +577,7 @@ export default function PortfolioDashboardPage() {
 
           <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "services" ? "" : "hidden"}`}><div className="mb-5 flex items-center justify-between"><div><h2 className="font-bold text-foreground dark:text-white">Services</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Turn your capabilities into clear client outcomes.</p></div><Button type="button" onClick={() => updateContent({ services: [...content.services, { id: id("service"), title: "", description: "" }] })} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-2 text-xs font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"><Plus className="h-3.5 w-3.5" /> Add service</Button></div><div className="grid gap-3 sm:grid-cols-2">{content.services.map((service) => <div key={service.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div className="mb-3 flex justify-end"><Button type="button" onClick={() => updateContent({ services: content.services.filter((item) => item.id !== service.id) })} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button></div><Input className={`${inputClass} mb-3`} value={service.title || ""} placeholder="Service name" onChange={(event) => updateContent({ services: content.services.map((item) => item.id === service.id ? { ...item, title: event.target.value } : item) })} /><Textarea className={inputClass} rows={3} value={service.description || ""} placeholder="Describe the outcome clients can expect" onChange={(event) => updateContent({ services: content.services.map((item) => item.id === service.id ? { ...item, description: event.target.value } : item) })} />{content.practices.length > 0 && <label className="mt-3 flex flex-col gap-2"><span className={labelClass}>Practice</span><Select className={inputClass} value={service.practiceId || ""} onChange={(event) => updateContent({ services: content.services.map((item) => item.id === service.id ? { ...item, practiceId: event.target.value || undefined } : item) })}><option value="">Shown in every practice</option>{content.practices.map((practice) => <option key={practice.id} value={practice.id}>{practice.name || "Untitled practice"}</option>)}</Select></label>}</div>)}</div></section>
 
-          <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "design" ? "" : "hidden"}`}><h2 className="mb-5 font-bold text-foreground dark:text-white">Appearance & visibility</h2><div className="grid gap-4 sm:grid-cols-3"><label className="flex flex-col gap-2"><span className={labelClass}>Accent</span><Input type="color" className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent dark:border-slate-700" value={theme.accent} onChange={(event) => updateTheme({ accent: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Site mode</span><Select className={inputClass} value={theme.mode} onChange={(event) => updateTheme({ mode: event.target.value as PortfolioTheme["mode"] })}><option value="light">Light</option><option value="dark">Dark</option></Select></label><label className="flex flex-col gap-2"><span className={labelClass}>Corners</span><Select className={inputClass} value={theme.radius} onChange={(event) => updateTheme({ radius: event.target.value as PortfolioTheme["radius"] })}><option value="soft">Soft</option><option value="sharp">Sharp</option></Select></label></div><div className="mt-6 border-t border-border pt-6"><h3 className="text-sm font-bold text-foreground dark:text-white">Media playback</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">Applies to your public portfolio and the preview, never to this editor.</p>
+          <section className={`rounded-2xl border border-border bg-white p-6 dark:border-slate-800 dark:bg-slate-900 ${editorSection === "design" ? "" : "hidden"}`}><h2 className="mb-5 font-bold text-foreground dark:text-white">Appearance & visibility</h2><div className="grid gap-4 sm:grid-cols-3"><label className="flex flex-col gap-2"><span className={labelClass}>Accent</span><Input type="color" className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent dark:border-slate-700" value={theme.accent} onChange={(event) => updateTheme({ accent: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Site mode</span><Select className={inputClass} value={theme.mode} onChange={(event) => updateTheme({ mode: event.target.value as PortfolioTheme["mode"] })}><option value="light">Light</option><option value="dark">Dark</option></Select></label><label className="flex flex-col gap-2"><span className={labelClass}>Corners</span><Select className={inputClass} value={theme.radius} onChange={(event) => updateTheme({ radius: event.target.value as PortfolioTheme["radius"] })}><option value="soft">Soft</option><option value="sharp">Sharp</option></Select></label></div><div className="mt-6 border-t border-border pt-6"><h3 className="text-sm font-bold text-foreground dark:text-white">Media playback</h3>{!hasProjectMedia ? <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">These settings appear once a project has images, video, or audio attached. Add media under Selected work and the playback controls will show up here.</p> : <><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">Applies to your public portfolio and the preview, never to this editor.</p>
 <div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="flex flex-col gap-2"><span className={labelClass}>Media layout</span><Select className={inputClass} value={content.mediaSettings.layout} onChange={(event) => updateMediaSettings({ layout: event.target.value as PortfolioMediaSettings["layout"] })}><option value="grid">Grid</option><option value="masonry">Masonry</option><option value="carousel">Carousel</option></Select></label><label className="flex flex-col gap-2"><span className={labelClass}>Image framing</span><Select className={inputClass} value={content.mediaSettings.fit} onChange={(event) => updateMediaSettings({ fit: event.target.value as PortfolioMediaSettings["fit"] })}><option value="cover">Fill the frame (crops)</option><option value="contain">Show the whole image</option></Select></label></div>
 <div className="mt-5 flex flex-col gap-3">{([
   { key: "autoplayOnScroll", label: "Play video automatically as visitors scroll", hint: "Always muted, because browsers block sound that starts on its own. Paused while off screen, and skipped for visitors who ask for reduced motion or are saving data. Audio never autoplays." },
@@ -564,30 +586,42 @@ export default function PortfolioDashboardPage() {
   { key: "lightbox", label: "Let visitors expand images", hint: "Clicking an image opens it full screen." },
   { key: "showCaptions", label: "Show captions under media", hint: "Hide these for a cleaner, more visual page." },
 ] as const).map(({ key, label, hint }) => <label key={key} className="flex gap-3"><Input id={`media-${key}`} type="checkbox" className="mt-1 shrink-0" checked={content.mediaSettings[key]} onChange={(event) => updateMediaSettings({ [key]: event.target.checked })} /><span><span className="block text-sm text-slate-700 dark:text-slate-200">{label}</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-500 dark:text-slate-400">{hint}</span></span></label>)}</div>
-{content.mediaSettings.autoplayOnScroll && <p className="mt-4 rounded-xl bg-amber-50 px-3.5 py-3 text-[11px] leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">Autoplay starts downloading each video as it scrolls into view, which uses your visitors&apos; data and your storage bandwidth. Embedded video is served by its platform, so it costs you nothing.</p>}
+{content.mediaSettings.autoplayOnScroll && <p className="mt-4 rounded-xl bg-amber-50 px-3.5 py-3 text-[11px] leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">Autoplay starts downloading each video as it scrolls into view, which uses your visitors&apos; data and your storage bandwidth. Embedded video is served by its platform, so it costs you nothing.</p>}</>}
 </div><div className="mt-6 border-t border-border pt-6"><h3 className="text-sm font-bold text-foreground dark:text-white">Search preview</h3><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Give search engines a useful title and description for your public portfolio.</p><div className="mt-4 grid gap-4"><label className="flex flex-col gap-2"><span className={labelClass}>Page title</span><Input className={inputClass} value={seo.title} maxLength={60} placeholder={content.name ? `${content.name} — your work and services` : "Your name — your work and services"} onChange={(event) => updateSeo({ title: event.target.value })} /></label><label className="flex flex-col gap-2"><span className={labelClass}>Description</span><Textarea className={inputClass} rows={3} value={seo.description} maxLength={160} placeholder="A concise description of what you do, who you help, and where to find your work." onChange={(event) => updateSeo({ description: event.target.value })} /></label></div></div><div className="mt-5 flex items-center gap-3"><Input id="about-visible" type="checkbox" checked={content.sections.find((section) => section.key === "about")?.visible ?? true} onChange={(event) => updateContent({ sections: content.sections.map((section) => section.key === "about" ? { ...section, visible: event.target.checked } : section) })} /><label htmlFor="about-visible" className="text-sm text-slate-600 dark:text-slate-300">Show about section publicly</label></div><div className="mt-3 flex items-center gap-3"><Input id="indexable" type="checkbox" checked={seo.indexable} onChange={(event) => updateSeo({ indexable: event.target.checked })} /><label htmlFor="indexable" className="text-sm text-slate-600 dark:text-slate-300">Allow search engines to index my portfolio</label></div></section>
         </div>
+      </div>
+      {/* Beside the editor on a wide screen, so a change to the accent or the
+          template is seen where it is made. Narrower screens keep the Preview
+          tab, which is the same thing at full width. */}
+      {wideEnoughForSidePreview && (
+        <aside>
+          <div className="sticky top-5">
+            <PortfolioLivePreview
+              content={content}
+              theme={theme}
+              templateKey={templateKey}
+              device={previewDevice}
+              onDeviceChange={setPreviewDevice}
+              frameClassName="h-[calc(100vh-12rem)]"
+            />
+          </div>
+        </aside>
+      )}
       </div>}
 
-      {tab === "preview" && <div className="rounded-2xl border border-border bg-slate-100 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div><p className="text-xs font-bold text-foreground dark:text-white">Responsive preview</p><p className="mt-0.5 text-[10px] text-slate-500">Review the complete experience at common viewport sizes before publishing.</p></div>
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
-            {([{ key: "desktop", label: "Desktop", icon: Monitor }, { key: "tablet", label: "Tablet", icon: Tablet }, { key: "mobile", label: "Mobile", icon: Smartphone }] as const).map(({ key, label, icon: Icon }) => <Button key={key} type="button" aria-label={`${label} preview`} aria-pressed={previewDevice === key} title={`${label} preview`} onClick={() => setPreviewDevice(key)} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-bold ${previewDevice === key ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}><Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{label}</span></Button>)}
-          </div>
+      {tab === "preview" && <div className="rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-5">
+        <div className="mb-4">
+          <p className="text-xs font-bold text-foreground dark:text-white">Responsive preview</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">Review the complete experience at common viewport sizes before publishing.</p>
         </div>
-        <div className={`mx-auto overflow-hidden bg-white shadow-2xl transition-[max-width] duration-300 dark:bg-slate-900 ${previewDevice === "mobile" ? "max-w-[390px] rounded-[2rem]" : previewDevice === "tablet" ? "max-w-[820px] rounded-2xl" : "max-w-full rounded-xl"}`}>
-          <iframe
-            ref={previewFrameRef}
-            src="/portfolio-preview"
-            title={`${previewDevice} portfolio preview`}
-            className="block h-[75vh] w-full border-0 bg-white"
-            onLoad={() => previewFrameRef.current?.contentWindow?.postMessage({
-              type: "rive:portfolio-preview",
-              payload: { content, theme, templateKey },
-            }, window.location.origin)}
-          />
-        </div>
+        <PortfolioLivePreview
+          content={content}
+          theme={theme}
+          templateKey={templateKey}
+          device={previewDevice}
+          onDeviceChange={setPreviewDevice}
+          frameClassName="h-[75vh]"
+        />
       </div>}
 
       {tab === "analytics" && <PortfolioAnalyticsPanel published={portfolio.status === "published"} />}
