@@ -4,7 +4,11 @@ import test from "node:test";
 import {
   ANY_PROMPT_COOLDOWN_MS,
   FEEDBACK_PROMPTS,
+  FEEDBACK_SUBMIT_COOLDOWN_MS,
   PROMPT_REASK_COOLDOWN_MS,
+  feedbackSubmitCooldownKey,
+  formatCooldownClock,
+  formatCooldownRemaining,
   isPromptAvailable,
   promptForKey,
 } from "../../src/utils/feedback.ts";
@@ -92,4 +96,36 @@ test("every prompt the dashboard asks for is actually defined", () => {
 test("prompt keys are unique, so state rows cannot collide", () => {
   const keys = Object.values(FEEDBACK_PROMPTS).map((prompt) => prompt.key);
   assert.equal(new Set(keys).size, keys.length);
+});
+
+/* --------------------------------------------------------------------- */
+/* Submission cooldown                                                   */
+/* --------------------------------------------------------------------- */
+
+test("the submit cooldown is a full day, keyed per account", () => {
+  assert.equal(FEEDBACK_SUBMIT_COOLDOWN_MS, 24 * 60 * 60 * 1000);
+  assert.equal(feedbackSubmitCooldownKey("user-1"), "feedback:submit:user-1");
+  assert.notEqual(
+    feedbackSubmitCooldownKey("user-1"),
+    feedbackSubmitCooldownKey("user-2"),
+    "one account's allowance must never spend another's",
+  );
+});
+
+test("the wait is described in human terms, always rounded up", () => {
+  assert.equal(formatCooldownRemaining(5), "in under a minute");
+  assert.equal(formatCooldownRemaining(60), "in under a minute");
+  assert.equal(formatCooldownRemaining(61), "in 2 minutes");
+  assert.equal(formatCooldownRemaining(60 * 59), "in 59 minutes");
+  assert.equal(formatCooldownRemaining(60 * 90), "in about 2 hours");
+  assert.equal(formatCooldownRemaining(60 * 60 * 23), "in about 23 hours");
+  assert.equal(formatCooldownRemaining(60 * 60 * 24), "in about a day");
+});
+
+test("the countdown clock degrades from hours to seconds", () => {
+  assert.equal(formatCooldownClock(60 * 60 * 23 + 14 * 60), "23h 14m");
+  assert.equal(formatCooldownClock(60 * 45 + 30), "45m 30s");
+  assert.equal(formatCooldownClock(30), "30s");
+  assert.equal(formatCooldownClock(0), "0s");
+  assert.equal(formatCooldownClock(-5), "0s", "an elapsed wait never reads as negative");
 });

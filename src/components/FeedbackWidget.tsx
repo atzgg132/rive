@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageSquare, Send, X } from "lucide-react";
+import { Clock, MessageSquare, Send, X } from "lucide-react";
 import { Button, Textarea } from "@/components/ui";
+import { formatCooldownClock } from "@/utils/feedback";
 
 type Props = {
   promptKey?: string;
@@ -23,8 +24,31 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
   const [rating, setRating] = useState<number | null>(null);
   const [body, setBody] = useState("");
   const [contactAllowed, setContactAllowed] = useState(false);
-  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "error" | "cooldown">("idle");
   const [message, setMessage] = useState("");
+  const [retryAt, setRetryAt] = useState<number | null>(null);
+  const [remaining, setRemaining] = useState(0);
+
+  /* Ticks the countdown while the panel is open and the wait is on, and clears
+     itself the moment the wait is over so the form comes straight back without
+     a reload. */
+  useEffect(() => {
+    if (state !== "cooldown" || retryAt === null) return;
+    const tick = () => {
+      const left = Math.ceil((retryAt - Date.now()) / 1000);
+      if (left <= 0) {
+        setState("idle");
+        setRetryAt(null);
+        setMessage("");
+        setRemaining(0);
+        return;
+      }
+      setRemaining(left);
+    };
+    tick();
+    const timer = window.setInterval(tick, 1_000);
+    return () => window.clearInterval(timer);
+  }, [retryAt, state]);
 
   useEffect(() => {
     if (promptedThisSession) return;
@@ -53,6 +77,14 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
     try {
       const response = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ promptKey, module, triggerEvent, rating, body, contactAllowed, context: { path: window.location.pathname, module, trigger: triggerEvent } }) });
       const data = await response.json().catch(() => null);
+      // Already sent something today: not an error, just a wait. Told plainly,
+      // with the draft left intact so nothing anyone typed is thrown away.
+      if (response.status === 429 && data?.reason === "cooldown") {
+        setRetryAt(data.retryAt ? new Date(data.retryAt).getTime() : Date.now() + (data.retryAfterSeconds ?? 0) * 1_000);
+        setMessage(data.message || "You've already shared feedback today.");
+        setState("cooldown");
+        return;
+      }
       if (!response.ok || !data?.success) throw new Error(data?.message || "Feedback could not be saved.");
       setState("sent");
       window.setTimeout(() => setOpen(false), 1_200);
@@ -78,8 +110,22 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
             </div>
             <Textarea value={body} onChange={(event) => setBody(event.target.value.slice(0, 4_000))} rows={4} placeholder="What was clear, confusing, or missing?" className="mt-4 resize-none" />
             <label className="mt-3 flex items-start gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={contactAllowed} onChange={(event) => setContactAllowed(event.target.checked)} className="mt-0.5" />You may contact me about this feedback.</label>
-            {message ? <p className={`mt-3 text-xs ${state === "error" ? "text-red-600" : "text-emerald-600"}`}>{message}</p> : null}
-            {state === "sent" ? <p className="mt-4 text-sm font-medium text-emerald-600">Thanks — feedback saved.</p> : <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => close("dismiss")}>Not now</Button><Button type="button" size="sm" onClick={() => void submit()} disabled={state === "sending"} className="gap-2"><Send className="h-3.5 w-3.5" />{state === "sending" ? "Saving…" : "Send feedback"}</Button></div>}
+            {state === "cooldown" ? (
+              <div role="status" className="mt-4 rounded-xl border border-border bg-muted/50 p-4">
+                <p className="flex items-start gap-2 text-sm font-medium text-foreground">
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  You&apos;ve already shared feedback today — thank you.
+                </p>
+                <p className="mt-1.5 pl-6 text-xs leading-5 text-muted-foreground">
+                  One a day keeps the signal strong. You can send more in{" "}
+                  <span className="font-bold tabular-nums text-foreground">{formatCooldownClock(remaining)}</span>. Your note is
+                  still here if you want to keep it for then.
+                </p>
+              </div>
+            ) : message ? (
+              <p className={`mt-3 text-xs ${state === "error" ? "text-red-600" : "text-emerald-600"}`}>{message}</p>
+            ) : null}
+            {state === "sent" ? <p className="mt-4 text-sm font-medium text-emerald-600">Thanks — feedback saved.</p> : <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => close("dismiss")}>{state === "cooldown" ? "Close" : "Not now"}</Button><Button type="button" size="sm" onClick={() => void submit()} disabled={state === "sending" || state === "cooldown"} className="gap-2"><Send className="h-3.5 w-3.5" />{state === "sending" ? "Saving…" : "Send feedback"}</Button></div>}
           </div>
         </div>
       ) : null}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -9,7 +10,16 @@ import { DEFAULT_PORTFOLIO_THEME, getPublicPortfolioContent, isPortfolioPublishe
 
 type Props = { params: Promise<{ slug: string; projectId: string }> };
 
-async function loadCaseStudy(slug: string, projectId: string) {
+/* Matches the portfolio and practice pages, which both declare this and both
+   record views correctly. Without it this route was the odd one out: `after`
+   is explicitly not a request-time API, so on a route Next is free to treat as
+   prerenderable the callback can run at build time rather than per visit —
+   which is exactly the shape of "case-study views are never counted". */
+export const dynamic = "force-dynamic";
+
+/* Cached per request so `generateMetadata` and the page share one query rather
+   than reading the portfolio twice, matching the sibling routes. */
+const loadCaseStudy = cache(async (slug: string, projectId: string) => {
   const portfolio = await prisma.portfolio.findUnique({ where: { slug } });
   if (!portfolio || !isPortfolioPublished(portfolio.status)) return null;
   /* Public content already excludes private projects and anything belonging to
@@ -18,7 +28,7 @@ async function loadCaseStudy(slug: string, projectId: string) {
   const project = content.projects.find((item) => item.id === projectId);
   if (!project) return null;
   return { portfolio, content, project };
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, projectId } = await params;
