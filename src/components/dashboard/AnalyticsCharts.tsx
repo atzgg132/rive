@@ -74,7 +74,7 @@ export default function AnalyticsCharts({ data, currency = "USD" }: { data: Char
       ) : null}
 
       <div className="mt-6 overflow-x-auto pb-1">
-        <div className="grid min-w-[42rem] grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
+        <div className="grid min-w-[26rem] grid-cols-[4rem_minmax(0,1fr)] gap-3 sm:min-w-[36rem] sm:grid-cols-[5.5rem_minmax(0,1fr)]">
           <div className="h-64 text-right text-[0.6875rem] tabular-nums text-muted-foreground" aria-hidden="true">
             <div className="flex h-56 flex-col justify-between py-0.5">
               <span>{compactMoney(chart.scaleMax)}</span>
@@ -88,7 +88,7 @@ export default function AnalyticsCharts({ data, currency = "USD" }: { data: Char
               <span className="absolute inset-x-0 top-1/2 border-t border-dashed border-border" />
               <span className="absolute inset-x-0 bottom-0 border-t border-border" />
             </div>
-            <div className="relative grid h-64 grid-cols-6 gap-2">
+            <div className="relative grid h-64 gap-2" style={{ gridTemplateColumns: `repeat(${chart.points.length}, minmax(0, 1fr))` }}>
               {chart.points.map((point) => {
                 const active = point.key === (selected?.key || chart.defaultPointKey);
                 return (

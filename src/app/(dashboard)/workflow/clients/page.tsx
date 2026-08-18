@@ -74,22 +74,28 @@ export default function ClientsPage() {
 
   const [saving, setSaving] = useState(false);
 
-  const loadClients = async () => {
+  const loadClients = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}&page=${page}&pageSize=${pageSize}`);
+      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}&page=${page}&pageSize=${pageSize}`, { signal });
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           setClients(data.clients);
+          // buildPagination clamps an out-of-range page server-side. Without
+          // adopting that clamp the local page counter drifts, and the Next
+          // button then re-requests a page the list is already showing.
           setPagination(data.pagination || null);
+          if (data.pagination && data.pagination.page !== page) setPage(data.pagination.page);
         }
       }
     } catch (err) {
+      if (signal?.aborted) return;
       console.error("Error loading clients:", err);
       toast.error("Failed to load clients");
     } finally {
-      setLoading(false);
+      // A superseded request must not clear the spinner the live one is using.
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
@@ -99,8 +105,13 @@ export default function ClientsPage() {
   }, [debouncedSearch, status]);
 
   useEffect(() => {
+    // Changing a filter also resets the page, so two loads are queued in the
+    // same commit. Aborting the superseded one keeps a slow first response
+    // from overwriting the newer page's rows.
+    const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadClients();
+    loadClients(controller.signal);
+    return () => controller.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, status, page, pageSize]);
 

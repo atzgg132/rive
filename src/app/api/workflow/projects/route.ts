@@ -12,6 +12,21 @@ import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagina
 const PROJECT_STATUSES = PROJECT_STATUS_SET;
 const PROJECT_PRIORITIES = PROJECT_PRIORITY_SET;
 
+// Every ordering ends in a unique column so a row cannot be skipped or repeated
+// across pages when two records share a sort value.
+const PROJECT_SORTS: Record<string, Prisma.ProjectOrderByWithRelationInput[]> = {
+  due_date: [{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }, { id: "desc" }],
+  recent: [{ updatedAt: "desc" }, { id: "desc" }],
+  title: [{ title: "asc" }, { id: "asc" }],
+  budget: [{ budget: { sort: "desc", nulls: "last" } }, { id: "desc" }],
+};
+const DEFAULT_PROJECT_SORT = "due_date";
+
+function startOfUtcToday(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
 function cleanText(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
@@ -61,25 +76,28 @@ export async function GET(req: NextRequest) {
     const clientId = searchParams.get("clientId") || "";
     const mode = searchParams.get("mode") || "list";
 
-    const where: Prisma.ProjectWhereInput = {
+    // Everything except the status filter. The status tallies returned below
+    // have to describe the whole workspace, not just the status being viewed,
+    // so they are counted against this base rather than the narrowed `where`.
+    const baseWhere: Prisma.ProjectWhereInput = {
       userId: session.userId,
       status: { not: "archived" }
     };
 
     if (search) {
-      where.OR = [
+      baseWhere.OR = [
         { title: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } }
       ];
     }
 
-    if (status !== "all") {
-      where.status = status;
+    if (clientId) {
+      baseWhere.clientId = clientId;
     }
 
-    if (clientId) {
-      where.clientId = clientId;
-    }
+    const where: Prisma.ProjectWhereInput = status !== "all"
+      ? { ...baseWhere, status }
+      : baseWhere;
 
     if (mode === "options") {
       const optionLimit = parsePagination(searchParams, { pageSize: 100, maxPageSize: 100 }).pageSize;
@@ -121,6 +139,7 @@ export async function GET(req: NextRequest) {
     }
 
     const requestedPagination = parsePagination(searchParams);
+    const sort = PROJECT_SORTS[searchParams.get("sort") || ""] ? searchParams.get("sort") as string : DEFAULT_PROJECT_SORT;
     const total = await prisma.project.count({ where });
     const pagination = buildPagination(total, requestedPagination);
     const projects = await prisma.project.findMany({
@@ -157,11 +176,7 @@ export async function GET(req: NextRequest) {
           select: { id: true, title: true, status: true },
         }
       },
-      orderBy: [
-        { dueDate: "asc" },
-        { createdAt: "desc" },
-        { id: "desc" },
-      ],
+      orderBy: PROJECT_SORTS[sort],
       skip: paginationOffset(pagination),
       take: pagination.pageSize,
     });
@@ -221,10 +236,34 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // Counted separately from the page so the filter chips show workspace-wide
+    // totals. Deriving them from the current page would make each chip report
+    // only whatever rows happened to land on it.
+    const [statusGroups, overdueCount] = await Promise.all([
+      prisma.project.groupBy({
+        by: ["status"],
+        where: baseWhere,
+        _count: { _all: true },
+      }),
+      prisma.project.count({
+        where: { ...baseWhere, status: "active", dueDate: { lt: startOfUtcToday() } },
+      }),
+    ]);
+
+    const counts = { all: 0, active: 0, paused: 0, completed: 0, overdue: overdueCount };
+    for (const group of statusGroups) {
+      counts.all += group._count._all;
+      if (group.status === "active" || group.status === "paused" || group.status === "completed") {
+        counts[group.status] = group._count._all;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       projects: formattedProjects,
       pagination,
+      sort,
+      counts,
     });
   } catch (error: unknown) {
     console.error("Projects fetch error:", error);

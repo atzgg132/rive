@@ -254,23 +254,23 @@ p {
   /* Long tables own a bounded vertical scroll region so their header remains
      visible while rows move beneath it. `overflow-x-auto` alone creates a
      scrolling ancestor on both axes and prevents a header from sticking to
-     the page, even when that ancestor never actually scrolls vertically. */
-  .table-scroll-region,
-  .overflow-x-auto:has(> table) {
+     the page, even when that ancestor never actually scrolls vertically.
+     Opt in per table: matching every `.overflow-x-auto` wrapping a table also
+     caught short admin tables that never scroll and gave their unpadded
+     headers a floating background block. */
+  .table-scroll-region {
     max-height: min(70vh, 44rem);
     overflow: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
   }
 
-  .table-scroll-region > table,
-  .overflow-x-auto > table {
+  .table-scroll-region > table {
     border-collapse: separate;
     border-spacing: 0;
   }
 
-  .table-scroll-region > table > thead > tr > th,
-  .overflow-x-auto > table > thead > tr > th {
+  .table-scroll-region > table > thead > tr > th {
     position: sticky;
     top: 0;
     z-index: 10;

@@ -21,10 +21,11 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { PaginationMeta } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type ContractListItem = {
   id: string;
@@ -83,8 +84,19 @@ function nextAction(contract: ContractListItem): string {
   return "View record";
 }
 
+// useSearchParams needs a suspense boundary for this route to keep its static
+// shell; the inner component owns every query-driven piece of state.
 export default function ContractsPage() {
+  return (
+    <Suspense fallback={<div className="workspace-page min-h-[calc(100vh-8rem)]" />}>
+      <ContractsWorkspace />
+    </Suspense>
+  );
+}
+
+function ContractsWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryConsumed = useRef(false);
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
   const [sourceContracts, setSourceContracts] = useState<SourceContract[]>([]);
@@ -93,9 +105,13 @@ export default function ContractsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [filter, setFilter] = useState("all");
-  const [clientFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") || "" : "");
-  const [projectFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("projectId") || "" : "");
+  // Read from the live query string. A useState initializer only runs on mount,
+  // so arriving here from an in-app link that only changes the query left the
+  // filter stuck at its previous value.
+  const clientFilter = searchParams.get("clientId") || "";
+  const projectFilter = searchParams.get("projectId") || "";
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -104,65 +120,92 @@ export default function ContractsPage() {
   const [initialClientId, setInitialClientId] = useState("");
   const [initialProjectId, setInitialProjectId] = useState("");
 
-  const load = async () => {
+  const load = async (signal?: AbortSignal) => {
     setLoading(true);
     setLoadError("");
     try {
       const selectedFilter = filters.find((item) => item.value === filter);
       const statusParam = selectedFilter?.statuses?.join(",") || "all";
-      const [contractResponse, clientResponse, projectResponse] = await Promise.all([
-        fetch(`/api/workflow/contracts?search=${encodeURIComponent(search.trim())}&status=${encodeURIComponent(statusParam)}&clientId=${encodeURIComponent(clientFilter)}&projectId=${encodeURIComponent(projectFilter)}&page=${page}&pageSize=${pageSize}`, { cache: "no-store" }),
-        fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
-        fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
-      ]);
-      const sourceContractResponse = await fetch("/api/workflow/contracts?mode=options&pageSize=100", { cache: "no-store" });
-      const [contractData, clientData, projectData] = await Promise.all([
-        contractResponse.json(),
-        clientResponse.json(),
-        projectResponse.json(),
-      ]);
-      const sourceContractData = await sourceContractResponse.json();
+      const contractResponse = await fetch(`/api/workflow/contracts?search=${encodeURIComponent(debouncedSearch.trim())}&status=${encodeURIComponent(statusParam)}&clientId=${encodeURIComponent(clientFilter)}&projectId=${encodeURIComponent(projectFilter)}&page=${page}&pageSize=${pageSize}`, { cache: "no-store", signal });
+      const contractData = await contractResponse.json();
       if (!contractResponse.ok || !contractData.success) throw new Error(contractData.message || "Unable to load Agreements.");
-      if (!clientResponse.ok || !clientData.success) throw new Error(clientData.message || "Unable to load clients.");
-      if (!projectResponse.ok || !projectData.success) throw new Error(projectData.message || "Unable to load projects.");
-      if (!sourceContractResponse.ok || !sourceContractData.success) throw new Error(sourceContractData.message || "Unable to load reusable Agreements.");
       setContracts(contractData.contracts);
+      // buildPagination clamps an out-of-range page server-side. Without
+      // adopting that clamp the local page counter drifts, and the Next
+      // button then re-requests a page the list is already showing.
       setPagination(contractData.pagination || null);
+      if (contractData.pagination && contractData.pagination.page !== page) setPage(contractData.pagination.page);
       setSummary(contractData.summary || null);
-      setSourceContracts(sourceContractData.contracts || []);
-      setClients(clientData.clients.map((client: ContractComposerClient) => ({
-        id: client.id,
-        name: client.name,
-        email: client.email || null,
-        company: client.company || null,
-        address: client.address || null,
-        status: client.status,
-      })));
-      setProjects(projectData.projects.map((project: ProjectListItem) => ({
-        ...project,
-        budget: project.budget || null,
-        milestones: project.milestones || [],
-      })));
     } catch (error) {
+      if (signal?.aborted) return;
       const message = error instanceof Error ? error.message : "Unable to load the Agreements workspace.";
       setLoadError(message);
       toast.error(message);
     } finally {
-      setLoading(false);
+      // A superseded request must not clear the spinner the live one is using.
+      if (!signal?.aborted) setLoading(false);
+    }
+  };
+
+  // The composer pickers do not vary with the list query, so they are fetched
+  // once instead of on every keystroke and every page change.
+  const loadComposerOptions = async () => {
+    try {
+      const [clientResponse, projectResponse, sourceContractResponse] = await Promise.all([
+        fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
+        fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
+        fetch("/api/workflow/contracts?mode=options&pageSize=100", { cache: "no-store" }),
+      ]);
+      const [clientData, projectData, sourceContractData] = await Promise.all([
+        clientResponse.json(),
+        projectResponse.json(),
+        sourceContractResponse.json(),
+      ]);
+      if (clientResponse.ok && clientData.success) {
+        setClients(clientData.clients.map((client: ContractComposerClient) => ({
+          id: client.id,
+          name: client.name,
+          email: client.email || null,
+          company: client.company || null,
+          address: client.address || null,
+          status: client.status,
+        })));
+      }
+      if (projectResponse.ok && projectData.success) {
+        setProjects(projectData.projects.map((project: ProjectListItem) => ({
+          ...project,
+          budget: project.budget || null,
+          milestones: project.milestones || [],
+        })));
+      }
+      if (sourceContractResponse.ok && sourceContractData.success) {
+        setSourceContracts(sourceContractData.contracts || []);
+      }
+    } catch {
+      // The composer falls back to empty pickers; the list itself still loads.
     }
   };
 
   useEffect(() => {
-    // Initial client-side workspace hydration and subsequent list changes.
+    // Changing a filter also resets the page, so two loads are queued in the
+    // same commit. Aborting the superseded one keeps a slow first response
+    // from overwriting the newer page rows.
+    const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
+    void load(controller.signal);
+    return () => controller.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, search, filter]);
+  }, [page, pageSize, debouncedSearch, filter, clientFilter, projectFilter]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadComposerOptions();
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
-  }, [search, filter]);
+  }, [debouncedSearch, filter]);
 
   useEffect(() => {
     if (loading || queryConsumed.current || typeof window === "undefined") return;
