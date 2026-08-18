@@ -83,3 +83,36 @@ test("draft snapshots parse only when the required fields are present", () => {
   assert.equal(parsed?.slug, "local");
   assert.equal(parsed?.seo.indexable, true);
 });
+
+function persistBody(slug, savedSlug) {
+  return buildPortfolioPersistBody({
+    revision: 2,
+    content: { name: "A" },
+    theme: { accent: "#2563EB", mode: "light", radius: "soft" },
+    templateKey: "minimal-pro",
+    slug,
+    savedSlug,
+    seo: { title: "", description: "", indexable: true },
+  });
+}
+
+test("an unchanged public URL is left out of the save", () => {
+  /* It used to ride on every autosave. The endpoint answers a taken slug with
+     a 409, so one unavailable URL in the field failed every unrelated save and
+     nothing written afterwards was stored. */
+  const body = persistBody("agnik", "agnik");
+  assert.equal("slug" in body, false);
+  // Everything else still travels.
+  assert.deepEqual(body.content, { name: "A" });
+  assert.equal(body.templateKey, "minimal-pro");
+  assert.equal(body.revision, 2);
+});
+
+test("a changed public URL is still sent, so it can be claimed or rejected", () => {
+  const body = persistBody("agnik-studio", "agnik");
+  assert.equal(body.slug, "agnik-studio");
+});
+
+test("without a known saved slug the URL is sent, preserving old behaviour", () => {
+  assert.equal(persistBody("agnik", undefined).slug, "agnik");
+});

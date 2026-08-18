@@ -9,6 +9,12 @@ name: Regenerate visual baselines
 # commit the PNGs. It is manual on purpose: a workflow that rewrote baselines
 # automatically would turn every unintended visual regression into a silently
 # accepted one.
+#
+# This file must stay on the default branch. GitHub offers a workflow_dispatch
+# trigger only for workflows present there, so while this lived only on dev it
+# could not be started at all — the API answered 404 and it never appeared in
+# the Actions UI. Keeping it on main is what makes it runnable; the branch
+# selector then chooses which ref to regenerate against.
 on:
   workflow_dispatch:
 

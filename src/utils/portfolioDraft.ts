@@ -155,6 +155,8 @@ export function buildPortfolioPersistBody(input: {
   theme: PortfolioTheme;
   templateKey: string;
   slug: string;
+  /** The slug the server last confirmed. Omit to always send the slug. */
+  savedSlug?: string;
   seo: PortfolioSeo;
   status?: "draft" | "published";
 }) {
@@ -163,7 +165,7 @@ export function buildPortfolioPersistBody(input: {
     content: PortfolioContent;
     theme: PortfolioTheme;
     templateKey: string;
-    slug: string;
+    slug?: string;
     seo: PortfolioSeo;
     status?: "draft" | "published";
   } = {
@@ -171,9 +173,14 @@ export function buildPortfolioPersistBody(input: {
     content: input.content,
     theme: input.theme,
     templateKey: input.templateKey,
-    slug: input.slug,
     seo: input.seo,
   };
+  /* The public URL travels only when it actually changed. It used to ride on
+     every autosave, and the endpoint answers a taken slug with a 409 — so one
+     unavailable URL sitting in the field failed every unrelated save, and the
+     writing someone did afterwards was never stored. A rejected URL should
+     cost them the URL, not the work. */
+  if (input.savedSlug === undefined || input.slug !== input.savedSlug) body.slug = input.slug;
   if (input.status) body.status = input.status;
   return body;
 }
