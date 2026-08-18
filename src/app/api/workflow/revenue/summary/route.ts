@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { monthlyCohortRows } from "@/utils/revenueTrend";
 import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
 
 const ISSUED = new Set(["sent", "viewed", "overdue", "partially_paid", "paid"]);
@@ -25,10 +26,6 @@ function addCurrency(map: Map<string, CurrencySummary>, currency: string): Curre
   return created;
 }
 
-function monthKey(value: Date): string {
-  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
 function daysPastDue(dueDate: Date | null, now: Date): number | null {
   if (!dueDate || dueDate >= now) return null;
   return Math.floor((now.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
@@ -41,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const now = new Date();
-    const [invoices, payments, events] = await Promise.all([
+    const [invoices, events] = await Promise.all([
       prisma.invoice.findMany({
         where: { userId: session.userId },
         select: {
@@ -51,12 +48,6 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { updatedAt: "desc" },
         take: 20_000,
-      }),
-      prisma.invoicePayment.findMany({
-        where: { invoice: { userId: session.userId } },
-        select: { amount: true, paidAt: true, invoice: { select: { currency: true } } },
-        orderBy: { paidAt: "asc" },
-        take: 50_000,
       }),
       prisma.invoiceEvent.findMany({
         where: { invoice: { userId: session.userId } },
@@ -68,7 +59,6 @@ export async function GET(req: NextRequest) {
 
     const byCurrency = new Map<string, CurrencySummary>();
     const aging = new Map<string, { currency: string; current: number; days30: number; days60: number; days90: number; days90Plus: number; noDueDate: number }>();
-    const monthly = new Map<string, { month: string; currency: string; invoiced: number; collected: number }>();
     const byClient = new Map<string, { client: string; currency: string; invoiced: number; collected: number; outstanding: number }>();
     const byProject = new Map<string, { project: string; currency: string; invoiced: number; collected: number; outstanding: number }>();
     const attention: Array<{ id: string; invoiceNumber: string; currency: string; status: string; outstanding: number; dueDate: string | null; client: string | null; reason: string }> = [];
@@ -107,12 +97,6 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      if (ISSUED.has(invoice.status)) {
-        const key = `${monthKey(invoice.issueDate)}:${currency}`;
-        const row = monthly.get(key) || { month: monthKey(invoice.issueDate), currency, invoiced: 0, collected: 0 };
-        row.invoiced += total;
-        monthly.set(key, row);
-      }
       const client = invoice.client?.name || "Unassigned client";
       const clientKey = `${client}:${currency}`;
       const clientRow = byClient.get(clientKey) || { client, currency, invoiced: 0, collected: 0, outstanding: 0 };
@@ -133,20 +117,23 @@ export async function GET(req: NextRequest) {
     }
 
     for (const row of byCurrency.values()) row.collectionRate = row.issued > 0 ? Math.round((row.collected / row.issued) * 1000) / 10 : null;
-    for (const payment of payments) {
-      const currency = payment.invoice.currency.toUpperCase();
-      const month = monthKey(payment.paidAt);
-      const key = `${month}:${currency}`;
-      const row = monthly.get(key) || { month, currency, invoiced: 0, collected: 0 };
-      row.collected += Number(payment.amount);
-      monthly.set(key, row);
-    }
 
     return NextResponse.json({
       success: true,
       currencies: Array.from(byCurrency.values()),
       aging: Array.from(aging.values()),
-      monthlyRevenue: Array.from(monthly.values()).sort((a, b) => a.month.localeCompare(b.month)).slice(-24),
+      /* One cohort per row — see `monthlyCohortRows`, which owns the rule and
+         carries its tests. */
+      monthlyRevenue: monthlyCohortRows(
+        invoices
+          .filter((invoice) => ISSUED.has(invoice.status))
+          .map((invoice) => ({
+            currency: invoice.currency,
+            total: Number(invoice.total),
+            amountPaid: Number(invoice.amountPaid),
+            issueDate: invoice.issueDate,
+          })),
+      ).slice(-24),
       byClient: Array.from(byClient.values()).sort((a, b) => b.invoiced - a.invoiced).slice(0, 20),
       byProject: Array.from(byProject.values()).sort((a, b) => b.invoiced - a.invoiced).slice(0, 20),
       recentActivity: events.map((event) => ({ eventType: event.eventType, createdAt: event.createdAt, invoiceNumber: event.invoice.invoiceNumber, currency: event.invoice.currency, metadata: event.metadata })),

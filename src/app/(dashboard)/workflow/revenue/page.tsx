@@ -199,7 +199,7 @@ export default function RevenuePage() {
               the solid part of it is what has actually been collected. */}
           <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-primary/25" /> Invoiced, relative to the busiest month</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-emerald-500" /> Collected</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-emerald-500" /> Paid so far, of that month&apos;s invoices</span>
           </div>
           {monthlyTrend.points.length ? (
             <div className="mt-5 space-y-4">
@@ -209,13 +209,13 @@ export default function RevenuePage() {
                     <span className="text-sm font-semibold">{point.label}</span>
                     <span className="text-xs tabular-nums text-muted-foreground">
                       <strong className="font-semibold text-foreground">{formatMoney(point.invoiced, displayCurrency)}</strong> invoiced
-                      {point.collectionRate !== null ? ` · ${point.collectionRate}% collected` : ""}
+                      {point.collectionRate !== null ? ` · ${point.collectionRate}% paid` : ""}
                     </span>
                   </div>
                   <div
                     className="h-2.5 overflow-hidden rounded-full bg-muted"
                     role="img"
-                    aria-label={`${point.label}: ${formatMoney(point.invoiced, displayCurrency)} invoiced${point.collectionRate !== null ? `, ${point.collectionRate}% collected` : ""}${point.currencies.length > 1 ? `, across ${point.currencies.join(" and ")}` : ""}`}
+                    aria-label={`${point.label}: ${formatMoney(point.invoiced, displayCurrency)} invoiced, ${point.collectionRate === null ? "nothing billed" : `${point.collectionRate}% of it paid`}${point.currencies.length > 1 ? `, across ${point.currencies.join(" and ")}` : ""}`}
                   >
                     {/* A visible sliver for a month that had activity but is
                         dwarfed by another — zero-width would read as no data. */}

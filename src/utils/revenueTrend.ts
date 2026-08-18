@@ -92,3 +92,51 @@ export function buildMonthlyTrend(
 
   return { points, complete: dropped.size === 0 };
 }
+
+/** The shape the monthly cohort needs from an invoice. */
+export type CohortInvoice = {
+  currency: string;
+  total: number;
+  amountPaid: number;
+  issueDate: Date;
+};
+
+/** `YYYY-MM` in UTC, so a month does not shift with the reader's timezone. */
+export function monthKeyUtc(value: Date): string {
+  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * One row per month and currency, both figures belonging to the same cohort:
+ * what was billed that month, and how much of *that* has been paid.
+ *
+ * This is the rule that was wrong. `invoiced` was keyed by issue date while
+ * `collected` was keyed by payment date, so a row held two unrelated
+ * quantities — money billed in March beside cash received in March — and their
+ * ratio was not a rate at all. It also read zero everywhere in practice,
+ * because collection came from payment records while the collection rates in
+ * the summary cards came from `amountPaid`; an invoice can be settled without a
+ * payment row existing, and the two disagreed.
+ *
+ * Taking both from the invoice means each month reconciles with the totals
+ * shown above it, which is the property the tests pin down.
+ */
+export function monthlyCohortRows(invoices: CohortInvoice[]): MonthlyInvoiceRow[] {
+  const rows = new Map<string, MonthlyInvoiceRow>();
+
+  for (const invoice of invoices) {
+    const currency = invoice.currency.toUpperCase();
+    const month = monthKeyUtc(invoice.issueDate);
+    const key = `${month}:${currency}`;
+    // Never more than was billed, never less than nothing: an overpayment or a
+    // correction must not push a month past 100% or below zero.
+    const paid = Math.min(Math.max(invoice.amountPaid, 0), Math.max(invoice.total, 0));
+
+    const row = rows.get(key) || { month, currency, invoiced: 0, collected: 0 };
+    row.invoiced += invoice.total;
+    row.collected += paid;
+    rows.set(key, row);
+  }
+
+  return [...rows.values()].sort((a, b) => a.month.localeCompare(b.month));
+}
