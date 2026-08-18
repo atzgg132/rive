@@ -254,6 +254,7 @@ export function usePortfolioDraft() {
           theme: themeRef.current,
           templateKey: templateKeyRef.current,
           slug: slugRef.current,
+          savedSlug: current.slug,
           seo: seoRef.current,
           status: explicitStatus,
         })),
@@ -267,6 +268,15 @@ export function usePortfolioDraft() {
           pendingPersistRef.current = null;
           if (!alreadyConflicting) flushDraftSnapshot();
           throw new Error("This portfolio changed in another tab. Reload the latest version or keep your local draft.");
+        }
+        if (response.status === 409) {
+          /* The URL was refused, not the revision. Put the field back to the
+             one the server holds so the next autosave stops carrying a value
+             that will be refused again — otherwise a single unavailable URL
+             keeps failing every save and none of the writing that follows is
+             ever stored. The message still tells them the URL did not stick. */
+          setSlug(current.slug);
+          slugRef.current = current.slug;
         }
         setConflictState(false);
         throw new Error(data.message || "could not save portfolio");

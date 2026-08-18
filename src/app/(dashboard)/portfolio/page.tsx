@@ -224,7 +224,14 @@ export default function PortfolioDashboardPage() {
         : <PortfolioNextSteps steps={steps} onGoTo={goToSection} onPublish={() => setReviewingPublish(true)} />)}
 
       {tab === "edit" && <div className="grid min-h-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_26rem]">
-      <div data-portfolio-editor-shell className="grid min-h-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
+      {/* self-start, not the grid default of stretch. The preview column is a
+          fixed calc(100vh-12rem) tall, so on an empty portfolio it is the taller
+          of the two and the row takes its height — which stretched this card to
+          match and left a screen of bordered empty space under a single line of
+          content. Only the editor opts out: the aside must keep stretching, or
+          a long editor would leave the sticky preview no travel and it would
+          scroll away instead of staying put. */}
+      <div data-portfolio-editor-shell className="grid min-h-0 self-start overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="border-b border-border bg-muted/35 p-4 lg:border-b-0 lg:border-r">
             <nav data-portfolio-section-nav className="grid grid-cols-2 gap-2 sm:grid-cols-6 lg:sticky lg:top-5 lg:grid-cols-1">
             {/* Work leads: it is the thing a portfolio is for. Practices keeps a
