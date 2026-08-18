@@ -24,7 +24,7 @@ type ProjectInvoice = { id: string; invoiceNumber: string; issueDate: string; to
 type ProjectClient = { id: string; name: string; company: string | null; avatarColor: string };
 type ProjectMilestone = { id: string; title: string; dueDate: string | null; completed: boolean; completedAt: string | null };
 type ProjectContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string };
-type ProjectDetails = { id: string; title: string; status: string; createdAt: string; budget: string | null; currency: string; dueDate: string | null; tags: string[]; description: string | null; contractCoverage: "undecided" | "rive" | "external" | "none"; externalContractLabel: string | null; externalContractUrl: string | null; contractDecisionAt: string | null; related_counts: { invoices: number; milestones: number; contracts: number }; client: ProjectClient | null; invoices: ProjectInvoice[]; milestones: ProjectMilestone[]; contracts: ProjectContract[] };
+type ProjectDetails = { id: string; title: string; status: string; createdAt: string; budget: string | null; currency: string; dueDate: string | null; tags: string[]; description: string | null; contractCoverage: "undecided" | "rive" | "external" | "none"; externalContractLabel: string | null; externalContractUrl: string | null; contractDecisionAt: string | null; related_counts?: { invoices: number; milestones: number; contracts: number }; client: ProjectClient | null; invoices: ProjectInvoice[]; milestones: ProjectMilestone[]; contracts: ProjectContract[] };
 
 export default function ProjectProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { displayCurrency, format, formatConverted } = useCurrency();
@@ -244,7 +244,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-blue-600" /> Milestones
               </h3>
-              <span className="text-xs text-muted-foreground">{project.milestones.filter((item) => item.completed).length}/{project.related_counts.milestones} complete</span>
+              <span className="text-xs text-muted-foreground">{project.milestones.filter((item) => item.completed).length}/{project.related_counts?.milestones ?? project.milestones.length} complete</span>
             </div>
             {project.milestones.length === 0 ? (
               <div className="text-center py-8 border border-dashed border-border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-muted-foreground dark:text-slate-400">No milestones recorded for this project.</div>
