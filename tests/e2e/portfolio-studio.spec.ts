@@ -217,7 +217,13 @@ test.describe("portfolio studio", () => {
        and make any frame selector ambiguous. */
     await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(0);
 
+    /* There is no Preview tab any more — with the preview beside the editor on a
+       wide screen, a tab showing the same thing was the same thing twice. The
+       action bar's Preview button is the one way in, and it has to work here,
+       where there is no ambient pane at all. */
+    await expect(page.getByRole("tab", { name: "Preview" })).toHaveCount(0);
     await page.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: /full-screen portfolio preview/i })).toBeVisible();
     await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
 
     // Switching device size keeps exactly one frame, retitled.
@@ -226,6 +232,12 @@ test.describe("portfolio studio", () => {
     await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
 
     await expectPreviewHasRoom(page);
+
+    /* Closing it takes the frame with it. A narrow studio that quietly kept a
+       preview route mounted would be loading a page nobody can see. */
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: /full-screen portfolio preview/i })).toBeHidden();
+    await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(0);
   });
 
   test("side-by-side preview appears on a wide screen, and only there", async ({ page, context }) => {

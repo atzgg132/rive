@@ -31,6 +31,17 @@ export const STUDIO_OVERLAY_Z = "z-[200]";
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
+/**
+ * `button:not([disabled])` happily matches the backdrop, which is deliberately
+ * `aria-hidden` and `tabindex="-1"`. It was therefore the first "focusable"
+ * element in the layer, so opening the overlay put focus on hidden content and
+ * the first Tab went nowhere useful. Both conditions have to be re-checked on
+ * the element itself, not left to the selector.
+ */
+function isReallyFocusable(element: HTMLElement) {
+  return element.tabIndex >= 0 && element.offsetParent !== null && !element.closest('[aria-hidden="true"]');
+}
+
 export default function StudioOverlay({
   label,
   onClose,
@@ -63,8 +74,7 @@ export default function StudioOverlay({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const focusable = () =>
-      Array.from(overlay.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((element) => element.offsetParent !== null);
+    const focusable = () => Array.from(overlay.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(isReallyFocusable);
     focusable()[0]?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -92,7 +102,12 @@ export default function StudioOverlay({
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
       document.body.style.overflow = previousOverflow;
-      restoreTo?.focus?.();
+      /* Only if it still exists. The preview's opener sits in the very subtree
+         that moves into this portal, so by the time the layer closes that button
+         has been destroyed and re-created — focusing the detached original
+         silently drops focus to <body>. Owners of a disappearing trigger restore
+         focus themselves; see `PortfolioLivePreview`. */
+      if (restoreTo?.isConnected) restoreTo.focus();
     };
   }, []);
 

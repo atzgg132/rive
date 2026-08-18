@@ -82,6 +82,9 @@ export default function PortfolioLivePreview({
   frameClassName = "h-[70vh]",
   showDeviceControls = true,
   liveSiteUrl,
+  inspecting,
+  onInspectingChange,
+  inlineHidden = false,
 }: {
   content: PortfolioContent;
   theme: PortfolioTheme;
@@ -94,15 +97,26 @@ export default function PortfolioLivePreview({
   /** Offered inside the overlay: even full screen scales 1440px down on a laptop,
    *  and the published site is the only genuinely 1:1 desktop view. */
   liveSiteUrl?: string | null;
+  /** Controlled by the studio, so one preview serves both the ambient side pane
+   *  and the button in the action bar without two of them existing. */
+  inspecting: boolean;
+  onInspectingChange: (next: boolean) => void;
+  /** Render nothing until inspected. Used where there is no room for an ambient
+   *  pane — a narrow window, or a tab that is not the editor — so the preview
+   *  route is not loaded for a frame nobody can see. */
+  inlineHidden?: boolean;
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
+  const inspectButtonRef = useRef<HTMLButtonElement>(null);
+  /* Set when the overlay is dismissed, so focus can be handed back to the
+     re-created toggle rather than falling to <body>. */
+  const returnFocusRef = useRef(false);
   const readyRef = useRef(false);
   /* The inline width, remembered while inline, so the promote-or-not decision
      is made against the column even when the overlay is what is measured. */
   const inlineWidthRef = useRef(0);
   const [shellWidth, setShellWidth] = useState(0);
-  const [inspecting, setInspecting] = useState(false);
 
   const post = useCallback(() => {
     frameRef.current?.contentWindow?.postMessage(
@@ -163,6 +177,15 @@ export default function PortfolioLivePreview({
     readyRef.current = false;
   }, [inspecting]);
 
+  /* The control that opened the overlay is inside the subtree the overlay takes
+     with it, so it no longer exists when the layer closes and the generic
+     restore cannot reach it. Hand focus to its replacement instead. */
+  useEffect(() => {
+    if (inspecting || !returnFocusRef.current) return;
+    returnFocusRef.current = false;
+    inspectButtonRef.current?.focus();
+  }, [inspecting]);
+
 
   const deviceWidth = DEVICE_WIDTH[device];
   // Never scale up: a 390px phone in a 900px pane should stay life-sized rather
@@ -171,13 +194,16 @@ export default function PortfolioLivePreview({
   const scaledWidth = deviceWidth * scale;
   const percent = Math.round(scale * 100);
 
-  const closeInspect = useCallback(() => setInspecting(false), []);
+  const closeInspect = useCallback(() => {
+    returnFocusRef.current = true;
+    onInspectingChange(false);
+  }, [onInspectingChange]);
 
   const chooseDevice = (next: PreviewDevice) => {
     onDeviceChange(next);
     if (inspecting) return;
     const inlineWidth = inlineWidthRef.current || shellWidth;
-    if (inlineWidth > 0 && inlineWidth / DEVICE_WIDTH[next] < INLINE_LEGIBLE_SCALE) setInspecting(true);
+    if (inlineWidth > 0 && inlineWidth / DEVICE_WIDTH[next] < INLINE_LEGIBLE_SCALE) onInspectingChange(true);
   };
 
   const controls = (
@@ -230,8 +256,9 @@ export default function PortfolioLivePreview({
         )}
         <Button
           type="button"
+          ref={inspectButtonRef}
           data-portfolio-preview-inspect
-          onClick={() => (inspecting ? closeInspect() : setInspecting(true))}
+          onClick={() => (inspecting ? closeInspect() : onInspectingChange(true))}
           aria-label={inspecting ? "Close the full-screen preview" : "Inspect the preview full screen"}
           title={inspecting ? "Close (Esc)" : "Inspect full screen"}
           aria-expanded={inspecting}
@@ -297,8 +324,8 @@ export default function PortfolioLivePreview({
       <div className={`flex min-h-0 flex-col ${className}`}>
         {/* Holds the column open while the preview is elsewhere in the DOM, so
             nothing reflows behind the backdrop and the page does not jump when
-            the overlay closes. */}
-        <div aria-hidden className={`pointer-events-none ${frameClassName}`} />
+            the overlay closes. Nothing to hold open if there was no pane. */}
+        {!inlineHidden && <div aria-hidden className={`pointer-events-none ${frameClassName}`} />}
         <StudioOverlay
           label="Full-screen portfolio preview"
           onClose={closeInspect}
@@ -310,6 +337,8 @@ export default function PortfolioLivePreview({
       </div>
     );
   }
+
+  if (inlineHidden) return null;
 
   return (
     <div className={`flex min-h-0 flex-col ${className}`}>

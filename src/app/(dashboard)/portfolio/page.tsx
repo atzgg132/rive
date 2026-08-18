@@ -63,7 +63,7 @@ export default function PortfolioDashboardPage() {
     reloadAndKeepLocalDraft,
   } = usePortfolioDraft();
 
-  const [tab, setTab] = useState<"edit" | "preview" | "analytics" | "inquiries">("edit");
+  const [tab, setTab] = useState<"edit" | "analytics" | "inquiries">("edit");
   const [unreadInquiries, setUnreadInquiries] = useState(0);
   const [copied, setCopied] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("mobile");
@@ -77,6 +77,9 @@ export default function PortfolioDashboardPage() {
   /* Publishing is the one action that puts someone in front of clients, so it
      asks first and says what is about to go public. */
   const [reviewingPublish, setReviewingPublish] = useState(false);
+  /* One preview, opened from one place. The side pane is ambient; this is the
+     deliberate look, and on a narrow window it is the only preview there is. */
+  const [inspectingPreview, setInspectingPreview] = useState(false);
 
   const savedPublicUrl = portfolio?.status === "published"
     ? (typeof window !== "undefined" ? `${window.location.origin}/p/${portfolio.slug}` : `/p/${portfolio.slug}`)
@@ -85,6 +88,9 @@ export default function PortfolioDashboardPage() {
   const steps = getPortfolioSteps(content, seo, portfolio?.status || "draft");
   /* Playback controls stay out of the way until there is media for them to
      govern — seven toggles are noise on a portfolio with no video in it. */
+  /* Exactly one preview exists at a time: ambient in the column when there is
+     room for it, overlay-only otherwise. */
+  const sidePreviewVisible = tab === "edit" && wideEnoughForSidePreview;
   const hasProjectMedia = content.projects.some((project) => (project.media || []).length > 0);
   /* Most portfolios arrive prefilled from the account, so this is the rarer
      case: nothing typed, nothing tracked, nothing to build on. */
@@ -148,7 +154,7 @@ export default function PortfolioDashboardPage() {
       />
 
       <div data-portfolio-sticky-actions className="sticky -top-3 z-20 flex min-h-12 flex-wrap items-center justify-end gap-2 border-y border-border bg-background px-1 py-2 sm:-top-4 sm:px-2 md:-top-6 xl:-top-8">
-        <Button data-guide-target="portfolio-publish" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
+        <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button><Button data-guide-target="portfolio-publish" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
       {portfolio.status !== "published" && readiness.score < 100 && !unstarted && (
@@ -161,7 +167,6 @@ export default function PortfolioDashboardPage() {
         <div className="flex flex-wrap gap-1">
           {([
             { key: "edit", label: "Editor", icon: LayoutTemplate },
-            { key: "preview", label: "Preview", icon: Eye },
             { key: "analytics", label: "Analytics", icon: BarChart3 },
             { key: "inquiries", label: "Enquiries", icon: Inbox },
           ] as const).map(({ key, label, icon: Icon }) => (
@@ -264,7 +269,7 @@ export default function PortfolioDashboardPage() {
       {/* Beside the editor on a wide screen, so a change to the accent or the
           template is seen where it is made. Narrower screens keep the Preview
           tab, which is the same thing at full width. */}
-      {wideEnoughForSidePreview && (
+      {sidePreviewVisible && (
         <aside>
           <div className="sticky top-5">
             <PortfolioLivePreview
@@ -275,26 +280,31 @@ export default function PortfolioDashboardPage() {
               onDeviceChange={setPreviewDevice}
               frameClassName="h-[calc(100vh-12rem)]"
               liveSiteUrl={savedPublicUrl}
+              inspecting={inspectingPreview}
+              onInspectingChange={setInspectingPreview}
             />
           </div>
         </aside>
       )}
       </div>}
 
-      {tab === "preview" && <div className="rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-5">
-        <div className="mb-4">
-          <p className="text-xs font-bold text-foreground dark:text-white">Responsive preview</p>
-          <p className="mt-0.5 text-xs text-slate-500">Review the complete experience at common viewport sizes before publishing.</p>
-        </div>
+      {/* Wherever there is no ambient pane — a narrow window, or a tab that is
+          not the editor — the same preview still opens from the action bar. It
+          renders nothing until asked for, so the preview route is not loaded
+          for a frame nobody can see. */}
+      {!sidePreviewVisible && (
         <PortfolioLivePreview
+          inlineHidden
           content={content}
           theme={theme}
           templateKey={templateKey}
           device={previewDevice}
           onDeviceChange={setPreviewDevice}
-          frameClassName="h-[75vh]"
+          liveSiteUrl={savedPublicUrl}
+          inspecting={inspectingPreview}
+          onInspectingChange={setInspectingPreview}
         />
-      </div>}
+      )}
 
       {tab === "analytics" && <PortfolioAnalyticsPanel published={portfolio.status === "published"} />}
 
