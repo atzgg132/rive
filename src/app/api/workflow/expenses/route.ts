@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
 type ProjectValidation =
   | { ok: true; projectId: string | null }
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category") || "all";
     const projectId = searchParams.get("projectId") || "";
+    const requestedPagination = parsePagination(searchParams);
 
     const where: Prisma.ExpenseWhereInput = {
       userId: session.userId
@@ -51,6 +53,8 @@ export async function GET(req: NextRequest) {
       where.projectId = projectId;
     }
 
+    const total = await prisma.expense.count({ where });
+    const pagination = buildPagination(total, requestedPagination);
     const expenses = await prisma.expense.findMany({
       where,
       include: {
@@ -58,8 +62,11 @@ export async function GET(req: NextRequest) {
       },
       orderBy: [
         { date: "desc" },
-        { createdAt: "desc" }
-      ]
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
+      skip: paginationOffset(pagination),
+      take: pagination.pageSize,
     });
 
     const formattedExpenses = expenses.map((e) => ({
@@ -81,7 +88,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      expenses: formattedExpenses
+      expenses: formattedExpenses,
+      pagination,
     });
   } catch (error: unknown) {
     console.error("Expenses fetch error:", error);

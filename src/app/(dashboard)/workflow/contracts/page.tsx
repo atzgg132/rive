@@ -5,7 +5,7 @@ import {
   type ContractComposerClient,
   type ContractComposerProject,
 } from "@/components/contracts/ContractComposer";
-import { Badge, Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, PaginationControls, Select } from "@/components/ui";
 import {
   AlertTriangle,
   ArrowRight,
@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { PaginationMeta } from "@/lib/pagination";
 
 type ContractListItem = {
   id: string;
@@ -43,6 +44,9 @@ type ContractListItem = {
 type ProjectListItem = ContractComposerProject & {
   contract_coverage?: "undecided" | "rive" | "external" | "none";
 };
+
+type SourceContract = { id: string; title: string; client: { name: string } };
+type ContractSummary = { action: number; review: number; signing: number; executed: number };
 
 const statusMeta: Record<string, { label: string; description: string; badge: "default" | "secondary" | "outline" | "success" | "warning" | "destructive" }> = {
   draft: { label: "Draft", description: "Finish the terms, then share for review.", badge: "secondary" },
@@ -83,12 +87,18 @@ export default function ContractsPage() {
   const router = useRouter();
   const queryConsumed = useRef(false);
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
+  const [sourceContracts, setSourceContracts] = useState<SourceContract[]>([]);
   const [clients, setClients] = useState<ContractComposerClient[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [clientFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") || "" : "");
+  const [projectFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("projectId") || "" : "");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [summary, setSummary] = useState<ContractSummary | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [initialClientId, setInitialClientId] = useState("");
   const [initialProjectId, setInitialProjectId] = useState("");
@@ -97,20 +107,28 @@ export default function ContractsPage() {
     setLoading(true);
     setLoadError("");
     try {
+      const selectedFilter = filters.find((item) => item.value === filter);
+      const statusParam = selectedFilter?.statuses?.join(",") || "all";
       const [contractResponse, clientResponse, projectResponse] = await Promise.all([
-        fetch("/api/workflow/contracts", { cache: "no-store" }),
-        fetch("/api/workflow/clients", { cache: "no-store" }),
-        fetch("/api/workflow/projects", { cache: "no-store" }),
+        fetch(`/api/workflow/contracts?search=${encodeURIComponent(search.trim())}&status=${encodeURIComponent(statusParam)}&clientId=${encodeURIComponent(clientFilter)}&projectId=${encodeURIComponent(projectFilter)}&page=${page}&pageSize=25`, { cache: "no-store" }),
+        fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
+        fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
       ]);
+      const sourceContractResponse = await fetch("/api/workflow/contracts?mode=options&pageSize=100", { cache: "no-store" });
       const [contractData, clientData, projectData] = await Promise.all([
         contractResponse.json(),
         clientResponse.json(),
         projectResponse.json(),
       ]);
+      const sourceContractData = await sourceContractResponse.json();
       if (!contractResponse.ok || !contractData.success) throw new Error(contractData.message || "Unable to load Agreements.");
       if (!clientResponse.ok || !clientData.success) throw new Error(clientData.message || "Unable to load clients.");
       if (!projectResponse.ok || !projectData.success) throw new Error(projectData.message || "Unable to load projects.");
+      if (!sourceContractResponse.ok || !sourceContractData.success) throw new Error(sourceContractData.message || "Unable to load reusable Agreements.");
       setContracts(contractData.contracts);
+      setPagination(contractData.pagination || null);
+      setSummary(contractData.summary || null);
+      setSourceContracts(sourceContractData.contracts || []);
       setClients(clientData.clients.map((client: ContractComposerClient) => ({
         id: client.id,
         name: client.name,
@@ -134,10 +152,16 @@ export default function ContractsPage() {
   };
 
   useEffect(() => {
-    // Initial client-side workspace hydration.
+    // Initial client-side workspace hydration and subsequent list changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search, filter]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [search, filter]);
 
   useEffect(() => {
     if (loading || queryConsumed.current || typeof window === "undefined") return;
@@ -171,12 +195,13 @@ export default function ContractsPage() {
     });
   }, [contracts, filter, search]);
 
-  const counts = useMemo(() => ({
+  const calculatedCounts = useMemo(() => ({
     action: contracts.filter((contract) => ["draft", "ready_to_sign", "declined", "expired"].includes(contract.status) || (contract.status === "signing" && contract.signers.find((signer) => signer.role === "owner")?.status !== "signed" && contract.signers.find((signer) => signer.role === "client")?.status === "signed")).length,
     review: contracts.filter((contract) => contract.status === "in_review").length,
     signing: contracts.filter((contract) => ["ready_to_sign", "starting", "signing"].includes(contract.status)).length,
     executed: contracts.filter((contract) => contract.status === "executed").length,
   }), [contracts]);
+  const counts = summary || calculatedCounts;
 
   const uncoveredProjects = useMemo(() => projects.filter((project) => !project.contract_coverage || project.contract_coverage === "undecided"), [projects]);
 
@@ -247,7 +272,7 @@ export default function ContractsPage() {
         )
       ) : filteredContracts.length === 0 ? (
         <EmptyState icon={<Search className="h-5 w-5" />} title="No Agreements match" description="Try a different search or stage filter." action={<Button variant="outline" onClick={() => { setSearch(""); setFilter("all"); }}>Clear filters</Button>} />
-      ) : (
+      ) : (<>
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredContracts.map((contract) => {
             const meta = statusMeta[contract.status] || { label: contract.status, description: "Open the Agreement record.", badge: "outline" as const };
@@ -274,14 +299,15 @@ export default function ContractsPage() {
             );
           })}
         </div>
-      )}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="Agreements" onPageChange={setPage} /> : null}
+      </>)}
 
       <ContractComposer
         open={composerOpen}
         onOpenChange={setComposerOpen}
         clients={clients}
         projects={projects}
-        sourceContracts={contracts.map((contract) => ({ id: contract.id, title: contract.title, client: { name: contract.client.name } }))}
+        sourceContracts={sourceContracts}
         initialClientId={initialClientId}
         initialProjectId={initialProjectId}
         onCreated={(contractId) => router.push(`/workflow/contracts/${contractId}`)}

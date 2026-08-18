@@ -369,10 +369,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {notificationsOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-72 animate-fade-in-up rounded-xl border border-border bg-popover p-4 shadow-overlay">
                   <h4 className="mb-3 text-xs font-semibold text-foreground">Notifications</h4>
-                  <div className="flex flex-col gap-2.5">
-                    {notifications.map(n => (
-                      n.href ? <Link key={n.id} href={n.href} onClick={() => setNotificationsOpen(false)} className="block border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0 hover:text-primary">{n.text}</Link> : <div key={n.id} className="border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0">{n.text}</div>
-                    ))}
+                  <div className="max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain pr-1">
+                    <div className="flex flex-col gap-2.5">
+                      {notifications.map(n => (
+                        n.href ? <Link key={n.id} href={n.href} onClick={() => setNotificationsOpen(false)} className="block border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0 hover:text-primary">{n.text}</Link> : <div key={n.id} className="border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0">{n.text}</div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

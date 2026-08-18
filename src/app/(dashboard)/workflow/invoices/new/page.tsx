@@ -38,9 +38,9 @@ export default function NewInvoicePage() {
     let cancelled = false;
     const requestedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("invoiceId") : null;
     void Promise.all([
-      fetch("/api/workflow/clients", { cache: "no-store" }),
-      fetch("/api/workflow/projects", { cache: "no-store" }),
-      requestedId ? fetch("/api/workflow/invoices", { cache: "no-store" }) : Promise.resolve(null),
+      fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
+      fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
+      requestedId ? fetch(`/api/workflow/invoices?id=${encodeURIComponent(requestedId)}`, { cache: "no-store" }) : Promise.resolve(null),
     ]).then(async ([clientResponse, projectResponse, invoiceResponse]) => {
       const clientData = await clientResponse.json().catch(() => null);
       const projectData = await projectResponse.json().catch(() => null);

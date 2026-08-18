@@ -28,13 +28,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           }
         },
         invoices: {
-          orderBy: { issueDate: "desc" }
+          orderBy: [{ issueDate: "desc" }, { id: "desc" }],
+          take: 10,
         },
         milestones: {
-          orderBy: { dueDate: "asc" }
+          orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+          take: 50,
         },
         contracts: {
-          orderBy: { updatedAt: "desc" },
+          orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+          take: 10,
           select: {
             id: true,
             title: true,
@@ -51,9 +54,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ success: false, message: "Project not found." }, { status: 404 });
     }
 
+    const [invoiceCount, milestoneCount, contractCount] = await Promise.all([
+      prisma.invoice.count({ where: { userId: session.userId, projectId: id } }),
+      prisma.milestone.count({ where: { projectId: id } }),
+      prisma.contract.count({ where: { userId: session.userId, projectId: id, status: { not: "void" } } }),
+    ]);
+
     return NextResponse.json({
       success: true,
-      project
+      project: {
+        ...project,
+        related_counts: { invoices: invoiceCount, milestones: milestoneCount, contracts: contractCount },
+      },
     });
   } catch (error: unknown) {
     console.error("Project fetch error:", error);

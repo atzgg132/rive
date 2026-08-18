@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -25,6 +25,7 @@ import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
+import type { PaginationMeta } from "@/lib/pagination";
 
 interface Client {
   id: string;
@@ -49,6 +50,8 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Drawer & Form state
@@ -71,12 +74,14 @@ export default function ClientsPage() {
   const [saving, setSaving] = useState(false);
 
   const loadClients = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}`);
+      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}&page=${page}&pageSize=25`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           setClients(data.clients);
+          setPagination(data.pagination || null);
         }
       }
     } catch (err) {
@@ -89,9 +94,14 @@ export default function ClientsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [debouncedSearch, status]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadClients();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status]);
+  }, [debouncedSearch, status, page]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -257,7 +267,7 @@ export default function ClientsPage() {
           after="Your projects and invoices can reuse these details."
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
         />
-      ) : (
+      ) : (<>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {clients.map((c) => (
             <div key={c.id} className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-card transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-lg">
@@ -375,7 +385,8 @@ export default function ClientsPage() {
             </div>
           ))}
         </div>
-      )}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="clients" onPageChange={setPage} /> : null}
+      </>)}
 
       {/* Right Slideout Modal Drawer for adding/editing a Client */}
       {drawerOpen && (

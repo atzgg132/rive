@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, CheckCircle, Clock3, Download, FileText, MoreVertical, Plus, Search, Send, Trash2, WalletCards } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, PageHeader, Select } from "@/components/ui";
+import { Button, Input, PageHeader, PaginationControls, Select } from "@/components/ui";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { formatMoney } from "@/lib/currency";
+import type { PaginationMeta } from "@/lib/pagination";
 import { buildMonthlyTrend } from "@/utils/revenueTrend";
 
 type Invoice = {
@@ -68,21 +69,36 @@ export default function RevenuePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+  const [invoiceFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("invoiceId") || "" : "");
+  const [clientFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") || "" : "");
+  const [projectFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("projectId") || "" : "");
   const debouncedSearch = useDebouncedValue(search);
 
   const load = async () => {
     setLoading(true);
     try {
+      const relatedParams = new URLSearchParams();
+      if (invoiceFilter) relatedParams.set("id", invoiceFilter);
+      if (clientFilter) relatedParams.set("clientId", clientFilter);
+      if (projectFilter) relatedParams.set("projectId", projectFilter);
+      const relatedQuery = relatedParams.toString();
+      const summaryParams = new URLSearchParams();
+      if (clientFilter) summaryParams.set("clientId", clientFilter);
+      if (projectFilter) summaryParams.set("projectId", projectFilter);
+      const summaryQuery = summaryParams.toString();
       const [invoiceResponse, summaryResponse] = await Promise.all([
-        fetch(`/api/workflow/invoices?search=${encodeURIComponent(debouncedSearch)}&status=${encodeURIComponent(status)}`, { cache: "no-store" }),
-        fetch("/api/workflow/revenue/summary", { cache: "no-store" }),
+        fetch(`/api/workflow/invoices?search=${encodeURIComponent(debouncedSearch)}&status=${encodeURIComponent(status)}&page=${page}&pageSize=25${relatedQuery ? `&${relatedQuery}` : ""}`, { cache: "no-store" }),
+        fetch(`/api/workflow/revenue/summary${summaryQuery ? `?${summaryQuery}` : ""}`, { cache: "no-store" }),
       ]);
       const invoiceData = await invoiceResponse.json().catch(() => null);
       const summaryData = await summaryResponse.json().catch(() => null);
       if (!invoiceResponse.ok || !invoiceData?.success) throw new Error(invoiceData?.message || "Invoices could not be loaded.");
       setInvoices(invoiceData.invoices || []);
+      setPagination(invoiceData.pagination || null);
       if (summaryResponse.ok && summaryData?.success) {
         setSummaries(summaryData.currencies || []);
         setAging(summaryData.aging || []);
@@ -98,8 +114,10 @@ export default function RevenuePage() {
 
   // This effect intentionally refreshes server state when the query controls
   // change; the async loader owns the resulting state updates.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setPage(1); }, [debouncedSearch, status]);
   // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, [debouncedSearch, status]);
+  useEffect(() => { void load(); }, [debouncedSearch, status, page]);
 
   const convertedTotal = (field: "issued" | "collected" | "outstanding" | "overdue" | "draft") => {
     let total = 0;
@@ -231,12 +249,13 @@ export default function RevenuePage() {
             <p className="mt-5 text-sm text-muted-foreground">{ratesStatus === "loading" && monthly.length ? `Converting to ${displayCurrency}…` : "Your monthly trend will appear after the first invoice."}</p>
           )}
         </section>
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-600">Attention queue</p><h2 className="mt-1 text-xl font-semibold">Next best actions</h2><div className="mt-4 space-y-2">{attention.slice(0, 5).map((item) => <Link key={item.id} href={item.status === "draft" ? `/workflow/invoices/new?invoiceId=${encodeURIComponent(item.id)}` : `/workflow/revenue#invoice-${encodeURIComponent(item.id)}`} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-3 transition hover:border-primary/40 hover:bg-primary/[0.03]"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.invoiceNumber} · {item.client || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{item.reason} · {dateLabel(item.dueDate)}</p></div><span className="shrink-0 text-sm font-semibold">{formatConverted(item.outstanding, item.currency) || `${item.currency} ${item.outstanding.toFixed(2)}`}</span></Link>)}{!attention.length ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">Nothing urgent in the invoice queue.</p> : null}</div></section>
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-600">Attention queue</p><h2 className="mt-1 text-xl font-semibold">Next best actions</h2><div className="mt-4 space-y-2">{attention.slice(0, 5).map((item) => <Link key={item.id} href={item.status === "draft" ? `/workflow/invoices/new?invoiceId=${encodeURIComponent(item.id)}` : `/workflow/revenue?invoiceId=${encodeURIComponent(item.id)}`} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-3 transition hover:border-primary/40 hover:bg-primary/[0.03]"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.invoiceNumber} · {item.client || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{item.reason} · {dateLabel(item.dueDate)}</p></div><span className="shrink-0 text-sm font-semibold">{formatConverted(item.outstanding, item.currency) || `${item.currency} ${item.outstanding.toFixed(2)}`}</span></Link>)}{!attention.length ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">Nothing urgent in the invoice queue.</p> : null}</div></section>
       </div>
 
       <section className="rounded-2xl border border-border bg-card shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Invoice workspace</p><h2 className="mt-1 text-xl font-semibold">All invoices</h2></div><div className="flex flex-wrap gap-2"><label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search invoices, clients…" className="w-56 pl-9" aria-label="Search invoices" /></label><Select value={status} onChange={(event) => setStatus(event.target.value)} className="w-36"><option value="all">All statuses</option><option value="draft">Drafts</option><option value="sent">Sent</option><option value="overdue">Overdue</option><option value="partially_paid">Partial</option><option value="paid">Paid</option></Select></div></div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Invoice workspace</p><div className="mt-1 flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold">{invoiceFilter ? "Selected invoice" : "All invoices"}</h2>{invoiceFilter ? <Link href="/workflow/revenue" className="text-xs font-semibold text-primary hover:underline">View all invoices</Link> : null}</div></div><div className="flex flex-wrap gap-2"><label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search invoices, clients…" className="w-56 pl-9" aria-label="Search invoices" /></label><Select value={status} onChange={(event) => setStatus(event.target.value)} className="w-36"><option value="all">All statuses</option><option value="draft">Drafts</option><option value="sent">Sent</option><option value="overdue">Overdue</option><option value="partially_paid">Partial</option><option value="paid">Paid</option></Select></div></div>
         {loading ? <div className="p-10 text-center text-sm text-muted-foreground">Loading invoices…</div> : !invoices.length ? <div className="p-10 text-center"><FileText className="mx-auto h-8 w-8 text-muted-foreground/50" /><p className="mt-3 font-semibold">No invoices match this view</p><p className="mt-1 text-sm text-muted-foreground">Create a draft in the invoice workspace to get started.</p><Link href="/workflow/invoices/new" className="mt-4 inline-flex"><Button className="gap-2"><Plus className="h-4 w-4" /> Create invoice</Button></Link></div> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-5 py-3">Invoice</th><th className="px-5 py-3">Client / project</th><th className="px-5 py-3">Due</th><th className="px-5 py-3 text-right">Amount due</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-border">{invoices.map((invoice) => <tr id={`invoice-${invoice.id}`} key={invoice.id} className="transition hover:bg-muted/20"><td className="px-5 py-4"><p className="font-semibold">{invoice.invoice_number}</p><p className="mt-1 text-xs text-muted-foreground">Issued {dateLabel(invoice.issue_date)}</p></td><td className="px-5 py-4"><p className="font-medium">{invoice.client_name || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{invoice.project_title || "General services"}</p></td><td className="px-5 py-4 text-muted-foreground">{dateLabel(invoice.due_date)}</td><td className="px-5 py-4 text-right"><p className="font-semibold">{formatConverted(Number(invoice.outstanding), invoice.currency) || `${invoice.currency} ${Number(invoice.outstanding).toFixed(2)}`}</p>{Number(invoice.amount_paid) > 0 ? <p className="mt-1 text-xs text-emerald-600">{formatConverted(Number(invoice.amount_paid), invoice.currency) || `${invoice.currency} ${Number(invoice.amount_paid).toFixed(2)}`} paid</p> : null}{invoice.currency !== displayCurrency ? <p className="mt-1 text-xs font-medium text-muted-foreground">Originally {formatMoney(Number(invoice.total), invoice.currency)}</p> : null}</td><td className="px-5 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${statusClass(invoice.status)}`}>{statusLabel(invoice.status)}</span></td><td className="relative px-5 py-4 text-right"><div className="flex justify-end gap-2">{invoice.status === "draft" ? <Link href={`/workflow/invoices/new?invoiceId=${encodeURIComponent(invoice.id)}`}><Button size="sm" variant="outline">Review</Button></Link> : null}<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${invoice.invoice_number}`} onClick={(event) => { setMenuRect(event.currentTarget.getBoundingClientRect()); setOpenMenu(openMenu === invoice.id ? null : invoice.id); }}><MoreVertical className="h-4 w-4" /></Button></div>{openMenu === invoice.id ? <DropdownPortal triggerRect={menuRect} onClose={() => setOpenMenu(null)}><div className="w-48 rounded-xl border border-border bg-card p-1 shadow-xl"><Button className="w-full justify-start gap-2" variant="ghost" onClick={() => { openPdf(invoice); setOpenMenu(null); }}><Download className="h-4 w-4" /> Download PDF</Button>{["sent", "viewed", "overdue", "partially_paid"].includes(invoice.status) ? <Button className="w-full justify-start gap-2 text-emerald-700" variant="ghost" onClick={() => { setOpenMenu(null); void recordPayment(invoice); }}><CheckCircle className="h-4 w-4" /> Record payment</Button> : null}{["draft", "overdue"].includes(invoice.status) ? <Button className="w-full justify-start gap-2 text-blue-700" variant="ghost" onClick={() => { setOpenMenu(null); void sendInvoice(invoice); }}><Send className="h-4 w-4" /> Send invoice</Button> : null}{invoice.status === "draft" && !invoice.contract_id ? <Button className="w-full justify-start gap-2 text-red-700" variant="ghost" onClick={() => { setOpenMenu(null); void deleteInvoice(invoice); }}><Trash2 className="h-4 w-4" /> Delete draft</Button> : null}</div></DropdownPortal> : null}</td></tr>)}</tbody></table></div>}
+        {!loading && invoices.length > 0 && pagination ? <PaginationControls pagination={pagination} loading={loading} label="invoices" onPageChange={setPage} /> : null}
       </section>
 
       <p className="text-center text-xs text-muted-foreground">All totals are calculated from the server-side invoice and payment ledger. {ratesStatus === "ready" ? `Converted to ${displayCurrency} for display.` : "Original currencies are shown while exchange rates load."}</p>

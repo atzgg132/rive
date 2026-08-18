@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { monthlyCohortRows } from "@/utils/revenueTrend";
@@ -38,9 +39,17 @@ export async function GET(req: NextRequest) {
 
   try {
     const now = new Date();
+    const { searchParams } = new URL(req.url);
+    const clientId = searchParams.get("clientId") || "";
+    const projectId = searchParams.get("projectId") || "";
+    const invoiceWhere: Prisma.InvoiceWhereInput = {
+      userId: session.userId,
+      ...(clientId ? { clientId } : {}),
+      ...(projectId ? { projectId } : {}),
+    };
     const [invoices, events] = await Promise.all([
       prisma.invoice.findMany({
-        where: { userId: session.userId },
+        where: invoiceWhere,
         select: {
           id: true, invoiceNumber: true, currency: true, status: true, total: true, amountPaid: true,
           dueDate: true, issueDate: true, paidDate: true, updatedAt: true,
@@ -50,7 +59,7 @@ export async function GET(req: NextRequest) {
         take: 20_000,
       }),
       prisma.invoiceEvent.findMany({
-        where: { invoice: { userId: session.userId } },
+        where: { invoice: invoiceWhere },
         select: { eventType: true, createdAt: true, metadata: true, invoice: { select: { invoiceNumber: true, currency: true } } },
         orderBy: { createdAt: "desc" },
         take: 12,

@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
               dueDate: true,
               milestones: {
                 orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+                take: 100,
                 select: { id: true, title: true, dueDate: true, completed: true },
               },
             },

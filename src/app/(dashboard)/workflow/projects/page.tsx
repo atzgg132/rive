@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
@@ -30,6 +30,7 @@ import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
+import type { PaginationMeta } from "@/lib/pagination";
 
 interface Project {
   id: string;
@@ -68,6 +69,9 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState("all");
+  const [clientFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") || "" : "");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Form state
@@ -94,12 +98,14 @@ export default function ProjectsPage() {
   const [externalCoverageUrl, setExternalCoverageUrl] = useState("");
 
   const loadProjects = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(debouncedSearch)}&status=${status}`);
+      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(debouncedSearch)}&status=${status}&clientId=${encodeURIComponent(clientFilter)}&page=${page}&pageSize=25`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           setProjects(data.projects);
+          setPagination(data.pagination || null);
         }
       }
     } catch (err) {
@@ -112,7 +118,7 @@ export default function ProjectsPage() {
 
   const loadClients = async () => {
     try {
-      const res = await fetch("/api/workflow/clients");
+      const res = await fetch("/api/workflow/clients?mode=options&pageSize=100");
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -139,9 +145,14 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [debouncedSearch, status]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status]);
+  }, [debouncedSearch, status, page]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -413,7 +424,7 @@ export default function ProjectsPage() {
           after="Its deadlines and budget can flow into Calendar and Revenue."
           action={clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
         />
-      ) : (
+      ) : (<>
         <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {kanbanColumns.map((col) => {
@@ -443,7 +454,8 @@ export default function ProjectsPage() {
             })}
           </div>
         </DndContext>
-      )}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="projects" onPageChange={setPage} /> : null}
+      </>)}
 
       {/* Add/Edit Project Drawer */}
       {drawerOpen && (

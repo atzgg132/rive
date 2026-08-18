@@ -7,6 +7,7 @@ export * from "@/components/ui/empty-state";
 export * from "@/components/ui/form-field";
 export * from "@/components/ui/input";
 export * from "@/components/ui/page-header";
+export * from "@/components/ui/pagination";
 export * from "@/components/ui/select";
 export * from "@/components/ui/separator";
 export * from "@/components/ui/skeleton";

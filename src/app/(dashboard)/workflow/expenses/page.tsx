@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -19,6 +19,7 @@ import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { DISPLAY_CURRENCIES } from "@/lib/currency";
+import type { PaginationMeta } from "@/lib/pagination";
 
 interface Expense {
   id: string;
@@ -48,6 +49,8 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [category, setCategory] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Form Drawer state
@@ -68,12 +71,14 @@ export default function ExpensesPage() {
   const [saving, setSaving] = useState(false);
 
   const loadExpenses = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/expenses?search=${encodeURIComponent(debouncedSearch)}&category=${category}`);
+      const res = await fetch(`/api/workflow/expenses?search=${encodeURIComponent(debouncedSearch)}&category=${category}&page=${page}&pageSize=25`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           setExpenses(data.expenses);
+          setPagination(data.pagination || null);
         }
       }
     } catch (err) {
@@ -86,7 +91,7 @@ export default function ExpensesPage() {
 
   const loadProjects = async () => {
     try {
-      const res = await fetch("/api/workflow/projects");
+      const res = await fetch("/api/workflow/projects?mode=options&pageSize=100");
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -100,9 +105,14 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [debouncedSearch, category]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadExpenses();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, category]);
+  }, [debouncedSearch, category, page]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -313,7 +323,7 @@ export default function ExpensesPage() {
           after="Rive will include it in your expense and profitability views."
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Log expense</Button>}
         />
-      ) : (
+      ) : (<>
         <div className="workspace-table">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -395,7 +405,8 @@ export default function ExpensesPage() {
             </table>
           </div>
         </div>
-      )}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="expenses" onPageChange={setPage} /> : null}
+      </>)}
 
       {/* Add/Edit Expense Drawer */}
       {drawerOpen && (

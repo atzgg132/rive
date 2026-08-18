@@ -5,6 +5,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { PROJECT_PRIORITY_SET, PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
+import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
 // Shared with the migration engine so imported projects can never carry a
 // status this endpoint would reject.
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
     const clientId = searchParams.get("clientId") || "";
+    const mode = searchParams.get("mode") || "list";
 
     const where: Prisma.ProjectWhereInput = {
       userId: session.userId,
@@ -79,38 +81,117 @@ export async function GET(req: NextRequest) {
       where.clientId = clientId;
     }
 
+    if (mode === "options") {
+      const optionLimit = parsePagination(searchParams, { pageSize: 100, maxPageSize: 100 }).pageSize;
+      const [optionTotal, options] = await Promise.all([
+        prisma.project.count({ where }),
+        prisma.project.findMany({
+          where,
+          orderBy: [{ title: "asc" }, { id: "asc" }],
+          take: optionLimit,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            clientId: true,
+            currency: true,
+            budget: true,
+            milestones: {
+              orderBy: { dueDate: "asc" },
+              take: 100,
+              select: { id: true, title: true, dueDate: true, completed: true },
+            },
+          },
+        }),
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        projects: options.map((project) => ({
+          id: project.id,
+          title: project.title,
+          description: project.description,
+          client_id: project.clientId,
+          currency: project.currency,
+          budget: project.budget ? project.budget.toString() : null,
+          milestones: project.milestones.map((milestone) => ({ id: milestone.id, title: milestone.title, dueDate: milestone.dueDate, completed: milestone.completed })),
+        })),
+        options: { limit: optionLimit, total: optionTotal, hasMore: optionTotal > optionLimit },
+      });
+    }
+
+    const requestedPagination = parsePagination(searchParams);
+    const total = await prisma.project.count({ where });
+    const pagination = buildPagination(total, requestedPagination);
     const projects = await prisma.project.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        clientId: true,
+        userId: true,
+        title: true,
+        description: true,
+        status: true,
+        priority: true,
+        startDate: true,
+        dueDate: true,
+        budget: true,
+        currency: true,
+        contractCoverage: true,
+        externalContractLabel: true,
+        externalContractUrl: true,
+        contractDecisionAt: true,
+        tags: true,
+        createdAt: true,
+        updatedAt: true,
         client: {
           select: {
             name: true,
             company: true
           }
         },
-        milestones: {
-          select: {
-            id: true,
-            title: true,
-            dueDate: true,
-            completed: true
-          }
-        },
         contracts: {
           where: { status: { not: "void" } },
           orderBy: { updatedAt: "desc" },
+          take: 1,
           select: { id: true, title: true, status: true },
         }
       },
       orderBy: [
         { dueDate: "asc" },
-        { createdAt: "desc" }
-      ]
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
+      skip: paginationOffset(pagination),
+      take: pagination.pageSize,
     });
 
+    const projectIds = projects.map((project) => project.id);
+    const [milestoneCounts, contractCounts] = projectIds.length ? await Promise.all([
+      prisma.milestone.groupBy({
+        by: ["projectId", "completed"],
+        where: { projectId: { in: projectIds } },
+        _count: { _all: true },
+      }),
+      prisma.contract.groupBy({
+        by: ["projectId"],
+        where: { userId: session.userId, projectId: { in: projectIds }, status: { not: "void" } },
+        _count: { _all: true },
+      }),
+    ]) : [[], []];
+
+    const milestoneTotals = new Map<string, number>();
+    const completedMilestones = new Map<string, number>();
+    for (const row of milestoneCounts) {
+      milestoneTotals.set(row.projectId, (milestoneTotals.get(row.projectId) || 0) + row._count._all);
+      if (row.completed) completedMilestones.set(row.projectId, row._count._all);
+    }
+    const contractCountByProject = new Map(contractCounts.map((row) => [row.projectId, row._count._all]));
+
     const formattedProjects = projects.map((p) => {
-      const milestone_count = p.milestones.length;
-      const completed_milestones = p.milestones.filter((m) => m.completed).length;
+      const milestone_count = milestoneTotals.get(p.id) || 0;
+      const completed_milestones = completedMilestones.get(p.id) || 0;
+      const contract_count = contractCountByProject.get(p.id) || 0;
 
       return {
         id: p.id,
@@ -124,11 +205,11 @@ export async function GET(req: NextRequest) {
         due_date: p.dueDate,
         budget: p.budget ? p.budget.toString() : null,
         currency: p.currency,
-        contract_coverage: p.contracts.length > 0 ? "rive" : p.contractCoverage,
+        contract_coverage: contract_count > 0 ? "rive" : p.contractCoverage,
         external_contract_label: p.externalContractLabel,
         external_contract_url: p.externalContractUrl,
         contract_decision_at: p.contractDecisionAt,
-        contract_count: p.contracts.length,
+        contract_count,
         latest_contract: p.contracts[0] || null,
         tags: p.tags,
         created_at: p.createdAt,
@@ -137,13 +218,13 @@ export async function GET(req: NextRequest) {
         client_company: p.client?.company || null,
         milestone_count,
         completed_milestones,
-        milestones: p.milestones.map((milestone) => ({ id: milestone.id, title: milestone.title, dueDate: milestone.dueDate, completed: milestone.completed }))
       };
     });
 
     return NextResponse.json({
       success: true,
-      projects: formattedProjects
+      projects: formattedProjects,
+      pagination,
     });
   } catch (error: unknown) {
     console.error("Projects fetch error:", error);

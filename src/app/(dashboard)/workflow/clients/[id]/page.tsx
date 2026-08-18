@@ -19,10 +19,10 @@ import { toast } from "sonner";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
-type ClientProject = { id: string; name: string; dueDate: string | null; status: string };
+type ClientProject = { id: string; title: string; dueDate: string | null; status: string };
 type ClientInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; currency: string; status: string };
 type ClientContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string; projectId: string | null };
-type ClientDetails = { id: string; name: string; company: string | null; avatarColor: string; createdAt: string; status: string; email: string | null; phone: string | null; website: string | null; tags: string[]; ltv: number; notes: string | null; projects: ClientProject[]; invoices: ClientInvoice[]; contracts: ClientContract[] };
+type ClientDetails = { id: string; name: string; company: string | null; avatarColor: string; createdAt: string; status: string; email: string | null; phone: string | null; website: string | null; tags: string[]; ltv: number; paid_revenue_by_currency: Record<string, number>; related_counts: { projects: number; invoices: number; contracts: number }; notes: string | null; projects: ClientProject[]; invoices: ClientInvoice[]; contracts: ClientContract[] };
 
 export default function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { displayCurrency, convert, format, formatConverted } = useCurrency();
@@ -75,10 +75,9 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const paidInvoices = client.invoices.filter((invoice) => invoice.status === "paid");
-  const convertedLtv = paidInvoices.reduce<number | null>((total, invoice) => {
+  const convertedLtv = Object.entries(client.paid_revenue_by_currency).reduce<number | null>((total, [currency, amount]) => {
     if (total === null) return null;
-    const converted = convert(Number(invoice.total), invoice.currency);
+    const converted = convert(amount, currency);
     return converted === null ? null : total + converted;
   }, 0);
 
@@ -168,15 +167,15 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-3 gap-3 border-t border-blue-500/30 pt-4">
               <div>
                 <div className="text-xs text-blue-200 mb-0.5 font-medium">Projects</div>
-                <div className="text-xl font-bold">{client.projects.length}</div>
+                <div className="text-xl font-bold">{client.related_counts.projects}</div>
               </div>
               <div>
                 <div className="text-xs text-blue-200 mb-0.5 font-medium">Invoices</div>
-                <div className="text-xl font-bold">{client.invoices.length}</div>
+                <div className="text-xl font-bold">{client.related_counts.invoices}</div>
               </div>
               {agreements && <div>
                 <div className="text-xs text-blue-200 mb-0.5 font-medium">Contracts</div>
-                <div className="text-xl font-bold">{client.contracts.length}</div>
+                <div className="text-xl font-bold">{client.related_counts.contracts}</div>
               </div>}
             </div>
           </div>
@@ -201,7 +200,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               <h3 className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
                 <Briefcase className="h-5 w-5 text-blue-600" /> Linked Projects
               </h3>
-              <Link href="/workflow/projects" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
+              <Link href={`/workflow/projects?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
                 View all
               </Link>
             </div>
@@ -219,7 +218,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                         <Briefcase className="h-5 w-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-foreground dark:text-white">{proj.name}</h4>
+                        <h4 className="font-bold text-sm text-foreground dark:text-white">{proj.title}</h4>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-slate-500">
                           <Calendar className="h-3 w-3" />
                           <span>Due {proj.dueDate ? formatDate(proj.dueDate) : "No due date"}</span>
@@ -246,7 +245,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               <h3 className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
                 <FileSignature className="h-5 w-5 text-blue-600" /> Contracts
               </h3>
-              <Link href="/workflow/contracts" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
+              <Link href={`/workflow/contracts?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
                 View all
               </Link>
             </div>
@@ -280,7 +279,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               <h3 className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-emerald-600" /> Billing History
               </h3>
-              <Link href="/workflow/revenue" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
+              <Link href={`/workflow/revenue?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
                 View all
               </Link>
             </div>

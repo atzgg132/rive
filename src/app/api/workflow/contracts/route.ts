@@ -14,6 +14,7 @@ import {
   stableStringify,
   validatePaymentPlanItem,
 } from "@/utils/contracts";
+import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
 function clean(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -81,20 +82,50 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search")?.trim() || "";
     const status = searchParams.get("status") || "all";
+    const statuses = status.split(",").map((value) => value.trim()).filter(Boolean);
+    const clientId = searchParams.get("clientId") || "";
+    const projectId = searchParams.get("projectId") || "";
+    const mode = searchParams.get("mode") || "list";
+    const where: Prisma.ContractWhereInput = {
+      userId: session.userId,
+      ...(clientId ? { clientId } : {}),
+      ...(projectId ? { projectId } : {}),
+      ...(statuses.length && status !== "all" ? { status: statuses.length === 1 ? statuses[0] : { in: statuses } } : {}),
+      ...(search
+        ? {
+            OR: [
+              { title: { contains: search, mode: "insensitive" } },
+              { client: { name: { contains: search, mode: "insensitive" } } },
+              { project: { title: { contains: search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    };
+
+    if (mode === "options") {
+      const optionLimit = parsePagination(searchParams, { pageSize: 100, maxPageSize: 100 }).pageSize;
+      const [optionTotal, options] = await Promise.all([
+        prisma.contract.count({ where }),
+        prisma.contract.findMany({
+          where,
+          orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+          take: optionLimit,
+          select: { id: true, title: true, client: { select: { name: true } } },
+        }),
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        contracts: options,
+        options: { limit: optionLimit, total: optionTotal, hasMore: optionTotal > optionLimit },
+      });
+    }
+
+    const requestedPagination = parsePagination(searchParams);
+    const total = await prisma.contract.count({ where });
+    const pagination = buildPagination(total, requestedPagination);
     const contracts = await prisma.contract.findMany({
-      where: {
-        userId: session.userId,
-        ...(status !== "all" ? { status } : {}),
-        ...(search
-          ? {
-              OR: [
-                { title: { contains: search, mode: "insensitive" } },
-                { client: { name: { contains: search, mode: "insensitive" } } },
-                { project: { title: { contains: search, mode: "insensitive" } } },
-              ],
-            }
-          : {}),
-      },
+      where,
       include: {
         client: { select: { id: true, name: true, email: true } },
         project: { select: { id: true, title: true } },
@@ -102,10 +133,34 @@ export async function GET(req: NextRequest) {
         signers: { orderBy: { sequence: "asc" }, select: { role: true, name: true, email: true, status: true, signedAt: true } },
         paymentPlanItems: { orderBy: { sequence: "asc" }, select: { id: true, label: true, amount: true, currency: true, triggerType: true, status: true } },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      skip: paginationOffset(pagination),
+      take: pagination.pageSize,
     });
 
-    return NextResponse.json({ success: true, contracts: contracts.map(serializeListContract) });
+    const [actionBase, signingAction, reviewCount, signingCount, executedCount] = await Promise.all([
+      prisma.contract.count({ where: { userId: session.userId, status: { in: ["draft", "ready_to_sign", "declined", "expired"] } } }),
+      prisma.contract.count({
+        where: {
+          userId: session.userId,
+          status: "signing",
+          signers: {
+            some: { role: "owner", status: { not: "signed" } },
+          },
+          AND: [{ signers: { some: { role: "client", status: "signed" } } }],
+        },
+      }),
+      prisma.contract.count({ where: { userId: session.userId, status: "in_review" } }),
+      prisma.contract.count({ where: { userId: session.userId, status: { in: ["ready_to_sign", "starting", "signing"] } } }),
+      prisma.contract.count({ where: { userId: session.userId, status: "executed" } }),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      contracts: contracts.map(serializeListContract),
+      pagination,
+      summary: { action: actionBase + signingAction, review: reviewCount, signing: signingCount, executed: executedCount },
+    });
   } catch (error) {
     console.error("Contracts fetch error:", error);
     return NextResponse.json({ success: false, message: "Unable to load Agreements." }, { status: 500 });
