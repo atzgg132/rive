@@ -365,6 +365,70 @@ test.describe("portfolio studio", () => {
     }, { timeout: 15_000 }).toEqual(["Second project", "Harbour rebuild"]);
   });
 
+  test("publishing asks first, names what is missing, and only then goes live", async ({ page, context }) => {
+    const { token, user } = await studioUser("publish");
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: /Publish portfolio/i }).click();
+
+    const review = page.locator("[data-portfolio-publish-review]");
+    await expect(review).toBeVisible();
+    // What is about to become public, in the owner's own numbers.
+    await expect(review).toContainText(/1 project/i);
+    // The fixture's only project has no cover, so the review must say so.
+    await expect(review).toContainText(/Add a cover image to Harbour rebuild/i);
+
+    /* Opening the review must not publish. The whole point is that the first
+       click stopped being the irreversible one. */
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { status: true } });
+      return portfolio?.status;
+    }, { timeout: 5_000 }).toBe("draft");
+
+    // Escape backs out without publishing, like any other overlay here.
+    await page.keyboard.press("Escape");
+    await expect(review).toBeHidden();
+
+    await page.getByRole("button", { name: /Publish portfolio/i }).click();
+    await expect(review).toBeVisible();
+    await page.locator("[data-portfolio-publish-confirm]").click();
+
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { status: true } });
+      return portfolio?.status;
+    }, { timeout: 15_000 }).toBe("published");
+  });
+
+  test("the template gallery shows the owner's own work, not six gradients", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("templates")).token, url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: /Appearance/i }).click();
+    await expect(page.locator("[data-portfolio-template]")).toHaveCount(6);
+
+    /* The fixture's template renders live on arrival, with the fixture's own
+       headline inside it — that is the difference between comparing and
+       guessing. The others stay asleep until asked for. */
+    const selected = page.locator('[data-portfolio-template="minimal-pro"]');
+    await expect(selected).toContainText("Independent product designer", { timeout: 20_000 });
+
+    const asleep = page.locator('[data-portfolio-template="creator"]');
+    await expect(asleep).not.toContainText("Independent product designer");
+
+    // Hovering wakes one, and it renders the same portfolio at its own template.
+    await asleep.hover();
+    await expect(asleep).toContainText("Independent product designer", { timeout: 20_000 });
+
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth, "scaled miniatures must not push the page sideways").toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  });
+
   test("a stale revision asks the owner to choose instead of overwriting their draft", async ({ page, context }) => {
     const { token, user } = await studioUser("conflict");
     await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);

@@ -9,6 +9,7 @@ import PortfolioAnalyticsPanel from "@/components/portfolio/PortfolioAnalyticsPa
 import PortfolioInquiriesPanel from "@/components/portfolio/PortfolioInquiriesPanel";
 import PortfolioLivePreview, { type PreviewDevice } from "@/components/portfolio/PortfolioLivePreview";
 import PortfolioNextSteps, { getPortfolioSteps, type StudioSection } from "@/components/portfolio/PortfolioNextSteps";
+import PortfolioPublishReview from "@/components/portfolio/PortfolioPublishReview";
 import StudioDesignSection from "@/components/portfolio/studio/StudioDesignSection";
 import StudioPracticesSection from "@/components/portfolio/studio/StudioPracticesSection";
 import StudioProfileSection from "@/components/portfolio/studio/StudioProfileSection";
@@ -72,6 +73,9 @@ export default function PortfolioDashboardPage() {
   /* Opens on the work, because the work is the portfolio. The old default was
      the profile form, which put the least differentiating screen first. */
   const [editorSection, setEditorSection] = useState<StudioSection>("work");
+  /* Publishing is the one action that puts someone in front of clients, so it
+     asks first and says what is about to go public. */
+  const [reviewingPublish, setReviewingPublish] = useState(false);
 
   const savedPublicUrl = portfolio?.status === "published"
     ? (typeof window !== "undefined" ? `${window.location.origin}/p/${portfolio.slug}` : `/p/${portfolio.slug}`)
@@ -140,7 +144,7 @@ export default function PortfolioDashboardPage() {
       />
 
       <div data-portfolio-sticky-actions className="sticky -top-3 z-20 flex min-h-12 flex-wrap items-center justify-end gap-2 border-y border-border bg-background px-1 py-2 sm:-top-4 sm:px-2 md:-top-6 xl:-top-8">
-        <Button data-guide-target="portfolio-publish" onClick={() => void persist({ status: "published" })} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
+        <Button data-guide-target="portfolio-publish" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
       {portfolio.status !== "published" && readiness.score < 100 && (
@@ -287,6 +291,19 @@ export default function PortfolioDashboardPage() {
       {tab === "analytics" && <PortfolioAnalyticsPanel published={portfolio.status === "published"} />}
 
       {tab === "inquiries" && <PortfolioInquiriesPanel onUnreadChange={setUnreadInquiries} />}
+
+      {reviewingPublish && (
+        <PortfolioPublishReview
+          steps={steps}
+          content={content}
+          publicUrl={savedPublicUrl || (typeof window !== "undefined" ? `${window.location.origin}/p/${slug}` : `/p/${slug}`)}
+          published={portfolio.status === "published"}
+          publishing={saving}
+          onGoTo={(section) => { setTab("edit"); setEditorSection(section); }}
+          onConfirm={() => { setReviewingPublish(false); void persist({ status: "published" }); }}
+          onClose={() => setReviewingPublish(false)}
+        />
+      )}
     </div>
   );
 }

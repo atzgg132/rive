@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Input, Select, Textarea } from "@/components/ui";
-import { PORTFOLIO_TEMPLATES, type PortfolioContent, type PortfolioMediaSettings, type PortfolioTheme } from "@/utils/portfolio";
+import { Input, Select, Textarea } from "@/components/ui";
+import { type PortfolioContent, type PortfolioMediaSettings, type PortfolioTheme } from "@/utils/portfolio";
+import PortfolioTemplateGallery from "@/components/portfolio/PortfolioTemplateGallery";
 import type { PortfolioSeo } from "@/utils/portfolioDraft";
 import { inputClass, labelClass, sectionClass } from "@/components/portfolio/studio/studioStyles";
 
@@ -35,17 +36,14 @@ export default function StudioDesignSection({
       <section className={sectionClass}>
         <div className="mb-5">
           <h2 className="font-bold text-foreground dark:text-white">Choose your starting point</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Changing templates keeps your content and is always reversible.</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Each one is shown with your own work. Changing templates keeps your content and is always reversible.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {PORTFOLIO_TEMPLATES.map((template) => (
-            <Button key={template.key} onClick={() => onChooseTemplate(template.key, template.accent)} className={`h-full min-h-32 min-w-0 items-start rounded-xl border p-4 text-left !whitespace-normal transition ${templateKey === template.key ? "border-blue-500 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/30" : "border-slate-200 hover:border-blue-300 dark:border-slate-700 dark:hover:border-blue-700"}`}>
-              <div className="mb-3 h-10 w-full rounded-lg" style={{ background: `linear-gradient(135deg, ${template.accent}, #0C1E36)` }} />
-              <div className="text-sm font-bold text-foreground dark:text-slate-100">{template.name}</div>
-              <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{template.description}</div>
-            </Button>
-          ))}
-        </div>
+        <PortfolioTemplateGallery
+          content={content}
+          theme={theme}
+          templateKey={templateKey}
+          onChooseTemplate={onChooseTemplate}
+        />
       </section>
 
       <section className={sectionClass}>

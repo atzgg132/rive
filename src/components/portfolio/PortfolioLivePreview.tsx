@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { ExternalLink, Maximize2, Monitor, Smartphone, Tablet, X } from "lucide-react";
 import { Button } from "@/components/ui";
+import StudioOverlay from "@/components/portfolio/StudioOverlay";
 import type { PortfolioContent, PortfolioTheme } from "@/utils/portfolio";
 
 /**
@@ -70,15 +70,7 @@ const FRAME_RADIUS: Record<PreviewDevice, string> = {
  */
 const INLINE_LEGIBLE_SCALE = 0.6;
 
-const FOCUSABLE = 'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-/**
- * Above every layer the workspace puts on screen — the sticky headers at 30,
- * the publish bar at 20, the feedback launcher at 40 and its modal at 120 — and
- * deliberately below the toast layer at 9999, so a save error still reaches
- * someone who is inspecting.
- */
-const OVERLAY_Z = "z-[200]";
 
 export default function PortfolioLivePreview({
   content,
@@ -105,7 +97,6 @@ export default function PortfolioLivePreview({
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(false);
   /* The inline width, remembered while inline, so the promote-or-not decision
      is made against the column even when the overlay is what is measured. */
@@ -172,50 +163,6 @@ export default function PortfolioLivePreview({
     readyRef.current = false;
   }, [inspecting]);
 
-  /* Everything a full-screen layer owes the keyboard: focus goes in, stays in,
-     Escape gets out, and the control that opened it gets focus back. The page
-     behind is scroll-locked so a wheel over the backdrop does not move it. */
-  useEffect(() => {
-    if (!inspecting) return;
-    const overlay = overlayRef.current;
-    if (!overlay) return;
-
-    const restoreTo = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const focusable = () =>
-      Array.from(overlay.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((element) => element.offsetParent !== null);
-    focusable()[0]?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setInspecting(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const items = focusable();
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !overlay.contains(active))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      document.body.style.overflow = previousOverflow;
-      restoreTo?.focus?.();
-    };
-  }, [inspecting]);
 
   const deviceWidth = DEVICE_WIDTH[device];
   // Never scale up: a 390px phone in a 900px pane should stay life-sized rather
@@ -223,6 +170,8 @@ export default function PortfolioLivePreview({
   const scale = shellWidth > 0 ? Math.min(1, shellWidth / deviceWidth) : 1;
   const scaledWidth = deviceWidth * scale;
   const percent = Math.round(scale * 100);
+
+  const closeInspect = useCallback(() => setInspecting(false), []);
 
   const chooseDevice = (next: PreviewDevice) => {
     onDeviceChange(next);
@@ -282,7 +231,7 @@ export default function PortfolioLivePreview({
         <Button
           type="button"
           data-portfolio-preview-inspect
-          onClick={() => setInspecting(!inspecting)}
+          onClick={() => (inspecting ? closeInspect() : setInspecting(true))}
           aria-label={inspecting ? "Close the full-screen preview" : "Inspect the preview full screen"}
           title={inspecting ? "Close (Esc)" : "Inspect full screen"}
           aria-expanded={inspecting}
@@ -343,35 +292,21 @@ export default function PortfolioLivePreview({
     </div>
   );
 
-  if (inspecting && typeof document !== "undefined") {
+  if (inspecting) {
     return (
       <div className={`flex min-h-0 flex-col ${className}`}>
         {/* Holds the column open while the preview is elsewhere in the DOM, so
             nothing reflows behind the backdrop and the page does not jump when
             the overlay closes. */}
         <div aria-hidden className={`pointer-events-none ${frameClassName}`} />
-        {createPortal(
-          <div
-            ref={overlayRef}
-            role="dialog"
-            aria-modal
-            aria-label="Full-screen portfolio preview"
-            className={`fixed inset-0 ${OVERLAY_Z} flex flex-col gap-3 bg-slate-950/80 p-3 backdrop-blur-md sm:gap-4 sm:p-6`}
-          >
-            {/* Behind the content, so a click on the surround closes while a
-                click on the controls or the frame does not. */}
-            <button
-              type="button"
-              tabIndex={-1}
-              aria-hidden
-              onClick={() => setInspecting(false)}
-              className="absolute inset-0 -z-10 cursor-default"
-            />
-            {showDeviceControls && controls}
-            {pane}
-          </div>,
-          document.body,
-        )}
+        <StudioOverlay
+          label="Full-screen portfolio preview"
+          onClose={closeInspect}
+          className="gap-3 p-3 sm:gap-4 sm:p-6"
+        >
+          {showDeviceControls && controls}
+          {pane}
+        </StudioOverlay>
       </div>
     );
   }
