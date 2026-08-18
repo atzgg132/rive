@@ -428,6 +428,58 @@ test.describe("portfolio studio", () => {
     }, { timeout: 15_000 }).toEqual(["Second project", "Harbour rebuild"]);
   });
 
+  test("the full-screen preview hands focus somewhere real, and gives it back", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("focus")).token, url: baseUrl() }]);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Live preview")).toBeVisible({ timeout: 20_000 });
+
+    /* Opened from the keyboard, because that is the path where losing focus
+       actually strands someone. */
+    const toggle = page.locator("[data-portfolio-preview-inspect]");
+    await toggle.focus();
+    await page.keyboard.press("Enter");
+
+    const dialog = page.getByRole("dialog", { name: /full-screen portfolio preview/i });
+    await expect(dialog).toBeVisible();
+
+    /* The backdrop is a real <button>, so `button:not([disabled])` matched it and
+       it was the first "focusable" thing in the layer — focus landed on
+       aria-hidden content and the first Tab went nowhere. */
+    const landed = await page.evaluate(() => {
+      const active = document.activeElement as HTMLElement | null;
+      const overlay = document.querySelector('[role="dialog"][aria-label*="Full-screen"]');
+      return {
+        insideOverlay: Boolean(active && overlay?.contains(active)),
+        hidden: Boolean(active?.closest('[aria-hidden="true"]')),
+        tabbable: (active?.tabIndex ?? -1) >= 0,
+        label: active?.getAttribute("aria-label") || active?.textContent?.trim() || null,
+      };
+    });
+    expect(landed.insideOverlay, "focus must move into the overlay").toBe(true);
+    expect(landed.hidden, "focus must not land on the aria-hidden backdrop").toBe(false);
+    expect(landed.tabbable, "focus must land on something actually tabbable").toBe(true);
+    expect(landed.label, "the focused control must have an accessible name").not.toBeNull();
+
+    // Tab must stay inside the layer rather than escaping into the editor behind it.
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => {
+      const overlay = document.querySelector('[role="dialog"][aria-label*="Full-screen"]');
+      return Boolean(overlay?.contains(document.activeElement));
+    }), "Tab must not escape the overlay").toBe(true);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+
+    /* And focus comes back. The generic "restore to whatever opened it" cannot
+       work here — that control lives in the subtree the overlay carries into the
+       portal, so the original element no longer exists by the time it closes. */
+    expect(await page.evaluate(() => document.activeElement?.hasAttribute("data-portfolio-preview-inspect") ?? false),
+      "closing must return focus to the toggle, not drop it on <body>").toBe(true);
+  });
+
   test("publishing asks first, names what is missing, and only then goes live", async ({ page, context }) => {
     const { token, user } = await studioUser("publish");
     await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
