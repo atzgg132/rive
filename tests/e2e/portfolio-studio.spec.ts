@@ -128,6 +128,17 @@ test.describe("portfolio studio", () => {
   test.skip(!dbChecksEnabled, "Requires DATABASE_URL with a migrated test database.");
   test.setTimeout(120_000);
 
+  /* The feedback widget invites itself onto any dashboard page 4.5 seconds after
+     load, as a full-screen modal that swallows clicks. Short tests finished
+     before it appeared; this file's longest one did not, and failed on a click
+     the modal intercepted rather than on anything it was testing. Stubbed to
+     unavailable so studio tests measure the studio. */
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/feedback/prompt**", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, available: false, prompt: null }) }),
+    );
+  });
+
   test.beforeAll(async () => {
     const parsed = new URL(process.env.DATABASE_URL as string);
     for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) parsed.searchParams.delete(parameter);
