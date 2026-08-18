@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Input, Select, Textarea } from "@/components/ui";
-import { Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical, Trash2, Upload } from "lucide-react";
 import PortfolioMediaEditor from "@/components/portfolio/PortfolioMediaEditor";
 import type { PortfolioPractice, PortfolioProject } from "@/utils/portfolio";
 
@@ -15,23 +15,59 @@ function isManagedImage(value: string) {
 type Props = {
   project: PortfolioProject;
   index: number;
+  total: number;
   practices?: PortfolioPractice[];
   onChange: (update: Partial<PortfolioProject>) => void;
   onDelete: () => void;
   onUploadCover: (file: File | undefined) => void;
+  /** Move this project to a new position. Order is the order visitors read in. */
+  onMove: (to: number) => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLSpanElement> & { draggable?: boolean };
 };
 
-export default function PortfolioProjectEditor({ project, index, practices = [], onChange, onDelete, onUploadCover }: Props) {
+export default function PortfolioProjectEditor({ project, index, total, practices = [], onChange, onDelete, onUploadCover, onMove, dragHandleProps }: Props) {
   const media = project.media || [];
+  const first = index === 0;
+  const last = index === total - 1;
 
   return (
     <article className="rounded-2xl border border-slate-200 p-5 dark:border-slate-700">
       <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Project {index + 1}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Start with the essentials. Add a full case study only if it helps explain the work.</p>
+        <div className="flex min-w-0 items-start gap-2">
+          {/* Only the handle is draggable. Making the whole card draggable takes
+              text selection away from every input inside it. */}
+          {total > 1 && (
+            <span
+              {...dragHandleProps}
+              aria-hidden
+              title="Drag to reorder"
+              className="mt-0.5 cursor-grab rounded-md p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:bg-slate-800"
+            >
+              <GripVertical className="h-4 w-4" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+              Project {index + 1}{first && total > 1 ? " · shown first" : ""}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {first && total > 1
+                ? "This is the first work a visitor sees. Start with the essentials; add a case study only if it helps explain the work."
+                : "Start with the essentials. Add a full case study only if it helps explain the work."}
+            </p>
+          </div>
         </div>
-        <Button type="button" title="Remove project" onClick={onDelete} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /></Button>
+        <div className="flex shrink-0 items-center gap-1">
+          {/* The keyboard path, and the reliable one. Dragging is the shortcut,
+              not the only way to change the order visitors read the work in. */}
+          {total > 1 && (
+            <>
+              <Button type="button" disabled={first} title="Move earlier" aria-label={`Move ${project.title.trim() || `project ${index + 1}`} earlier`} onClick={() => onMove(index - 1)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 dark:hover:bg-slate-800"><ChevronUp className="h-4 w-4" /></Button>
+              <Button type="button" disabled={last} title="Move later" aria-label={`Move ${project.title.trim() || `project ${index + 1}`} later`} onClick={() => onMove(index + 1)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 dark:hover:bg-slate-800"><ChevronDown className="h-4 w-4" /></Button>
+            </>
+          )}
+          <Button type="button" title="Remove project" onClick={onDelete} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /></Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

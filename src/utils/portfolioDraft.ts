@@ -204,3 +204,25 @@ export function snapshotFromDraft(input: {
 export function contentFromRecord(record: Pick<PortfolioRecord, "content">): PortfolioContent {
   return mergePortfolioContent(record.content);
 }
+
+/**
+ * Move one item to a new index, returning a new array.
+ *
+ * Project order is not decoration: it is the order visitors read the work in on
+ * the public page. Until now the only way to change it was to delete a project
+ * and retype it, which meant the first thing someone saw was whichever project
+ * they happened to add first.
+ *
+ * Out-of-range indices clamp rather than throw. Callers include drag handlers,
+ * where a drop can land past the end of the list, and "move up" on the first
+ * item, which should be a no-op rather than an error.
+ */
+export function moveItem<T>(items: T[], from: number, to: number): T[] {
+  if (from < 0 || from >= items.length) return items;
+  const target = Math.max(0, Math.min(items.length - 1, to));
+  if (target === from) return items;
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(target, 0, moved);
+  return next;
+}

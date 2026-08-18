@@ -310,6 +310,41 @@ test.describe("portfolio studio", () => {
     });
   });
 
+  test("projects can be reordered by keyboard, and the new order is what persists", async ({ page, context }) => {
+    const { token, user } = await studioUser("reorder");
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    const titles = page.getByPlaceholder("e.g. A calmer checkout for Acme");
+    await expect(titles).toHaveCount(1);
+
+    /* Reorder controls are pointless with one project, so they are not rendered
+       until there are two — which is also what makes the order meaningful. */
+    await expect(page.getByRole("button", { name: /Move .* later/i })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Add project" }).click();
+    await expect(titles).toHaveCount(2);
+    await titles.nth(1).fill("Second project");
+
+    await expect(titles.nth(0)).toHaveValue("Harbour rebuild");
+    await page.getByRole("button", { name: /Move Harbour rebuild later/i }).click();
+
+    // The order visitors read in is the order on screen.
+    await expect(titles.nth(0)).toHaveValue("Second project");
+    await expect(titles.nth(1)).toHaveValue("Harbour rebuild");
+
+    // The first project cannot move earlier, and the last cannot move later.
+    await expect(page.getByRole("button", { name: /Move Second project earlier/i })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Move Harbour rebuild later/i })).toBeDisabled();
+
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { content: true } });
+      const content = portfolio?.content as { projects?: Array<{ title?: string }> } | null;
+      return (content?.projects || []).map((project) => project.title);
+    }, { timeout: 15_000 }).toEqual(["Second project", "Harbour rebuild"]);
+  });
+
   test("a stale revision asks the owner to choose instead of overwriting their draft", async ({ page, context }) => {
     const { token, user } = await studioUser("conflict");
     await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
