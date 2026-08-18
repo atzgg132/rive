@@ -194,10 +194,19 @@ export default function PortfolioLivePreview({
   const scaledWidth = deviceWidth * scale;
   const percent = Math.round(scale * 100);
 
+  /* Closing hands the pane back a device it can actually show. Picking Desktop
+     promotes to the overlay precisely because 27% in a 390px column cannot be
+     judged — so returning to that column still on Desktop would drop someone
+     straight back into the rendering the overlay exists to avoid. The same
+     threshold decides both directions, rather than a hardcoded "always mobile":
+     a device that is legible inline is kept, and only an illegible one falls
+     back. */
   const closeInspect = useCallback(() => {
     returnFocusRef.current = true;
+    const inlineWidth = inlineWidthRef.current;
+    if (inlineWidth > 0 && inlineWidth / DEVICE_WIDTH[device] < INLINE_LEGIBLE_SCALE) onDeviceChange("mobile");
     onInspectingChange(false);
-  }, [onInspectingChange]);
+  }, [device, onDeviceChange, onInspectingChange]);
 
   const chooseDevice = (next: PreviewDevice) => {
     onDeviceChange(next);

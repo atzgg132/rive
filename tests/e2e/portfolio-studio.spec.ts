@@ -292,6 +292,13 @@ test.describe("portfolio studio", () => {
     await expect(overlay).toBeHidden();
     await expect(page.locator('iframe[title$="portfolio preview"]')).toHaveCount(1);
 
+    /* And the pane comes back showing something it can actually render. Desktop
+       promotes to the overlay because 27% in this column cannot be judged, so
+       returning to the column still on Desktop would restore exactly the
+       rendering the overlay exists to avoid. */
+    await expect(page.locator('iframe[title="mobile portfolio preview"]')).toHaveCount(1);
+    await expect(page.getByText(/%\s*·\s*\d+px wide/)).toHaveCount(0);
+
     // Mobile is the ambient mode and stays inline — no overlay, no interruption.
     await page.getByRole("button", { name: "Mobile preview" }).click();
     await expect(overlay).toBeHidden();
@@ -478,6 +485,37 @@ test.describe("portfolio studio", () => {
        portal, so the original element no longer exists by the time it closes. */
     expect(await page.evaluate(() => document.activeElement?.hasAttribute("data-portfolio-preview-inspect") ?? false),
       "closing must return focus to the toggle, not drop it on <body>").toBe(true);
+  });
+
+  test("the feedback prompt does not invite itself into the studio", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: (await studioUser("nointerrupt")).token, url: baseUrl() }]);
+
+    /* The stub in beforeEach makes the prompt unavailable, which would hide a
+       regression here. Make it available, and count whether it is even asked. */
+    let promptRequests = 0;
+    await page.route("**/api/feedback/prompt**", (route) => {
+      if (route.request().method() === "GET") promptRequests += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, available: true, prompt: { key: "workspace_general", type: "workspace" } }),
+      });
+    });
+
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    /* It fires 4.5s after load as a full-screen layer that swallows clicks, so
+       it could land over the preview mid-inspection and take the click meant for
+       the control underneath. */
+    await page.waitForTimeout(8_000);
+
+    expect(promptRequests, "the studio must not even ask whether to interrupt").toBe(0);
+    await expect(page.getByRole("heading", { name: "How is this feeling so far?" })).toHaveCount(0);
+
+    // The button still works — this suppresses the interruption, not the feature.
+    await page.getByRole("button", { name: /Share feedback/i }).click();
+    await expect(page.getByRole("heading", { name: /How is this feeling so far\?|that is today's note/i })).toBeVisible();
   });
 
   test("publishing asks first, names what is missing, and only then goes live", async ({ page, context }) => {

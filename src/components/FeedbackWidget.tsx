@@ -72,6 +72,21 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
     if (promptedThisSession) return;
     const timer = window.setTimeout(() => {
       void (async () => {
+        /* Never on top of something the person is already doing. This arrives
+           uninvited four and a half seconds after a page loads, as a
+           full-screen layer that swallows clicks — which meant it could land
+           over the portfolio preview mid-inspection, or over the publish
+           review, and take the click meant for the button underneath.
+
+           Asked at fire time rather than at mount, because the four seconds in
+           between is exactly when someone opens something. A dismissed prompt
+           is not lost: the server's pacing decides when it is offered again. */
+        if (document.querySelector('[role="dialog"]')) return;
+        /* Nor while the studio is in use. It is the one screen in the product
+           people sit and work in for a stretch, and interrupting that to ask
+           how the product feels answers its own question. */
+        if (window.location.pathname.startsWith("/portfolio")) return;
+
         /* Checked before the prompt endpoint, which records an impression:
            inviting feedback that cannot be sent today wastes the invitation as
            well as the person's time. */
@@ -79,7 +94,8 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
         const data = await fetch(`/api/feedback/prompt?promptKey=${encodeURIComponent(promptKey)}`, { credentials: "same-origin", cache: "no-store" })
           .then((response) => response.json())
           .catch(() => null);
-        if (data?.success && data.available) {
+        // The round trip is another window in which a layer can open.
+        if (data?.success && data.available && !document.querySelector('[role="dialog"]')) {
           promptedThisSession = true;
           setOpen(true);
         }
