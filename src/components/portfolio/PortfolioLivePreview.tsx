@@ -117,16 +117,36 @@ export default function PortfolioLivePreview({
   }, [post, device]);
 
   /* Only the width is measured. The height comes from CSS below, so a resized
-     window re-fits the frame during layout rather than a frame later. */
+     window re-fits the frame during layout rather than a frame later.
+     
+     Keyed on `inspecting`, so the mode switch does not depend on an async
+     notification arriving. Promoting to the overlay takes this element from a
+     390px column to the full window by changing an ancestor's
+     `display: contents` to `position: fixed`, and a discrete state change like
+     that is better measured directly than waited on. The observer and the
+     resize listener stay for ordinary window resizing.
+
+     Worth recording why this is belt-and-braces rather than a bug fix: the
+     stuck-at-27% rendering that prompted it was observed in a background tab,
+     where Chrome pauses the rendering lifecycle, so ResizeObserver had nothing
+     to deliver and rAF never ran. A visible tab, and CI, both scale correctly. */
   useEffect(() => {
     const element = shellRef.current;
     if (!element) return;
     const measure = () => setShellWidth(element.clientWidth);
     measure();
+    // One more after the next frame: on the mode switch the containing block
+    // has only just changed, and the first read can still see the old box.
+    const frame = window.requestAnimationFrame(measure);
     const observer = new ResizeObserver(measure);
     observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [inspecting]);
 
   useEffect(() => {
     if (!inspecting) inlineWidthRef.current = shellWidth;
