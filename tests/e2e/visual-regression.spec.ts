@@ -292,14 +292,15 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page).toHaveScreenshot(`calendar-week-${theme}-1024x768.png`, { fullPage: false, maxDiffPixelRatio: 0.12 });
   });
 
-  /* Layout assertions only, for now. The studio redesign intentionally changed
-     this screen — work-first navigation, the next-action worklist above the
-     shell, playback settings disclosed on demand — so the committed baselines
-     describe a screen that no longer exists.
+  /* Screenshot coverage is back on, against baselines regenerated at the end of
+     the studio redesign rather than during it. It was suspended deliberately
+     while the screen was moving — work-first navigation, the worklist above the
+     shell, the template gallery, the publish review — because a baseline
+     rewritten on every commit checks nothing at all.
 
-     Regenerate them from an environment with a database, then restore the
-     `toHaveScreenshot` line below:
-       npx playwright test tests/e2e/visual-regression.spec.ts --update-snapshots
+     Regenerate on the CI runner, never locally: Chromium's Linux font stack
+     rendered the committed images and no developer machine reproduces it. Use
+     the `Regenerate visual baselines` workflow.
 
      The geometry checks here still run, and the public portfolio renderer —
      which this redesign does not touch — keeps its own screenshot coverage
@@ -320,7 +321,7 @@ for (const theme of ["light", "dark"] as const) {
     expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
     expect(Math.max(...copyLefts) - Math.min(...copyLefts)).toBeLessThanOrEqual(1);
     await page.evaluate(() => document.fonts.ready);
-    // await expect(page).toHaveScreenshot(`portfolio-editor-${theme}-1024x768.png`, { fullPage: false, maxDiffPixelRatio: 0.12 });
+    await expect(page).toHaveScreenshot(`portfolio-editor-${theme}-1024x768.png`, { fullPage: false, maxDiffPixelRatio: 0.12 });
   });
 }
 
