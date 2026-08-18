@@ -69,12 +69,12 @@ function KpiCard({
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
+      <div className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
       <div className="mt-2.5 text-3xl font-black tabular-nums text-foreground">{value}</div>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
         {change !== undefined ? <Movement change={change} suffix={changeSuffix} /> : null}
       </div>
-      <p className="mt-2 text-[11px] leading-4 text-muted-foreground">{hint}</p>
+      <p className="mt-2 text-xs leading-4 text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -280,7 +280,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
             <h3 className="font-bold text-foreground">Top projects</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">Which case studies are actually being read.</p>
           </div>
-          <span className="text-[11px] text-muted-foreground">{numberFormat.format(totals.projectViews)} case-study views</span>
+          <span className="text-xs text-muted-foreground">{numberFormat.format(totals.projectViews)} case-study views</span>
         </div>
         {projects.length === 0 ? (
           <div className="p-5 sm:p-6">
@@ -294,7 +294,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
           <div className="overflow-x-auto">
             <table className="w-full min-w-[36rem] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                <tr className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
                   <th scope="col" className="px-5 py-3 sm:px-6">Project</th>
                   <th scope="col" className="px-3 py-3 text-right">Views</th>
                   <th scope="col" className="px-3 py-3 text-right">Visitors</th>
@@ -344,7 +344,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
         />
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-3 text-[11px] leading-4 text-muted-foreground">
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-3 text-xs leading-4 text-muted-foreground">
         <p className="flex items-start gap-2">
           <Users className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>

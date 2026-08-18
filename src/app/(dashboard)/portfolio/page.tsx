@@ -160,7 +160,7 @@ export default function PortfolioDashboardPage() {
             <Button key={key} onClick={() => setTab(key)} aria-current={tab === key ? "page" : undefined} className={`border-b-2 px-3 py-3 text-sm font-semibold ${tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
               <Icon className="mr-1 inline h-4 w-4" /> {label}
               {key === "inquiries" && unreadInquiries > 0 && (
-                <span aria-label={`${unreadInquiries} unread`} className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black tabular-nums text-primary-foreground">
+                <span aria-label={`${unreadInquiries} unread`} className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-black tabular-nums text-primary-foreground">
                   {unreadInquiries > 99 ? "99+" : unreadInquiries}
                 </span>
               )}
@@ -194,13 +194,13 @@ export default function PortfolioDashboardPage() {
             ] as const).map(({ key, label, sub, icon: Icon }) => (
               <Button data-guide-target={key === "profile" ? "portfolio-profile" : key === "work" ? "portfolio-project" : undefined} data-portfolio-section={key} key={key} onClick={() => setEditorSection(key)} className={`grid min-h-14 w-full grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${editorSection === key ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-blue-300 dark:ring-slate-700" : "text-slate-600 hover:bg-white/70 dark:text-slate-400 dark:hover:bg-slate-800/70"}`}>
                 <Icon className="h-4 w-4 justify-self-center" />
-                <span className="min-w-0"><span className="block truncate text-xs font-bold">{label}</span><span className="hidden truncate text-[10px] leading-4 text-slate-400 lg:block">{sub}</span></span>
+                <span className="min-w-0"><span className="block truncate text-xs font-bold">{label}</span><span className="hidden truncate text-xs leading-4 text-slate-400 lg:block">{sub}</span></span>
               </Button>
             ))}
             <div className="col-span-2 mt-2 border-t border-slate-200 pt-3 dark:border-slate-700 sm:col-span-6 lg:col-span-1">
-              <div className="flex items-center justify-between"><span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500"><Sparkles className="h-3.5 w-3.5 text-blue-500" /> Readiness</span><span className="text-xs font-black text-foreground dark:text-white">{readiness.score}%</span></div>
+              <div className="flex items-center justify-between"><span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-slate-500"><Sparkles className="h-3.5 w-3.5 text-blue-500" /> Readiness</span><span className="text-xs font-black text-foreground dark:text-white">{readiness.score}%</span></div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${readiness.score}%` }} /></div>
-              <p className="mt-2 text-[10px] leading-4 text-slate-500">{readiness.completed} of {readiness.checks.length} signals complete. The worklist above says which.</p>
+              <p className="mt-2 text-xs leading-4 text-slate-500">{readiness.completed} of {readiness.checks.length} signals complete. The worklist above says which.</p>
             </div>
           </nav>
         </aside>
@@ -272,7 +272,7 @@ export default function PortfolioDashboardPage() {
       {tab === "preview" && <div className="rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-5">
         <div className="mb-4">
           <p className="text-xs font-bold text-foreground dark:text-white">Responsive preview</p>
-          <p className="mt-0.5 text-[10px] text-slate-500">Review the complete experience at common viewport sizes before publishing.</p>
+          <p className="mt-0.5 text-xs text-slate-500">Review the complete experience at common viewport sizes before publishing.</p>
         </div>
         <PortfolioLivePreview
           content={content}

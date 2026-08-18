@@ -261,7 +261,7 @@ export default function ContractsPage() {
                       <div className="min-w-0"><h2 className="truncate text-base font-extrabold group-hover:text-primary">{contract.title}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{contract.client.name}{contract.project ? ` · ${contract.project.title}` : " · Standalone agreement"}</p></div>
                       <Badge variant={meta.badge}>{meta.label}</Badge>
                     </div>
-                    <div className="rounded-xl bg-muted/45 px-3 py-2.5"><p className="text-xs font-bold">{nextAction(contract)}</p><p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{meta.description}</p></div>
+                    <div className="rounded-xl bg-muted/45 px-3 py-2.5"><p className="text-xs font-bold">{nextAction(contract)}</p><p className="mt-0.5 text-xs leading-4 text-muted-foreground">{meta.description}</p></div>
                     <div className="mt-auto grid grid-cols-3 gap-3 border-t border-border pt-4 text-xs">
                       <Metric icon={Users} value={`${signedCount}/2`} label="accepted" />
                       <Metric icon={Clock3} value={`v${contract.current_version?.version || 1}`} label={new Date(contract.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
@@ -297,9 +297,9 @@ function SummaryCard({ icon: Icon, label, value, tone }: { icon: typeof FileSign
     blue: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
     green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   };
-  return <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-[11px] font-medium text-muted-foreground">{label}</p></div></div>;
+  return <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p></div></div>;
 }
 
 function Metric({ icon: Icon, value, label }: { icon: typeof Users; value: string; label: string }) {
-  return <div className="min-w-0"><p className="flex items-center gap-1.5 truncate font-bold"><Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{value}</p><p className="mt-0.5 truncate text-[10px] text-muted-foreground">{label}</p></div>;
+  return <div className="min-w-0"><p className="flex items-center gap-1.5 truncate font-bold"><Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{label}</p></div>;
 }

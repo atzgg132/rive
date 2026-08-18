@@ -264,7 +264,7 @@ export default function ExpensesPage() {
         ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-card"><p className="text-xs font-semibold capitalize text-muted-foreground">{label}</p><p className="mt-2 truncate text-xl font-extrabold capitalize text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>)}
       </section>
 
-      <p className="-mt-3 text-[11px] text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
+      <p className="-mt-3 text-xs text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
 
       {/* Filter and Search */}
       <div className="workspace-toolbar">
@@ -334,21 +334,21 @@ export default function ExpensesPage() {
                     <td className="py-4 px-6">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                     <td className="py-4 px-6 font-bold">{exp.description}</td>
                     <td className="py-4 px-6">
-                      <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${getCategoryColor(exp.category)}`}>
+                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${getCategoryColor(exp.category)}`}>
                         {exp.category}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-muted-foreground">{exp.project_title || "None"}</td>
                     <td className="py-4 px-6">
                       {exp.is_billable ? (
-                        <span className="rounded-md border border-success/20 bg-success/10 px-2 py-1 text-[11px] font-semibold text-success">Yes</span>
+                        <span className="rounded-md border border-success/20 bg-success/10 px-2 py-1 text-xs font-semibold text-success">Yes</span>
                       ) : (
-                        <span className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground">No</span>
+                        <span className="rounded-md border border-border bg-muted/60 px-2 py-1 text-xs font-semibold text-muted-foreground">No</span>
                       )}
                     </td>
                     <td className="py-4 px-6 font-bold text-destructive">
                       <span className="block">{formatConverted(parseFloat(exp.amount), exp.currency) || formatCurrency(parseFloat(exp.amount), exp.currency)}</span>
-                      {exp.currency !== displayCurrency && <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
+                      {exp.currency !== displayCurrency && <span className="mt-0.5 block text-xs font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
                     </td>
                     <td className="py-4 px-6 text-right relative">
                       <Button
@@ -505,7 +505,7 @@ export default function ExpensesPage() {
                     />
                     <div className="flex flex-col">
                       <label htmlFor="billable" className="text-xs font-bold text-foreground dark:text-slate-200 cursor-pointer">Billable to client</label>
-                      <span className="text-[10px] text-muted-foreground dark:text-slate-400">Reclaim this expense via invoicing later.</span>
+                      <span className="text-xs text-muted-foreground dark:text-slate-400">Reclaim this expense via invoicing later.</span>
                     </div>
                   </div>
                 </form>

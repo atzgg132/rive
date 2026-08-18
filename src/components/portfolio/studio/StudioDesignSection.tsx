@@ -103,12 +103,12 @@ export default function StudioDesignSection({
                     <Input id={`media-${key}`} type="checkbox" className="mt-1 shrink-0" checked={content.mediaSettings[key]} onChange={(event) => onUpdateMediaSettings({ [key]: event.target.checked })} />
                     <span>
                       <span className="block text-sm text-slate-700 dark:text-slate-200">{label}</span>
-                      <span className="mt-0.5 block text-[11px] leading-4 text-slate-500 dark:text-slate-400">{hint}</span>
+                      <span className="mt-0.5 block text-xs leading-4 text-slate-500 dark:text-slate-400">{hint}</span>
                     </span>
                   </label>
                 ))}
               </div>
-              {content.mediaSettings.autoplayOnScroll && <p className="mt-4 rounded-xl bg-amber-50 px-3.5 py-3 text-[11px] leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">Autoplay starts downloading each video as it scrolls into view, which uses your visitors&apos; data and your storage bandwidth. Embedded video is served by its platform, so it costs you nothing.</p>}
+              {content.mediaSettings.autoplayOnScroll && <p className="mt-4 rounded-xl bg-amber-50 px-3.5 py-3 text-xs leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">Autoplay starts downloading each video as it scrolls into view, which uses your visitors&apos; data and your storage bandwidth. Embedded video is served by its platform, so it costs you nothing.</p>}
             </>
           )}
         </div>

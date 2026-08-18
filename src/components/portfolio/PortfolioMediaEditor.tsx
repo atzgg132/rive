@@ -83,7 +83,7 @@ function StorageMeter({ usage }: { usage: StorageUsage }) {
   const tight = usage.percentUsed >= 80;
   return (
     <div className="mt-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-      <div className="flex items-center justify-between text-[11px] font-bold">
+      <div className="flex items-center justify-between text-xs font-bold">
         <span className="text-slate-600 dark:text-slate-300">Upload storage</span>
         <span className={tight ? "text-amber-600 dark:text-amber-400" : "text-slate-500"}>
           {formatMegabytes(usage.usedBytes)} of {formatMegabytes(usage.quotaBytes)}
@@ -96,7 +96,7 @@ function StorageMeter({ usage }: { usage: StorageUsage }) {
         />
       </div>
       {tight && (
-        <p className="mt-2 text-[11px] leading-4 text-amber-700 dark:text-amber-300">
+        <p className="mt-2 text-xs leading-4 text-amber-700 dark:text-amber-300">
           Running low. Pasted links are hosted by their platform and use none of this.
         </p>
       )}
@@ -231,7 +231,7 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-foreground dark:text-white">Project media</p>
-          <p className="mt-0.5 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-xs leading-4 text-slate-500 dark:text-slate-400">
             {media.length} of {MAX_MEDIA_PER_PROJECT} added · images, video, audio, and PDFs
           </p>
         </div>
@@ -245,7 +245,7 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
               type="button"
               onClick={() => setMode(key)}
               aria-pressed={mode === key}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-bold transition ${
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${
                 mode === key ? "bg-white text-blue-700 shadow-sm dark:bg-slate-900 dark:text-blue-300" : "text-slate-500"
               }`}
             >
@@ -269,7 +269,7 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
           </label>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="min-h-6 text-[11px] font-semibold">
+            <div className="min-h-6 text-xs font-semibold">
               {linkValue.trim() && preview && (
                 <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                   <Check className="h-3.5 w-3.5" /> Recognised as {preview.provider === "applemusic" ? "Apple Music" : preview.provider}
@@ -285,7 +285,7 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
               <Button
                 type="button"
                 onClick={() => setGuideOpen((open) => !open)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-2 text-[11px] font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
               >
                 <HelpCircle className="h-3.5 w-3.5" /> How do I get this?
               </Button>
@@ -293,7 +293,7 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
                 type="button"
                 onClick={addEmbed}
                 disabled={!preview || atLimit}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
               >
                 Add media
               </Button>
@@ -304,18 +304,18 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
             <div className="mt-4 grid gap-4 border-t border-slate-200 pt-4 dark:border-slate-700 sm:grid-cols-2">
               {EMBED_GUIDE.map((section) => (
                 <div key={section.group}>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400">{section.group}</p>
+                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400">{section.group}</p>
                   <dl className="mt-2 flex flex-col gap-2">
                     {section.items.map((item) => (
                       <div key={item.name}>
-                        <dt className="text-[11px] font-bold text-foreground dark:text-white">{item.name}</dt>
-                        <dd className="text-[11px] leading-4 text-slate-500 dark:text-slate-400">{item.steps}</dd>
+                        <dt className="text-xs font-bold text-foreground dark:text-white">{item.name}</dt>
+                        <dd className="text-xs leading-4 text-slate-500 dark:text-slate-400">{item.steps}</dd>
                       </div>
                     ))}
                   </dl>
                 </div>
               ))}
-              <p className="text-[11px] leading-4 text-slate-500 dark:text-slate-400 sm:col-span-2">
+              <p className="text-xs leading-4 text-slate-500 dark:text-slate-400 sm:col-span-2">
                 Linked media is hosted by the platform, so there is no size or length limit and it does not use your storage.
               </p>
             </div>
@@ -328,7 +328,7 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
             <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
               {busy ? "Uploading…" : "Choose files to upload"}
             </span>
-            <span className="text-[11px] leading-4 text-slate-500 dark:text-slate-400">{uploadHint()}</span>
+            <span className="text-xs leading-4 text-slate-500 dark:text-slate-400">{uploadHint()}</span>
             <Input
               type="file"
               multiple
@@ -339,7 +339,7 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
             />
           </label>
           {usage && <StorageMeter usage={usage} />}
-          <p className="mt-3 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-xs leading-4 text-slate-500 dark:text-slate-400">
             For longer or higher-quality video and audio, paste a link instead — the platform hosts it, so no limits apply.
           </p>
         </div>
@@ -357,11 +357,11 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
                 </div>
                 <div className="grid min-w-0 gap-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.1em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                       <Icon className="h-3 w-3" /> {item.provider || item.kind}
                     </span>
                     {item.durationSeconds ? (
-                      <span className="text-[10px] font-bold tabular-nums text-slate-400">
+                      <span className="text-xs font-bold tabular-nums text-slate-400">
                         {Math.floor(item.durationSeconds / 60)}:{String(item.durationSeconds % 60).padStart(2, "0")}
                       </span>
                     ) : null}

@@ -357,7 +357,7 @@ export default function ContractDetailPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <Card>
-          <CardHeader><CardTitle>Agreement terms</CardTitle><CardDescription>Immutable version {version?.version} · hash <span className="break-all font-mono text-[10px]">{version?.content_hash}</span></CardDescription></CardHeader>
+          <CardHeader><CardTitle>Agreement terms</CardTitle><CardDescription>Immutable version {version?.version} · hash <span className="break-all font-mono text-xs">{version?.content_hash}</span></CardDescription></CardHeader>
           <CardContent className="flex flex-col gap-5 pt-0 sm:pt-0">
             {content?.projectTitle ? <section className="rounded-xl border border-primary/20 bg-primary/5 p-4"><h2 className="text-sm font-bold">Linked project brief snapshot</h2><p className="mt-1 text-xs font-semibold text-primary">{content.projectTitle}</p>{content.projectDescription ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{content.projectDescription}</p> : null}</section> : null}
             {content?.sections?.filter((section) => section.enabled).map((section) => <section key={section.key} className="border-b border-border pb-5 last:border-0 last:pb-0"><h2 className="mb-2 text-sm font-bold">{section.title}</h2><p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{section.body}</p></section>)}
@@ -372,7 +372,7 @@ export default function ContractDetailPage() {
               {contract.signers.map((signer) => (
                 <div key={signer.id} className="rounded-xl border border-border p-3">
                   <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold">{signer.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{signer.role} · {signer.email}</p></div><Badge variant={signer.status === "signed" ? "success" : signer.status === "declined" ? "destructive" : "outline"}>{signer.status === "signed" ? "accepted" : signer.status}</Badge></div>
-                  {signer.signatures.map((signature) => <p key={signature.signedAt} className="mt-2 text-[11px] leading-4 text-muted-foreground">Acceptance recorded {new Date(signature.signedAt).toLocaleString()} · consent {signature.consentTextVersion}</p>)}
+                  {signer.signatures.map((signature) => <p key={signature.signedAt} className="mt-2 text-xs leading-4 text-muted-foreground">Acceptance recorded {new Date(signature.signedAt).toLocaleString()} · consent {signature.consentTextVersion}</p>)}
                   {contract.status === "signing" && signer.status === "pending" ? <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => void reissueSigningLink(signer.role, false)}><Link2 className="h-3.5 w-3.5" /> Get fresh link</Button><Button size="sm" variant="ghost" disabled={Boolean(busy)} onClick={() => void reissueSigningLink(signer.role, true)}><Send className="h-3.5 w-3.5" /> Email</Button></div> : null}
                 </div>
               ))}
@@ -386,7 +386,7 @@ export default function ContractDetailPage() {
               {currentComments.length === 0 ? <p className="text-sm text-muted-foreground">No comments on this version.</p> : currentComments.map((item) => (
                 <div key={item.id} className={`rounded-xl border p-3 ${item.status === "resolved" ? "border-border/60 bg-muted/30" : "border-border"}`}>
                   <div className="flex items-start justify-between gap-3 text-xs"><span className="font-semibold">{item.authorName} · {item.authorRole}</span><Badge variant={item.status === "resolved" ? "secondary" : "warning"}>{item.status}</Badge></div>
-                  {item.sectionKey ? <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-primary">{item.sectionKey}</p> : null}
+                  {item.sectionKey ? <p className="mt-1 text-xs font-bold uppercase tracking-wide text-primary">{item.sectionKey}</p> : null}
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-5">{item.body}</p>
                   <Button size="sm" variant="ghost" className="mt-2" disabled={busy === `comment-${item.id}`} onClick={() => void runAction(`comment-${item.id}`, `/api/workflow/contracts/${id}/comments`, "PATCH", { commentId: item.id, status: item.status === "resolved" ? "open" : "resolved" })}>{item.status === "resolved" ? "Reopen" : "Mark resolved"}</Button>
                 </div>
@@ -399,7 +399,7 @@ export default function ContractDetailPage() {
             <CardHeader><CardTitle className="flex items-center gap-2"><History className="h-4 w-4" /> Version & evidence history</CardTitle></CardHeader>
             <CardContent className="flex flex-col gap-4 pt-0 sm:pt-0">
               <div className="space-y-2">{contract.versions.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 text-xs"><span className="font-semibold">Version {item.version} · {item.status}</span><span className="text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</span></div>)}</div>
-              <div className="border-t border-border pt-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Recent Agreement evidence events</p><div className="space-y-2">{contract.events.slice(0, 12).map((event) => <div key={event.id} className="flex items-start justify-between gap-3 text-xs"><span className="font-medium capitalize">{formatContractEventType(event.eventType)}</span><span className="shrink-0 text-[10px] text-muted-foreground">{new Date(event.createdAt).toLocaleString()}</span></div>)}</div></div>
+              <div className="border-t border-border pt-3"><p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Recent Agreement evidence events</p><div className="space-y-2">{contract.events.slice(0, 12).map((event) => <div key={event.id} className="flex items-start justify-between gap-3 text-xs"><span className="font-medium capitalize">{formatContractEventType(event.eventType)}</span><span className="shrink-0 text-xs text-muted-foreground">{new Date(event.createdAt).toLocaleString()}</span></div>)}</div></div>
             </CardContent>
           </Card>
         </aside>
@@ -429,7 +429,7 @@ export default function ContractDetailPage() {
 function ContractProgress({ status }: { status: string }) {
   const current = status === "executed" ? 3 : ["ready_to_sign", "starting", "signing"].includes(status) ? 2 : status === "in_review" ? 1 : 0;
   const stages = ["Draft", "Client review", "Recorded acceptance", "Accepted"];
-  return <ol className="grid grid-cols-4 gap-2" aria-label="Agreement progress">{stages.map((stage, index) => <li key={stage} className="min-w-0"><div className={`h-1.5 rounded-full ${index <= current ? status === "void" || status === "declined" ? "bg-amber-500" : "bg-primary" : "bg-muted"}`} /><p className={`mt-1.5 truncate text-[10px] font-bold sm:text-xs ${index === current ? "text-foreground" : "text-muted-foreground"}`}>{stage}</p></li>)}</ol>;
+  return <ol className="grid grid-cols-4 gap-2" aria-label="Agreement progress">{stages.map((stage, index) => <li key={stage} className="min-w-0"><div className={`h-1.5 rounded-full ${index <= current ? status === "void" || status === "declined" ? "bg-amber-500" : "bg-primary" : "bg-muted"}`} /><p className={`mt-1.5 truncate text-xs font-bold sm:text-xs ${index === current ? "text-foreground" : "text-muted-foreground"}`}>{stage}</p></li>)}</ol>;
 }
 
 function formatContractEventType(eventType: string): string {
@@ -498,7 +498,7 @@ function PaymentPlan({ contract, busy, runAction }: { contract: Contract; busy: 
 }
 
 function LinkPanel({ label, url, onCopy }: { label: string; url: string; onCopy: (url: string) => void }) {
-  return <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start"><div className="min-w-0 flex-1"><p className="text-sm font-bold">{label}</p><a className="mt-1 block break-all text-xs text-primary underline" href={url} target="_blank" rel="noreferrer">{url}</a><p className="mt-1 text-[11px] text-muted-foreground">This acceptance or review link is shown once. Reissuing it revokes the previous active link for that person.</p></div><Button size="sm" variant="outline" onClick={() => onCopy(url)}><Copy className="h-3.5 w-3.5" /> Copy</Button></div></div>;
+  return <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start"><div className="min-w-0 flex-1"><p className="text-sm font-bold">{label}</p><a className="mt-1 block break-all text-xs text-primary underline" href={url} target="_blank" rel="noreferrer">{url}</a><p className="mt-1 text-xs text-muted-foreground">This acceptance or review link is shown once. Reissuing it revokes the previous active link for that person.</p></div><Button size="sm" variant="outline" onClick={() => onCopy(url)}><Copy className="h-3.5 w-3.5" /> Copy</Button></div></div>;
 }
 
 function formatTrigger(item: { trigger_type?: string; trigger_date?: string | null; milestone?: { title: string } | null }) {

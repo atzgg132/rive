@@ -193,7 +193,7 @@ export default function PortfolioNextSteps({
           {essentials.length ? "Next up" : "Worth doing"}
         </p>
         <div className="flex items-center gap-1">
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {done} of {steps.length} done
             {essentials.length === 0 && " · essentials complete"}
           </p>
@@ -217,7 +217,7 @@ export default function PortfolioNextSteps({
       </ul>
 
       {essentials.length > shown.length && (
-        <p className="mt-2.5 text-[11px] text-muted-foreground">
+        <p className="mt-2.5 text-xs text-muted-foreground">
           {essentials.length - shown.length} more essential{essentials.length - shown.length === 1 ? "" : "s"} after this.
         </p>
       )}

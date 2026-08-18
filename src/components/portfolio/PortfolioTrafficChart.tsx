@@ -91,7 +91,7 @@ export default function PortfolioTrafficChart({ points, totalViews }: { points: 
           {[1, 0.5, 0].map((fraction) => (
             <span
               key={fraction}
-              className="absolute right-0 -translate-y-1/2 text-[10px] tabular-nums text-muted-foreground"
+              className="absolute right-0 -translate-y-1/2 text-xs tabular-nums text-muted-foreground"
               style={{ top: `${(1 - fraction) * 100}%` }}
             >
               {Math.round(max * fraction)}
@@ -138,7 +138,7 @@ export default function PortfolioTrafficChart({ points, totalViews }: { points: 
               {ticks.map((index) => (
                 <span
                   key={index}
-                  className="absolute whitespace-nowrap text-[10px] text-muted-foreground"
+                  className="absolute whitespace-nowrap text-xs text-muted-foreground"
                   style={{
                     left: `${((index + 0.5) / points.length) * 100}%`,
                     transform:

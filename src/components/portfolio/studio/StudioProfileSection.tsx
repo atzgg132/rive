@@ -60,7 +60,7 @@ export default function StudioProfileSection({
         <label className="flex flex-col gap-2 sm:col-span-2">
           <span className={labelClass}>Tagline <span className="font-normal normal-case tracking-normal text-slate-400">the small line above your headline</span></span>
           <Input className={inputClass} value={content.tagline || ""} maxLength={MAX_TAGLINE_LENGTH} placeholder={templateEyebrow(templateKey)} onChange={(event) => onUpdateContent({ tagline: event.target.value })} />
-          <span className="text-[11px] leading-4 text-slate-500 dark:text-slate-400">Leave it blank to use your template&apos;s wording — currently &ldquo;{templateEyebrow(templateKey)}&rdquo;.</span>
+          <span className="text-xs leading-4 text-slate-500 dark:text-slate-400">Leave it blank to use your template&apos;s wording — currently &ldquo;{templateEyebrow(templateKey)}&rdquo;.</span>
         </label>
         <label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>Headline</span><Input className={inputClass} value={content.headline || ""} placeholder="e.g. product designer and developer building clear, useful products" onChange={(event) => onUpdateContent({ headline: event.target.value })} /></label>
         <label className="flex flex-col gap-2 sm:col-span-2"><span className={labelClass}>About</span><Textarea rows={4} className={inputClass} value={content.bio || ""} placeholder="Tell people what you do, who you help, and what makes your work different." onChange={(event) => onUpdateContent({ bio: event.target.value })} /></label>

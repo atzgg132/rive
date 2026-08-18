@@ -204,34 +204,13 @@ textarea {
   }
 }
 
-/* Keep dense calendar metadata readable without changing the app-wide type
-   scale. The calendar has several information-dense views, so its former
-   8–10px labels were too small at normal zoom and especially under scaling. */
-.calendar-shell [class~="text-[10px]"] {
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.calendar-shell [class~="text-[9px]"],
-.calendar-shell [class~="text-[8px]"] {
-  font-size: 0.6875rem;
-  line-height: 1.35;
-}
-
-/* Alpha surfaces use compact metadata, but primary navigation, labels, and
-   helper copy should remain readable at the default browser zoom. Keep the
-   adjustment scoped to product workspaces instead of changing marketing pages. */
-.dashboard-overview [class~="text-[10px]"],
-.portfolio-editor-panels [class~="text-[10px]"] {
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.dashboard-overview [class~="text-[9px]"],
-.portfolio-editor-panels [class~="text-[9px]"] {
-  font-size: 0.6875rem;
-  line-height: 1.35;
-}
+/* The type floor used to be enforced here, by overriding what the markup said:
+   a `text-[10px]` class inside `.dashboard-overview`, `.portfolio-editor-panels`
+   or `.calendar-shell` actually rendered at 12px. Two problems with that. It
+   only worked on pages that remembered the wrapper class, so the same component
+   was 10px in one place and 12px in another; and it made the source lie, which
+   is why the sizes drifted in the first place. The markup now says `text-xs`
+   and means it. */
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);

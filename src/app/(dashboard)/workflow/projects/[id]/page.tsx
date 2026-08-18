@@ -195,7 +195,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               <div>
                 <div className="text-xs text-slate-400 mb-1 flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Budget</div>
                 <div className="text-2xl font-bold text-emerald-400">{budgetAmount === null ? "Unspecified" : convertedBudget || formatCurrency(budgetAmount, project.currency)}</div>
-                {budgetAmount !== null && project.currency !== displayCurrency && convertedBudget && <div className="mt-1 text-[10px] font-medium text-slate-400">Originally {formatCurrency(budgetAmount, project.currency)}</div>}
+                {budgetAmount !== null && project.currency !== displayCurrency && convertedBudget && <div className="mt-1 text-xs font-medium text-slate-400">Originally {formatCurrency(budgetAmount, project.currency)}</div>}
               </div>
               
               <div className="h-px bg-slate-700/50 w-full" />
@@ -213,7 +213,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               <h3 className="text-xs font-bold text-foreground dark:text-slate-200 mb-3 uppercase tracking-wider">Project Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {project.tags.map((t: string, idx: number) => (
-                  <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1">
+                  <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1">
                     <Tag className="h-2.5 w-2.5" />
                     <span>{t}</span>
                   </span>
@@ -287,7 +287,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
                 {project.contracts.map((item) => (
                   <Link key={item.id} href={`/workflow/contracts/${item.id}`} className="flex items-center justify-between gap-4 rounded-xl border border-border dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all">
                     <div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground dark:text-slate-200">{item.title}</p><p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{item.currency} · Updated {formatDate(item.updatedAt)}</p></div>
-                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
+                    <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
                   </Link>
                 ))}
               </div>
@@ -322,9 +322,9 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
                     <div className="flex items-center gap-4">
                       <span className="text-right font-extrabold text-sm text-foreground dark:text-slate-200">
                         <span className="block">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
-                        {inv.currency !== displayCurrency && <span className="block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
+                        {inv.currency !== displayCurrency && <span className="block text-xs font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border uppercase ${
                          inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
                          inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :
                          "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"

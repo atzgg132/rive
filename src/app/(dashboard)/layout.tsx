@@ -253,7 +253,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
               <RiveLogo height={26} />
             </Link>
-            {!sidebarCollapsed && <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-[11px] font-semibold capitalize text-primary">
+            {!sidebarCollapsed && <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-xs font-semibold capitalize text-primary">
               {user?.plan}
             </span>}
             <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-muted-foreground hover:bg-accent hover:text-foreground ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-border bg-card shadow-sm"}`}>
@@ -337,7 +337,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Search className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate whitespace-nowrap">Search workspace...</span>
               </span>
-              <span className="flex items-center gap-1 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
+              <span className="flex items-center gap-1 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs">
                 {isMac ? (
                   <>
                     <Command className="h-2.5 w-2.5" /> K

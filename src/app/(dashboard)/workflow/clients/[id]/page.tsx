@@ -149,7 +149,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 <h3 className="text-xs font-bold text-foreground dark:text-white mb-3 uppercase tracking-wider">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {client.tags.map((t: string, idx: number) => (
-                    <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-700 text-muted-foreground dark:text-slate-400 border border-border dark:border-slate-600 flex items-center gap-1">
+                    <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-700 text-muted-foreground dark:text-slate-400 border border-border dark:border-slate-600 flex items-center gap-1">
                       <Tag className="h-2.5 w-2.5" />
                       <span>{t}</span>
                     </span>
@@ -163,7 +163,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           <div className="glass bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl border border-blue-800 text-white shadow-lg">
             <h3 className="text-xs font-bold text-blue-100 mb-1 uppercase tracking-wider">Lifetime Value (LTV)</h3>
             <div className="text-3xl font-extrabold mb-1 tracking-tight">{convertedLtv === null ? "Rates unavailable" : formatCurrency(convertedLtv)}</div>
-            <p className="mb-6 text-[10px] font-semibold text-blue-100">Paid invoices shown in {displayCurrency}</p>
+            <p className="mb-6 text-xs font-semibold text-blue-100">Paid invoices shown in {displayCurrency}</p>
             
             <div className="grid grid-cols-3 gap-3 border-t border-blue-500/30 pt-4">
               <div>
@@ -226,7 +226,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                         </div>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border uppercase ${
                       proj.status === "completed" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
                       proj.status === "in_progress" ? "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-900/60" :
                       "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"
@@ -265,7 +265,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                       <h4 className="truncate font-bold text-sm text-foreground dark:text-white">{item.title}</h4>
                       <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{item.currency} · Updated {formatDate(item.updatedAt)}</p>
                     </div>
-                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
+                    <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
                   </Link>
                 ))}
               </div>
@@ -307,10 +307,10 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                         <td className="py-3 pr-4 text-xs text-muted-foreground">{formatDate(inv.issueDate)}</td>
                         <td className="py-3 pr-4 text-sm font-bold text-foreground dark:text-slate-200">
                           <span className="block">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
-                          {inv.currency !== displayCurrency && <span className="block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
+                          {inv.currency !== displayCurrency && <span className="block text-xs font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
                         </td>
                         <td className="py-3">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border uppercase ${
                             inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
                             inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :
                             "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"

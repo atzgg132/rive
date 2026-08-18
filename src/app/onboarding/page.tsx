@@ -616,7 +616,7 @@ export default function OnboardingPage() {
                     aria-controls="onboarding-avatar-input"
                     disabled={avatarUploading}
                     onClick={() => avatarInputRef.current?.click()}
-                    className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 px-3 py-2 text-[10px] font-bold text-blue-700 disabled:cursor-wait dark:border-blue-800 dark:text-blue-300"
+                    className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 px-3 py-2 text-xs font-bold text-blue-700 disabled:cursor-wait dark:border-blue-800 dark:text-blue-300"
                   >
                     {avatarUploading ? (
                       <>
@@ -646,7 +646,7 @@ export default function OnboardingPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label>
-                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                       Your name
                     </span>
                     <Input
@@ -656,7 +656,7 @@ export default function OnboardingPage() {
                     />
                   </label>
                   <label>
-                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                       What do you do?
                     </span>
                     <Input
@@ -667,7 +667,7 @@ export default function OnboardingPage() {
                     />
                   </label>
                   <label>
-                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                       Default currency
                     </span>
                     <Select
@@ -690,7 +690,7 @@ export default function OnboardingPage() {
                     </Select>
                   </label>
                   <label>
-                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                       Timezone
                     </span>
                     <Input
@@ -702,7 +702,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div className="mt-7">
-                <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                <p className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
                   How do you work? Choose all that apply.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
@@ -720,7 +720,7 @@ export default function OnboardingPage() {
                         <Icon className="h-4 w-4 shrink-0 text-blue-600" />
                         <span className="min-w-0">
                           <p className="text-xs font-black leading-4">{item.label}</p>
-                          <p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">{item.detail}</p>
+                          <p className="mt-1 text-xs leading-4 text-slate-500 dark:text-slate-400">{item.detail}</p>
                         </span>
                       </Button>
                     );
@@ -817,7 +817,7 @@ export default function OnboardingPage() {
                 populate the workspace.
               </p>
               <div className="mt-7">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                   Where is your business information today? <span className="normal-case tracking-normal font-semibold">Select all existing sources, or choose one fresh start.</span>
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -866,7 +866,7 @@ export default function OnboardingPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black">Google Calendar</p>
-                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
                           Live connector
                         </span>
                       </div>
@@ -912,7 +912,7 @@ export default function OnboardingPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black">Zoho Books</p>
-                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">
                           {zohoConnection ? "Connected" : "OAuth ready"}
                         </span>
                       </div>
@@ -939,7 +939,7 @@ export default function OnboardingPage() {
                 </div>
               )}
               <div className="mt-7">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                   Choose one way to populate operational data
                 </p>
                 <div className="mt-3 grid gap-4 md:grid-cols-3">
@@ -978,7 +978,7 @@ export default function OnboardingPage() {
                         onClick={() => choosePath(item.id)}
                         className={`relative flex min-h-40 min-w-0 flex-col items-start justify-start whitespace-normal rounded-2xl border p-5 text-left ${path === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
                       >
-                        <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase text-blue-600 shadow-sm dark:bg-slate-800">
+                        <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-1 text-xs font-black uppercase text-blue-600 shadow-sm dark:bg-slate-800">
                           {item.badge}
                         </span>
                         <Icon className="h-6 w-6 shrink-0 text-blue-600" />
@@ -1060,7 +1060,7 @@ export default function OnboardingPage() {
                 <p className="mt-3 text-sm font-black">
                   Choose up to six CSV or XLSX files
                 </p>
-                <p className="mt-1 text-[10px] text-slate-500">
+                <p className="mt-1 text-xs text-slate-500">
                   2 MB each · clients, projects, invoices, and expenses
                 </p>
                 <Input
@@ -1080,7 +1080,7 @@ export default function OnboardingPage() {
                   {files.map((file) => (
                     <span
                       key={`${file.name}-${file.size}`}
-                      className="rounded-full border border-slate-200 px-2.5 py-1 text-[9px] font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                      className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
                     >
                       {file.name}
                     </span>
@@ -1089,7 +1089,7 @@ export default function OnboardingPage() {
               )}
               {preview.length > 0 && (
                 <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <div className="grid grid-cols-[1fr_100px_70px] bg-slate-50 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800">
+                  <div className="grid grid-cols-[1fr_100px_70px] bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800">
                     <span>File</span>
                     <span>Detected as</span>
                     <span>Rows</span>
@@ -1111,7 +1111,7 @@ export default function OnboardingPage() {
                       </span>
                       <span>{item.rows}</span>
                       {item.warning && (
-                        <span className="col-span-3 mt-1 text-[9px] text-red-500">
+                        <span className="col-span-3 mt-1 text-xs text-red-500">
                           {item.warning}
                         </span>
                       )}
@@ -1125,7 +1125,7 @@ export default function OnboardingPage() {
                 ),
               ) && (
                 <div className="mt-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-400">
                     Recent migrations
                   </p>
                   <div className="mt-3 space-y-2">
@@ -1149,13 +1149,13 @@ export default function OnboardingPage() {
                                 job.sourceLabel ||
                                 job.source}
                             </p>
-                            <p className="mt-1 text-[9px] text-slate-500">
+                            <p className="mt-1 text-xs text-slate-500">
                               {job.createdRecords} created ·{" "}
                               {job.skippedRecords} skipped ·{" "}
                               {job.unresolvedCount} need review
                             </p>
                           </div>
-                          <span className="text-[9px] font-black uppercase text-slate-400">
+                          <span className="text-xs font-black uppercase text-slate-400">
                             {job.status === "rolled_back" ? "Rolled back" : "Imported"}
                           </span>
                         </div>
@@ -1210,7 +1210,7 @@ export default function OnboardingPage() {
               </p>
               <div className="mt-7 grid gap-4 sm:grid-cols-2">
                 <label>
-                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                     Client name
                   </span>
                   <Input
@@ -1221,7 +1221,7 @@ export default function OnboardingPage() {
                   />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                     Client email
                   </span>
                   <Input
@@ -1232,7 +1232,7 @@ export default function OnboardingPage() {
                   />
                 </label>
                 <label className="sm:col-span-2">
-                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                     Project
                   </span>
                   <Input
@@ -1244,7 +1244,7 @@ export default function OnboardingPage() {
                   />
                 </label>
                 <label className="sm:col-span-2">
-                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                     What are you delivering?
                   </span>
                   <Textarea
@@ -1257,7 +1257,7 @@ export default function OnboardingPage() {
                   />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                     Deadline
                   </span>
                   <Input
@@ -1268,7 +1268,7 @@ export default function OnboardingPage() {
                   />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                     draft invoice value ({currency})
                   </span>
                   <Input
@@ -1327,7 +1327,7 @@ export default function OnboardingPage() {
                       className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
                     >
                       <p className="text-2xl font-black">{report[key]}</p>
-                      <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                      <p className="mt-1 text-xs font-black uppercase tracking-wider text-slate-400">
                         {key}
                       </p>
                     </div>
@@ -1345,7 +1345,7 @@ export default function OnboardingPage() {
               >
                 Open my operating system <ArrowRight className="h-4 w-4" />
               </Button>
-              <div className="mt-5 flex justify-center gap-5 text-[10px] font-bold text-slate-400">
+              <div className="mt-5 flex justify-center gap-5 text-xs font-bold text-slate-400">
                 <span className="inline-flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5" />
                   Deadlines connected

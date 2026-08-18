@@ -222,7 +222,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
               </div>
               <Badge variant={badge.variant}>{badge.label}</Badge>
             </div>
-            <dl className="flex flex-wrap gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
+            <dl className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
               <div className="flex gap-1.5"><dt className="font-semibold">Received</dt><dd>{formatWhen(selected.createdAt)}</dd></div>
               {selected.sourceProjectTitle && (
                 <div className="flex gap-1.5"><dt className="font-semibold">Was reading</dt><dd>{selected.sourceProjectTitle}</dd></div>
@@ -246,7 +246,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
             </p>
           )}
           {selected.notificationStatus === "queued" && (
-            <p className="border-b border-border bg-muted/40 px-5 py-3 text-[11px] text-muted-foreground sm:px-6">
+            <p className="border-b border-border bg-muted/40 px-5 py-3 text-xs text-muted-foreground sm:px-6">
               The email notification for this enquiry is still queued for delivery.
             </p>
           )}
@@ -398,7 +398,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                           <Badge variant={badge.variant}>{badge.label}</Badge>
                           {inquiry.notificationStatus === "failed" && <Badge variant="warning">Email not delivered</Badge>}
                         </span>
-                        <span className="shrink-0 text-[11px] text-muted-foreground">{formatWhen(inquiry.createdAt)}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">{formatWhen(inquiry.createdAt)}</span>
                       </div>
                       <span className="truncate text-xs font-semibold text-primary">{inquiry.projectType}</span>
                       <span className="line-clamp-2 text-xs leading-5 text-muted-foreground">{inquiry.excerpt}</span>
@@ -411,7 +411,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
 
           {(page > 1 || hasMore) && (
             <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Page {page} · {total} enquir{total === 1 ? "y" : "ies"}
               </span>
               <div className="flex gap-2">

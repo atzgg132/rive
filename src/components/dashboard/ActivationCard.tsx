@@ -47,7 +47,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
     >
       <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 max-w-2xl">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-blue-100">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-blue-100">
             <Target className="h-4 w-4" />
             Today · {plan.stageLabel}
           </div>
@@ -62,7 +62,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
                 <ChevronRight className="h-4 w-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-100">Recommended next</p>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-blue-100">Recommended next</p>
                 {recommended ? (
                   <Link href={recommended.href} data-guide-target="activation-primary" className="mt-1 block text-sm font-black text-white hover:underline">
                     {recommended.label}
@@ -104,7 +104,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
           {plan.secondaryActions.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {plan.secondaryActions.map((action) => (
-                <Link key={action.id} href={action.href} className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-bold text-blue-50 ring-1 ring-white/15 hover:bg-white/15">
+                <Link key={action.id} href={action.href} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-blue-50 ring-1 ring-white/15 hover:bg-white/15">
                   {action.label}
                 </Link>
               ))}
@@ -132,7 +132,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
               <p className="text-xs font-black uppercase tracking-[0.14em] text-blue-100">Getting Started</p>
               <p className="mt-1 text-sm font-bold text-white">Follow the highlighted step when you are ready. You can return here from the Overview.</p>
             </div>
-            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-blue-100">{plan.completed}/{plan.total}</span>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-blue-100">{plan.completed}/{plan.total}</span>
           </div>
           {plan.unresolvedImportIssues > 0 && (
             <Link href="/onboarding?restart=1&focus=import" className="mt-3 inline-flex text-xs font-bold text-amber-100 underline">

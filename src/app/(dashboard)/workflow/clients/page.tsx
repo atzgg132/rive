@@ -317,7 +317,7 @@ export default function ClientsPage() {
                       <span className="truncate text-xs text-muted-foreground">{c.company || "Private client"}</span>
                     </div>
                   </div>
-                  <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${
+                  <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${
                     c.status === "active" ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800" : "bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border-border dark:border-slate-700"
                   }`}>
                     {c.status}
@@ -328,7 +328,7 @@ export default function ClientsPage() {
                 {c.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {c.tags.map((t, idx) => (
-                      <span key={idx} className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                      <span key={idx} className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground">
                         <Tag className="h-2 w-2" />
                         <span>{t}</span>
                       </span>
