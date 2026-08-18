@@ -4,10 +4,11 @@ import { Button, PageHeader } from "@/components/ui";
 
 import { useEffect, useState } from "react";
 import { Check, Copy, Eye, ExternalLink, Globe2, Inbox, Layers, LayoutTemplate, BarChart3, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
-import type { PortfolioContent } from "@/utils/portfolio";
+import { isPortfolioUnstarted, type PortfolioContent } from "@/utils/portfolio";
 import PortfolioAnalyticsPanel from "@/components/portfolio/PortfolioAnalyticsPanel";
 import PortfolioInquiriesPanel from "@/components/portfolio/PortfolioInquiriesPanel";
 import PortfolioLivePreview, { type PreviewDevice } from "@/components/portfolio/PortfolioLivePreview";
+import PortfolioFirstRun from "@/components/portfolio/PortfolioFirstRun";
 import PortfolioNextSteps, { getPortfolioSteps, type StudioSection } from "@/components/portfolio/PortfolioNextSteps";
 import PortfolioPublishReview from "@/components/portfolio/PortfolioPublishReview";
 import StudioDesignSection from "@/components/portfolio/studio/StudioDesignSection";
@@ -85,6 +86,9 @@ export default function PortfolioDashboardPage() {
   /* Playback controls stay out of the way until there is media for them to
      govern — seven toggles are noise on a portfolio with no video in it. */
   const hasProjectMedia = content.projects.some((project) => (project.media || []).length > 0);
+  /* Most portfolios arrive prefilled from the account, so this is the rarer
+     case: nothing typed, nothing tracked, nothing to build on. */
+  const unstarted = isPortfolioUnstarted(content);
 
   /* The unread count is loaded up front so the tab can carry a badge without
      the owner having to open it first. A failure here is silent: an absent
@@ -147,7 +151,7 @@ export default function PortfolioDashboardPage() {
         <Button data-guide-target="portfolio-publish" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
-      {portfolio.status !== "published" && readiness.score < 100 && (
+      {portfolio.status !== "published" && readiness.score < 100 && !unstarted && (
         <FirstVisitNote>
           Your profile and selected projects become public proof of work. Fill the essentials first; optional case-study detail can wait.
         </FirstVisitNote>
@@ -177,8 +181,12 @@ export default function PortfolioDashboardPage() {
       {saveError && <div data-portfolio-save-alert role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Keep my draft</Button></div> : <Button onClick={() => void persist()} disabled={saving} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button>}</div>}
 
       {/* Above the shell, not inside a panel: what to do next is true of the
-          whole portfolio, not of whichever section happens to be open. */}
-      {tab === "edit" && <PortfolioNextSteps steps={steps} onGoTo={setEditorSection} />}
+          whole portfolio, not of whichever section happens to be open. An
+          untouched portfolio gets the ordered path instead — two competing
+          lists of what to do next is worse than either one alone. */}
+      {tab === "edit" && (unstarted
+        ? <PortfolioFirstRun onGoTo={setEditorSection} />
+        : <PortfolioNextSteps steps={steps} onGoTo={setEditorSection} />)}
 
       {tab === "edit" && <div className="grid min-h-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_26rem]">
       <div data-portfolio-editor-shell className="grid min-h-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">

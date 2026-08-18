@@ -380,6 +380,25 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
   };
 }
 
+/**
+ * Has this portfolio been started at all?
+ *
+ * A freshly provisioned portfolio is not empty in the `=== null` sense: it
+ * arrives with one blank project and one blank service already in it, so
+ * `projects.length` is 1 before anyone has typed a word. Asking "is there
+ * anything here" has to mean "is there anything a visitor would see", which is
+ * why this looks at the text rather than the arrays.
+ *
+ * The first-run path keys off this, so it must not linger once someone has
+ * genuinely started: a name alone is enough to count as begun.
+ */
+export function isPortfolioUnstarted(content: PortfolioContent): boolean {
+  const hasIdentity = Boolean(content.name.trim() || content.headline.trim() || content.bio.trim());
+  const hasWork = content.projects.some((project) => project.title.trim() || project.description.trim());
+  const hasServices = content.services.some((service) => service.title.trim());
+  return !hasIdentity && !hasWork && !hasServices;
+}
+
 /** Practices a visitor may see, in the owner's chosen order. */
 export function getVisiblePractices(content: PortfolioContent): PortfolioPractice[] {
   return content.practices

@@ -124,6 +124,36 @@ async function studioUser(label: string) {
   return { token: tokenFor(user), user };
 }
 
+/** A portfolio with nothing in it at all — the first-run case. Most accounts
+ *  never see this, because provisioning prefills from the account's own record. */
+async function unstartedStudioUser(label: string) {
+  const user = await db.prisma.user.create({
+    data: {
+      email: `studio-${label}-${randomUUID()}@rive.test`,
+      name: `Studio ${label}`,
+      passwordHash: hashPassword("studio-test-password"),
+      plan: "pro",
+      onboardingStatus: "complete",
+      businessType: "freelancer",
+      currency: "USD",
+      timeZone: "UTC",
+    },
+    select: { id: true, email: true, plan: true, sessionVersion: true },
+  });
+  await db.prisma.portfolio.create({
+    data: {
+      userId: user.id,
+      slug: `studio-${label}-${randomUUID().slice(0, 8)}`,
+      status: "draft",
+      templateKey: "minimal-pro",
+      content: {},
+      theme: { accent: "#2563EB", mode: "light", radius: "soft" },
+      seo: { title: "", description: "", indexable: false },
+    },
+  });
+  return { token: tokenFor(user), user };
+}
+
 test.describe("portfolio studio", () => {
   test.skip(!dbChecksEnabled, "Requires DATABASE_URL with a migrated test database.");
   test.setTimeout(120_000);
@@ -288,14 +318,35 @@ test.describe("portfolio studio", () => {
 
     await expect(page.getByRole("button", { name: /Add a cover image to Harbour rebuild/i })).toBeVisible({ timeout: 20_000 });
 
-    const dimensions = await page.evaluate(() => ({
-      clientWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(
-      dimensions.scrollWidth,
-      `the studio overflows by ${dimensions.scrollWidth - dimensions.clientWidth}px at 390px`,
-    ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    const overflow = async (what: string) => {
+      const dimensions = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(
+        dimensions.scrollWidth,
+        `${what} overflows by ${dimensions.scrollWidth - dimensions.clientWidth}px at 390px`,
+      ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    };
+    await overflow("the studio");
+
+    /* The surfaces added since this test was written are the ones most likely to
+       break a phone: a six-card gallery of scaled miniatures, and a modal. */
+    await page.getByRole("button", { name: /Appearance/i }).click();
+    await expect(page.locator("[data-portfolio-template]")).toHaveCount(6);
+    await overflow("the template gallery");
+
+    await page.getByRole("button", { name: /Publish portfolio/i }).click();
+    const review = page.locator("[data-portfolio-publish-review]");
+    await expect(review).toBeVisible();
+    await overflow("the publish review");
+
+    // It must fit the screen, not run off the bottom of it with the buttons.
+    const fits = await review.evaluate((element) => element.getBoundingClientRect().height <= window.innerHeight + 1);
+    expect(fits, "the publish review must fit a 844px-tall phone").toBe(true);
+
+    await page.keyboard.press("Escape");
+    await expect(review).toBeHidden();
   });
 
   test("typed work survives leaving a section, and autosave never publishes", async ({ page, context }) => {
@@ -427,6 +478,30 @@ test.describe("portfolio studio", () => {
       scrollWidth: document.documentElement.scrollWidth,
     }));
     expect(dimensions.scrollWidth, "scaled miniatures must not push the page sideways").toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  });
+
+  test("an empty portfolio gets an ordered path, and a started one does not", async ({ page, context }) => {
+    await context.addCookies([{ name: "rive_session", value: (await unstartedStudioUser("firstrun")).token, url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    const firstRun = page.locator("[data-portfolio-first-run]");
+    await expect(firstRun).toBeVisible({ timeout: 20_000 });
+    await expect(firstRun).toContainText(/Say who you are/i);
+
+    /* One guidance surface, not two: the worklist is replaced rather than
+       stacked on top of. */
+    await expect(page.getByText(/of 9 done/i)).toHaveCount(0);
+
+    // A step goes where it says it goes.
+    await firstRun.getByRole("button", { name: /Add a project/i }).click();
+    await expect(page.getByText("Show the work you want clients to remember", { exact: false })).toBeVisible();
+
+    /* Typing a name is enough to count as started, and the path steps aside for
+       the worklist without needing a reload. */
+    await page.getByRole("button", { name: /^Profile/i }).click();
+    await page.getByPlaceholder("Your name").fill("Arnav");
+    await expect(firstRun).toBeHidden();
   });
 
   test("a stale revision asks the owner to choose instead of overwriting their draft", async ({ page, context }) => {
