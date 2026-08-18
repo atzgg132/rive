@@ -9,6 +9,7 @@ import DropdownPortal from "@/components/ui/DropdownPortal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { formatMoney } from "@/lib/currency";
+import { buildMonthlyTrend } from "@/utils/revenueTrend";
 
 type Invoice = {
   id: string;
@@ -115,7 +116,11 @@ export default function RevenuePage() {
   const overdue = convertedTotal("overdue");
   const drafts = convertedTotal("draft");
   const collectionRate = invoiced !== null && invoiced > 0 && collected !== null ? Math.round((collected / invoiced) * 1000) / 10 : null;
-  const topMonths = useMemo(() => monthly.slice(-6), [monthly]);
+  /* Grouped by month, not by month-and-currency: a trend with two rows for July
+     is not a trend, and pairing a currency code with a converted amount printed
+     "INR — $12.55". Everything else on this page is already in the display
+     currency, so this is too. */
+  const monthlyTrend = useMemo(() => buildMonthlyTrend(monthly, convert), [monthly, convert]);
 
   const refresh = () => { void load(); };
 
@@ -181,7 +186,51 @@ export default function RevenuePage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Trend</p><h2 className="mt-1 text-xl font-semibold">Monthly invoice activity</h2></div><span className="text-xs text-muted-foreground">Last 6 recorded months</span></div>{topMonths.length ? <div className="mt-5 space-y-3">{topMonths.map((row) => <div key={`${row.month}-${row.currency}`}><div className="mb-1 flex justify-between text-xs"><span className="font-medium">{row.month} · {row.currency}</span><span className="text-muted-foreground">{formatConverted(row.invoiced, row.currency) || "—"} invoiced</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(100, row.invoiced ? Math.max(8, (row.collected / row.invoiced) * 100) : 0)}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-muted-foreground">Your monthly trend will appear after the first invoice.</p>}</section>
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Trend</p>
+              <h2 className="mt-1 text-xl font-semibold">Monthly invoice activity</h2>
+            </div>
+            <span className="shrink-0 text-xs text-muted-foreground">Last 6 recorded months · {displayCurrency}</span>
+          </div>
+          {/* Two quantities, two lengths, both labelled. The bar compares this
+              month's invoiced value against the largest month in the window;
+              the solid part of it is what has actually been collected. */}
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-primary/25" /> Invoiced, relative to the busiest month</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-emerald-500" /> Collected</span>
+          </div>
+          {monthlyTrend.points.length ? (
+            <div className="mt-5 space-y-4">
+              {monthlyTrend.points.map((point) => (
+                <div key={point.month}>
+                  <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                    <span className="text-sm font-semibold">{point.label}</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      <strong className="font-semibold text-foreground">{formatMoney(point.invoiced, displayCurrency)}</strong> invoiced
+                      {point.collectionRate !== null ? ` · ${point.collectionRate}% collected` : ""}
+                    </span>
+                  </div>
+                  <div
+                    className="h-2.5 overflow-hidden rounded-full bg-muted"
+                    role="img"
+                    aria-label={`${point.label}: ${formatMoney(point.invoiced, displayCurrency)} invoiced${point.collectionRate !== null ? `, ${point.collectionRate}% collected` : ""}${point.currencies.length > 1 ? `, across ${point.currencies.join(" and ")}` : ""}`}
+                  >
+                    {/* A visible sliver for a month that had activity but is
+                        dwarfed by another — zero-width would read as no data. */}
+                    <div className="h-full rounded-full bg-primary/25" style={{ width: `${point.invoiced > 0 ? Math.max(2, point.share * 100) : 0}%` }}>
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${point.invoiced > 0 ? Math.min(100, (point.collected / point.invoiced) * 100) : 0}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!monthlyTrend.complete && <p className="pt-1 text-[11px] text-muted-foreground">Some months are still converting to {displayCurrency} and are not shown yet.</p>}
+            </div>
+          ) : (
+            <p className="mt-5 text-sm text-muted-foreground">{ratesStatus === "loading" && monthly.length ? `Converting to ${displayCurrency}…` : "Your monthly trend will appear after the first invoice."}</p>
+          )}
+        </section>
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-600">Attention queue</p><h2 className="mt-1 text-xl font-semibold">Next best actions</h2><div className="mt-4 space-y-2">{attention.slice(0, 5).map((item) => <Link key={item.id} href={item.status === "draft" ? `/workflow/invoices/new?invoiceId=${encodeURIComponent(item.id)}` : `/workflow/revenue#invoice-${encodeURIComponent(item.id)}`} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-3 transition hover:border-primary/40 hover:bg-primary/[0.03]"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.invoiceNumber} · {item.client || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{item.reason} · {dateLabel(item.dueDate)}</p></div><span className="shrink-0 text-sm font-semibold">{formatConverted(item.outstanding, item.currency) || `${item.currency} ${item.outstanding.toFixed(2)}`}</span></Link>)}{!attention.length ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">Nothing urgent in the invoice queue.</p> : null}</div></section>
       </div>
 
