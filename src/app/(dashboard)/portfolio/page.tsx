@@ -2,7 +2,7 @@
 
 import { Button, PageHeader } from "@/components/ui";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Check, Copy, Eye, ExternalLink, Globe2, Inbox, Layers, LayoutTemplate, BarChart3, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
 import { isPortfolioUnstarted, type PortfolioContent } from "@/utils/portfolio";
 import PortfolioAnalyticsPanel from "@/components/portfolio/PortfolioAnalyticsPanel";
@@ -74,6 +74,33 @@ export default function PortfolioDashboardPage() {
   /* Opens on the work, because the work is the portfolio. The old default was
      the profile form, which put the least differentiating screen first. */
   const [editorSection, setEditorSection] = useState<StudioSection>("work");
+
+  /* The worklist sits above the editor and usually names the section that is
+     already open — "work" is both the default section and the target of the
+     two most common suggestions. Setting state alone therefore changed nothing
+     on screen, so the buttons looked live and did nothing. Bringing the editor
+     into view is what makes the click read as an action, whichever section it
+     names. */
+  const goToSection = useCallback((section: StudioSection) => {
+    setTab("edit");
+    setEditorSection(section);
+    if (typeof window === "undefined") return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    /* The shell may not be mounted yet: reaching here from the publish review
+       closes a dialog and switches tab in the same commit. Retry across a few
+       frames rather than assuming it has painted, and give up quietly if it
+       never appears. */
+    let attempts = 0;
+    const scrollToEditor = () => {
+      const shell = document.querySelector("[data-portfolio-editor-shell]");
+      if (shell) {
+        shell.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+        return;
+      }
+      if (attempts++ < 5) window.requestAnimationFrame(scrollToEditor);
+    };
+    window.requestAnimationFrame(scrollToEditor);
+  }, []);
   /* Publishing is the one action that puts someone in front of clients, so it
      asks first and says what is about to go public. */
   const [reviewingPublish, setReviewingPublish] = useState(false);
@@ -193,8 +220,8 @@ export default function PortfolioDashboardPage() {
           untouched portfolio gets the ordered path instead — two competing
           lists of what to do next is worse than either one alone. */}
       {tab === "edit" && (unstarted
-        ? <PortfolioFirstRun onGoTo={setEditorSection} />
-        : <PortfolioNextSteps steps={steps} onGoTo={setEditorSection} />)}
+        ? <PortfolioFirstRun onGoTo={goToSection} />
+        : <PortfolioNextSteps steps={steps} onGoTo={goToSection} onPublish={() => setReviewingPublish(true)} />)}
 
       {tab === "edit" && <div className="grid min-h-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_26rem]">
       <div data-portfolio-editor-shell className="grid min-h-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
@@ -320,7 +347,7 @@ export default function PortfolioDashboardPage() {
           publicUrl={savedPublicUrl || (typeof window !== "undefined" ? `${window.location.origin}/p/${slug}` : `/p/${slug}`)}
           published={portfolio.status === "published"}
           publishing={saving}
-          onGoTo={(section) => { setTab("edit"); setEditorSection(section); }}
+          onGoTo={goToSection}
           onConfirm={() => { setReviewingPublish(false); void persist({ status: "published" }); }}
           onClose={() => setReviewingPublish(false)}
         />

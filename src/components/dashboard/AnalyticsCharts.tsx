@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { prepareFinancialChart, type FinancialChartInput } from "@/utils/financialChart";
 
 export type ChartData = FinancialChartInput;
@@ -22,7 +22,16 @@ function makeCurrencyFormatter(currency: string, compact: boolean): Intl.NumberF
 function NetIcon({ value }: { value: number }) {
   if (value > 0) return <ArrowUpRight className="h-4 w-4" aria-hidden="true" />;
   if (value < 0) return <ArrowDownRight className="h-4 w-4" aria-hidden="true" />;
-  return <Minus className="h-4 w-4" aria-hidden="true" />;
+  // A month with no activity is flat, not a loss. The minus glyph sat directly
+  // against the amount and read as "-0.00".
+  return null;
+}
+
+/** Break-even is neither good nor bad, so it gets neither colour. */
+function netToneClass(value: number): string {
+  if (value < 0) return "text-rose-700 dark:text-rose-300";
+  if (value > 0) return "text-emerald-700 dark:text-emerald-300";
+  return "text-muted-foreground";
 }
 
 export default function AnalyticsCharts({ data, currency = "USD" }: { data: ChartData[]; currency?: string }) {
@@ -68,7 +77,7 @@ export default function AnalyticsCharts({ data, currency = "USD" }: { data: Char
           <dl className="mt-3 grid gap-3 sm:grid-cols-3">
             <div><dt className="text-xs text-muted-foreground">Paid invoice value</dt><dd className="mt-0.5 text-base font-bold tabular-nums text-blue-700 dark:text-blue-300">{fullMoney(selected.revenue)}</dd></div>
             <div><dt className="text-xs text-muted-foreground">Expenses logged</dt><dd className="mt-0.5 text-base font-bold tabular-nums text-rose-700 dark:text-rose-300">{fullMoney(selected.expenses)}</dd></div>
-            <div><dt className="text-xs text-muted-foreground">Net for the month</dt><dd className={`mt-0.5 inline-flex items-center gap-1 text-base font-bold tabular-nums ${selected.net < 0 ? "text-rose-700 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300"}`}><NetIcon value={selected.net} />{fullMoney(selected.net)}</dd></div>
+            <div><dt className="text-xs text-muted-foreground">Net for the month</dt><dd className={`mt-0.5 inline-flex items-center gap-1 text-base font-bold tabular-nums ${netToneClass(selected.net)}`}><NetIcon value={selected.net} />{fullMoney(selected.net)}</dd></div>
           </dl>
         </div>
       ) : null}
@@ -120,7 +129,7 @@ export default function AnalyticsCharts({ data, currency = "USD" }: { data: Char
       <dl className="mt-5 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-3">
         <div className="flex items-center justify-between gap-3 sm:block"><dt className="text-xs text-muted-foreground">Six-month paid invoices</dt><dd className="font-bold tabular-nums text-foreground sm:mt-1">{fullMoney(chart.totals.revenue)}</dd></div>
         <div className="flex items-center justify-between gap-3 sm:block"><dt className="text-xs text-muted-foreground">Six-month expenses</dt><dd className="font-bold tabular-nums text-foreground sm:mt-1">{fullMoney(chart.totals.expenses)}</dd></div>
-        <div className="flex items-center justify-between gap-3 sm:block"><dt className="text-xs text-muted-foreground">Six-month net</dt><dd className={`font-bold tabular-nums sm:mt-1 ${chart.totals.net < 0 ? "text-rose-700 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300"}`}>{fullMoney(chart.totals.net)}</dd></div>
+        <div className="flex items-center justify-between gap-3 sm:block"><dt className="text-xs text-muted-foreground">Six-month net</dt><dd className={`font-bold tabular-nums sm:mt-1 ${netToneClass(chart.totals.net)}`}>{fullMoney(chart.totals.net)}</dd></div>
       </dl>
     </section>
   );

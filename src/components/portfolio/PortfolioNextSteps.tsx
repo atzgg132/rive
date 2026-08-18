@@ -139,9 +139,11 @@ function rememberDismissed(signature: string) {
 export default function PortfolioNextSteps({
   steps,
   onGoTo,
+  onPublish,
 }: {
   steps: PortfolioStep[];
   onGoTo: (section: StudioSection) => void;
+  onPublish: () => void;
 }) {
   const outstanding = steps.filter((step) => !step.done);
   const essentials = outstanding.filter((step) => step.essential);
@@ -206,7 +208,7 @@ export default function PortfolioNextSteps({
           <li key={step.id}>
             <Button
               type="button"
-              onClick={() => onGoTo(step.section)}
+              onClick={() => (step.id === "publish" ? onPublish() : onGoTo(step.section))}
               className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-background px-3.5 py-2.5 text-left !whitespace-normal transition hover:border-primary/50"
             >
               <span className="min-w-0 text-sm font-semibold text-foreground">{step.label}</span>

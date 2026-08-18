@@ -34,3 +34,30 @@ test("financial chart scale rounds up to readable steps", () => {
   assert.equal(financialChartScale(1_425), 2_000);
   assert.equal(financialChartScale(5_001), 10_000);
 });
+
+test("a break-even month reports positive zero, never negative zero", () => {
+  // Intl.NumberFormat renders -0 with its sign, which printed "-$0.00" for a
+  // month that simply had no activity.
+  const chart = prepareFinancialChart([
+    { month: "Aug 2026", period: "2026-08", revenue: 0, expenses: 0 },
+    { month: "Sep 2026", period: "2026-09", revenue: 250, expenses: 250 },
+  ]);
+
+  for (const point of chart.points) {
+    assert.equal(point.net, 0);
+    assert.ok(Object.is(point.net, 0), `${point.label} produced negative zero`);
+    assert.ok(!Object.is(point.net, -0), `${point.label} produced negative zero`);
+  }
+  assert.ok(Object.is(chart.totals.net, 0), "totals produced negative zero");
+});
+
+test("net keeps its sign when the month is not break-even", () => {
+  const chart = prepareFinancialChart([
+    { month: "Oct 2026", period: "2026-10", revenue: 100, expenses: 400 },
+    { month: "Nov 2026", period: "2026-11", revenue: 900, expenses: 400 },
+  ]);
+
+  assert.equal(chart.points[0].net, -300);
+  assert.equal(chart.points[1].net, 500);
+  assert.equal(chart.totals.net, 200);
+});
