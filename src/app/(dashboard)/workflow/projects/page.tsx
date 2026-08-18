@@ -1,35 +1,42 @@
 "use client";
 
-import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
 
-import React, { useState, useEffect, type ReactNode } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Briefcase,
   Plus,
   Search,
-  Calendar,
   User,
   X,
   Loader2,
   MoreVertical,
   Edit2,
   Trash2,
-  GripVertical,
   FileSignature,
   ExternalLink,
   CircleSlash2,
   ArrowRight,
+  ChevronDown,
+  Check,
+  TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DndContext, useDraggable, useDroppable, DragEndEvent, closestCorners } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
+import type { PaginationMeta } from "@/lib/pagination";
+import {
+  DELIVERY_BUCKET_LABELS,
+  deliveryStatus,
+  groupByDeliveryBucket,
+  milestoneProgress,
+  type DeliveryBucket,
+} from "@/utils/projectDelivery";
 
 interface Project {
   id: string;
@@ -60,15 +67,72 @@ interface Client {
   company: string | null;
 }
 
+type StatusCounts = { all: number; active: number; paused: number; completed: number; overdue: number };
+
+const STATUS_TABS = [
+  { value: "all", label: "All work" },
+  { value: "active", label: "In progress" },
+  { value: "paused", label: "Paused" },
+  { value: "completed", label: "Completed" },
+] as const;
+
+// Only the three states a project can be moved between from this page;
+// "archived" is excluded by the list endpoint and is not a destination here.
+const STATUS_CHOICES = [
+  { value: "active", label: "In progress", dot: "bg-blue-500", pill: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300" },
+  { value: "paused", label: "Paused", dot: "bg-amber-500", pill: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300" },
+  { value: "completed", label: "Completed", dot: "bg-emerald-500", pill: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300" },
+] as const;
+
+const SORT_OPTIONS = [
+  { value: "due_date", label: "Deadline first" },
+  { value: "recent", label: "Recently updated" },
+  { value: "title", label: "Title A–Z" },
+  { value: "budget", label: "Largest budget" },
+] as const;
+
+const DELIVERY_ACCENT: Record<DeliveryBucket, string> = {
+  overdue: "text-red-700 dark:text-red-400",
+  this_week: "text-amber-700 dark:text-amber-400",
+  later: "text-muted-foreground",
+  no_deadline: "text-muted-foreground",
+};
+
+function statusChoice(status: string) {
+  return STATUS_CHOICES.find((choice) => choice.value === status) || STATUS_CHOICES[0];
+}
+
+// useSearchParams needs a suspense boundary for this route to keep its static
+// shell; the inner component owns every query-driven piece of state.
 export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<div className="workspace-page min-h-[calc(100vh-8rem)]" />}>
+      <ProjectsWorkspace />
+    </Suspense>
+  );
+}
+
+function ProjectsWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { agreements } = useFeatureAvailability();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState("all");
+  // Read from the live query string. A useState initializer only runs on mount,
+  // so arriving here from an in-app link that only changes the query left the
+  // filter stuck at its previous value.
+  const clientFilter = searchParams.get("clientId") || "";
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sort, setSort] = useState<string>("due_date");
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [counts, setCounts] = useState<StatusCounts | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
+  const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
 
   // Form state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -93,26 +157,35 @@ export default function ProjectsPage() {
   const [externalCoverageLabel, setExternalCoverageLabel] = useState("Contract handled outside Rive");
   const [externalCoverageUrl, setExternalCoverageUrl] = useState("");
 
-  const loadProjects = async () => {
+  const loadProjects = async (signal?: AbortSignal) => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(debouncedSearch)}&status=${status}`);
+      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(debouncedSearch)}&status=${status}&clientId=${encodeURIComponent(clientFilter)}&page=${page}&pageSize=${pageSize}&sort=${encodeURIComponent(sort)}`, { signal });
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           setProjects(data.projects);
+          // buildPagination clamps an out-of-range page server-side. Without
+          // adopting that clamp the local page counter drifts, and the Next
+          // button then re-requests a page the list is already showing.
+          setPagination(data.pagination || null);
+          if (data.pagination && data.pagination.page !== page) setPage(data.pagination.page);
+          setCounts(data.counts || null);
         }
       }
     } catch (err) {
+      if (signal?.aborted) return;
       console.error("Error loading projects:", err);
       toast.error("Failed to load projects");
     } finally {
-      setLoading(false);
+      // A superseded request must not clear the spinner the live one is using.
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   const loadClients = async () => {
     try {
-      const res = await fetch("/api/workflow/clients");
+      const res = await fetch("/api/workflow/clients?mode=options&pageSize=100");
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -139,9 +212,19 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadProjects();
+    setPage(1);
+  }, [debouncedSearch, status, sort]);
+
+  useEffect(() => {
+    // Changing a filter also resets the page, so two loads are queued in the
+    // same commit. Aborting the superseded one keeps a slow first response
+    // from overwriting the newer page rows.
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadProjects(controller.signal);
+    return () => controller.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status]);
+  }, [debouncedSearch, status, page, pageSize, sort, clientFilter]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -319,46 +402,39 @@ export default function ProjectsPage() {
     }
   };
 
-  const getProgressPercent = (project: Project) => {
-    if (project.milestone_count === 0) return 0;
-    return Math.round((project.completed_milestones / project.milestone_count) * 100);
-  };
+  // Deadline copy is derived once per render pass so every row in a paint
+  // compares against the same instant.
+  const now = new Date();
+  const sections = sort === "due_date"
+    ? groupByDeliveryBucket(projects, (project) => deliveryStatus(project.due_date, project.status, now))
+    : [{ bucket: null as DeliveryBucket | null, items: projects }];
 
-  // Group projects for Kanban columns
-  const kanbanColumns = [
-    { id: "active", title: "in progress", color: "bg-blue-600" },
-    { id: "paused", title: "paused", color: "bg-amber-500" },
-    { id: "completed", title: "completed", color: "bg-emerald-500" }
-  ];
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const projectId = active.id as string;
-    const newStatus = over.id as string;
-
-    const project = projects.find(p => p.id === projectId);
-    if (!project || project.status === newStatus) return;
+  const updateStatus = async (projectId: string, newStatus: string) => {
+    setStatusMenuId(null);
+    const project = projects.find((p) => p.id === projectId);
+    if (!project || project.status === newStatus || pendingStatusId) return;
 
     const oldStatus = project.status;
-
-    // Optimistic update
-    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
+    setPendingStatusId(projectId);
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: newStatus } : p)));
 
     try {
-      const res = await fetch('/api/workflow/projects/status', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: projectId, status: newStatus })
+      const res = await fetch("/api/workflow/projects/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: projectId, status: newStatus }),
       });
       const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.message || "Failed to update status");
-      }
+      if (!data.success) throw new Error(data.message || "Failed to update status");
+
+      // The row no longer belongs in this view, and every status tally just
+      // moved, so refetch rather than leaving a stale row and stale counts.
+      await loadProjects();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Error updating status. Reverting...");
-      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: oldStatus } : p));
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: oldStatus } : p)));
+    } finally {
+      setPendingStatusId(null);
     }
   };
 
@@ -384,24 +460,65 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs font-medium text-muted-foreground">Status</span>
+          <label htmlFor="projects-sort" className="text-xs font-medium text-muted-foreground">Sort</label>
           <Select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            id="projects-sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
             className="sm:w-auto"
           >
-            <option value="all">All status</option>
-            <option value="active">In progress</option>
-            <option value="paused">Paused</option>
-            <option value="completed">Completed</option>
+            {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
         </div>
       </div>
 
-      {/* Kanban Board Layout */}
-      {loading ? (
+      {/* Status filters. The tallies come from the server so they describe the
+          whole workspace rather than whichever rows landed on this page. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {STATUS_TABS.map((tab) => {
+          const isActive = status === tab.value;
+          const count = counts ? counts[tab.value] : null;
+          return (
+            <Button
+              key={tab.value}
+              type="button"
+              size="sm"
+              variant={isActive ? "default" : "outline"}
+              aria-pressed={isActive}
+              onClick={() => setStatus(tab.value)}
+              className="gap-2"
+            >
+              {tab.label}
+              {count !== null ? <span className={`rounded px-1.5 py-0.5 text-[0.6875rem] font-bold tabular-nums ${isActive ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"}`}>{count}</span> : null}
+            </Button>
+          );
+        })}
+        {counts && counts.overdue > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => { setStatus("active"); setSort("due_date"); }}
+            className="gap-1.5 font-bold text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+          >
+            <TriangleAlert className="h-3.5 w-3.5" />
+            {counts.overdue} overdue
+          </Button>
+        ) : null}
+      </div>
+
+      {loading && projects.length === 0 ? (
         <div className="flex justify-center items-center h-48">
           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
+        </div>
+      ) : projects.length === 0 && (debouncedSearch || status !== "all") ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-6 py-14 text-center">
+          <Briefcase className="h-6 w-6 text-muted-foreground/60" />
+          <div>
+            <p className="text-sm font-bold text-foreground">No projects match this view</p>
+            <p className="mt-1 text-xs text-muted-foreground">Try a different status, or clear the search to see everything.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => { setSearch(""); setStatus("all"); }}>Clear filters</Button>
         </div>
       ) : projects.length === 0 ? (
         <ContextualEmptyState
@@ -413,37 +530,40 @@ export default function ProjectsPage() {
           after="Its deadlines and budget can flow into Calendar and Revenue."
           action={clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
         />
-      ) : (
-        <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {kanbanColumns.map((col) => {
-              const filteredProjects = projects.filter(p => p.status === col.id);
-              return (
-                <DroppableColumn key={col.id} id={col.id} title={col.title} color={col.color} count={filteredProjects.length}>
-                  {filteredProjects.length === 0 ? (
-                    <div className="text-center py-8 text-[11px] text-muted-foreground dark:text-slate-500 border border-dashed border-border dark:border-slate-700 rounded-xl bg-white/30 dark:bg-slate-900/30">
-                      no projects in this state
-                    </div>
-                  ) : (
-                    filteredProjects.map((p) => (
-                      <DraggableProjectCard
-                        key={p.id}
-                        project={p}
-                        openDropdownId={openDropdownId}
-                        setOpenDropdownId={setOpenDropdownId}
-                        openEdit={openEdit}
-                        handleDelete={handleDelete}
-                        getPriorityColor={getPriorityColor}
-                        getProgressPercent={getProgressPercent}
-                      />
-                    ))
-                  )}
-                </DroppableColumn>
-              );
-            })}
+      ) : (<>
+        <div className={`flex flex-col gap-6 transition-opacity ${loading ? "opacity-60" : "opacity-100"}`} aria-busy={loading}>
+          {sections.map((section) => (
+            <section key={section.bucket || "all"} className="flex flex-col gap-2.5">
+              {section.bucket ? (
+                <h2 className="px-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                  {DELIVERY_BUCKET_LABELS[section.bucket]}
+                </h2>
+              ) : null}
+              {section.items.map((project) => (
+                <ProjectRow
+                  key={project.id}
+                  project={project}
+                  now={now}
+                  openDropdownId={openDropdownId}
+                  setOpenDropdownId={setOpenDropdownId}
+                  statusMenuId={statusMenuId}
+                  setStatusMenuId={setStatusMenuId}
+                  pendingStatusId={pendingStatusId}
+                  updateStatus={updateStatus}
+                  openEdit={openEdit}
+                  handleDelete={handleDelete}
+                  getPriorityColor={getPriorityColor}
+                />
+              ))}
+            </section>
+          ))}
+        </div>
+        {pagination ? (
+          <div className="rounded-2xl border border-border bg-card shadow-card">
+            <PaginationControls pagination={pagination} loading={loading} label="projects" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} />
           </div>
-        </DndContext>
-      )}
+        ) : null}
+      </>)}
 
       {/* Add/Edit Project Drawer */}
       {drawerOpen && (
@@ -649,11 +769,11 @@ export default function ProjectsPage() {
             </div> : <div className="grid gap-3 sm:grid-cols-2">
               <Button type="button" variant="outline" className="h-auto justify-start gap-3 px-4 py-3 text-left" disabled={savingCoverage} onClick={() => setExternalCoverageOpen(true)}>
                 <ExternalLink className="h-4 w-4 shrink-0" />
-                <span><span className="block text-sm">Handled elsewhere</span><span className="block text-[11px] font-normal text-muted-foreground">Record external coverage</span></span>
+                <span><span className="block text-sm">Handled elsewhere</span><span className="block text-xs font-normal text-muted-foreground">Record external coverage</span></span>
               </Button>
               <Button type="button" variant="outline" className="h-auto justify-start gap-3 px-4 py-3 text-left" disabled={savingCoverage} onClick={() => void saveContractCoverage("none")}>
                 <CircleSlash2 className="h-4 w-4 shrink-0" />
-                <span><span className="block text-sm">No contract needed</span><span className="block text-[11px] font-normal text-muted-foreground">Record an intentional exception</span></span>
+                <span><span className="block text-sm">No contract needed</span><span className="block text-xs font-normal text-muted-foreground">Record an intentional exception</span></span>
               </Button>
             </div>}
 
@@ -667,194 +787,234 @@ export default function ProjectsPage() {
   );
 }
 
-function DroppableColumn({ id, title, color, count, children }: { id: string; title: string; color: string; count: number; children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  return (
-    <div ref={setNodeRef} className={`flex min-h-[450px] flex-col gap-4 rounded-2xl border p-4 transition-colors ${isOver ? "border-primary/35 bg-primary/[0.06]" : "border-border bg-muted/30"}`}>
-      <div className="flex justify-between items-center px-1">
-        <div className="flex items-center gap-2">
-          <span className={`h-2.5 w-2.5 rounded-full ${color}`}></span>
-          <h3 className="text-sm font-semibold capitalize text-foreground">{title}</h3>
-        </div>
-        <span className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-muted-foreground">
-          {count}
-        </span>
-      </div>
-      <div className="flex flex-col gap-3 min-h-[100px]">
-        {children}
-      </div>
-    </div>
-  );
-}
+type ProjectRowProps = {
+  project: Project;
+  now: Date;
+  openDropdownId: string | null;
+  setOpenDropdownId: (id: string | null) => void;
+  statusMenuId: string | null;
+  setStatusMenuId: (id: string | null) => void;
+  pendingStatusId: string | null;
+  updateStatus: (projectId: string, status: string) => void;
+  openEdit: (project: Project) => void;
+  handleDelete: (id: string, name: string) => void;
+  getPriorityColor: (priority: string) => string;
+};
 
-function DraggableProjectCard({
+function ProjectRow({
   project,
+  now,
   openDropdownId,
   setOpenDropdownId,
+  statusMenuId,
+  setStatusMenuId,
+  pendingStatusId,
+  updateStatus,
   openEdit,
   handleDelete,
   getPriorityColor,
-  getProgressPercent
-}: { project: Project; openDropdownId: string | null; setOpenDropdownId: (id: string | null) => void; openEdit: (project: Project) => void; handleDelete: (id: string, name: string) => void; getPriorityColor: (priority: string) => string; getProgressPercent: (project: Project) => number }) {
-  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
+}: ProjectRowProps) {
+  const [actionsRect, setActionsRect] = useState<DOMRect | null>(null);
+  const [statusRect, setStatusRect] = useState<DOMRect | null>(null);
   const { agreements } = useFeatureAvailability();
   const { displayCurrency, format, formatConverted } = useCurrency();
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: project.id,
-    data: project
-  });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : 'auto',
-  };
-
-  const pct = getProgressPercent(project);
+  const choice = statusChoice(project.status);
+  const delivery = deliveryStatus(project.due_date, project.status, now);
+  const pct = milestoneProgress(project.completed_milestones, project.milestone_count);
   const budgetAmount = project.budget === null ? null : Number(project.budget);
   const convertedBudget = budgetAmount === null ? null : formatConverted(budgetAmount, project.currency);
+  const busy = pendingStatusId === project.id;
 
   return (
-    <div ref={setNodeRef} style={style} className="group relative flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-card">
-      {/* Dropdown Actions */}
-      <div className="absolute top-4 right-4 z-10">
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (openDropdownId === project.id) {
-              setOpenDropdownId(null);
-            } else {
-              setDropdownRect(e.currentTarget.getBoundingClientRect());
-              setOpenDropdownId(project.id);
-            }
-          }}
-          variant="ghost"
-          size="icon-sm"
-          className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-          aria-label={`Actions for ${project.title}`}
-          title={`Actions for ${project.title}`}
-        >
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+    <article className="group relative rounded-xl border border-border bg-card py-4 pl-5 pr-4 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-card">
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${choice.dot}`} />
 
-        {openDropdownId === project.id && (
-          <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
-            <div className="w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up">
-              <Button
-                data-guide-target={!project.due_date ? "projects-deadline" : undefined}
-                onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
-                className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
-              >
-                <Edit2 className="h-3.5 w-3.5" /> Edit
-              </Button>
-              <Button
-                onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); setOpenDropdownId(null); }}
-                className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Delete
-              </Button>
-            </div>
-          </DropdownPortal>
-        )}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/workflow/projects/${project.id}`} className="min-w-0">
+              <h3 className="truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary hover:underline">{project.title}</h3>
+            </Link>
+            <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[0.6875rem] font-semibold capitalize ${getPriorityColor(project.priority)}`}>
+              {project.priority}
+            </span>
+          </div>
+          <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            {project.client_name ? (
+              <>
+                <User className="h-3.5 w-3.5 shrink-0 text-primary dark:text-blue-400" />
+                <span className="shrink-0 font-semibold text-foreground dark:text-slate-200">{project.client_name}</span>
+              </>
+            ) : (
+              <span className="shrink-0">No client linked</span>
+            )}
+            {project.description ? <span className="truncate">· {project.description}</span> : null}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            aria-haspopup="menu"
+            aria-expanded={statusMenuId === project.id}
+            aria-label={`Change status of ${project.title}, currently ${choice.label}`}
+            className={`gap-1.5 px-2.5 font-semibold ${choice.pill}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (statusMenuId === project.id) {
+                setStatusMenuId(null);
+              } else {
+                setStatusRect(e.currentTarget.getBoundingClientRect());
+                setStatusMenuId(project.id);
+                setOpenDropdownId(null);
+              }
+            }}
+          >
+            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <span aria-hidden="true" className={`h-2 w-2 rounded-full ${choice.dot}`} />}
+            {choice.label}
+            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          </Button>
+
+          {statusMenuId === project.id && (
+            <DropdownPortal triggerRect={statusRect} onClose={() => setStatusMenuId(null)}>
+              <div role="menu" aria-label={`Status for ${project.title}`} className="w-44 rounded-xl border border-border bg-card p-1 shadow-xl animate-fade-in-up">
+                {STATUS_CHOICES.map((option) => (
+                  <Button
+                    key={option.value}
+                    role="menuitem"
+                    variant="ghost"
+                    className="w-full justify-start gap-2 px-3 py-2 text-xs font-medium"
+                    onClick={(e) => { e.stopPropagation(); updateStatus(project.id, option.value); }}
+                  >
+                    <span aria-hidden="true" className={`h-2 w-2 rounded-full ${option.dot}`} />
+                    {option.label}
+                    {option.value === project.status ? <Check className="ml-auto h-3.5 w-3.5 text-primary" /> : null}
+                  </Button>
+                ))}
+              </div>
+            </DropdownPortal>
+          )}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${project.title}`}
+            title={`Actions for ${project.title}`}
+            className="text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (openDropdownId === project.id) {
+                setOpenDropdownId(null);
+              } else {
+                setActionsRect(e.currentTarget.getBoundingClientRect());
+                setOpenDropdownId(project.id);
+                setStatusMenuId(null);
+              }
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+
+          {openDropdownId === project.id && (
+            <DropdownPortal triggerRect={actionsRect} onClose={() => setOpenDropdownId(null)}>
+              <div className="w-36 rounded-xl border border-slate-100 bg-white py-1 shadow-xl dark:border-slate-800 dark:bg-slate-900 animate-fade-in-up">
+                <Button
+                  data-guide-target={!project.due_date ? "projects-deadline" : undefined}
+                  onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"
+                >
+                  <Edit2 className="h-3.5 w-3.5" /> Edit
+                </Button>
+                <Button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); setOpenDropdownId(null); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </Button>
+              </div>
+            </DropdownPortal>
+          )}
+        </div>
       </div>
 
-      <div>
-        <div className="flex justify-between items-start gap-3 mb-2 pr-6">
-          <div className="flex items-center gap-2">
-            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400">
-              <GripVertical className="h-4 w-4" />
-            </div>
-            <Link href={`/workflow/projects/${project.id}`}>
-              <h4 className="line-clamp-1 text-sm font-semibold text-foreground transition-colors group-hover:text-primary hover:underline">{project.title}</h4>
-            </Link>
-          </div>
-          <span className={`shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold capitalize ${getPriorityColor(project.priority)}`}>
-            {project.priority}
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-3 text-xs">
+        <span className={`inline-flex items-center gap-1.5 font-semibold ${DELIVERY_ACCENT[delivery.bucket]}`}>
+          {delivery.tone === "overdue" ? <TriangleAlert className="h-3.5 w-3.5" /> : null}
+          {delivery.label}
+        </span>
+
+        {!project.due_date ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-guide-target="projects-deadline"
+            aria-label={`Add deadline to ${project.title}`}
+            onClick={(e) => { e.stopPropagation(); openEdit(project); }}
+            className="h-6 px-2 text-xs font-bold text-primary hover:bg-primary/10"
+          >
+            Add deadline
+          </Button>
+        ) : null}
+
+        {project.milestone_count > 0 ? (
+          <span className="inline-flex items-center gap-2">
+            <span aria-hidden="true" className="block h-1.5 w-20 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <span className="block h-full rounded-full bg-primary transition-all duration-500 dark:bg-blue-500" style={{ width: `${pct}%` }} />
+            </span>
+            <span className="font-medium text-muted-foreground">{project.completed_milestones}/{project.milestone_count} milestones</span>
           </span>
-        </div>
-        <p className="ml-6 line-clamp-2 text-xs leading-5 text-muted-foreground">{project.description || "No description provided."}</p>
-      </div>
-
-      {/* Progress bar */}
-      {project.milestone_count > 0 && (
-        <div className="flex flex-col gap-1.5 ml-6">
-          <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
-            <span>Progress</span>
-            <span>{pct}% ({project.completed_milestones}/{project.milestone_count})</span>
-          </div>
-          <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary dark:bg-blue-500 rounded-full transition-all duration-500"
-              style={{ width: `${pct}%` }}
-            ></div>
-          </div>
-        </div>
-      )}
-
-      {/* Metadata */}
-      <div className="ml-6 flex flex-col gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
-        {project.client_name && (
-          <div className="flex items-center gap-1.5 truncate">
-            <User className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
-            <span className="font-semibold text-foreground dark:text-slate-200">{project.client_name}</span>
-          </div>
-        )}
-        <div className="flex items-center justify-between mt-1">
-          {project.due_date ? (
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              <span>due {new Date(project.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <span>No due date</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                data-guide-target="projects-deadline"
-                aria-label={`Add deadline to ${project.title}`}
-                onClick={(e) => { e.stopPropagation(); openEdit(project); }}
-                className="h-7 px-2 text-[11px] font-bold text-primary hover:bg-primary/10"
-              >
-                Add deadline
-              </Button>
-            </span>
-          )}
-          {budgetAmount !== null && (
-            <span className="flex flex-col items-end text-right font-extrabold text-[#10B981] dark:text-emerald-400">
-              <span>{convertedBudget || format(budgetAmount, project.currency)}</span>
-              {project.currency !== displayCurrency && convertedBudget && (
-                <span className="text-[10px] font-medium text-muted-foreground">Originally {format(budgetAmount, project.currency)}</span>
-              )}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {agreements && <div className="ml-6 flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-[11px]">
-        {project.contract_coverage === "rive" && project.latest_contract ? (
-          <>
-            <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300"><FileSignature className="h-3.5 w-3.5 shrink-0" /><span className="truncate">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span></span>
-            <Link href={`/workflow/contracts/${project.latest_contract.id}`} className="shrink-0 font-bold text-primary hover:underline">Open</Link>
-          </>
-        ) : project.contract_coverage === "external" ? (
-          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300"><ExternalLink className="h-3.5 w-3.5" /> Contract handled elsewhere</span>
-        ) : project.contract_coverage === "none" ? (
-          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300"><CircleSlash2 className="h-3.5 w-3.5" /> No contract required</span>
         ) : (
-          <>
-            <span className="inline-flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300"><FileSignature className="h-3.5 w-3.5" /> Contract undecided</span>
-            <Link
-              href={project.client_id ? `/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client_id)}` : `/workflow/projects/${project.id}`}
-              className="shrink-0 font-bold text-primary hover:underline"
-            >
-              {project.client_id ? "Create" : "Review"}
-            </Link>
-          </>
+          <span className="text-muted-foreground">No milestones</span>
         )}
-      </div>}
-    </div>
+
+        {budgetAmount !== null ? (
+          <span className="font-extrabold text-[#10B981] dark:text-emerald-400">
+            {convertedBudget || format(budgetAmount, project.currency)}
+            {project.currency !== displayCurrency && convertedBudget ? (
+              <span className="ml-1 font-medium text-muted-foreground">Originally {format(budgetAmount, project.currency)}</span>
+            ) : null}
+          </span>
+        ) : null}
+
+        {agreements ? (
+          <span className="inline-flex items-center gap-1.5">
+            {project.contract_coverage === "rive" && project.latest_contract ? (
+              <>
+                <FileSignature className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                <span className="font-semibold text-emerald-700 dark:text-emerald-300">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span>
+                <Link href={`/workflow/contracts/${project.latest_contract.id}`} className="font-bold text-primary hover:underline">Open</Link>
+              </>
+            ) : project.contract_coverage === "external" ? (
+              <>
+                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-600 dark:text-slate-300" />
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Contract handled elsewhere</span>
+              </>
+            ) : project.contract_coverage === "none" ? (
+              <>
+                <CircleSlash2 className="h-3.5 w-3.5 shrink-0 text-slate-600 dark:text-slate-300" />
+                <span className="font-semibold text-slate-600 dark:text-slate-300">No contract required</span>
+              </>
+            ) : (
+              <>
+                <FileSignature className="h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
+                <span className="font-semibold text-amber-700 dark:text-amber-300">Contract undecided</span>
+                <Link
+                  href={project.client_id ? `/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client_id)}` : `/workflow/projects/${project.id}`}
+                  className="font-bold text-primary hover:underline"
+                >
+                  {project.client_id ? "Create" : "Review"}
+                </Link>
+              </>
+            )}
+          </span>
+        ) : null}
+      </div>
+    </article>
   );
 }

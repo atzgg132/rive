@@ -18,14 +18,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       },
       include: {
         projects: {
-          orderBy: { createdAt: "desc" }
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 10,
         },
         invoices: {
-          orderBy: { issueDate: "desc" },
-          include: { items: true }
+          orderBy: [{ issueDate: "desc" }, { id: "desc" }],
+          take: 10,
         },
         contracts: {
-          orderBy: { updatedAt: "desc" },
+          orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+          take: 10,
           select: {
             id: true,
             title: true,
@@ -43,16 +45,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ success: false, message: "Client not found." }, { status: 404 });
     }
 
-    // Calculate LTV
-    const ltv = client.invoices
-      .filter((inv) => inv.status === "paid")
-      .reduce((sum, inv) => sum + Number(inv.total), 0);
+    const [projectCount, invoiceCount, contractCount, paidRevenue] = await Promise.all([
+      prisma.project.count({ where: { userId: session.userId, clientId: id } }),
+      prisma.invoice.count({ where: { userId: session.userId, clientId: id } }),
+      prisma.contract.count({ where: { userId: session.userId, clientId: id } }),
+      prisma.invoice.groupBy({
+        by: ["currency"],
+        where: { userId: session.userId, clientId: id, status: "paid" },
+        _sum: { total: true },
+      }),
+    ]);
+    const paidRevenueByCurrency = Object.fromEntries(paidRevenue.map((row) => [row.currency, Number(row._sum.total || 0)]));
 
     return NextResponse.json({
       success: true,
       client: {
         ...client,
-        ltv
+        ltv: Object.values(paidRevenueByCurrency).reduce((sum, amount) => sum + amount, 0),
+        paid_revenue_by_currency: paidRevenueByCurrency,
+        related_counts: { projects: projectCount, invoices: invoiceCount, contracts: contractCount },
       }
     });
   } catch (error: unknown) {

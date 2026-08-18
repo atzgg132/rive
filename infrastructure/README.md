@@ -27,6 +27,12 @@ does not modify public DNS.
 
 ## Terraform
 
+> **APPLY FREEZE:** Do not run `terraform apply` against the platform stack
+> while the current state reconciliation is in progress. Planning, validation,
+> state inspection, and reviewed imports are allowed. Targeted or full applies
+> require explicit operator approval after a clean credential-safe plan has
+> been reviewed.
+
 The bootstrap stack creates the encrypted, versioned state bucket:
 
 ```powershell
@@ -56,6 +62,11 @@ Workspace app password only in the current shell:
 ```powershell
 $env:TF_VAR_smtp_password = "<Google Workspace app password>"
 ```
+
+The production SMTP password and Google Calendar OAuth credentials are rotated
+directly in SSM and are operator-managed after bootstrap. Terraform records the
+parameters but ignores subsequent changes to their values. Admin credentials
+follow the same operator-managed model.
 
 The SMTP parameters default to `smtp.gmail.com:587` with STARTTLS as
 `hello@rive.work`. Clear the shell variable after the apply. If the account uses

@@ -5,11 +5,27 @@ import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { PROJECT_PRIORITY_SET, PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
+import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
 // Shared with the migration engine so imported projects can never carry a
 // status this endpoint would reject.
 const PROJECT_STATUSES = PROJECT_STATUS_SET;
 const PROJECT_PRIORITIES = PROJECT_PRIORITY_SET;
+
+// Every ordering ends in a unique column so a row cannot be skipped or repeated
+// across pages when two records share a sort value.
+const PROJECT_SORTS: Record<string, Prisma.ProjectOrderByWithRelationInput[]> = {
+  due_date: [{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }, { id: "desc" }],
+  recent: [{ updatedAt: "desc" }, { id: "desc" }],
+  title: [{ title: "asc" }, { id: "asc" }],
+  budget: [{ budget: { sort: "desc", nulls: "last" } }, { id: "desc" }],
+};
+const DEFAULT_PROJECT_SORT = "due_date";
+
+function startOfUtcToday(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
 
 function cleanText(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -58,59 +74,139 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
     const clientId = searchParams.get("clientId") || "";
+    const mode = searchParams.get("mode") || "list";
 
-    const where: Prisma.ProjectWhereInput = {
+    // Everything except the status filter. The status tallies returned below
+    // have to describe the whole workspace, not just the status being viewed,
+    // so they are counted against this base rather than the narrowed `where`.
+    const baseWhere: Prisma.ProjectWhereInput = {
       userId: session.userId,
       status: { not: "archived" }
     };
 
     if (search) {
-      where.OR = [
+      baseWhere.OR = [
         { title: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } }
       ];
     }
 
-    if (status !== "all") {
-      where.status = status;
-    }
-
     if (clientId) {
-      where.clientId = clientId;
+      baseWhere.clientId = clientId;
     }
 
+    const where: Prisma.ProjectWhereInput = status !== "all"
+      ? { ...baseWhere, status }
+      : baseWhere;
+
+    if (mode === "options") {
+      const optionLimit = parsePagination(searchParams, { pageSize: 100, maxPageSize: 100 }).pageSize;
+      const [optionTotal, options] = await Promise.all([
+        prisma.project.count({ where }),
+        prisma.project.findMany({
+          where,
+          orderBy: [{ title: "asc" }, { id: "asc" }],
+          take: optionLimit,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            clientId: true,
+            currency: true,
+            budget: true,
+            milestones: {
+              orderBy: { dueDate: "asc" },
+              take: 100,
+              select: { id: true, title: true, dueDate: true, completed: true },
+            },
+          },
+        }),
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        projects: options.map((project) => ({
+          id: project.id,
+          title: project.title,
+          description: project.description,
+          client_id: project.clientId,
+          currency: project.currency,
+          budget: project.budget ? project.budget.toString() : null,
+          milestones: project.milestones.map((milestone) => ({ id: milestone.id, title: milestone.title, dueDate: milestone.dueDate, completed: milestone.completed })),
+        })),
+        options: { limit: optionLimit, total: optionTotal, hasMore: optionTotal > optionLimit },
+      });
+    }
+
+    const requestedPagination = parsePagination(searchParams);
+    const sort = PROJECT_SORTS[searchParams.get("sort") || ""] ? searchParams.get("sort") as string : DEFAULT_PROJECT_SORT;
+    const total = await prisma.project.count({ where });
+    const pagination = buildPagination(total, requestedPagination);
     const projects = await prisma.project.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        clientId: true,
+        userId: true,
+        title: true,
+        description: true,
+        status: true,
+        priority: true,
+        startDate: true,
+        dueDate: true,
+        budget: true,
+        currency: true,
+        contractCoverage: true,
+        externalContractLabel: true,
+        externalContractUrl: true,
+        contractDecisionAt: true,
+        tags: true,
+        createdAt: true,
+        updatedAt: true,
         client: {
           select: {
             name: true,
             company: true
           }
         },
-        milestones: {
-          select: {
-            id: true,
-            title: true,
-            dueDate: true,
-            completed: true
-          }
-        },
         contracts: {
           where: { status: { not: "void" } },
           orderBy: { updatedAt: "desc" },
+          take: 1,
           select: { id: true, title: true, status: true },
         }
       },
-      orderBy: [
-        { dueDate: "asc" },
-        { createdAt: "desc" }
-      ]
+      orderBy: PROJECT_SORTS[sort],
+      skip: paginationOffset(pagination),
+      take: pagination.pageSize,
     });
 
+    const projectIds = projects.map((project) => project.id);
+    const [milestoneCounts, contractCounts] = projectIds.length ? await Promise.all([
+      prisma.milestone.groupBy({
+        by: ["projectId", "completed"],
+        where: { projectId: { in: projectIds } },
+        _count: { _all: true },
+      }),
+      prisma.contract.groupBy({
+        by: ["projectId"],
+        where: { userId: session.userId, projectId: { in: projectIds }, status: { not: "void" } },
+        _count: { _all: true },
+      }),
+    ]) : [[], []];
+
+    const milestoneTotals = new Map<string, number>();
+    const completedMilestones = new Map<string, number>();
+    for (const row of milestoneCounts) {
+      milestoneTotals.set(row.projectId, (milestoneTotals.get(row.projectId) || 0) + row._count._all);
+      if (row.completed) completedMilestones.set(row.projectId, row._count._all);
+    }
+    const contractCountByProject = new Map(contractCounts.map((row) => [row.projectId, row._count._all]));
+
     const formattedProjects = projects.map((p) => {
-      const milestone_count = p.milestones.length;
-      const completed_milestones = p.milestones.filter((m) => m.completed).length;
+      const milestone_count = milestoneTotals.get(p.id) || 0;
+      const completed_milestones = completedMilestones.get(p.id) || 0;
+      const contract_count = contractCountByProject.get(p.id) || 0;
 
       return {
         id: p.id,
@@ -124,11 +220,11 @@ export async function GET(req: NextRequest) {
         due_date: p.dueDate,
         budget: p.budget ? p.budget.toString() : null,
         currency: p.currency,
-        contract_coverage: p.contracts.length > 0 ? "rive" : p.contractCoverage,
+        contract_coverage: contract_count > 0 ? "rive" : p.contractCoverage,
         external_contract_label: p.externalContractLabel,
         external_contract_url: p.externalContractUrl,
         contract_decision_at: p.contractDecisionAt,
-        contract_count: p.contracts.length,
+        contract_count,
         latest_contract: p.contracts[0] || null,
         tags: p.tags,
         created_at: p.createdAt,
@@ -137,13 +233,37 @@ export async function GET(req: NextRequest) {
         client_company: p.client?.company || null,
         milestone_count,
         completed_milestones,
-        milestones: p.milestones.map((milestone) => ({ id: milestone.id, title: milestone.title, dueDate: milestone.dueDate, completed: milestone.completed }))
       };
     });
 
+    // Counted separately from the page so the filter chips show workspace-wide
+    // totals. Deriving them from the current page would make each chip report
+    // only whatever rows happened to land on it.
+    const [statusGroups, overdueCount] = await Promise.all([
+      prisma.project.groupBy({
+        by: ["status"],
+        where: baseWhere,
+        _count: { _all: true },
+      }),
+      prisma.project.count({
+        where: { ...baseWhere, status: "active", dueDate: { lt: startOfUtcToday() } },
+      }),
+    ]);
+
+    const counts = { all: 0, active: 0, paused: 0, completed: 0, overdue: overdueCount };
+    for (const group of statusGroups) {
+      counts.all += group._count._all;
+      if (group.status === "active" || group.status === "paused" || group.status === "completed") {
+        counts[group.status] = group._count._all;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      projects: formattedProjects
+      projects: formattedProjects,
+      pagination,
+      sort,
+      counts,
     });
   } catch (error: unknown) {
     console.error("Projects fetch error:", error);

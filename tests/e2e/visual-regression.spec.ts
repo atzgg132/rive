@@ -87,9 +87,9 @@ async function mockVisualWorkspace(page: Page, guidance: "completed" | "active" 
         stats: { totalPaid: 5075, totalPending: 825, activeProjects: 3, totalExpenses: 522, netEarnings: 4553 },
         topClients: [], recentActivity: [],
         chartData: [
-          { month: "Mar", revenue: 900, expenses: 120 }, { month: "Apr", revenue: 1350, expenses: 80 },
-          { month: "May", revenue: 1425, expenses: 112 }, { month: "Jun", revenue: 1400, expenses: 90 },
-          { month: "Jul", revenue: 0, expenses: 120 }, { month: "Aug", revenue: 0, expenses: 0 },
+          { month: "Mar 2026", period: "2026-03", revenue: 900, expenses: 120 }, { month: "Apr 2026", period: "2026-04", revenue: 1350, expenses: 80 },
+          { month: "May 2026", period: "2026-05", revenue: 1425, expenses: 112 }, { month: "Jun 2026", period: "2026-06", revenue: 1400, expenses: 90 },
+          { month: "Jul 2026", period: "2026-07", revenue: 0, expenses: 120 }, { month: "Aug 2026", period: "2026-08", revenue: 0, expenses: 0 },
         ],
         activation: {
           goal: "organize", goalLabel: "Organize client work", outcome: "Keep client work, deadlines, and delivery in one place.", startingPath: "quickstart", activationStage: activated ? "activated" : "build", stageLabel: activated ? "Ready to run" : "Build your next useful step",
@@ -219,6 +219,21 @@ for (const { width, height } of [{ width: 1280, height: 800 }, { width: 1024, he
   }
 }
 
+test("financial overview reveals exact month values without a moving tooltip", async ({ page }) => {
+  await prepareVisualPage(page, "light");
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+  const chart = page.getByRole("region", { name: "Paid invoices and expenses" });
+  await expect(chart).toBeVisible({ timeout: 20_000 });
+  await expect(chart.getByText("Jul 2026", { exact: true }).first()).toBeVisible();
+  const april = chart.getByRole("button", { name: /Apr 2026: \$1,350\.00 paid invoice value/ });
+  await april.focus();
+  await expect(april).toHaveAttribute("aria-pressed", "true");
+  await expect(chart.getByText("$1,350.00", { exact: true })).toBeVisible();
+  await expect(chart.getByText("$80.00", { exact: true })).toBeVisible();
+  await expect(chart.getByText("$1,270.00", { exact: true })).toBeVisible();
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`active guidance ${theme} visual`, async ({ page }) => {
     await prepareVisualPage(page, theme, { width: 1440, height: 900 }, "active");
@@ -292,7 +307,20 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page).toHaveScreenshot(`calendar-week-${theme}-1024x768.png`, { fullPage: false, maxDiffPixelRatio: 0.12 });
   });
 
-  test(`portfolio editor ${theme} 1024x768 visual`, async ({ page }) => {
+  /* Screenshot coverage is back on, against baselines regenerated at the end of
+     the studio redesign rather than during it. It was suspended deliberately
+     while the screen was moving — work-first navigation, the worklist above the
+     shell, the template gallery, the publish review — because a baseline
+     rewritten on every commit checks nothing at all.
+
+     Regenerate on the CI runner, never locally: Chromium's Linux font stack
+     rendered the committed images and no developer machine reproduces it. Use
+     the `Regenerate visual baselines` workflow.
+
+     The geometry checks here still run, and the public portfolio renderer —
+     which this redesign does not touch — keeps its own screenshot coverage
+     further down this file. */
+  test(`portfolio editor ${theme} 1024x768 layout`, async ({ page }) => {
     await prepareVisualPage(page, theme, { width: 1024, height: 768 });
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
@@ -309,6 +337,75 @@ for (const theme of ["light", "dark"] as const) {
     expect(Math.max(...copyLefts) - Math.min(...copyLefts)).toBeLessThanOrEqual(1);
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveScreenshot(`portfolio-editor-${theme}-1024x768.png`, { fullPage: false, maxDiffPixelRatio: 0.12 });
+  });
+}
+
+test("portfolio sticky action bar stays flush with the scroll viewport", async ({ page }) => {
+  await prepareVisualPage(page, "light", { width: 1440, height: 900 });
+  await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+  await page.locator("main").evaluate((main) => { main.scrollTop = 520; });
+  const geometry = await page.evaluate(() => {
+    const main = document.querySelector("main")?.getBoundingClientRect();
+    const actions = document.querySelector("[data-portfolio-sticky-actions]")?.getBoundingClientRect();
+    return {
+      actionsTop: actions?.top || 0,
+      mainTop: main?.top || 0,
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    };
+  });
+
+  expect(Math.abs(geometry.actionsTop - geometry.mainTop)).toBeLessThanOrEqual(1);
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+});
+
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
+  test(`portfolio studio avoids viewport-sized bottom whitespace ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await prepareVisualPage(page, "light", viewport);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: "Testimonials" }).click();
+    const editorMetrics = await page.evaluate(() => {
+      const shell = document.querySelector("[data-portfolio-editor-shell]");
+      const shellRect = shell?.getBoundingClientRect();
+      return {
+        shellHeight: shellRect?.height || 0,
+        minHeight: shell ? getComputedStyle(shell).minHeight : "",
+      };
+    });
+    expect(editorMetrics.minHeight).toBe("0px");
+    expect(editorMetrics.shellHeight).toBeLessThan(680);
+
+    /* This used to open the Preview tab and require the frame to stay under
+       75vh, because a tall pane in a normal page flow left a screen of
+       whitespace under it. There is no Preview tab now — the preview is a
+       full-screen layer, where filling the viewport is the point. The concern
+       it was guarding survives in a different form: the layer must fit the
+       screen exactly, never overflow it or add scroll to the page behind. */
+    await page.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: /full-screen portfolio preview/i })).toBeVisible();
+
+    const previewMetrics = await page.evaluate(() => {
+      const frame = document.querySelector('iframe[title$="portfolio preview"]');
+      const rect = frame?.getBoundingClientRect();
+      return {
+        height: rect?.height ?? 0,
+        bottom: rect?.bottom ?? 0,
+        minHeight: frame ? getComputedStyle(frame).minHeight : "",
+        documentScrollHeight: document.documentElement.scrollHeight,
+        clientHeight: document.documentElement.clientHeight,
+      };
+    });
+    expect(previewMetrics.minHeight).toBe("0px");
+    expect(previewMetrics.height, "the overlay frame must have real room").toBeGreaterThan(200);
+    expect(previewMetrics.bottom, "the overlay must not run off the bottom of the screen").toBeLessThanOrEqual(viewport.height + 1);
+    expect(
+      previewMetrics.documentScrollHeight,
+      "a scroll-locked overlay must not leave the page behind it taller than the screen",
+    ).toBeLessThanOrEqual(previewMetrics.clientHeight + 1);
   });
 }
 

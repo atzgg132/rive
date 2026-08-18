@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -25,6 +25,7 @@ import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
+import type { PaginationMeta } from "@/lib/pagination";
 
 interface Client {
   id: string;
@@ -49,6 +50,9 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Drawer & Form state
@@ -70,28 +74,46 @@ export default function ClientsPage() {
 
   const [saving, setSaving] = useState(false);
 
-  const loadClients = async () => {
+  const loadClients = async (signal?: AbortSignal) => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}`);
+      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}&page=${page}&pageSize=${pageSize}`, { signal });
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           setClients(data.clients);
+          // buildPagination clamps an out-of-range page server-side. Without
+          // adopting that clamp the local page counter drifts, and the Next
+          // button then re-requests a page the list is already showing.
+          setPagination(data.pagination || null);
+          if (data.pagination && data.pagination.page !== page) setPage(data.pagination.page);
         }
       }
     } catch (err) {
+      if (signal?.aborted) return;
       console.error("Error loading clients:", err);
       toast.error("Failed to load clients");
     } finally {
-      setLoading(false);
+      // A superseded request must not clear the spinner the live one is using.
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadClients();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPage(1);
   }, [debouncedSearch, status]);
+
+  useEffect(() => {
+    // Changing a filter also resets the page, so two loads are queued in the
+    // same commit. Aborting the superseded one keeps a slow first response
+    // from overwriting the newer page's rows.
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadClients(controller.signal);
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, status, page, pageSize]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -257,7 +279,7 @@ export default function ClientsPage() {
           after="Your projects and invoices can reuse these details."
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
         />
-      ) : (
+      ) : (<>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {clients.map((c) => (
             <div key={c.id} className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-card transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-lg">
@@ -317,7 +339,7 @@ export default function ClientsPage() {
                       <span className="truncate text-xs text-muted-foreground">{c.company || "Private client"}</span>
                     </div>
                   </div>
-                  <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${
+                  <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${
                     c.status === "active" ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800" : "bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border-border dark:border-slate-700"
                   }`}>
                     {c.status}
@@ -328,7 +350,7 @@ export default function ClientsPage() {
                 {c.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {c.tags.map((t, idx) => (
-                      <span key={idx} className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                      <span key={idx} className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground">
                         <Tag className="h-2 w-2" />
                         <span>{t}</span>
                       </span>
@@ -375,7 +397,8 @@ export default function ClientsPage() {
             </div>
           ))}
         </div>
-      )}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="clients" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
+      </>)}
 
       {/* Right Slideout Modal Drawer for adding/editing a Client */}
       {drawerOpen && (

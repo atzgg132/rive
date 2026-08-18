@@ -9,7 +9,10 @@
 
 export const PROJECT_STATUSES = ["active", "paused", "completed", "archived"] as const;
 export const PROJECT_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
-export const INVOICE_STATUSES = ["draft", "sent", "viewed", "paid", "overdue", "cancelled"] as const;
+// `partially_paid` and `voided` are written by the payment and void routes but
+// were missing here, so migration validation rejected them and the importer
+// fell back to "draft" — a voided invoice came back across as an open draft.
+export const INVOICE_STATUSES = ["draft", "sent", "viewed", "partially_paid", "paid", "overdue", "voided", "cancelled"] as const;
 export const CLIENT_STATUSES = ["active", "inactive"] as const;
 export const EXPENSE_CATEGORIES = [
   "software",

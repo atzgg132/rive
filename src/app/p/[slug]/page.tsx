@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { createHash } from "crypto";
 import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { prisma } from "@/utils/db";
 import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
+import { portfolioViewRequestContext, recordPortfolioView } from "@/utils/portfolioViews";
 import { isPortfolioPublished, mergePortfolioContent, DEFAULT_PORTFOLIO_THEME, type PortfolioTheme } from "@/utils/portfolio";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -37,15 +37,15 @@ export default async function PublicPortfolioPage({ params }: Props) {
   const portfolio = await loadPortfolio(slug);
   if (!portfolio) notFound();
 
-  const requestHeaders = await headers();
-  const userAgent = requestHeaders.get("user-agent") || "";
-  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-  const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-  const referrer = requestHeaders.get("referer")?.slice(0, 500) || null;
-  const deviceType = /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop";
+  // Request data is read during render: `headers()` inside `after` throws in a
+  // Server Component, so the values are captured first and passed by closure.
+  const viewContext = portfolioViewRequestContext(await headers());
   after(async () => {
-    await prisma.portfolioView.create({
-      data: { portfolioId: portfolio.id, visitorHash, referrer, deviceType },
+    await recordPortfolioView({
+      ...viewContext,
+      portfolioId: portfolio.id,
+      ownerUserId: portfolio.userId,
+      pageType: "portfolio",
     });
   });
 

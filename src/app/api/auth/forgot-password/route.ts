@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { createAuthToken } from "@/utils/authTokens";
 import { sendPasswordResetEmail } from "@/utils/email";
-import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { getRequestIp } from "@/utils/rateLimit";
+import { durableRateLimit } from "@/utils/durableRateLimit";
+import { hashRequestValue } from "@/utils/contracts";
 
 const genericMessage = "If an account exists for that email, a secure reset link is on its way.";
 
 export async function POST(req: NextRequest) {
   try {
     const ip = getRequestIp(req);
-    if (!rateLimit(`forgot-password:${ip}`, 5, 15 * 60 * 1000)) {
+    // Durable, not process-local: this is public, unauthenticated, and sends
+    // mail, so a counter that empties on every deploy is not a boundary. The
+    // per-address cap that actually bounds how much mail one victim receives
+    // is the `recentTokens` check below, which no header can influence.
+    if (!await durableRateLimit(`forgot-password:${hashRequestValue(ip)}`, 5, 15 * 60 * 1000)) {
       return NextResponse.json({ success: true, message: genericMessage });
     }
 

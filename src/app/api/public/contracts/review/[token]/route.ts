@@ -40,6 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     const comments = await prisma.contractComment.findMany({
       where: { contractId: link!.contractId, versionId: link!.versionId },
       orderBy: { createdAt: "asc" },
+      take: 100,
       select: { id: true, authorRole: true, authorName: true, sectionKey: true, body: true, status: true, resolvedAt: true, createdAt: true },
     });
     return NextResponse.json({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
@@ -7,12 +8,17 @@ import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const tasks = await prisma.task.findMany({
-    where: { userId: session.userId, status: { notIn: ["done", "cancelled"] } },
-    include: { project: { select: { title: true } } },
-    orderBy: [{ scheduledStartAt: "asc" }, { dueDate: "asc" }, { priority: "asc" }],
-  });
-  return NextResponse.json({ success: true, tasks });
+  const where: Prisma.TaskWhereInput = { userId: session.userId, status: { notIn: ["done", "cancelled"] } };
+  const [total, tasks] = await Promise.all([
+    prisma.task.count({ where }),
+    prisma.task.findMany({
+      where,
+      include: { project: { select: { title: true } } },
+      orderBy: [{ scheduledStartAt: "asc" }, { dueDate: "asc" }, { priority: "asc" }, { id: "asc" }],
+      take: 100,
+    }),
+  ]);
+  return NextResponse.json({ success: true, tasks, total, hasMore: total > tasks.length });
 }
 
 export async function POST(req: NextRequest) {

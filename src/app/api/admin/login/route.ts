@@ -12,12 +12,17 @@ const PLACEHOLDER_HASH = "PLACEHOLDER_RUN_node_scripts/setup-admin.mjs";
 
 export async function POST(req: NextRequest) {
   const ip = getRequestIp(req);
-  if (!await durableRateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000)) {
-    return NextResponse.json(
-      { success: false, message: "Too many attempts. Please wait and try again." },
-      { status: 429 }
-    );
-  }
+  const tooManyAttempts = NextResponse.json(
+    { success: false, message: "Too many attempts. Please wait and try again." },
+    { status: 429 },
+  );
+
+  // This endpoint authenticates one fixed account, so a per-IP counter alone
+  // bounds nothing an attacker cannot sidestep by changing address. The global
+  // ceiling is the real limit; the per-IP one only stops a single source from
+  // consuming it. Both have to pass.
+  if (!await durableRateLimit("admin-login:global", 30, 15 * 60 * 1000)) return tooManyAttempts;
+  if (!await durableRateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000)) return tooManyAttempts;
 
   if (!ADMIN_USERNAME || !ADMIN_PASSWORD_HASH || ADMIN_PASSWORD_HASH === PLACEHOLDER_HASH) {
     console.error("Admin credentials not configured. Set ADMIN_USERNAME and ADMIN_PASSWORD_HASH environment variables.");

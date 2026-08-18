@@ -253,7 +253,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
               <RiveLogo height={26} />
             </Link>
-            {!sidebarCollapsed && <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-[11px] font-semibold capitalize text-primary">
+            {!sidebarCollapsed && <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-xs font-semibold capitalize text-primary">
               {user?.plan}
             </span>}
             <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-muted-foreground hover:bg-accent hover:text-foreground ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-border bg-card shadow-sm"}`}>
@@ -337,7 +337,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Search className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate whitespace-nowrap">Search workspace...</span>
               </span>
-              <span className="flex items-center gap-1 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
+              <span className="flex items-center gap-1 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs">
                 {isMac ? (
                   <>
                     <Command className="h-2.5 w-2.5" /> K
@@ -369,10 +369,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {notificationsOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-72 animate-fade-in-up rounded-xl border border-border bg-popover p-4 shadow-overlay">
                   <h4 className="mb-3 text-xs font-semibold text-foreground">Notifications</h4>
-                  <div className="flex flex-col gap-2.5">
-                    {notifications.map(n => (
-                      n.href ? <Link key={n.id} href={n.href} onClick={() => setNotificationsOpen(false)} className="block border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0 hover:text-primary">{n.text}</Link> : <div key={n.id} className="border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0">{n.text}</div>
-                    ))}
+                  <div className="max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain pr-1">
+                    <div className="flex flex-col gap-2.5">
+                      {notifications.map(n => (
+                        n.href ? <Link key={n.id} href={n.href} onClick={() => setNotificationsOpen(false)} className="block border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0 hover:text-primary">{n.text}</Link> : <div key={n.id} className="border-b border-border pb-2.5 text-xs leading-5 text-foreground last:border-none last:pb-0">{n.text}</div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

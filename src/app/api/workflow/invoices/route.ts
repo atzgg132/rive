@@ -6,6 +6,7 @@ import { calculateInvoice } from "@/utils/invoiceMath";
 import { nextInvoiceNumber } from "@/utils/invoiceNumber";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
+import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
 const EDITABLE_INVOICE_STATUSES = new Set(["draft"]);
 const INVOICE_NUMBER_MAX_LENGTH = 80;
@@ -67,10 +68,25 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
+    const invoiceId = searchParams.get("id") || "";
+    const clientId = searchParams.get("clientId") || "";
+    const projectId = searchParams.get("projectId") || "";
+    const includeItems = Boolean(invoiceId);
+    const requestedPagination = parsePagination(searchParams, invoiceId ? { pageSize: 1, minPageSize: 1 } : undefined);
 
     const where: Prisma.InvoiceWhereInput = {
       userId: session.userId
     };
+
+    if (invoiceId) {
+      where.id = invoiceId;
+    }
+    if (clientId) {
+      where.clientId = clientId;
+    }
+    if (projectId) {
+      where.projectId = projectId;
+    }
 
     if (search) {
       where.OR = [
@@ -84,65 +100,72 @@ export async function GET(req: NextRequest) {
       where.status = status;
     }
 
+    const total = await prisma.invoice.count({ where });
+    const pagination = buildPagination(total, requestedPagination);
     const invoices = await prisma.invoice.findMany({
       where,
       include: {
         client: { select: { name: true } },
         project: { select: { title: true } },
-        items: {
-          orderBy: { sortOrder: 'asc' }
-        },
+        ...(includeItems ? { items: { orderBy: { sortOrder: "asc" } } } : {}),
         billingOccurrence: {
           select: { contract: { select: { id: true, title: true } } }
         }
       },
       orderBy: [
         { dueDate: "asc" },
-        { createdAt: "desc" }
-      ]
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
+      skip: paginationOffset(pagination),
+      take: pagination.pageSize,
     });
 
-    const formattedInvoices = invoices.map((i) => ({
-      id: i.id,
-      client_id: i.clientId,
-      project_id: i.projectId,
-      invoice_number: i.invoiceNumber,
-      status: i.status,
-      currency: i.currency,
-      subtotal: i.subtotal.toString(),
-      tax_rate: i.taxRate.toString(),
-      discount_rate: i.discountRate.toString(),
-      discount_amount: i.discountAmount.toString(),
-      tax_amount: i.taxAmount.toString(),
-      total: i.total.toString(),
-      amount_paid: i.amountPaid.toString(),
-      outstanding: i.total.sub(i.amountPaid).toString(),
-      issue_date: i.issueDate,
-      due_date: i.dueDate,
-      paid_date: i.paidDate,
-      sent_at: i.sentAt,
-      reviewed_at: i.reviewedAt,
-      viewed_at: i.viewedAt,
-      voided_at: i.voidedAt,
-      notes: i.notes,
-      created_at: i.createdAt,
-      updated_at: i.updatedAt,
-      client_name: i.client?.name || null,
-      project_title: i.project?.title || null,
-      contract_id: i.billingOccurrence?.contract.id || null,
-      contract_title: i.billingOccurrence?.contract.title || null,
-      items: (i.items || []).map((item) => ({
-        id: item.id,
-        description: item.description,
-        quantity: item.quantity.toString(),
-        unit_price: item.unitPrice.toString(),
-        amount: item.amount.toString()
-      }))
-    }));
+    const formattedInvoices = invoices.map((i) => {
+      const lineItems = "items" in i && Array.isArray(i.items) ? i.items : [];
+      return {
+        id: i.id,
+        client_id: i.clientId,
+        project_id: i.projectId,
+        invoice_number: i.invoiceNumber,
+        status: i.status,
+        currency: i.currency,
+        subtotal: i.subtotal.toString(),
+        tax_rate: i.taxRate.toString(),
+        discount_rate: i.discountRate.toString(),
+        discount_amount: i.discountAmount.toString(),
+        tax_amount: i.taxAmount.toString(),
+        total: i.total.toString(),
+        amount_paid: i.amountPaid.toString(),
+        outstanding: i.total.sub(i.amountPaid).toString(),
+        issue_date: i.issueDate,
+        due_date: i.dueDate,
+        paid_date: i.paidDate,
+        sent_at: i.sentAt,
+        reviewed_at: i.reviewedAt,
+        viewed_at: i.viewedAt,
+        voided_at: i.voidedAt,
+        notes: i.notes,
+        created_at: i.createdAt,
+        updated_at: i.updatedAt,
+        client_name: i.client?.name || null,
+        project_title: i.project?.title || null,
+        contract_id: i.billingOccurrence?.contract.id || null,
+        contract_title: i.billingOccurrence?.contract.title || null,
+        items: lineItems.map((item) => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity.toString(),
+          unit_price: item.unitPrice.toString(),
+          amount: item.amount.toString(),
+        })),
+      };
+    });
 
     return NextResponse.json({
       success: true,
-      invoices: formattedInvoices
+      invoices: formattedInvoices,
+      pagination,
     });
   } catch (error: unknown) {
     console.error("Invoices fetch error:", error);

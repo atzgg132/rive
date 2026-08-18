@@ -305,7 +305,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
           {GUIDE_OPTIONS.map((option) => (
             <Button key={option.id} type="button" variant="ghost" onClick={() => startGuide(option.id)} className="h-auto min-h-11 justify-start gap-3 rounded-xl px-3 py-2.5 text-left">
               <Compass className="h-4 w-4 shrink-0 text-primary" />
-              <span className="min-w-0"><span className="block text-xs font-bold text-foreground">{option.label}</span><span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">{option.description}</span></span>
+              <span className="min-w-0"><span className="block text-xs font-bold text-foreground">{option.label}</span><span className="mt-0.5 block text-xs leading-4 text-muted-foreground">{option.description}</span></span>
             </Button>
           ))}
         </div>
@@ -327,7 +327,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
         style={popoverStyle}
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+          <div className="flex min-w-0 items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-primary">
             <CircleHelp className="h-4 w-4 shrink-0" />
             {activeMode === "manual" ? "Guide" : "A useful next step"}
           </div>

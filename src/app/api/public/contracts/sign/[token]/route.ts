@@ -188,13 +188,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const executedAt = new Date();
       const executed = await transitionContractStatus(tx, { where: { id: link!.contractId }, from: "signing", to: "executed", data: { executedAt, reviewExpiresAt: null } });
       if (executed !== 1) throw new Error("This Agreement was changed or voided before final acceptance was recorded.");
-      const planItems = await tx.contractPaymentPlanItem.findMany({ where: { contractId: link!.contractId }, orderBy: { sequence: "asc" } });
+      const planItems = await tx.contractPaymentPlanItem.findMany({ where: { contractId: link!.contractId }, orderBy: { sequence: "asc" }, take: 25 });
       for (const item of planItems) {
         await tx.contractPaymentPlanItem.update({ where: { id: item.id }, data: { status: "active" } });
         await tx.contractBillingOccurrence.create({ data: { contractId: link!.contractId, paymentPlanItemId: item.id, status: item.triggerType === "on_signing" ? "eligible" : "pending", eligibleAt: item.triggerType === "on_signing" ? executedAt : null } });
       }
       await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, eventType: "contract_executed", metadata: { executedAt: executedAt.toISOString(), signedBy: "client_and_owner" } } });
-       const allSignatures = await tx.contractSignature.findMany({ where: { contractId: link!.contractId, versionId: link!.version!.id }, orderBy: { signedAt: "asc" }, select: { id: true, signerRole: true, signerName: true, signerEmail: true, signatureType: true, consentAccepted: true, consentTextVersion: true, ipHash: true, userAgentHash: true, providerEventId: true, signedAt: true } });
+       const allSignatures = await tx.contractSignature.findMany({ where: { contractId: link!.contractId, versionId: link!.version!.id }, orderBy: { signedAt: "asc" }, take: 10, select: { id: true, signerRole: true, signerName: true, signerEmail: true, signatureType: true, consentAccepted: true, consentTextVersion: true, ipHash: true, userAgentHash: true, providerEventId: true, signedAt: true } });
        const evidence = {
          schemaVersion: 1,
          contractId: link!.contractId,

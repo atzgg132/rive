@@ -119,8 +119,14 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  /* The design tokens are space-separated RGB channels ("245 248 252"), which
+     is what tailwind.config.js consumes as rgb(var(--token) / <alpha-value>).
+     Wrapping them in hsl() instead reads those channels as hue/saturation/
+     lightness: hsl(245 248 252) resolves to pure yellow, and the foreground
+     token resolved to a muddy brown. Both must use rgb() like every other
+     consumer of these variables. */
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
   overflow-x: hidden;
   line-height: 1.6;
   font-weight: 400;
@@ -198,34 +204,13 @@ textarea {
   }
 }
 
-/* Keep dense calendar metadata readable without changing the app-wide type
-   scale. The calendar has several information-dense views, so its former
-   8–10px labels were too small at normal zoom and especially under scaling. */
-.calendar-shell [class~="text-[10px]"] {
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.calendar-shell [class~="text-[9px]"],
-.calendar-shell [class~="text-[8px]"] {
-  font-size: 0.6875rem;
-  line-height: 1.35;
-}
-
-/* Alpha surfaces use compact metadata, but primary navigation, labels, and
-   helper copy should remain readable at the default browser zoom. Keep the
-   adjustment scoped to product workspaces instead of changing marketing pages. */
-.dashboard-overview [class~="text-[10px]"],
-.portfolio-editor-panels [class~="text-[10px]"] {
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.dashboard-overview [class~="text-[9px]"],
-.portfolio-editor-panels [class~="text-[9px]"] {
-  font-size: 0.6875rem;
-  line-height: 1.35;
-}
+/* The type floor used to be enforced here, by overriding what the markup said:
+   a `text-[10px]` class inside `.dashboard-overview`, `.portfolio-editor-panels`
+   or `.calendar-shell` actually rendered at 12px. Two problems with that. It
+   only worked on pages that remembered the wrapper class, so the same component
+   was 10px in one place and 12px in another; and it made the source lie, which
+   is why the sizes drifted in the first place. The markup now says `text-xs`
+   and means it. */
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
@@ -264,6 +249,33 @@ p {
     font-size: 0.6875rem;
     letter-spacing: 0.045em;
     text-transform: none;
+  }
+
+  /* Long tables own a bounded vertical scroll region so their header remains
+     visible while rows move beneath it. `overflow-x-auto` alone creates a
+     scrolling ancestor on both axes and prevents a header from sticking to
+     the page, even when that ancestor never actually scrolls vertically.
+     Opt in per table: matching every `.overflow-x-auto` wrapping a table also
+     caught short admin tables that never scroll and gave their unpadded
+     headers a floating background block. */
+  .table-scroll-region {
+    max-height: min(70vh, 44rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .table-scroll-region > table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .table-scroll-region > table > thead > tr > th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: rgb(var(--muted));
+    box-shadow: inset 0 -1px 0 rgb(var(--border));
   }
 }
 

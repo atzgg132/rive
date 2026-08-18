@@ -14,6 +14,14 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is required.");
 }
 
+/* This script writes synthetic clients, invoices, enquiries, and traffic onto a
+   real account. That is exactly what a development showcase needs and exactly
+   what production must never contain, so the environment is checked rather than
+   trusted to the person typing the command. */
+if (process.env.APP_ENV === "production" || process.env.NODE_ENV === "production") {
+  throw new Error("The freelancer demo seed writes synthetic data and must never run against production.");
+}
+
 const connectionString = process.env.DATABASE_URL
   .replace(/([?&])channel_binding=[^&]*/g, "$1")
   .replace(/[?&]$/, "");
@@ -76,7 +84,14 @@ async function snapshot(userId) {
     prisma.calendarEvent.count({ where: { userId, deletedAt: null } }),
     prisma.portfolio.findUnique({
       where: { userId },
-      select: { id: true, slug: true, status: true, content: true, views: { select: { id: true } } },
+      select: {
+        id: true,
+        slug: true,
+        status: true,
+        content: true,
+        views: { select: { id: true, pageType: true } },
+        inquiries: { select: { id: true, status: true } },
+      },
     }),
   ]);
   const content = portfolio ? portfolioContent(portfolio.content) : null;
@@ -98,6 +113,13 @@ async function snapshot(userId) {
           services: content.services.length,
           testimonials: content.testimonials.length,
           views: portfolio.views.length,
+          portfolioViews: portfolio.views.filter((view) => view.pageType === "portfolio").length,
+          projectViews: portfolio.views.filter((view) => view.pageType === "project").length,
+          inquiries: portfolio.inquiries.length,
+          inquiriesByStatus: portfolio.inquiries.reduce(
+            (counts, inquiry) => ({ ...counts, [inquiry.status]: (counts[inquiry.status] || 0) + 1 }),
+            {},
+          ),
         }
       : null,
   };
@@ -652,7 +674,8 @@ async function seed(user) {
         seo: {
           title: "Arnav Bhattacharya — Web Developer & Product Designer",
           description: "Product design and full-stack web development for SaaS teams, founders, and independent businesses.",
-          indexable: true,
+          // A development showcase must never compete with the real site in search.
+          indexable: false,
         },
       },
       update: {
@@ -661,25 +684,152 @@ async function seed(user) {
         seo: {
           title: "Arnav Bhattacharya — Web Developer & Product Designer",
           description: "Product design and full-stack web development for SaaS teams, founders, and independent businesses.",
-          indexable: true,
+          // A development showcase must never compete with the real site in search.
+          indexable: false,
         },
         revision: { increment: 1 },
       },
     });
 
-    const referrers = ["https://www.google.com", "https://www.linkedin.com", "https://www.rive.work", null];
+    const referrers = ["https://www.google.com", "https://www.linkedin.com", null, "https://news.ycombinator.com"];
     const devices = ["desktop", "mobile", "desktop", "tablet", "mobile"];
+
+    /* Landing-page traffic. Every row is explicitly a portfolio-home view so the
+       Analytics split between the portfolio and its case studies is meaningful
+       rather than an artefact of the default. */
     await transaction.portfolioView.createMany({
       data: Array.from({ length: 96 }, (_, index) => ({
-          id: stableUuid(`portfolio-view:${index}`),
-          portfolioId,
-          visitorHash: `demo-visitor-${index % 41}`,
-          referrer: referrers[index % referrers.length],
-          deviceType: devices[index % devices.length],
-          viewedAt: new Date(at("2026-07-28T18:00:00+05:30").getTime() - (index % 30) * 86400000 - (index % 9) * 3600000),
+        id: stableUuid(`portfolio-view:${index}`),
+        portfolioId,
+        pageType: "portfolio",
+        projectId: null,
+        visitorHash: `demo-visitor-${index % 41}`,
+        referrer: referrers[index % referrers.length],
+        deviceType: devices[index % devices.length],
+        viewedAt: new Date(at("2026-07-28T18:00:00+05:30").getTime() - (index % 30) * 86400000 - (index % 9) * 3600000),
       })),
       skipDuplicates: true,
     });
+
+    /* Case-study traffic, deliberately uneven: the demo is only useful if "top
+       projects" has a real ranking to show, and if one well-read project has no
+       enquiries against it so the unconverted-work callout has something honest
+       to fire on. */
+    const projectTraffic = [
+      { projectId: "demo-rive", views: 54, visitors: 28 },
+      { projectId: "demo-finpilot", views: 31, visitors: 19 },
+      { projectId: "demo-northstar", views: 12, visitors: 9 },
+    ];
+    await transaction.portfolioView.createMany({
+      data: projectTraffic.flatMap(({ projectId, views, visitors }) =>
+        Array.from({ length: views }, (_, index) => ({
+          id: stableUuid(`portfolio-project-view:${projectId}:${index}`),
+          portfolioId,
+          pageType: "project",
+          projectId,
+          visitorHash: `demo-visitor-${projectId}-${index % visitors}`,
+          referrer: referrers[index % referrers.length],
+          deviceType: devices[index % devices.length],
+          viewedAt: new Date(at("2026-07-28T18:00:00+05:30").getTime() - (index % 27) * 86400000 - (index % 7) * 3600000),
+        })),
+      ),
+      skipDuplicates: true,
+    });
+
+    /* Demo enquiries across the whole lifecycle, including one the outbox gave
+       up on, so the "we kept your lead even though the email failed" warning is
+       visible without having to break a mail provider to see it.
+
+       Every message is prefixed and every address sits on example.invalid, a
+       reserved domain that can never receive mail: nobody reading this inbox
+       should be able to mistake a fixture for a real prospective client. */
+    const demoInquiries = [
+      {
+        key: "aanya",
+        name: "Aanya Kulkarni",
+        email: "aanya@example.invalid",
+        projectType: "Product design for a B2B dashboard",
+        message: "We are rebuilding our analytics dashboard and need help making a dense product feel simple. Roughly a ten week engagement starting next month.",
+        status: "new",
+        sourceProjectId: "demo-finpilot",
+        notificationStatus: "sent",
+        daysAgo: 1,
+      },
+      {
+        key: "marcus",
+        name: "Marcus Webb",
+        email: "marcus@example.invalid",
+        projectType: "Marketing site rebuild",
+        message: "Our site does not explain what we do. Looking for positioning, design, and a build we can extend ourselves afterwards.",
+        status: "read",
+        sourceProjectId: "demo-northstar",
+        notificationStatus: "sent",
+        daysAgo: 4,
+      },
+      {
+        key: "priya",
+        name: "Priya Raghavan",
+        email: "priya@example.invalid",
+        projectType: "Full-stack MVP",
+        message: "Early stage, funded, and we need a working product in front of customers this quarter. Keen to talk about scope and sequencing.",
+        status: "replied",
+        sourceProjectId: "demo-rive",
+        notificationStatus: "sent",
+        daysAgo: 9,
+      },
+      {
+        key: "tomas",
+        name: "Tomas Lindqvist",
+        email: "tomas@example.invalid",
+        projectType: "UX audit",
+        message: "We would like a focused audit of our onboarding with prioritised recommendations our team can act on.",
+        status: "archived",
+        sourceProjectId: null,
+        notificationStatus: "failed",
+        notificationError: "Demo fixture: the notification email was not delivered.",
+        daysAgo: 21,
+      },
+      {
+        key: "growth-bot",
+        name: "Growth Partners",
+        email: "offers@example.invalid",
+        projectType: "SEO services",
+        message: "We can get your website to the top of search results this week. Reply for our pricing sheet.",
+        status: "spam",
+        sourceProjectId: null,
+        notificationStatus: "sent",
+        daysAgo: 6,
+      },
+    ];
+
+    const demoNow = at("2026-07-28T18:00:00+05:30").getTime();
+    for (const inquiry of demoInquiries) {
+      const createdAt = new Date(demoNow - inquiry.daysAgo * 86400000);
+      const id = stableUuid(`portfolio-inquiry:${inquiry.key}`);
+      const data = {
+        portfolioId,
+        userId: user.id,
+        sourceProjectId: inquiry.sourceProjectId,
+        name: inquiry.name,
+        email: inquiry.email,
+        projectType: inquiry.projectType,
+        message: `[Demo enquiry — synthetic sample data] ${inquiry.message}`,
+        status: inquiry.status,
+        notificationStatus: inquiry.notificationStatus,
+        notificationError: inquiry.notificationError || null,
+        // No outbox job: these were never really sent, and correlating them to
+        // one would make the retry worker act on a fixture.
+        outboxId: null,
+        visitorHash: `demo-visitor-inquiry-${inquiry.key}`,
+        referrer: referrers[inquiry.key.length % referrers.length],
+        deviceType: devices[inquiry.key.length % devices.length],
+        createdAt,
+        readAt: inquiry.status === "new" ? null : createdAt,
+        repliedAt: inquiry.status === "replied" ? new Date(createdAt.getTime() + 7200000) : null,
+        archivedAt: ["archived", "spam"].includes(inquiry.status) ? new Date(createdAt.getTime() + 86400000) : null,
+      };
+      await transaction.portfolioInquiry.upsert({ where: { id }, create: { id, ...data }, update: data });
+    }
   }, { timeout: 60000 });
 }
 

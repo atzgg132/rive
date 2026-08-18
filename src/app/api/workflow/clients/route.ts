@@ -4,6 +4,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
 // GET /api/workflow/clients
 export async function GET(req: NextRequest) {
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "all";
+    const mode = searchParams.get("mode") || "list";
 
     // Build Prisma query filters
     const where: Prisma.ClientWhereInput = {
@@ -34,33 +36,84 @@ export async function GET(req: NextRequest) {
       where.status = status;
     }
 
-    // Load clients including aggregations
+    if (mode === "options") {
+      const optionLimit = parsePagination(searchParams, { pageSize: 100, maxPageSize: 100 }).pageSize;
+      const [optionTotal, options] = await Promise.all([
+        prisma.client.count({ where }),
+        prisma.client.findMany({
+          where,
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          take: optionLimit,
+          select: { id: true, name: true, email: true, company: true, address: true, status: true },
+        }),
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        clients: options,
+        options: { limit: optionLimit, total: optionTotal, hasMore: optionTotal > optionLimit },
+      });
+    }
+
+    const requestedPagination = parsePagination(searchParams);
+    const total = await prisma.client.count({ where });
+    const pagination = buildPagination(total, requestedPagination);
     const clients = await prisma.client.findMany({
       where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        projects: {
-          where: { status: { not: "archived" } },
-          select: { id: true }
-        },
-        invoices: {
-          where: { status: "paid" },
-          select: { total: true, currency: true }
-        },
-        contracts: {
-          select: { id: true }
-        }
-      }
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: paginationOffset(pagination),
+      take: pagination.pageSize,
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        email: true,
+        phone: true,
+        company: true,
+        website: true,
+        address: true,
+        avatarColor: true,
+        notes: true,
+        tags: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
-    // Format output to match client requirements (including counts and sums)
+    const clientIds = clients.map((client) => client.id);
+    const [projectCounts, contractCounts, paidRevenue] = clientIds.length ? await Promise.all([
+      prisma.project.groupBy({
+        by: ["clientId"],
+        where: { userId: session.userId, clientId: { in: clientIds }, status: { not: "archived" } },
+        _count: { _all: true },
+      }),
+      prisma.contract.groupBy({
+        by: ["clientId"],
+        where: { userId: session.userId, clientId: { in: clientIds } },
+        _count: { _all: true },
+      }),
+      prisma.invoice.groupBy({
+        by: ["clientId", "currency"],
+        where: { userId: session.userId, clientId: { in: clientIds }, status: "paid" },
+        _sum: { total: true },
+      }),
+    ]) : [[], [], []];
+
+    const projectCountByClient = new Map(projectCounts.map((row) => [row.clientId, row._count._all]));
+    const contractCountByClient = new Map(contractCounts.map((row) => [row.clientId, row._count._all]));
+    const revenueByClient = new Map<string, { total: number; byCurrency: Record<string, number> }>();
+    for (const row of paidRevenue) {
+      if (!row.clientId) continue;
+      const current = revenueByClient.get(row.clientId) || { total: 0, byCurrency: {} };
+      const amount = Number(row._sum.total || 0);
+      current.total += amount;
+      current.byCurrency[row.currency] = (current.byCurrency[row.currency] || 0) + amount;
+      revenueByClient.set(row.clientId, current);
+    }
+
     const formattedClients = clients.map((c) => {
-      const project_count = c.projects.length;
-      const total_revenue = c.invoices.reduce((sum, inv) => sum + Number(inv.total), 0);
-      const revenue_by_currency = c.invoices.reduce<Record<string, number>>((totals, invoice) => {
-        totals[invoice.currency] = (totals[invoice.currency] || 0) + Number(invoice.total);
-        return totals;
-      }, {});
+      const revenue = revenueByClient.get(c.id) || { total: 0, byCurrency: {} };
       
       return {
         id: c.id,
@@ -77,16 +130,17 @@ export async function GET(req: NextRequest) {
         status: c.status,
         created_at: c.createdAt,
         updated_at: c.updatedAt,
-        project_count,
-        total_revenue,
-        revenue_by_currency,
-        contract_count: c.contracts.length,
+        project_count: projectCountByClient.get(c.id) || 0,
+        total_revenue: revenue.total,
+        revenue_by_currency: revenue.byCurrency,
+        contract_count: contractCountByClient.get(c.id) || 0,
       };
     });
 
     return NextResponse.json({
       success: true,
-      clients: formattedClients
+      clients: formattedClients,
+      pagination,
     });
   } catch (error: unknown) {
     console.error("Clients fetch error:", error);

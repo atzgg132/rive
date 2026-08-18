@@ -1,21 +1,34 @@
-import { createHash } from "crypto";
 import type { Metadata } from "next";
+import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import PortfolioCaseStudy from "@/components/portfolio/PortfolioCaseStudy";
 import { prisma } from "@/utils/db";
-import { DEFAULT_PORTFOLIO_THEME, isPortfolioPublished, mergePortfolioContent, type PortfolioTheme } from "@/utils/portfolio";
+import { portfolioViewRequestContext, recordPortfolioView } from "@/utils/portfolioViews";
+import { DEFAULT_PORTFOLIO_THEME, getPublicPortfolioContent, isPortfolioPublished, type PortfolioTheme } from "@/utils/portfolio";
 
 type Props = { params: Promise<{ slug: string; projectId: string }> };
 
-async function loadCaseStudy(slug: string, projectId: string) {
+/* Matches the portfolio and practice pages, which both declare this and both
+   record views correctly. Without it this route was the odd one out: `after`
+   is explicitly not a request-time API, so on a route Next is free to treat as
+   prerenderable the callback can run at build time rather than per visit —
+   which is exactly the shape of "case-study views are never counted". */
+export const dynamic = "force-dynamic";
+
+/* Cached per request so `generateMetadata` and the page share one query rather
+   than reading the portfolio twice, matching the sibling routes. */
+const loadCaseStudy = cache(async (slug: string, projectId: string) => {
   const portfolio = await prisma.portfolio.findUnique({ where: { slug } });
   if (!portfolio || !isPortfolioPublished(portfolio.status)) return null;
-  const content = mergePortfolioContent(portfolio.content);
-  const project = content.projects.find((item) => item.id === projectId && item.visibility !== "private");
+  /* Public content already excludes private projects and anything belonging to
+     a hidden practice, so a direct case-study URL cannot reach either. */
+  const content = getPublicPortfolioContent(portfolio.content);
+  const project = content.projects.find((item) => item.id === projectId);
   if (!project) return null;
   return { portfolio, content, project };
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, projectId } = await params;
@@ -29,7 +42,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${project.title} · ${content.name}`,
       description: project.description || project.outcome || `A project by ${content.name}.`,
       type: "article",
-      images: project.imageUrl && /^https?:\/\//i.test(project.imageUrl) ? [{ url: project.imageUrl, alt: project.title }] : undefined,
+      // HTTPS only, matching what the content validator now accepts. Scrapers
+      // drop an http:// og:image anyway, so emitting one only produces a card
+      // with a broken preview.
+      images: project.imageUrl && /^https:\/\//i.test(project.imageUrl) ? [{ url: project.imageUrl, alt: project.title }] : undefined,
     },
   };
 }
@@ -39,17 +55,19 @@ export default async function PortfolioCaseStudyPage({ params }: Props) {
   const result = await loadCaseStudy(slug, projectId);
   if (!result) notFound();
 
-  const requestHeaders = await headers();
-  const userAgent = requestHeaders.get("user-agent") || "";
-  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-  const visitorHash = createHash("sha256").update(`${ip}:${userAgent}:${new Date().toISOString().slice(0, 10)}`).digest("hex");
-  await prisma.portfolioView.create({
-    data: {
+  /* Attributed to the project so per-case-study interest is measurable. The id
+     is the one inside the portfolio content, which is what makes the figure
+     survive a later rename — and `after` keeps the reader from waiting on a
+     write that used to block this page's response. */
+  const viewContext = portfolioViewRequestContext(await headers());
+  after(async () => {
+    await recordPortfolioView({
+      ...viewContext,
       portfolioId: result.portfolio.id,
-      visitorHash,
-      referrer: requestHeaders.get("referer")?.slice(0, 500) || null,
-      deviceType: /mobile|android|iphone|ipad/i.test(userAgent) ? "mobile" : /tablet/i.test(userAgent) ? "tablet" : "desktop",
-    },
+      ownerUserId: result.portfolio.userId,
+      pageType: "project",
+      projectId: result.project.id,
+    });
   });
 
   const theme = (result.portfolio.theme && typeof result.portfolio.theme === "object" ? result.portfolio.theme : DEFAULT_PORTFOLIO_THEME) as PortfolioTheme;

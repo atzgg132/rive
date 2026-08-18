@@ -25,13 +25,13 @@ async function getOwnedContract(userId: string, id: string) {
     where: { id, userId },
     include: {
       client: { select: { id: true, name: true, email: true, company: true, address: true } },
-      project: { select: { id: true, title: true, currency: true, description: true, milestones: { orderBy: { dueDate: "asc" }, select: { id: true, title: true, dueDate: true, completed: true } } } },
-      versions: { orderBy: { version: "desc" }, include: { artifacts: { orderBy: { generatedAt: "desc" }, take: 5 } } },
-      signers: { orderBy: { sequence: "asc" }, include: { signatures: { orderBy: { signedAt: "desc" }, select: { id: true, versionId: true, signerRole: true, signerName: true, signerEmail: true, consentAccepted: true, consentTextVersion: true, signedAt: true, providerEventId: true } } } },
-      reviewLinks: { orderBy: { createdAt: "desc" }, select: { id: true, type: true, versionId: true, expiresAt: true, revokedAt: true, createdAt: true } },
-      comments: { orderBy: { createdAt: "asc" }, select: { id: true, versionId: true, authorRole: true, authorName: true, authorEmail: true, sectionKey: true, body: true, status: true, resolvedAt: true, createdAt: true } },
+      project: { select: { id: true, title: true, currency: true, description: true, milestones: { orderBy: { dueDate: "asc" }, take: 100, select: { id: true, title: true, dueDate: true, completed: true } } } },
+      versions: { orderBy: { version: "desc" }, take: 50, include: { artifacts: { orderBy: { generatedAt: "desc" }, take: 5 } } },
+      signers: { orderBy: { sequence: "asc" }, include: { signatures: { orderBy: { signedAt: "desc" }, take: 50, select: { id: true, versionId: true, signerRole: true, signerName: true, signerEmail: true, consentAccepted: true, consentTextVersion: true, signedAt: true, providerEventId: true } } } },
+      reviewLinks: { orderBy: { createdAt: "desc" }, take: 50, select: { id: true, type: true, versionId: true, expiresAt: true, revokedAt: true, createdAt: true } },
+      comments: { orderBy: { createdAt: "asc" }, take: 50, select: { id: true, versionId: true, authorRole: true, authorName: true, authorEmail: true, sectionKey: true, body: true, status: true, resolvedAt: true, createdAt: true } },
       events: { orderBy: { createdAt: "desc" }, take: 100, select: { id: true, versionId: true, eventType: true, metadata: true, createdAt: true } },
-      paymentPlanItems: { orderBy: { sequence: "asc" }, include: { milestone: { select: { id: true, title: true, dueDate: true, completed: true } }, occurrence: { include: { invoice: { select: { id: true, invoiceNumber: true, status: true, total: true } } } } } },
+      paymentPlanItems: { orderBy: { sequence: "asc" }, take: 25, include: { milestone: { select: { id: true, title: true, dueDate: true, completed: true } }, occurrence: { include: { invoice: { select: { id: true, invoiceNumber: true, status: true, total: true } } } } } },
     },
   });
 }

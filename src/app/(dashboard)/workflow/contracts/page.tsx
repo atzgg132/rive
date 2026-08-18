@@ -5,7 +5,7 @@ import {
   type ContractComposerClient,
   type ContractComposerProject,
 } from "@/components/contracts/ContractComposer";
-import { Badge, Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, PaginationControls, Select } from "@/components/ui";
 import {
   AlertTriangle,
   ArrowRight,
@@ -21,9 +21,11 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { PaginationMeta } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type ContractListItem = {
   id: string;
@@ -43,6 +45,9 @@ type ContractListItem = {
 type ProjectListItem = ContractComposerProject & {
   contract_coverage?: "undecided" | "rive" | "external" | "none";
 };
+
+type SourceContract = { id: string; title: string; client: { name: string } };
+type ContractSummary = { action: number; review: number; signing: number; executed: number };
 
 const statusMeta: Record<string, { label: string; description: string; badge: "default" | "secondary" | "outline" | "success" | "warning" | "destructive" }> = {
   draft: { label: "Draft", description: "Finish the terms, then share for review.", badge: "secondary" },
@@ -79,65 +84,128 @@ function nextAction(contract: ContractListItem): string {
   return "View record";
 }
 
+// useSearchParams needs a suspense boundary for this route to keep its static
+// shell; the inner component owns every query-driven piece of state.
 export default function ContractsPage() {
+  return (
+    <Suspense fallback={<div className="workspace-page min-h-[calc(100vh-8rem)]" />}>
+      <ContractsWorkspace />
+    </Suspense>
+  );
+}
+
+function ContractsWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryConsumed = useRef(false);
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
+  const [sourceContracts, setSourceContracts] = useState<SourceContract[]>([]);
   const [clients, setClients] = useState<ContractComposerClient[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [filter, setFilter] = useState("all");
+  // Read from the live query string. A useState initializer only runs on mount,
+  // so arriving here from an in-app link that only changes the query left the
+  // filter stuck at its previous value.
+  const clientFilter = searchParams.get("clientId") || "";
+  const projectFilter = searchParams.get("projectId") || "";
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [summary, setSummary] = useState<ContractSummary | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [initialClientId, setInitialClientId] = useState("");
   const [initialProjectId, setInitialProjectId] = useState("");
 
-  const load = async () => {
+  const load = async (signal?: AbortSignal) => {
     setLoading(true);
     setLoadError("");
     try {
-      const [contractResponse, clientResponse, projectResponse] = await Promise.all([
-        fetch("/api/workflow/contracts", { cache: "no-store" }),
-        fetch("/api/workflow/clients", { cache: "no-store" }),
-        fetch("/api/workflow/projects", { cache: "no-store" }),
-      ]);
-      const [contractData, clientData, projectData] = await Promise.all([
-        contractResponse.json(),
-        clientResponse.json(),
-        projectResponse.json(),
-      ]);
+      const selectedFilter = filters.find((item) => item.value === filter);
+      const statusParam = selectedFilter?.statuses?.join(",") || "all";
+      const contractResponse = await fetch(`/api/workflow/contracts?search=${encodeURIComponent(debouncedSearch.trim())}&status=${encodeURIComponent(statusParam)}&clientId=${encodeURIComponent(clientFilter)}&projectId=${encodeURIComponent(projectFilter)}&page=${page}&pageSize=${pageSize}`, { cache: "no-store", signal });
+      const contractData = await contractResponse.json();
       if (!contractResponse.ok || !contractData.success) throw new Error(contractData.message || "Unable to load Agreements.");
-      if (!clientResponse.ok || !clientData.success) throw new Error(clientData.message || "Unable to load clients.");
-      if (!projectResponse.ok || !projectData.success) throw new Error(projectData.message || "Unable to load projects.");
       setContracts(contractData.contracts);
-      setClients(clientData.clients.map((client: ContractComposerClient) => ({
-        id: client.id,
-        name: client.name,
-        email: client.email || null,
-        company: client.company || null,
-        address: client.address || null,
-        status: client.status,
-      })));
-      setProjects(projectData.projects.map((project: ProjectListItem) => ({
-        ...project,
-        budget: project.budget || null,
-        milestones: project.milestones || [],
-      })));
+      // buildPagination clamps an out-of-range page server-side. Without
+      // adopting that clamp the local page counter drifts, and the Next
+      // button then re-requests a page the list is already showing.
+      setPagination(contractData.pagination || null);
+      if (contractData.pagination && contractData.pagination.page !== page) setPage(contractData.pagination.page);
+      setSummary(contractData.summary || null);
     } catch (error) {
+      if (signal?.aborted) return;
       const message = error instanceof Error ? error.message : "Unable to load the Agreements workspace.";
       setLoadError(message);
       toast.error(message);
     } finally {
-      setLoading(false);
+      // A superseded request must not clear the spinner the live one is using.
+      if (!signal?.aborted) setLoading(false);
+    }
+  };
+
+  // The composer pickers do not vary with the list query, so they are fetched
+  // once instead of on every keystroke and every page change.
+  const loadComposerOptions = async () => {
+    try {
+      const [clientResponse, projectResponse, sourceContractResponse] = await Promise.all([
+        fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
+        fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
+        fetch("/api/workflow/contracts?mode=options&pageSize=100", { cache: "no-store" }),
+      ]);
+      const [clientData, projectData, sourceContractData] = await Promise.all([
+        clientResponse.json(),
+        projectResponse.json(),
+        sourceContractResponse.json(),
+      ]);
+      if (clientResponse.ok && clientData.success) {
+        setClients(clientData.clients.map((client: ContractComposerClient) => ({
+          id: client.id,
+          name: client.name,
+          email: client.email || null,
+          company: client.company || null,
+          address: client.address || null,
+          status: client.status,
+        })));
+      }
+      if (projectResponse.ok && projectData.success) {
+        setProjects(projectData.projects.map((project: ProjectListItem) => ({
+          ...project,
+          budget: project.budget || null,
+          milestones: project.milestones || [],
+        })));
+      }
+      if (sourceContractResponse.ok && sourceContractData.success) {
+        setSourceContracts(sourceContractData.contracts || []);
+      }
+    } catch {
+      // The composer falls back to empty pickers; the list itself still loads.
     }
   };
 
   useEffect(() => {
-    // Initial client-side workspace hydration.
+    // Changing a filter also resets the page, so two loads are queued in the
+    // same commit. Aborting the superseded one keeps a slow first response
+    // from overwriting the newer page rows.
+    const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
+    void load(controller.signal);
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedSearch, filter, clientFilter, projectFilter]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadComposerOptions();
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [debouncedSearch, filter]);
 
   useEffect(() => {
     if (loading || queryConsumed.current || typeof window === "undefined") return;
@@ -171,12 +239,13 @@ export default function ContractsPage() {
     });
   }, [contracts, filter, search]);
 
-  const counts = useMemo(() => ({
+  const calculatedCounts = useMemo(() => ({
     action: contracts.filter((contract) => ["draft", "ready_to_sign", "declined", "expired"].includes(contract.status) || (contract.status === "signing" && contract.signers.find((signer) => signer.role === "owner")?.status !== "signed" && contract.signers.find((signer) => signer.role === "client")?.status === "signed")).length,
     review: contracts.filter((contract) => contract.status === "in_review").length,
     signing: contracts.filter((contract) => ["ready_to_sign", "starting", "signing"].includes(contract.status)).length,
     executed: contracts.filter((contract) => contract.status === "executed").length,
   }), [contracts]);
+  const counts = summary || calculatedCounts;
 
   const uncoveredProjects = useMemo(() => projects.filter((project) => !project.contract_coverage || project.contract_coverage === "undecided"), [projects]);
 
@@ -247,7 +316,7 @@ export default function ContractsPage() {
         )
       ) : filteredContracts.length === 0 ? (
         <EmptyState icon={<Search className="h-5 w-5" />} title="No Agreements match" description="Try a different search or stage filter." action={<Button variant="outline" onClick={() => { setSearch(""); setFilter("all"); }}>Clear filters</Button>} />
-      ) : (
+      ) : (<>
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredContracts.map((contract) => {
             const meta = statusMeta[contract.status] || { label: contract.status, description: "Open the Agreement record.", badge: "outline" as const };
@@ -261,7 +330,7 @@ export default function ContractsPage() {
                       <div className="min-w-0"><h2 className="truncate text-base font-extrabold group-hover:text-primary">{contract.title}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{contract.client.name}{contract.project ? ` · ${contract.project.title}` : " · Standalone agreement"}</p></div>
                       <Badge variant={meta.badge}>{meta.label}</Badge>
                     </div>
-                    <div className="rounded-xl bg-muted/45 px-3 py-2.5"><p className="text-xs font-bold">{nextAction(contract)}</p><p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{meta.description}</p></div>
+                    <div className="rounded-xl bg-muted/45 px-3 py-2.5"><p className="text-xs font-bold">{nextAction(contract)}</p><p className="mt-0.5 text-xs leading-4 text-muted-foreground">{meta.description}</p></div>
                     <div className="mt-auto grid grid-cols-3 gap-3 border-t border-border pt-4 text-xs">
                       <Metric icon={Users} value={`${signedCount}/2`} label="accepted" />
                       <Metric icon={Clock3} value={`v${contract.current_version?.version || 1}`} label={new Date(contract.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
@@ -274,14 +343,15 @@ export default function ContractsPage() {
             );
           })}
         </div>
-      )}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="Agreements" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
+      </>)}
 
       <ContractComposer
         open={composerOpen}
         onOpenChange={setComposerOpen}
         clients={clients}
         projects={projects}
-        sourceContracts={contracts.map((contract) => ({ id: contract.id, title: contract.title, client: { name: contract.client.name } }))}
+        sourceContracts={sourceContracts}
         initialClientId={initialClientId}
         initialProjectId={initialProjectId}
         onCreated={(contractId) => router.push(`/workflow/contracts/${contractId}`)}
@@ -297,9 +367,9 @@ function SummaryCard({ icon: Icon, label, value, tone }: { icon: typeof FileSign
     blue: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
     green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   };
-  return <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-[11px] font-medium text-muted-foreground">{label}</p></div></div>;
+  return <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p></div></div>;
 }
 
 function Metric({ icon: Icon, value, label }: { icon: typeof Users; value: string; label: string }) {
-  return <div className="min-w-0"><p className="flex items-center gap-1.5 truncate font-bold"><Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{value}</p><p className="mt-0.5 truncate text-[10px] text-muted-foreground">{label}</p></div>;
+  return <div className="min-w-0"><p className="flex items-center gap-1.5 truncate font-bold"><Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{label}</p></div>;
 }

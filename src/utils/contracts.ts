@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { buildContractStatusUpdate, type ContractStatus } from "@/utils/contractStatus";
+import { getRequestIp } from "@/utils/rateLimit";
 
 export {
   assertValidStatusTransition,
@@ -229,13 +230,10 @@ function getContractHashSecret(): string {
   return "rive-contract-development-only-salt";
 }
 
-export function getRequestIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
+// Re-exported rather than reimplemented. This used to be a second copy of the
+// same logic, which meant a fix to how the client address is derived could land
+// in one file and silently miss every caller of the other.
+export { getRequestIp };
 
 export function getRequestId(request: Request): string {
   const candidate = request.headers.get("x-request-id")?.trim() || "";

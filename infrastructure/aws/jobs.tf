@@ -84,6 +84,20 @@ locals {
         { environment = "dev", path = "/api/cron/funnel-quality" },
       ]
     }
+    # Reclaims abandoned uploads and media no portfolio references any more.
+    # Without this, deleted projects leave their objects billable forever.
+    #
+    # Hourly, not daily: a pending reservation counts against its owner's quota
+    # until it is swept, so the sweep interval is also the longest an honest
+    # user can be held out of their own storage after a failed transfer, and
+    # the longest uploaded-but-unconfirmed bytes can sit uncharged.
+    portfolio_assets = {
+      expression = "rate(1 hour)"
+      targets = [
+        { environment = "prod", path = "/api/cron/portfolio-assets" },
+        { environment = "dev", path = "/api/cron/portfolio-assets" },
+      ]
+    }
   }
 }
 

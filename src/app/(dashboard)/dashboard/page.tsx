@@ -296,12 +296,12 @@ export default function DashboardOverview() {
                 return (
                   <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border border-border dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 transition-all bg-white dark:bg-slate-800">
                     <div className="flex items-center gap-3">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border uppercase tracking-wide ${badgeColor}`}>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-lg border uppercase tracking-wide ${badgeColor}`}>
                         {a.type.replace("_", " ")}
                       </span>
                       <span className="text-sm font-semibold text-foreground dark:text-white">{a.title}</span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground dark:text-slate-500">
+                    <span className="text-xs text-muted-foreground dark:text-slate-500">
                       {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
@@ -340,7 +340,7 @@ export default function DashboardOverview() {
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs font-bold text-foreground dark:text-white">{client.name}</span>
-                      <span className="text-[10px] text-muted-foreground dark:text-slate-500">{client.company || "Independent client"}</span>
+                      <span className="text-xs text-muted-foreground dark:text-slate-500">{client.company || "Independent client"}</span>
                     </div>
                   </div>
                   <span className="text-xs font-extrabold text-[#10B981]">

@@ -77,6 +77,7 @@ export function createPrismaMock() {
     expense: [],
     migrationEvent: [],
     user: [],
+    portfolioInquiry: [],
   };
 
   let failOnCall = -1; // -1 = never; 0 = first $transaction call; 1 = second
@@ -248,6 +249,33 @@ export function createPrismaMock() {
       async findUnique({ where }) {
         const user = db.user.find((u) => u.id === where.id);
         return user ? { ...user } : null;
+      },
+    },
+
+    /* Enough of the enquiry table to drive notification settlement, which is
+       the one piece of that flow the outbox worker reaches into. Correlation is
+       by outboxId, so that is the only filter modelled. */
+    portfolioInquiry: {
+      async create({ data, select }) {
+        const created = row("portfolioInquiry", {
+          status: "new",
+          notificationStatus: "queued",
+          notificationError: null,
+          ...data,
+        });
+        db.portfolioInquiry.push(created);
+        return pick(created, select);
+      },
+      async findMany({ where, select } = {}) {
+        let list = [...db.portfolioInquiry];
+        if (where?.outboxId) list = list.filter((i) => i.outboxId === where.outboxId);
+        return list.map((i) => pick(i, select));
+      },
+      async updateMany({ where, data }) {
+        let list = [...db.portfolioInquiry];
+        if (where?.outboxId) list = list.filter((i) => i.outboxId === where.outboxId);
+        for (const inquiry of list) Object.assign(inquiry, data);
+        return { count: list.length };
       },
     },
   };

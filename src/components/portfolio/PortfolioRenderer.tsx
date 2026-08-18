@@ -1,12 +1,21 @@
 import { ArrowUpRight, Check, MapPin, Play, Quote, Sparkles } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import type {
-  PortfolioContent,
-  PortfolioProject,
-  PortfolioService,
-  PortfolioTheme,
+import Link from "next/link";
+import {
+  belongsToPractice,
+  getVisiblePractices,
+  resolveProjectCoverImage,
+  resolveProjectPlayableCover,
+  templateEyebrow,
+  type PortfolioContent,
+  type PortfolioMediaSettings,
+  type PortfolioPractice,
+  type PortfolioProject,
+  type PortfolioService,
+  type PortfolioTheme,
 } from "@/utils/portfolio";
 import PortfolioInquiryForm from "@/components/portfolio/PortfolioInquiryForm";
+import PortfolioMediaBlock from "@/components/portfolio/media/PortfolioMediaBlock";
 
 /* Portfolio owners can supply validated data URLs and arbitrary HTTPS image hosts. */
 /* eslint-disable @next/next/no-img-element */
@@ -17,10 +26,11 @@ type Props = {
   templateKey: string;
   portfolioSlug?: string;
   preview?: boolean;
+  /** Set when viewing a single practice at /p/[slug]/[practiceSlug]. */
+  activePracticeSlug?: string;
 };
 
 type TemplateProfile = {
-  eyebrow: string;
   workTitle: string;
   servicesTitle: string;
   heroClass: string;
@@ -28,11 +38,17 @@ type TemplateProfile = {
   projectsClass: string;
   visual: boolean;
   numbered: boolean;
+  /** Creator work reads as something to watch, so its card affordance is a play
+   *  triangle rather than an arrow. This used to be decided by comparing the
+   *  eyebrow copy to the string "Creator portfolio" — which meant editing that
+   *  line, as owners now can, would silently swap the icon on every card. */
+  playIcon?: boolean;
 };
 
+/** The hero tagline lives in `PORTFOLIO_TEMPLATES` — it is owner-editable, so it
+ *  belongs with the template's public identity rather than its layout classes. */
 const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
   "minimal-pro": {
-    eyebrow: "Independent practice",
     workTitle: "A considered selection of work.",
     servicesTitle: "How I create value.",
     heroClass: "lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]",
@@ -42,7 +58,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: true,
   },
   "visual-studio": {
-    eyebrow: "Selected visual practice",
     workTitle: "Stories, frames, and finished work.",
     servicesTitle: "Creative capabilities.",
     heroClass: "lg:grid-cols-[minmax(0,0.8fr)_minmax(420px,1.2fr)]",
@@ -52,7 +67,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: false,
   },
   "digital-builder": {
-    eyebrow: "Designing and shipping",
     workTitle: "Products built to perform.",
     servicesTitle: "From idea to shipped outcome.",
     heroClass: "lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]",
@@ -62,7 +76,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: true,
   },
   "expert-profile": {
-    eyebrow: "Independent expertise",
     workTitle: "Experience applied to real outcomes.",
     servicesTitle: "Ways I can support you.",
     heroClass: "lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]",
@@ -72,7 +85,6 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     numbered: false,
   },
   creator: {
-    eyebrow: "Creator portfolio",
     workTitle: "Worth watching, reading, and sharing.",
     servicesTitle: "Ways we can collaborate.",
     heroClass: "lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)]",
@@ -80,9 +92,9 @@ const TEMPLATE_PROFILES: Record<string, TemplateProfile> = {
     projectsClass: "md:grid-cols-2 lg:grid-cols-12",
     visual: true,
     numbered: false,
+    playIcon: true,
   },
   agency: {
-    eyebrow: "Independent studio",
     workTitle: "Partnerships with measurable impact.",
     servicesTitle: "A focused team for ambitious work.",
     heroClass: "lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]",
@@ -126,19 +138,102 @@ function SectionHeading({
   );
 }
 
+function ProjectLink({
+  href,
+  external,
+  label,
+  className,
+  children,
+}: {
+  href: string;
+  external: boolean;
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noreferrer" aria-label={label} className={className}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} aria-label={label} className={className}>
+      {children}
+    </Link>
+  );
+}
+
+/** Tabs across a portfolio's disciplines. Only rendered when there is more
+ *  than one, so a single-practice portfolio looks exactly as it always has. */
+function PracticeSwitcher({
+  practices,
+  activeSlug,
+  portfolioSlug,
+  separate,
+}: {
+  practices: PortfolioPractice[];
+  activeSlug?: string;
+  portfolioSlug?: string;
+  separate: boolean;
+}) {
+  const linkFor = (slug?: string) => {
+    if (!portfolioSlug || !separate) return slug ? `#practice-${slug}` : "#work";
+    return slug ? `/p/${portfolioSlug}/${slug}` : `/p/${portfolioSlug}`;
+  };
+  const pill = (active: boolean) =>
+    `inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-extrabold transition ${
+      active
+        ? "border-transparent bg-[var(--portfolio-accent)] text-white shadow-sm"
+        : "border-[var(--portfolio-border)] bg-[var(--portfolio-card)] text-[var(--portfolio-ink)] hover:border-[var(--portfolio-accent)]"
+    }`;
+
+  return (
+    <nav aria-label="Practices" className="flex flex-wrap gap-2">
+      <a href={linkFor()} className={pill(!activeSlug)}>Everything</a>
+      {practices.map((practice) => (
+        <a key={practice.id} href={linkFor(practice.slug)} className={pill(activeSlug === practice.slug)}>
+          {practice.name}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 function ProjectCard({
   project,
   index,
   profile,
   portfolioSlug,
+  mediaSettings,
 }: {
   project: PortfolioProject;
   index: number;
   profile: TemplateProfile;
   portfolioSlug?: string;
+  mediaSettings: PortfolioMediaSettings;
 }) {
   const projectUrl = safeExternalUrl(project.url);
+  const projectMedia = (project.media || []).filter((item) => item.url);
+  /* A still wins the cover slot whenever the project has one — the owner's own
+     cover first, then a photo from its media. Only when there is no photo at
+     all does one representative player earn the slot; the rest live on the case
+     study so the grid does not turn into a wall of media.
+
+     Poster frames are excluded here: if the only still belongs to a video, the
+     player is the better cover, because it shows that same frame and can be
+     played. */
+  const coverImage = resolveProjectCoverImage(project, { allowPosterFrame: false });
+  const playableCover = coverImage ? undefined : resolveProjectPlayableCover(project);
+  const cardAudio = projectMedia.find((item) => item.kind === "audio");
+  /* Captions and lightboxes belong on the case study, not on a summary card. */
+  const cardMediaSettings: PortfolioMediaSettings = { ...mediaSettings, showCaptions: false, lightbox: false };
   const caseStudyUrl = portfolioSlug ? `/p/${portfolioSlug}/work/${encodeURIComponent(project.id)}` : null;
+  const projectHref = caseStudyUrl || projectUrl;
+  const projectHrefIsExternal = !caseStudyUrl && Boolean(projectUrl);
+  const projectLinkLabel = caseStudyUrl ? `Open ${project.title} case study` : `Open ${project.title} project`;
   const isFeature = profile.visual && index === 0;
   const cardClass = isFeature ? "lg:col-span-7" : profile.visual ? "lg:col-span-5" : "";
 
@@ -149,14 +244,28 @@ function ProjectCard({
       }`}
     >
       <div className={`relative overflow-hidden ${isFeature ? "aspect-[4/3] sm:aspect-[16/10]" : "aspect-[16/10]"}`}>
-        {project.imageUrl ? (
-          <img
-            src={project.imageUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
-          />
+        {playableCover ? (
+          <PortfolioMediaBlock media={playableCover} settings={cardMediaSettings} fill />
+        ) : coverImage ? (
+          projectHref ? (
+            <ProjectLink href={projectHref} external={projectHrefIsExternal} label={projectLinkLabel} className="block h-full w-full">
+              <img
+                src={coverImage}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+              />
+            </ProjectLink>
+          ) : (
+            <img
+              src={coverImage}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+            />
+          )
         ) : (
           <div className="absolute inset-0 overflow-hidden bg-[var(--portfolio-soft)]">
             <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--portfolio-accent)] opacity-15 blur-3xl" />
@@ -165,7 +274,8 @@ function ProjectCard({
             </div>
           </div>
         )}
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 sm:p-5">
+        {/* Non-interactive, so they never swallow a click meant for a player. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 sm:p-5">
           <span className="rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur-md">
             {project.role || "Selected work"}
           </span>
@@ -175,10 +285,15 @@ function ProjectCard({
             </span>
           )}
         </div>
-        {profile.visual && projectUrl && (
-          <div className="absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-white text-slate-950 shadow-xl">
-            {profile.eyebrow === "Creator portfolio" ? <Play className="h-4 w-4 fill-current" /> : <ArrowUpRight className="h-4 w-4" />}
-          </div>
+        {!playableCover && profile.visual && projectHref && (
+          <ProjectLink
+            href={projectHref}
+            external={projectHrefIsExternal}
+            label={projectLinkLabel}
+            className="absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-white text-slate-950 shadow-xl transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            {profile.playIcon ? <Play className="h-4 w-4 fill-current" /> : <ArrowUpRight className="h-4 w-4" />}
+          </ProjectLink>
         )}
       </div>
 
@@ -198,6 +313,9 @@ function ProjectCard({
             </p>
           </div>
         </div>
+
+        {/* Audio is compact enough to play from the card itself. */}
+        {cardAudio && <PortfolioMediaBlock media={cardAudio} settings={cardMediaSettings} className="mt-5" />}
 
         {project.outcome && (
           <div className="mt-6 border-l-2 border-[var(--portfolio-accent)] pl-4">
@@ -237,21 +355,23 @@ function ProjectCard({
             ))}
           </div>
           {caseStudyUrl ? (
-            <a
+            <ProjectLink
               href={caseStudyUrl}
+              external={false}
+              label={`Read ${project.title} case study`}
               className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[var(--portfolio-ink)] hover:text-[var(--portfolio-accent)]"
             >
               Read case study <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
+            </ProjectLink>
           ) : projectUrl ? (
-            <a
+            <ProjectLink
               href={projectUrl}
-              target="_blank"
-              rel="noreferrer"
+              external
+              label={`Explore ${project.title} project`}
               className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[var(--portfolio-ink)] hover:text-[var(--portfolio-accent)]"
             >
               Explore project <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
+            </ProjectLink>
           ) : null}
         </div>
       </div>
@@ -277,17 +397,55 @@ function ServiceCard({ service, index }: { service: PortfolioService; index: num
   );
 }
 
-export default function PortfolioRenderer({ content, theme, templateKey, portfolioSlug, preview = false }: Props) {
+export default function PortfolioRenderer({ content, theme, templateKey, portfolioSlug, preview = false, activePracticeSlug }: Props) {
   const profile = TEMPLATE_PROFILES[templateKey] || TEMPLATE_PROFILES["minimal-pro"];
   const dark = theme.mode === "dark";
-  const publicProjects = content.projects.filter((project) => project.visibility !== "private");
-  const publicTestimonials = content.testimonials.filter((testimonial) => testimonial.visibility !== "private");
-  const featuredProject = publicProjects.find((project) => project.imageUrl) || publicProjects[0];
+  const practices = getVisiblePractices(content);
+  const activePractice = activePracticeSlug ? practices.find((practice) => practice.slug === activePracticeSlug) : undefined;
+  /* Practice name first — on a practice page that line is the subject of the
+     page. Then the owner's own tagline, then the template's default. */
+  const heroTagline = activePractice?.name || content.tagline?.trim() || templateEyebrow(templateKey);
+  const scopeId = activePractice?.id ?? null;
+  const visiblePracticeIds = new Set(practices.map((practice) => practice.id));
+  /* With no practices this is the identity filter, so a portfolio that has
+     never used them renders exactly as it did before they existed. This
+     component is handed merged content on some routes, so it also has to drop
+     anything assigned to a hidden practice rather than assume that already
+     happened upstream. */
+  const inScope = <T extends { practiceId?: string }>(item: T) => {
+    if (item.practiceId && !visiblePracticeIds.has(item.practiceId)) return false;
+    return belongsToPractice(item, scopeId);
+  };
+
+  const publicProjects = content.projects.filter((project) => project.visibility !== "private" && inScope(project));
+  const publicTestimonials = content.testimonials.filter((testimonial) => testimonial.visibility !== "private" && inScope(testimonial));
+  const publicServices = content.services.filter(inScope);
+  /* Any project with a usable still can headline, not only one with an explicit
+     cover — otherwise a portfolio whose work lives entirely in project media
+     showed the placeholder while holding perfectly good photographs. */
+  const featuredProject = publicProjects.find((project) => resolveProjectCoverImage(project)) || publicProjects[0];
+  const featuredCoverImage = featuredProject ? resolveProjectCoverImage(featuredProject) : "";
   const visible = (key: PortfolioContent["sections"][number]["key"]) =>
     content.sections.find((section) => section.key === key)?.visible ?? true;
   const contactHref = content.contactEmail ? `mailto:${content.contactEmail}` : null;
+  const mediaSettings = content.mediaSettings;
+  const separatePages = content.practiceLayout === "separate";
+  const showSwitcher = practices.length > 1;
+  /* Grouping only applies on the combined page. A practice-scoped page is
+     already one practice, and separate-page mode navigates instead. */
+  const groupWorkByPractice = showSwitcher && !separatePages && !activePractice;
+  const sharedProjects = groupWorkByPractice ? publicProjects.filter((project) => !project.practiceId) : [];
+  /* On the combined page a practice with no work renders no section, so its
+     pill would scroll nowhere. Separate-page mode still lists every practice,
+     because those pages stand on their own hero and services. */
+  const switcherPractices = groupWorkByPractice
+    ? practices.filter((practice) => publicProjects.some((project) => project.practiceId === practice.id))
+    : practices;
+  const headline = activePractice?.tagline?.trim() || content.headline;
+  const intro = activePractice?.description?.trim() || content.bio;
   const cssVars = {
-    "--portfolio-accent": theme.accent,
+    // A practice may carry its own accent so each discipline reads distinctly.
+    "--portfolio-accent": activePractice?.accent || theme.accent,
     "--portfolio-bg": dark ? "#080b12" : "#f7f7f4",
     "--portfolio-card": dark ? "#11151f" : "#ffffff",
     "--portfolio-soft": dark ? "#181e2a" : "#eeeee9",
@@ -314,7 +472,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
         <nav aria-label="Portfolio navigation" className="flex shrink-0 items-center gap-3 sm:gap-7">
           <div className="hidden items-center gap-7 text-xs font-bold text-[var(--portfolio-muted)] sm:flex">
             {visible("projects") && publicProjects.length > 0 && <a href="#work">Work</a>}
-            {visible("services") && content.services.length > 0 && <a href="#services">Services</a>}
+            {visible("services") && publicServices.length > 0 && <a href="#services">Services</a>}
             {visible("about") && <a href="#about">About</a>}
           </div>
           {visible("contact") && contactHref && (
@@ -333,7 +491,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           <div className="relative z-10 self-center">
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--portfolio-accent)]">
-                <Sparkles className="h-3.5 w-3.5" /> {profile.eyebrow}
+                <Sparkles className="h-3.5 w-3.5" /> {heroTagline}
               </span>
               {content.availability && (
                 <span className="inline-flex items-center gap-2 rounded-full border border-[var(--portfolio-border)] bg-[var(--portfolio-card)] px-3 py-1.5 text-[10px] font-bold text-[var(--portfolio-muted)]">
@@ -342,9 +500,9 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
               )}
             </div>
             <h1 className={`max-w-5xl font-black leading-[0.94] tracking-[-0.065em] text-[var(--portfolio-ink)] ${profile.headlineClass}`}>
-              {content.headline}
+              {headline}
             </h1>
-            <p className="mt-7 max-w-2xl text-base leading-7 text-[var(--portfolio-muted)] sm:text-lg sm:leading-8">{content.bio}</p>
+            <p className="mt-7 max-w-2xl text-base leading-7 text-[var(--portfolio-muted)] sm:text-lg sm:leading-8">{intro}</p>
             <div className="mt-9 flex flex-wrap items-center gap-5">
               {visible("contact") && contactHref && (
                 <a
@@ -360,14 +518,27 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                 </span>
               )}
             </div>
+            {showSwitcher && switcherPractices.length > 0 && (
+              <div className="mt-9 border-t border-[var(--portfolio-border)] pt-7">
+                <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--portfolio-muted)]">
+                  What I do
+                </p>
+                <PracticeSwitcher
+                  practices={switcherPractices}
+                  activeSlug={activePracticeSlug}
+                  portfolioSlug={portfolioSlug}
+                  separate={separatePages}
+                />
+              </div>
+            )}
           </div>
 
           <div className="relative min-h-72 self-stretch sm:min-h-96">
             <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-[var(--portfolio-radius-large)] border border-[var(--portfolio-border)] sm:translate-x-5 sm:translate-y-5" />
             <div className="relative h-full min-h-72 overflow-hidden rounded-[var(--portfolio-radius-large)] bg-[var(--portfolio-soft)] sm:min-h-96">
-              {featuredProject?.imageUrl ? (
+              {featuredProject && featuredCoverImage ? (
                 <>
-                  <img src={featuredProject.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={featuredCoverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">Featured work</p>
@@ -415,7 +586,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-[var(--portfolio-border)] px-5 sm:px-10 lg:grid-cols-4 lg:px-14">
             {[
               [String(publicProjects.length).padStart(2, "0"), publicProjects.length === 1 ? "Selected project" : "Selected projects"],
-              [String(content.services.length).padStart(2, "0"), content.services.length === 1 ? "Core service" : "Core services"],
+              [String(publicServices.length).padStart(2, "0"), publicServices.length === 1 ? "Core service" : "Core services"],
               [content.location || "Worldwide", "Where I work"],
               [content.availability || "Open to work", "Current status"],
             ].map(([value, label]) => (
@@ -431,15 +602,52 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           {visible("projects") && publicProjects.length > 0 && (
             <section id="work" className="py-20 sm:py-28">
               <SectionHeading eyebrow="Selected work" title={profile.workTitle} aside={`${publicProjects.length} project${publicProjects.length === 1 ? "" : "s"}`} />
-              <div className={`grid gap-5 sm:gap-7 ${profile.projectsClass}`}>
-                {publicProjects.map((project, index) => (
-                  <ProjectCard key={project.id} project={project} index={index} profile={profile} portfolioSlug={portfolioSlug} />
-                ))}
-              </div>
+              {groupWorkByPractice ? (
+                /* One anchored block per practice, so the switcher jumps to real
+                   sections and the page still works with no JavaScript. */
+                <div className="flex flex-col gap-16 sm:gap-20">
+                  {practices.map((practice) => {
+                    const items = publicProjects.filter((project) => project.practiceId === practice.id);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={practice.id} id={`practice-${practice.slug}`} className="scroll-mt-24">
+                        <div className="mb-7 flex flex-col gap-2 border-l-2 border-[var(--portfolio-accent)] pl-5 sm:mb-9">
+                          <h3 className="text-2xl font-black tracking-[-0.03em] text-[var(--portfolio-ink)] sm:text-3xl">{practice.name}</h3>
+                          {practice.tagline && <p className="max-w-2xl text-sm leading-6 text-[var(--portfolio-muted)]">{practice.tagline}</p>}
+                        </div>
+                        <div className={`grid gap-5 sm:gap-7 ${profile.projectsClass}`}>
+                          {items.map((project, index) => (
+                            <ProjectCard key={project.id} project={project} index={index} profile={profile} portfolioSlug={portfolioSlug} mediaSettings={mediaSettings} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {sharedProjects.length > 0 && (
+                    <div className="scroll-mt-24">
+                      <div className="mb-7 flex flex-col gap-2 border-l-2 border-[var(--portfolio-border)] pl-5 sm:mb-9">
+                        <h3 className="text-2xl font-black tracking-[-0.03em] text-[var(--portfolio-ink)] sm:text-3xl">Across everything</h3>
+                        <p className="max-w-2xl text-sm leading-6 text-[var(--portfolio-muted)]">Work that spans more than one practice.</p>
+                      </div>
+                      <div className={`grid gap-5 sm:gap-7 ${profile.projectsClass}`}>
+                        {sharedProjects.map((project, index) => (
+                          <ProjectCard key={project.id} project={project} index={index} profile={profile} portfolioSlug={portfolioSlug} mediaSettings={mediaSettings} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className={`grid gap-5 sm:gap-7 ${profile.projectsClass}`}>
+                  {publicProjects.map((project, index) => (
+                    <ProjectCard key={project.id} project={project} index={index} profile={profile} portfolioSlug={portfolioSlug} mediaSettings={mediaSettings} />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
-          {visible("services") && content.services.length > 0 && (
+          {visible("services") && publicServices.length > 0 && (
             <section id="services" className="border-t border-[var(--portfolio-border)] py-20 sm:py-28">
               <div className="grid gap-10 lg:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.25fr)] lg:gap-20">
                 <div>
@@ -452,7 +660,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                   )}
                 </div>
                 <div>
-                  {content.services.map((service, index) => <ServiceCard key={service.id} service={service} index={index} />)}
+                  {publicServices.map((service, index) => <ServiceCard key={service.id} service={service} index={index} />)}
                 </div>
               </div>
             </section>
@@ -481,7 +689,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
               <div className="grid gap-8 lg:grid-cols-[0.55fr_1.45fr] lg:gap-20">
                 <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--portfolio-accent)]">About the practice</p>
                 <div>
-                  <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-[-0.025em] text-[var(--portfolio-ink)] sm:text-4xl sm:leading-[1.25]">{content.bio}</p>
+                  <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-[-0.025em] text-[var(--portfolio-ink)] sm:text-4xl sm:leading-[1.25]">{intro}</p>
                   <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-xs font-semibold text-[var(--portfolio-muted)]">
                     {content.location && <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-[var(--portfolio-accent)]" /> {content.location}</span>}
                     {content.availability && <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-[var(--portfolio-accent)]" /> {content.availability}</span>}

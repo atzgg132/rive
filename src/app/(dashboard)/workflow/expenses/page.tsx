@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -19,6 +19,7 @@ import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { DISPLAY_CURRENCIES } from "@/lib/currency";
+import type { PaginationMeta } from "@/lib/pagination";
 
 interface Expense {
   id: string;
@@ -48,6 +49,9 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [category, setCategory] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Form Drawer state
@@ -67,26 +71,34 @@ export default function ExpensesPage() {
   const [isBillable, setIsBillable] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadExpenses = async () => {
+  const loadExpenses = async (signal?: AbortSignal) => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/expenses?search=${encodeURIComponent(debouncedSearch)}&category=${category}`);
+      const res = await fetch(`/api/workflow/expenses?search=${encodeURIComponent(debouncedSearch)}&category=${category}&page=${page}&pageSize=${pageSize}`, { signal });
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           setExpenses(data.expenses);
+          // buildPagination clamps an out-of-range page server-side. Without
+          // adopting that clamp the local page counter drifts, and the Next
+          // button then re-requests a page the list is already showing.
+          setPagination(data.pagination || null);
+          if (data.pagination && data.pagination.page !== page) setPage(data.pagination.page);
         }
       }
     } catch (err) {
+      if (signal?.aborted) return;
       console.error("Error loading expenses:", err);
       toast.error("Failed to load expenses");
     } finally {
-      setLoading(false);
+      // A superseded request must not clear the spinner the live one is using.
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   const loadProjects = async () => {
     try {
-      const res = await fetch("/api/workflow/projects");
+      const res = await fetch("/api/workflow/projects?mode=options&pageSize=100");
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -100,9 +112,19 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadExpenses();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPage(1);
   }, [debouncedSearch, category]);
+
+  useEffect(() => {
+    // Changing a filter also resets the page, so two loads are queued in the
+    // same commit. Aborting the superseded one keeps a slow first response
+    // from overwriting the newer page's rows.
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadExpenses(controller.signal);
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, category, page, pageSize]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -264,7 +286,7 @@ export default function ExpensesPage() {
         ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-card"><p className="text-xs font-semibold capitalize text-muted-foreground">{label}</p><p className="mt-2 truncate text-xl font-extrabold capitalize text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>)}
       </section>
 
-      <p className="-mt-3 text-[11px] text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
+      <p className="-mt-3 text-xs text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
 
       {/* Filter and Search */}
       <div className="workspace-toolbar">
@@ -313,9 +335,9 @@ export default function ExpensesPage() {
           after="Rive will include it in your expense and profitability views."
           action={<Button variant="secondary" size="sm" onClick={openCreate}>Log expense</Button>}
         />
-      ) : (
+      ) : (<>
         <div className="workspace-table">
-          <div className="overflow-x-auto">
+          <div className="table-scroll-region">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border text-xs font-semibold text-muted-foreground">
@@ -334,21 +356,21 @@ export default function ExpensesPage() {
                     <td className="py-4 px-6">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                     <td className="py-4 px-6 font-bold">{exp.description}</td>
                     <td className="py-4 px-6">
-                      <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold capitalize ${getCategoryColor(exp.category)}`}>
+                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${getCategoryColor(exp.category)}`}>
                         {exp.category}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-muted-foreground">{exp.project_title || "None"}</td>
                     <td className="py-4 px-6">
                       {exp.is_billable ? (
-                        <span className="rounded-md border border-success/20 bg-success/10 px-2 py-1 text-[11px] font-semibold text-success">Yes</span>
+                        <span className="rounded-md border border-success/20 bg-success/10 px-2 py-1 text-xs font-semibold text-success">Yes</span>
                       ) : (
-                        <span className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground">No</span>
+                        <span className="rounded-md border border-border bg-muted/60 px-2 py-1 text-xs font-semibold text-muted-foreground">No</span>
                       )}
                     </td>
                     <td className="py-4 px-6 font-bold text-destructive">
                       <span className="block">{formatConverted(parseFloat(exp.amount), exp.currency) || formatCurrency(parseFloat(exp.amount), exp.currency)}</span>
-                      {exp.currency !== displayCurrency && <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
+                      {exp.currency !== displayCurrency && <span className="mt-0.5 block text-xs font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
                     </td>
                     <td className="py-4 px-6 text-right relative">
                       <Button
@@ -395,7 +417,8 @@ export default function ExpensesPage() {
             </table>
           </div>
         </div>
-      )}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="expenses" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
+      </>)}
 
       {/* Add/Edit Expense Drawer */}
       {drawerOpen && (
@@ -505,7 +528,7 @@ export default function ExpensesPage() {
                     />
                     <div className="flex flex-col">
                       <label htmlFor="billable" className="text-xs font-bold text-foreground dark:text-slate-200 cursor-pointer">Billable to client</label>
-                      <span className="text-[10px] text-muted-foreground dark:text-slate-400">Reclaim this expense via invoicing later.</span>
+                      <span className="text-xs text-muted-foreground dark:text-slate-400">Reclaim this expense via invoicing later.</span>
                     </div>
                   </div>
                 </form>

@@ -25,6 +25,7 @@ type Funnel = {
 
 type UserRow = { id: string; email: string; name: string | null; createdAt: string; emailVerified: boolean; onboardingStatus: string; businessType: string | null; profession: string | null; goal: string | null; startingPath: string | null; qualified: boolean; realData: boolean; attribution: { firstTouchSource: string | null; lastTouchSource: string | null; firstTouchMedium: string | null; firstTouchCampaign: string | null; referralSource: string | null } | null; lastActivity: { at: string; eventName: string; module: string | null } | null };
 type FeedbackRow = { id: string; promptKey: string | null; feedbackType: string; module: string | null; rating: number | null; body: string | null; contactAllowed: boolean; status: string; createdAt: string; user: { email: string; name: string | null } | null };
+type FeedbackSummary = { counts: Record<string, number>; averageRating: number | null; ratedCount: number; contactable: number };
 type LegacyRow = { id: number; email: string; type: string; status: string; created_at: string; registered: boolean };
 type Tab = "overview" | "funnel" | "users" | "feedback" | "reliability" | "legacy";
 
@@ -91,7 +92,7 @@ function Empty({ text }: { text: string }) {
 }
 
 function Panel({ title, eyebrow, action, children }: { title: string; eyebrow?: string; action?: ReactNode; children: ReactNode }) {
-  return <section className="rounded-2xl border border-border bg-card shadow-sm"><div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4"><div>{eyebrow ? <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p> : null}<h2 className="mt-1 text-base font-semibold text-card-foreground">{title}</h2></div>{action}</div><div className="p-5">{children}</div></section>;
+  return <section className="rounded-2xl border border-border bg-card shadow-sm"><div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4"><div>{eyebrow ? <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p> : null}<h2 className="mt-1 text-base font-semibold text-card-foreground">{title}</h2></div>{action}</div><div className="p-5">{children}</div></section>;
 }
 
 function LoadError({ message, onRetry, loading = false }: { message: string; onRetry: () => void; loading?: boolean }) {
@@ -218,30 +219,84 @@ function UsersTab() {
   return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Users</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Who has signed up</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Every customer account with its acquisition source, qualification state and last recorded activity. Select a row for that user&rsquo;s event timeline.</p></div><Panel title="Accounts" action={<div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search accounts" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search email or name" className="w-56 pl-9" /></div>}>{error ? <div className="mb-4"><LoadError message={error} onRetry={load} loading={loading} /></div> : null}{loading ? <Loading label="Loading accounts" /> : <><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="pb-3">Account</th><th className="pb-3">Source</th><th className="pb-3">Qualification</th><th className="pb-3">Real data</th><th className="pb-3">Last activity</th></tr></thead><tbody className="divide-y divide-border">{users.map((user) => <tr key={user.id} className="cursor-pointer hover:bg-muted/40" tabIndex={0} onClick={() => void open(user)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); void open(user); } }}><td className="py-3"><p className="font-semibold text-card-foreground">{user.name || "Unnamed"}</p><p className="text-xs text-muted-foreground">{user.email}</p></td><td className="py-3">{user.attribution?.firstTouchSource || user.attribution?.lastTouchSource || "uncaptured"}</td><td className="py-3">{user.qualified ? <span className="text-emerald-600">Qualified</span> : <span className="text-muted-foreground">Not yet</span>}</td><td className="py-3">{user.realData ? <span className="text-blue-600">Yes</span> : "No"}</td><td className="py-3">{ago(user.lastActivity?.at)}</td></tr>)}</tbody></table>{!users.length ? <Empty text="No users match this search." /> : null}</div><div className="mt-5 flex items-center justify-between text-xs text-muted-foreground"><span>{total} accounts</span><div className="flex items-center gap-2"><Button type="button" variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft className="h-4 w-4" /></Button><span>Page {page}</span><Button type="button" variant="outline" size="sm" disabled={page * 25 >= total} onClick={() => setPage((value) => value + 1)}><ChevronRight className="h-4 w-4" /></Button></div></div></>}</Panel>{selected ? <Panel title={selected.email} eyebrow="User timeline" action={<Button type="button" variant="ghost" size="sm" onClick={() => setSelected(null)}>Close</Button>}><div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]"><div className="space-y-2 text-sm"><p><span className="text-muted-foreground">Goal:</span> {selected.goal || "Not recorded"}</p><p><span className="text-muted-foreground">Starting path:</span> {selected.startingPath || "Not recorded"}</p><p><span className="text-muted-foreground">Source:</span> {selected.attribution?.firstTouchSource || "Not recorded"}</p><p><span className="text-muted-foreground">Verified:</span> {selected.emailVerified ? "Yes" : "No"}</p></div><div className="max-h-80 space-y-2 overflow-y-auto">{timelineLoading ? <Loading label="Loading timeline" /> : timeline.map((event) => <div key={event.id} className="rounded-xl border border-border px-3 py-2"><div className="flex justify-between gap-3"><span className="text-sm font-medium">{event.type}</span><span className="text-xs text-muted-foreground">{ago(event.at)}</span></div><p className="mt-1 text-xs text-muted-foreground">{event.module || event.kind}</p></div>)}{!timelineLoading && !timeline.length ? <Empty text="No timeline events yet." /> : null}</div></div></Panel> : null}</div>;
 }
 
+const FEEDBACK_STATUSES = [
+  { key: "all", label: "All" },
+  { key: "new", label: "New" },
+  { key: "reviewing", label: "Reviewing" },
+  { key: "planned", label: "Planned" },
+  { key: "closed", label: "Closed" },
+] as const;
+
+/** A 1–5 rating read at a glance rather than parsed from "3/5". */
+function RatingDots({ rating }: { rating: number }) {
+  return (
+    <span className="inline-flex items-center gap-1" title={`Rated ${rating} out of 5`}>
+      <span className="sr-only">Rated {rating} out of 5</span>
+      {[1, 2, 3, 4, 5].map((value) => (
+        <span
+          key={value}
+          aria-hidden="true"
+          className={`h-1.5 w-1.5 rounded-full ${value <= rating ? (rating >= 4 ? "bg-emerald-500" : rating === 3 ? "bg-amber-500" : "bg-red-500") : "bg-border"}`}
+        />
+      ))}
+      <span className={`ml-1 text-xs font-bold tabular-nums ${rating >= 4 ? "text-emerald-600" : rating === 3 ? "text-amber-600" : "text-red-600"}`}>{rating}</span>
+    </span>
+  );
+}
+
+function FeedbackStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card px-4 py-3">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-card-foreground">{value}</p>
+      {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
+
 function FeedbackTab() {
   const [items, setItems] = useState<FeedbackRow[]>([]);
+  const [summary, setSummary] = useState<FeedbackSummary | null>(null);
   const [status, setStatus] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState("");
+
+  // Debounced so typing does not fire a request per keystroke.
+  useEffect(() => {
+    const timer = window.setTimeout(() => { setSearch(searchInput.trim()); setPage(1); }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetchAdmin(`/api/admin/feedback?status=${status}`, { cache: "no-store", credentials: "same-origin" });
+      const params = new URLSearchParams({ status, page: String(page) });
+      if (search) params.set("search", search);
+      const response = await fetchAdmin(`/api/admin/feedback?${params.toString()}`, { cache: "no-store", credentials: "same-origin" });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.message || "Feedback could not be loaded.");
       setItems(data.data || []);
+      setSummary(data.summary || null);
+      setTotal(data.total || 0);
+      setHasMore(Boolean(data.hasMore));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Feedback could not be loaded.");
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [page, search, status]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
   const update = async (id: string, next: string) => {
+    setSaving(id);
     try {
       const response = await fetchAdmin("/api/admin/feedback", { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ id, status: next }) });
       const data = await response.json().catch(() => null);
@@ -249,16 +304,148 @@ function FeedbackTab() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Feedback status could not be updated.");
+    } finally {
+      setSaving("");
     }
   };
 
-  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Feedback</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Submitted feedback</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Each entry records the module it came from and whether the user agreed to be contacted. Changing a status saves immediately.</p></div><Panel title="Inbox" action={<Select aria-label="Feedback status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option><option value="new">New</option><option value="reviewing">Reviewing</option><option value="planned">Planned</option><option value="closed">Closed</option></Select>}>{error ? <div className="mb-4"><LoadError message={error} onRetry={load} loading={loading} /></div> : null}{loading ? <Loading label="Loading feedback" /> : <div className="space-y-3">{items.map((item) => <article key={item.id} className="rounded-2xl border border-border p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-semibold">{item.user?.name || item.user?.email || "Anonymous account"}</p><p className="mt-1 text-xs text-muted-foreground">{item.promptKey || item.feedbackType} · {item.module || "workspace"} · {ago(item.createdAt)}</p></div><div className="flex items-center gap-2">{item.rating ? <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">{item.rating}/5</span> : null}<Select aria-label={`Status for ${item.user?.email || "feedback"}`} value={item.status} onChange={(event) => void update(item.id, event.target.value)}><option value="new">New</option><option value="reviewing">Reviewing</option><option value="planned">Planned</option><option value="closed">Closed</option></Select></div></div>{item.body ? <p className="mt-4 whitespace-pre-line text-sm leading-6 text-foreground/80">{item.body}</p> : null}<p className="mt-3 text-xs text-muted-foreground">{item.contactAllowed ? "Contact permitted" : "No contact permission"}</p></article>)}{!items.length ? <Empty text="No feedback has arrived yet." /> : null}</div>}</Panel></div>;
+  const filtered = Boolean(search) || status !== "all";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-sm font-semibold text-primary">Feedback</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Submitted feedback</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Every entry keeps the module it came from, the rating, and whether the person agreed to be contacted. Status changes save
+          immediately. Accounts may send one entry a day, so this is a queue of distinct voices rather than a firehose.
+        </p>
+      </div>
+
+      {summary ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <FeedbackStat label="Total" value={String(summary.counts.all || 0)} hint="All time" />
+          <FeedbackStat label="Awaiting triage" value={String(summary.counts.new || 0)} hint="Status is still New" />
+          <FeedbackStat
+            label="Average rating"
+            value={summary.averageRating === null ? "—" : `${summary.averageRating}`}
+            hint={summary.ratedCount ? `${summary.ratedCount} rated` : "No ratings yet"}
+          />
+          <FeedbackStat label="Contactable" value={String(summary.contactable)} hint="Agreed to follow-up" />
+        </div>
+      ) : null}
+
+      <Panel
+        title="Inbox"
+        action={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search feedback"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Search notes, people, modules"
+              className="w-64 pl-9"
+            />
+          </div>
+        }
+      >
+        <div className="mb-4 flex flex-wrap gap-1.5" role="group" aria-label="Filter feedback by status">
+          {FEEDBACK_STATUSES.map((option) => {
+            const count = summary?.counts[option.key] ?? 0;
+            return (
+              <Button
+                key={option.key}
+                type="button"
+                variant={status === option.key ? "default" : "outline"}
+                size="sm"
+                aria-pressed={status === option.key}
+                onClick={() => { setStatus(option.key); setPage(1); }}
+                className="rounded-full"
+              >
+                {option.label}
+                {count > 0 ? <span className="ml-1.5 tabular-nums opacity-70">{count}</span> : null}
+              </Button>
+            );
+          })}
+        </div>
+
+        {error ? <div className="mb-4"><LoadError message={error} onRetry={load} loading={loading} /></div> : null}
+
+        {loading ? (
+          <Loading label="Loading feedback" />
+        ) : items.length === 0 ? (
+          <Empty text={filtered ? "No feedback matches this view. Try another status, or clear the search." : "No feedback has arrived yet."} />
+        ) : (
+          <>
+            <div className="space-y-3">
+              {items.map((item) => (
+                <article key={item.id} className={`rounded-2xl border p-4 transition ${item.status === "new" ? "border-primary/30 bg-primary/[0.03]" : "border-border"}`}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-card-foreground">{item.user?.name || item.user?.email || "Anonymous account"}</p>
+                        {item.rating ? <RatingDots rating={item.rating} /> : null}
+                      </div>
+                      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{item.module || "workspace"}</span>
+                        <span>{item.promptKey || item.feedbackType}</span>
+                        <span aria-hidden="true">·</span>
+                        <time dateTime={item.createdAt} title={new Date(item.createdAt).toLocaleString()}>{ago(item.createdAt)}</time>
+                      </p>
+                    </div>
+                    <Select
+                      aria-label={`Status for feedback from ${item.user?.email || "an anonymous account"}`}
+                      value={item.status}
+                      disabled={saving === item.id}
+                      onChange={(event) => void update(item.id, event.target.value)}
+                    >
+                      <option value="new">New</option>
+                      <option value="reviewing">Reviewing</option>
+                      <option value="planned">Planned</option>
+                      <option value="closed">Closed</option>
+                    </Select>
+                  </div>
+
+                  {item.body ? (
+                    <p className="mt-3 whitespace-pre-line text-sm leading-6 text-card-foreground/85">{item.body}</p>
+                  ) : (
+                    <p className="mt-3 text-sm italic text-muted-foreground">Rating only — no note left.</p>
+                  )}
+
+                  {/* Contact permission is only useful next to a way to act on it. */}
+                  <div className="mt-3 border-t border-border pt-3 text-xs">
+                    {item.contactAllowed && item.user?.email ? (
+                      <a className="font-semibold text-primary hover:underline" href={`mailto:${item.user.email}?subject=${encodeURIComponent("Your Rive feedback")}`}>
+                        Reply to {item.user.email}
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">{item.contactAllowed ? "Contact permitted" : "No contact permission"}</span>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>{total} {filtered ? "matching" : ""} entr{total === 1 ? "y" : "ies"}</span>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={page === 1 || loading} onClick={() => setPage((value) => value - 1)} aria-label="Previous page"><ChevronLeft className="h-4 w-4" /></Button>
+                <span>Page {page}</span>
+                <Button type="button" variant="outline" size="sm" disabled={!hasMore || loading} onClick={() => setPage((value) => value + 1)} aria-label="Next page"><ChevronRight className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          </>
+        )}
+      </Panel>
+    </div>
+  );
 }
 
 function Reliability({ funnel, retry, loading, error }: { funnel: Funnel | null; retry: () => void; loading: boolean; error: string }) {
   if (!funnel) return <FunnelUnavailable message={error} retry={retry} loading={loading} />;
   const quality = funnel.quality;
-  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Reliability</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Is the product actually working</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Delivery and instrumentation health. If email is failing here, signups look slow on every other tab for a reason that has nothing to do with demand.</p></div>{error ? <LoadError message={error} onRetry={retry} loading={loading} /> : null}<div className="grid gap-4 sm:grid-cols-3"><Metric label="Failed emails / 24h" value={funnel.reliability.failedEmails24h} detail={funnel.reliability.failedEmails24h > 0 ? "Password resets and verification links are affected" : "Delivery is healthy"} tone={funnel.reliability.failedEmails24h > 0 ? "red" : "green"} /><Metric label="Queued email jobs" value={funnel.reliability.queuedEmails} detail={funnel.reliability.queuedEmails > 0 ? "Waiting in the outbox to be retried" : "Outbox is empty"} tone={funnel.reliability.queuedEmails > 0 ? "amber" : "blue"} /><Metric label="Product events / 24h" value={funnel.reliability.productEvents24h} detail={funnel.quality.eventLagMinutes === null ? "No events recorded yet" : `Most recent ${funnel.quality.eventLagMinutes}m ago`} tone={funnel.reliability.productEvents24h === 0 ? "amber" : "blue"} /></div><Panel title="Action queue" eyebrow={quality.alerts.length ? `${quality.alerts.length} active signal${quality.alerts.length === 1 ? "" : "s"}` : "No active threshold breaches"}>{quality.alerts.length ? <div className="space-y-3">{quality.alerts.map((item) => <div key={item.fingerprint} className={`rounded-xl border p-4 ${item.severity === "critical" ? "border-red-200 bg-red-50 text-red-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold">{item.title}</p><span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold uppercase tracking-wide">{item.severity}</span></div><p className="mt-2 text-sm opacity-80">{item.detail}</p><p className="mt-2 text-xs font-semibold opacity-90">Next: {item.action}</p></div>)}</div> : <p className="text-sm text-muted-foreground">The scheduled funnel-quality check has no active threshold breaches.</p>}</Panel><Panel title="Cohort-quality monitoring" eyebrow={`Event envelope schema v${quality.schemaVersion}`}><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Contract rejects / 24h</p><p className="mt-1 text-2xl font-bold">{quality.contractRejections24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Unknown event names / 24h</p><p className="mt-1 text-2xl font-bold">{quality.unknownEventNames24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Uncaptured signup source</p><p className="mt-1 text-2xl font-bold">{quality.uncapturedSignups} <span className="text-sm font-normal text-muted-foreground">({rate(quality.uncapturedSignupRate)})</span></p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Missing event identity / 24h</p><p className="mt-1 text-2xl font-bold">{quality.missingIdentityEvents24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Missing data origin / 24h</p><p className="mt-1 text-2xl font-bold">{quality.missingDataOriginEvents24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Event freshness</p><p className="mt-1 text-2xl font-bold">{quality.eventLagMinutes === null ? "No events" : `${quality.eventLagMinutes}m`}</p></div></div><p className="mt-4 text-xs text-muted-foreground">Unknown-origin business records: {quality.unknownOriginRecords}. Latest event: {quality.latestEventAt ? ago(quality.latestEventAt) : "not recorded"}.</p></Panel><Panel title="When not to trust these numbers"><ul className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2"><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Event freshness is stale.</span> Analytics writes never block a business action, so a broken pipeline shows up as flat metrics rather than errors. Check freshness above before reading a drop as real.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Contract rejects are non-zero.</span> Rejected events are discarded, so the funnel undercounts by roughly that amount.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Uncaptured signup source is high.</span> Those users are counted in totals but cannot be attributed, so the source breakdown understates every channel.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Emails are failing.</span> Unverified accounts stall before qualifying, which depresses every downstream rate for a delivery reason, not a product one.</li></ul></Panel></div>;
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Reliability</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Is the product actually working</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Delivery and instrumentation health. If email is failing here, signups look slow on every other tab for a reason that has nothing to do with demand.</p></div>{error ? <LoadError message={error} onRetry={retry} loading={loading} /> : null}<div className="grid gap-4 sm:grid-cols-3"><Metric label="Failed emails / 24h" value={funnel.reliability.failedEmails24h} detail={funnel.reliability.failedEmails24h > 0 ? "Password resets and verification links are affected" : "Delivery is healthy"} tone={funnel.reliability.failedEmails24h > 0 ? "red" : "green"} /><Metric label="Queued email jobs" value={funnel.reliability.queuedEmails} detail={funnel.reliability.queuedEmails > 0 ? "Waiting in the outbox to be retried" : "Outbox is empty"} tone={funnel.reliability.queuedEmails > 0 ? "amber" : "blue"} /><Metric label="Product events / 24h" value={funnel.reliability.productEvents24h} detail={funnel.quality.eventLagMinutes === null ? "No events recorded yet" : `Most recent ${funnel.quality.eventLagMinutes}m ago`} tone={funnel.reliability.productEvents24h === 0 ? "amber" : "blue"} /></div><Panel title="Action queue" eyebrow={quality.alerts.length ? `${quality.alerts.length} active signal${quality.alerts.length === 1 ? "" : "s"}` : "No active threshold breaches"}>{quality.alerts.length ? <div className="space-y-3">{quality.alerts.map((item) => <div key={item.fingerprint} className={`rounded-xl border p-4 ${item.severity === "critical" ? "border-red-200 bg-red-50 text-red-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold">{item.title}</p><span className="rounded-full bg-white/70 px-2 py-1 text-xs font-bold uppercase tracking-wide">{item.severity}</span></div><p className="mt-2 text-sm opacity-80">{item.detail}</p><p className="mt-2 text-xs font-semibold opacity-90">Next: {item.action}</p></div>)}</div> : <p className="text-sm text-muted-foreground">The scheduled funnel-quality check has no active threshold breaches.</p>}</Panel><Panel title="Cohort-quality monitoring" eyebrow={`Event envelope schema v${quality.schemaVersion}`}><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Contract rejects / 24h</p><p className="mt-1 text-2xl font-bold">{quality.contractRejections24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Unknown event names / 24h</p><p className="mt-1 text-2xl font-bold">{quality.unknownEventNames24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Uncaptured signup source</p><p className="mt-1 text-2xl font-bold">{quality.uncapturedSignups} <span className="text-sm font-normal text-muted-foreground">({rate(quality.uncapturedSignupRate)})</span></p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Missing event identity / 24h</p><p className="mt-1 text-2xl font-bold">{quality.missingIdentityEvents24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Missing data origin / 24h</p><p className="mt-1 text-2xl font-bold">{quality.missingDataOriginEvents24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Event freshness</p><p className="mt-1 text-2xl font-bold">{quality.eventLagMinutes === null ? "No events" : `${quality.eventLagMinutes}m`}</p></div></div><p className="mt-4 text-xs text-muted-foreground">Unknown-origin business records: {quality.unknownOriginRecords}. Latest event: {quality.latestEventAt ? ago(quality.latestEventAt) : "not recorded"}.</p></Panel><Panel title="When not to trust these numbers"><ul className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2"><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Event freshness is stale.</span> Analytics writes never block a business action, so a broken pipeline shows up as flat metrics rather than errors. Check freshness above before reading a drop as real.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Contract rejects are non-zero.</span> Rejected events are discarded, so the funnel undercounts by roughly that amount.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Uncaptured signup source is high.</span> Those users are counted in totals but cannot be attributed, so the source breakdown understates every channel.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Emails are failing.</span> Unverified accounts stall before qualifying, which depresses every downstream rate for a delivery reason, not a product one.</li></ul></Panel></div>;
 }
 
 function LegacyTab() {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { promptForKey } from "@/utils/feedback";
+import { isPromptAvailable, promptForKey } from "@/utils/feedback";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 function clean(value: string | null, max: number): string {
@@ -15,9 +15,12 @@ export async function GET(req: NextRequest) {
   const prompt = promptForKey(key);
   if (!prompt) return NextResponse.json({ success: false, message: "Unknown feedback prompt." }, { status: 400 });
 
-  const state = await prisma.feedbackPromptState.findUnique({ where: { userId_promptKey: { userId: session.userId, promptKey: key } } });
-  const snoozed = Boolean(state?.snoozedUntil && state.snoozedUntil > new Date());
-  const available = !state?.respondedAt && !state?.dismissedAt && !snoozed;
+  /* Every prompt for this user, not just this key: the key is derived from the
+     current path, so the only way to pace the experience as a whole is to look
+     at when *any* prompt was last shown. There are a handful of keys, so this
+     stays one small read. */
+  const states = await prisma.feedbackPromptState.findMany({ where: { userId: session.userId } });
+  const available = isPromptAvailable(states, key);
   if (available) {
     await prisma.feedbackPromptState.upsert({
       where: { userId_promptKey: { userId: session.userId, promptKey: key } },
@@ -51,7 +54,10 @@ export async function POST(req: NextRequest) {
     update: {
       shownAt: now,
       dismissedAt: action === "dismiss" ? now : undefined,
-      snoozedUntil: action === "snooze" ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) : action === "shown" ? null : undefined,
+      // "shown" used to clear snoozedUntil, so merely recording an impression
+      // cancelled an active snooze and made the prompt eligible again. Only an
+      // explicit snooze may write this field.
+      snoozedUntil: action === "snooze" ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) : undefined,
     },
   });
   return NextResponse.json({ success: true });

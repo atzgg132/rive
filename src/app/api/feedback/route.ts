@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { promptForKey, safeFeedbackContext } from "@/utils/feedback";
+import {
+  FEEDBACK_SUBMIT_COOLDOWN_MS,
+  feedbackSubmitCooldownKey,
+  formatCooldownRemaining,
+  promptForKey,
+  safeFeedbackContext,
+} from "@/utils/feedback";
+import { durableRateLimitResult } from "@/utils/durableRateLimit";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -53,6 +60,31 @@ export async function POST(req: NextRequest) {
   }
   if (!feedbackBody && rating === null) {
     return NextResponse.json({ success: false, message: "Add a rating or a short note before sending feedback." }, { status: 400 });
+  }
+
+  /* Checked after validation on purpose: a submission rejected for a missing
+     rating or an unknown prompt must not consume the day's allowance, or a
+     typo would lock someone out for twenty-four hours. Counted durably so the
+     limit survives restarts and cannot be raced by two open tabs. */
+  const cooldown = await durableRateLimitResult(
+    feedbackSubmitCooldownKey(session.userId),
+    1,
+    FEEDBACK_SUBMIT_COOLDOWN_MS,
+  );
+  if (!cooldown.allowed) {
+    const seconds = cooldown.retryAfterSeconds ?? Math.ceil(FEEDBACK_SUBMIT_COOLDOWN_MS / 1000);
+    return NextResponse.json(
+      {
+        success: false,
+        reason: "cooldown",
+        // The client renders a live countdown from these; the message is the
+        // fallback for anything that just shows `message`.
+        retryAt: cooldown.resetAt?.toISOString() ?? new Date(Date.now() + seconds * 1000).toISOString(),
+        retryAfterSeconds: seconds,
+        message: `Thanks — you've already shared feedback today. You can send more ${formatCooldownRemaining(seconds)}.`,
+      },
+      { status: 429, headers: { "Retry-After": String(seconds) } },
+    );
   }
 
   try {

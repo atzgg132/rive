@@ -44,7 +44,7 @@ export default function PlanStep({
             </p>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="table-scroll-region">
             <table className="w-full min-w-[30rem] border-collapse text-sm">
               <caption className="sr-only">Records to be created, linked, and skipped by record type</caption>
               <thead>

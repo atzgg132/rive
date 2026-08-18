@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { deliverPreparedEmail, type PreparedEmail } from "@/utils/email";
+import { markInquiryNotificationSettled } from "@/utils/portfolioInquiryNotifications";
 
 const OUTBOX_ALGORITHM = "aes-256-gcm";
 const OUTBOX_KEY = crypto
@@ -80,6 +81,7 @@ export async function processEmailOutbox(limit = 10): Promise<{ claimed: number;
           where: { id: job.id },
           data: { status: "sent", processedAt: new Date(), lastError: null },
         });
+        await settleNotificationState(job.type, job.id, "sent");
         sent += 1;
         continue;
       }
@@ -94,22 +96,45 @@ export async function processEmailOutbox(limit = 10): Promise<{ claimed: number;
         },
       });
       if (retryable) retried += 1;
-      else failed += 1;
+      else {
+        await settleNotificationState(job.type, job.id, "failed", result.reason);
+        failed += 1;
+      }
     } catch (error) {
       const retryable = job.attempts + 1 < 8;
+      const reason = error instanceof Error ? error.message.slice(0, 500) : "Email outbox processing failed.";
       await prisma.emailOutbox.update({
         where: { id: job.id },
         data: {
           status: retryable ? "queued" : "failed",
           availableAt: new Date(Date.now() + Math.min(6 * 60 * 60 * 1000, 2 ** (job.attempts + 1) * 30_000)),
-          lastError: error instanceof Error ? error.message.slice(0, 500) : "Email outbox processing failed.",
+          lastError: reason,
         },
       });
       if (retryable) retried += 1;
-      else failed += 1;
+      else {
+        await settleNotificationState(job.type, job.id, "failed", reason);
+        failed += 1;
+      }
     }
   }
 
   return { claimed: jobs.length, sent, retried, failed };
+}
+
+/**
+ * Reflects a terminal outbox outcome back onto the record that queued it.
+ *
+ * Only fires on the states a reader can act on: delivered, or abandoned after
+ * the last retry. A retryable failure leaves the record showing "queued",
+ * because that is what it still is.
+ */
+async function settleNotificationState(
+  type: string,
+  jobId: string,
+  outcome: "sent" | "failed",
+  reason?: string | null,
+): Promise<void> {
+  if (type === "portfolio_inquiry") await markInquiryNotificationSettled(jobId, outcome, reason);
 }
 
