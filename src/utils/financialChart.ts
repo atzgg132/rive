@@ -25,6 +25,17 @@ function nonNegativeFinite(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+/**
+ * Collapses negative zero to zero.
+ *
+ * Intl.NumberFormat renders -0 with its sign, so a break-even month printed as
+ * "-$0.00". Nothing here can produce -0 today, but the formatting is one
+ * subtraction away from it and the guard costs nothing.
+ */
+function normalizeZero(value: number): number {
+  return value === 0 ? 0 : value;
+}
+
 /** A readable ceiling that keeps the tallest bar below the very top edge. */
 export function financialChartScale(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return 1;
@@ -43,7 +54,7 @@ export function prepareFinancialChart(data: FinancialChartInput[]): FinancialCha
       label: row.month || row.period || `Period ${index + 1}`,
       revenue,
       expenses,
-      net: revenue - expenses,
+      net: normalizeZero(revenue - expenses),
     };
   });
 
@@ -51,7 +62,7 @@ export function prepareFinancialChart(data: FinancialChartInput[]): FinancialCha
     (sum, point) => ({
       revenue: sum.revenue + point.revenue,
       expenses: sum.expenses + point.expenses,
-      net: sum.net + point.net,
+      net: normalizeZero(sum.net + point.net),
     }),
     { revenue: 0, expenses: 0, net: 0 },
   );
