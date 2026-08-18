@@ -225,6 +225,26 @@ test.describe("portfolio studio", () => {
     const inspectWidth = (await page.locator('iframe[title$="portfolio preview"]').boundingBox())?.width ?? 0;
     expect(inspectWidth, "desktop in the overlay must be materially bigger than desktop in the pane").toBeGreaterThan(inlineWidth * 1.5);
 
+    /* Nothing may paint over the overlay. The first attempt kept the frame
+       inside the studio's own stacking context, so the sticky app header, the
+       publish bar and the feedback launcher all drew straight over a
+       "full-screen" layer and buried the switcher and the Close button. Counting
+       iframes and measuring the frame both passed while that was true — only
+       hit-testing the controls catches it. */
+    const covered = await page.evaluate(() => {
+      const dialog = document.querySelector('[role="dialog"][aria-label*="Full-screen"]');
+      if (!dialog) return "no dialog";
+      const targets = [dialog.querySelector("[data-portfolio-preview-inspect]"), dialog.querySelector('[role="group"][aria-label="Preview size"]')];
+      for (const target of targets) {
+        if (!target) return "control missing from the overlay";
+        const box = target.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        if (!hit || !dialog.contains(hit)) return `${target.getAttribute("aria-label") || "control"} is covered by <${hit?.tagName.toLowerCase() ?? "nothing"} class="${hit?.className ?? ""}">`;
+      }
+      return "clear";
+    });
+    expect(covered).toBe("clear");
+
     // Dismissable by keyboard alone, with focus handed back to what opened it.
     await page.keyboard.press("Escape");
     await expect(overlay).toBeHidden();

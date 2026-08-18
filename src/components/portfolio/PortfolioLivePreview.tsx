@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ExternalLink, Maximize2, Monitor, Smartphone, Tablet, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import type { PortfolioContent, PortfolioTheme } from "@/utils/portfolio";
@@ -28,12 +29,16 @@ import type { PortfolioContent, PortfolioTheme } from "@/utils/portfolio";
  * only flexes inside the overlay, where the column has a definite height to
  * divide up.
  *
- * There is exactly one iframe, and that is structural rather than intended. The
- * overlay is the same element tree with different classes — `display: contents`
- * when inline, `position: fixed` when inspecting — so React never unmounts the
- * frame and the preview route is never loaded twice. Rendering the overlay as
- * its own subtree would have put a second frame in the DOM, reloaded the route,
- * and made every `iframe[title$="portfolio preview"]` selector ambiguous.
+ * There is exactly one iframe at any moment. The overlay renders through a
+ * portal, so switching modes moves the frame between two places in the DOM and
+ * it reloads — a cost worth paying, because the alternative did not work. The
+ * overlay first tried to be the same element restyled from `display: contents`
+ * to `position: fixed`, which kept the frame mounted but left it inside the
+ * studio's stacking context: the sticky app header, the publish bar and the
+ * feedback button all painted straight over a "full-screen" layer, and the
+ * device switcher and Close button were hidden behind the header. `z-index`
+ * cannot fix that from the inside. A positioned ancestor caps everything below
+ * it, so the layer has to leave the subtree entirely.
  */
 
 export type PreviewDevice = "desktop" | "tablet" | "mobile";
@@ -66,6 +71,14 @@ const FRAME_RADIUS: Record<PreviewDevice, string> = {
 const INLINE_LEGIBLE_SCALE = 0.6;
 
 const FOCUSABLE = 'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+/**
+ * Above every layer the workspace puts on screen — the sticky headers at 30,
+ * the publish bar at 20, the feedback launcher at 40 and its modal at 120 — and
+ * deliberately below the toast layer at 9999, so a save error still reaches
+ * someone who is inspecting.
+ */
+const OVERLAY_Z = "z-[200]";
 
 export default function PortfolioLivePreview({
   content,
@@ -152,6 +165,13 @@ export default function PortfolioLivePreview({
     if (!inspecting) inlineWidthRef.current = shellWidth;
   }, [inspecting, shellWidth]);
 
+  /* Switching modes moves the frame through the portal, so the element is a new
+     one and has not loaded yet. Carrying the old readiness flag over would send
+     the first update into a frame that silently drops it. */
+  useEffect(() => {
+    readyRef.current = false;
+  }, [inspecting]);
+
   /* Everything a full-screen layer owes the keyboard: focus goes in, stays in,
      Escape gets out, and the control that opened it gets focus back. The page
      behind is scroll-locked so a wheel over the backdrop does not move it. */
@@ -212,9 +232,16 @@ export default function PortfolioLivePreview({
   };
 
   const controls = (
-    <div className={`flex flex-wrap items-center justify-between gap-2 ${inspecting ? "shrink-0" : "mb-3"}`}>
+    <div
+      className={`flex flex-wrap items-center justify-between gap-2 ${
+        inspecting
+          // A real toolbar rather than text floating over a blurred page.
+          ? "shrink-0 rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 shadow-lg sm:px-4"
+          : "mb-3"
+      }`}
+    >
       <p className={`flex items-baseline gap-2 text-xs font-bold uppercase tracking-[0.12em] ${inspecting ? "text-white/80" : "text-muted-foreground"}`}>
-        {inspecting ? "Inspecting" : "Live preview"}
+        {inspecting ? `Inspecting ${device}` : "Live preview"}
         {/* Say so when it is not life-sized, rather than letting someone judge
             type size from a 29% rendering. */}
         {percent < 100 && <span className="font-semibold normal-case tracking-normal opacity-70">{percent}% · {deviceWidth}px wide</span>}
@@ -270,78 +297,89 @@ export default function PortfolioLivePreview({
     </div>
   );
 
-  return (
-    <div className={`flex min-h-0 flex-col ${className}`}>
-      <div
-        ref={overlayRef}
-        {...(inspecting ? { role: "dialog" as const, "aria-modal": true, "aria-label": "Full-screen portfolio preview" } : {})}
-        /* `contents` inline, so the controls and pane stay direct children of the
-           column exactly as before; `fixed` when inspecting. Same element either
-           way, which is what keeps the one iframe mounted across the change. */
-        className={inspecting ? "fixed inset-0 z-[130] flex flex-col gap-3 bg-slate-950/70 p-3 backdrop-blur-md sm:p-6" : "contents"}
-      >
-        {/* The backdrop is a sibling behind the content so a click on it closes,
-            while a click on the controls or the frame does not. */}
-        {inspecting && (
-          <button
-            type="button"
-            tabIndex={-1}
-            aria-hidden
-            onClick={() => setInspecting(false)}
-            className="absolute inset-0 -z-10 cursor-default"
-          />
-        )}
-        {showDeviceControls && controls}
+  const pane = (
+    <div
+      data-portfolio-preview-pane
+      /* Inline: a definite height, never `flex-1` — that is the collapse.
+         Inspecting: `flex-1` is safe, because the fixed column above it has
+         a definite height for the free space to come from. */
+      className={
+        inspecting
+          ? "min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/10 bg-black/30 p-2 sm:p-3"
+          : `overflow-hidden rounded-2xl border border-border bg-muted/40 p-2 sm:p-3 ${frameClassName}`
+      }
+    >
+      <div ref={shellRef} className="relative h-full w-full overflow-hidden">
         <div
-          data-portfolio-preview-pane
-          /* Inline: a definite height, never `flex-1` — that is the collapse.
-             Inspecting: `flex-1` is safe, because the fixed column above it has
-             a definite height for the free space to come from. */
-          className={
-            inspecting
-              ? "min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/15 bg-slate-900/40 p-2 sm:p-3"
-              : `overflow-hidden rounded-2xl border border-border bg-muted/40 p-2 sm:p-3 ${frameClassName}`
-          }
+          className={`absolute top-0 origin-top-left overflow-hidden bg-white shadow-xl dark:bg-slate-900 ${FRAME_RADIUS[device]}`}
+          style={{
+            width: `${deviceWidth}px`,
+            /* Divided by the scale so the frame still fills the pane once
+               shrunk — a scaled-down desktop shows more page, not a
+               letterbox. A percentage rather than measured pixels, so it
+               stays correct between a resize and the observer firing. */
+            height: `${100 / scale}%`,
+            transform: `scale(${scale})`,
+            left: `${Math.max(0, (shellWidth - scaledWidth) / 2)}px`,
+          }}
         >
-          <div ref={shellRef} className="relative h-full w-full overflow-hidden">
-            <div
-              className={`absolute top-0 origin-top-left overflow-hidden bg-white shadow-xl dark:bg-slate-900 ${FRAME_RADIUS[device]}`}
-              style={{
-                width: `${deviceWidth}px`,
-                /* Divided by the scale so the frame still fills the pane once
-                   shrunk — a scaled-down desktop shows more page, not a
-                   letterbox. A percentage rather than measured pixels, so it
-                   stays correct between a resize and the observer firing. */
-                height: `${100 / scale}%`,
-                transform: `scale(${scale})`,
-                left: `${Math.max(0, (shellWidth - scaledWidth) / 2)}px`,
-              }}
-            >
-              <iframe
-                ref={frameRef}
-                src="/portfolio-preview"
-                title={`${device} portfolio preview`}
-                /* Out of the tab order on purpose. It is a preview: letting Tab
-                   walk into another document would strand the keyboard inside a
-                   frame whose Escape key cannot reach this overlay. The live
-                   site, one click away, is the thing to explore properly. */
-                tabIndex={-1}
-                className="block h-full w-full border-0 bg-white"
-                onLoad={() => {
-                  readyRef.current = true;
-                  post();
-                }}
-              />
-            </div>
-          </div>
+          <iframe
+            ref={frameRef}
+            src="/portfolio-preview"
+            title={`${device} portfolio preview`}
+            /* Out of the tab order on purpose. It is a preview: letting Tab
+               walk into another document would strand the keyboard inside a
+               frame whose Escape key cannot reach this overlay. The live
+               site, one click away, is the thing to explore properly. */
+            tabIndex={-1}
+            className="block h-full w-full border-0 bg-white"
+            onLoad={() => {
+              readyRef.current = true;
+              post();
+            }}
+          />
         </div>
       </div>
+    </div>
+  );
 
-      {/* Holds the column open while its contents are fixed, so nothing behind
-          the backdrop reflows and the page does not jump on close. */}
-      {inspecting && (
+  if (inspecting && typeof document !== "undefined") {
+    return (
+      <div className={`flex min-h-0 flex-col ${className}`}>
+        {/* Holds the column open while the preview is elsewhere in the DOM, so
+            nothing reflows behind the backdrop and the page does not jump when
+            the overlay closes. */}
         <div aria-hidden className={`pointer-events-none ${frameClassName}`} />
-      )}
+        {createPortal(
+          <div
+            ref={overlayRef}
+            role="dialog"
+            aria-modal
+            aria-label="Full-screen portfolio preview"
+            className={`fixed inset-0 ${OVERLAY_Z} flex flex-col gap-3 bg-slate-950/80 p-3 backdrop-blur-md sm:gap-4 sm:p-6`}
+          >
+            {/* Behind the content, so a click on the surround closes while a
+                click on the controls or the frame does not. */}
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden
+              onClick={() => setInspecting(false)}
+              className="absolute inset-0 -z-10 cursor-default"
+            />
+            {showDeviceControls && controls}
+            {pane}
+          </div>,
+          document.body,
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex min-h-0 flex-col ${className}`}>
+      {showDeviceControls && controls}
+      {pane}
     </div>
   );
 }
