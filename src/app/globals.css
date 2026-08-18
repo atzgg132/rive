@@ -338,7 +338,11 @@ p {
 }
 
 .glass {
-  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  /* background-color, not the `background` shorthand: the shorthand resets
+     background-image to none, which silently removed the gradient from the
+     cards that pair .glass with a bg-gradient-* utility and left their white
+     text on a near-white panel. */
+  background-color: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-blue-border);
