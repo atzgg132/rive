@@ -364,13 +364,33 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
     expect(editorMetrics.minHeight).toBe("0px");
     expect(editorMetrics.shellHeight).toBeLessThan(680);
 
+    /* This used to open the Preview tab and require the frame to stay under
+       75vh, because a tall pane in a normal page flow left a screen of
+       whitespace under it. There is no Preview tab now — the preview is a
+       full-screen layer, where filling the viewport is the point. The concern
+       it was guarding survives in a different form: the layer must fit the
+       screen exactly, never overflow it or add scroll to the page behind. */
     await page.getByRole("button", { name: "Preview", exact: true }).click();
-    const previewMetrics = await page.locator('iframe[title$="portfolio preview"]').evaluate((frame) => ({
-      height: frame.getBoundingClientRect().height,
-      minHeight: getComputedStyle(frame).minHeight,
-    }));
+    await expect(page.getByRole("dialog", { name: /full-screen portfolio preview/i })).toBeVisible();
+
+    const previewMetrics = await page.evaluate(() => {
+      const frame = document.querySelector('iframe[title$="portfolio preview"]');
+      const rect = frame?.getBoundingClientRect();
+      return {
+        height: rect?.height ?? 0,
+        bottom: rect?.bottom ?? 0,
+        minHeight: frame ? getComputedStyle(frame).minHeight : "",
+        documentScrollHeight: document.documentElement.scrollHeight,
+        clientHeight: document.documentElement.clientHeight,
+      };
+    });
     expect(previewMetrics.minHeight).toBe("0px");
-    expect(previewMetrics.height).toBeLessThanOrEqual(viewport.height * 0.75 + 1);
+    expect(previewMetrics.height, "the overlay frame must have real room").toBeGreaterThan(200);
+    expect(previewMetrics.bottom, "the overlay must not run off the bottom of the screen").toBeLessThanOrEqual(viewport.height + 1);
+    expect(
+      previewMetrics.documentScrollHeight,
+      "a scroll-locked overlay must not leave the page behind it taller than the screen",
+    ).toBeLessThanOrEqual(previewMetrics.clientHeight + 1);
   });
 }
 
