@@ -162,15 +162,21 @@ export async function GET(req: NextRequest) {
       .map(({ type, title, created_at }) => ({ type, title, created_at }));
 
     // Compute time-series data for charts (last 6 months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-    sixMonthsAgo.setDate(1);
+    const chartNow = new Date();
+    const sixMonthsAgo = new Date(Date.UTC(chartNow.getUTCFullYear(), chartNow.getUTCMonth() - 5, 1));
     
     // Fetch recent 6 months data for charts
     const [recent6mInvoices, recent6mExpenses] = await Promise.all([
       prisma.invoice.findMany({
-        where: { userId, issueDate: { gte: sixMonthsAgo }, status: "paid" },
-        select: { total: true, currency: true, issueDate: true }
+        where: {
+          userId,
+          status: "paid",
+          OR: [
+            { paidDate: { gte: sixMonthsAgo } },
+            { paidDate: null, issueDate: { gte: sixMonthsAgo } },
+          ],
+        },
+        select: { total: true, currency: true, issueDate: true, paidDate: true }
       }),
       prisma.expense.findMany({
         where: { userId, date: { gte: sixMonthsAgo } },
@@ -178,26 +184,28 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    const monthlyChartData: Record<string, { month: string, revenue: number, expenses: number }> = {};
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyChartData: Record<string, { month: string, period: string, revenue: number, expenses: number }> = {};
     
     // Initialize last 6 months
     for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      monthlyChartData[key] = { month: `${monthNames[d.getMonth()]}`, revenue: 0, expenses: 0 };
+      const d = new Date(Date.UTC(chartNow.getUTCFullYear(), chartNow.getUTCMonth() - i, 1));
+      const key = d.toISOString().slice(0, 7);
+      monthlyChartData[key] = {
+        month: d.toLocaleDateString(undefined, { month: "short", year: "numeric", timeZone: "UTC" }),
+        period: key,
+        revenue: 0,
+        expenses: 0,
+      };
     }
 
     recent6mInvoices.forEach((inv) => {
-      const d = new Date(inv.issueDate);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const d = inv.paidDate || inv.issueDate;
+      const key = d.toISOString().slice(0, 7);
       if (monthlyChartData[key]) monthlyChartData[key].revenue += convertAmount(Number(inv.total), inv.currency);
     });
 
     recent6mExpenses.forEach((exp) => {
-      const d = new Date(exp.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const key = exp.date.toISOString().slice(0, 7);
       if (monthlyChartData[key]) monthlyChartData[key].expenses += convertAmount(Number(exp.amount), exp.currency);
     });
 

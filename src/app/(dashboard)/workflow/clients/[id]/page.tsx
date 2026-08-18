@@ -289,7 +289,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 No invoices issued to this client yet.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="table-scroll-region">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">

@@ -250,6 +250,33 @@ p {
     letter-spacing: 0.045em;
     text-transform: none;
   }
+
+  /* Long tables own a bounded vertical scroll region so their header remains
+     visible while rows move beneath it. `overflow-x-auto` alone creates a
+     scrolling ancestor on both axes and prevents a header from sticking to
+     the page, even when that ancestor never actually scrolls vertically. */
+  .table-scroll-region,
+  .overflow-x-auto:has(> table) {
+    max-height: min(70vh, 44rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .table-scroll-region > table,
+  .overflow-x-auto > table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .table-scroll-region > table > thead > tr > th,
+  .overflow-x-auto > table > thead > tr > th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: rgb(var(--muted));
+    box-shadow: inset 0 -1px 0 rgb(var(--border));
+  }
 }
 
 /* ─── Scrollbar ──────────────────────────────────── */

@@ -50,6 +50,7 @@ export default function ExpensesPage() {
   const debouncedSearch = useDebouncedValue(search);
   const [category, setCategory] = useState("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +74,7 @@ export default function ExpensesPage() {
   const loadExpenses = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/expenses?search=${encodeURIComponent(debouncedSearch)}&category=${category}&page=${page}&pageSize=25`);
+      const res = await fetch(`/api/workflow/expenses?search=${encodeURIComponent(debouncedSearch)}&category=${category}&page=${page}&pageSize=${pageSize}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -112,7 +113,7 @@ export default function ExpensesPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadExpenses();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, category, page]);
+  }, [debouncedSearch, category, page, pageSize]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -325,7 +326,7 @@ export default function ExpensesPage() {
         />
       ) : (<>
         <div className="workspace-table">
-          <div className="overflow-x-auto">
+          <div className="table-scroll-region">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border text-xs font-semibold text-muted-foreground">
@@ -405,7 +406,7 @@ export default function ExpensesPage() {
             </table>
           </div>
         </div>
-        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="expenses" onPageChange={setPage} /> : null}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="expenses" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
       </>)}
 
       {/* Add/Edit Expense Drawer */}

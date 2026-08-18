@@ -71,6 +71,7 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState("all");
   const [clientFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") || "" : "");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -100,7 +101,7 @@ export default function ProjectsPage() {
   const loadProjects = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(debouncedSearch)}&status=${status}&clientId=${encodeURIComponent(clientFilter)}&page=${page}&pageSize=25`);
+      const res = await fetch(`/api/workflow/projects?search=${encodeURIComponent(debouncedSearch)}&status=${status}&clientId=${encodeURIComponent(clientFilter)}&page=${page}&pageSize=${pageSize}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -152,7 +153,7 @@ export default function ProjectsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status, page]);
+  }, [debouncedSearch, status, page, pageSize]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -454,7 +455,7 @@ export default function ProjectsPage() {
             })}
           </div>
         </DndContext>
-        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="projects" onPageChange={setPage} /> : null}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="projects" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
       </>)}
 
       {/* Add/Edit Project Drawer */}

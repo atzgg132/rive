@@ -83,7 +83,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
         </div>
 
         <div className="px-6 sm:px-10">
-          <div className="overflow-x-auto rounded-2xl border border-slate-200">
+          <div className="table-scroll-region rounded-2xl border border-slate-200">
             <table className="w-full min-w-[520px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Description</th><th className="px-4 py-3 text-right">Qty</th><th className="px-4 py-3 text-right">Rate</th><th className="px-4 py-3 text-right">Amount</th></tr></thead>
               <tbody className="divide-y divide-slate-100">{snapshot.items.map((item) => <tr key={`${item.description}-${item.amount}`}><td className="px-4 py-4 font-medium">{item.description}</td><td className="px-4 py-4 text-right text-slate-500">{item.quantity}</td><td className="px-4 py-4 text-right text-slate-500">{formatMoney(item.unitPrice)}</td><td className="px-4 py-4 text-right font-semibold">{formatMoney(item.amount)}</td></tr>)}</tbody>

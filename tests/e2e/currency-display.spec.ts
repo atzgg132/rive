@@ -31,12 +31,16 @@ async function mockCurrencyWorkspace(page: Page) {
       return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { INR: 83, EUR: 0.9, GBP: 0.8 } } });
     }
     if (pathname === "/api/workflow/invoices") {
+      const requestedPageSize = Number(new URL(request.url()).searchParams.get("pageSize") || 10);
+      const invoiceRows = [
+        { id: "usd", invoice_number: "INV-USD", status: "paid", currency: "USD", total: "100", subtotal: "100", discount_rate: "0", discount_amount: "0", tax_rate: "0", tax_amount: "0", amount_paid: "100", outstanding: "0", issue_date: "2026-08-01", due_date: null, paid_date: "2026-08-02", sent_at: "2026-08-01", notes: null, client_id: null, project_id: null, client_name: "US client", project_title: null, contract_id: null, contract_title: null, created_at: "2026-08-01", items: [] },
+        { id: "inr", invoice_number: "INV-INR", status: "paid", currency: "INR", total: "8300", subtotal: "8300", discount_rate: "0", discount_amount: "0", tax_rate: "0", tax_amount: "0", amount_paid: "8300", outstanding: "0", issue_date: "2026-08-01", due_date: null, paid_date: "2026-08-02", sent_at: "2026-08-01", notes: null, client_id: null, project_id: null, client_name: "India client", project_title: null, contract_id: null, contract_title: null, created_at: "2026-08-01", items: [] },
+        ...Array.from({ length: 10 }, (_, index) => ({ id: `filler-${index}`, invoice_number: `INV-${index + 1}`, status: "draft", currency: "INR", total: "0", subtotal: "0", discount_rate: "0", discount_amount: "0", tax_rate: "0", tax_amount: "0", amount_paid: "0", outstanding: "0", issue_date: "2026-08-01", due_date: null, paid_date: null, sent_at: null, notes: null, client_id: null, project_id: null, client_name: `Client ${index + 1}`, project_title: null, contract_id: null, contract_title: null, created_at: "2026-08-01", items: [] })),
+      ];
       return json(route, {
         success: true,
-        invoices: [
-          { id: "usd", invoice_number: "INV-USD", status: "paid", currency: "USD", total: "100", subtotal: "100", discount_rate: "0", discount_amount: "0", tax_rate: "0", tax_amount: "0", amount_paid: "100", outstanding: "0", issue_date: "2026-08-01", due_date: null, paid_date: "2026-08-02", sent_at: "2026-08-01", notes: null, client_id: null, project_id: null, client_name: "US client", project_title: null, contract_id: null, contract_title: null, created_at: "2026-08-01", items: [] },
-          { id: "inr", invoice_number: "INV-INR", status: "paid", currency: "INR", total: "8300", subtotal: "8300", discount_rate: "0", discount_amount: "0", tax_rate: "0", tax_amount: "0", amount_paid: "8300", outstanding: "0", issue_date: "2026-08-01", due_date: null, paid_date: "2026-08-02", sent_at: "2026-08-01", notes: null, client_id: null, project_id: null, client_name: "India client", project_title: null, contract_id: null, contract_title: null, created_at: "2026-08-01", items: [] },
-        ],
+        invoices: invoiceRows.slice(0, requestedPageSize),
+        pagination: { page: 1, pageSize: requestedPageSize, total: invoiceRows.length, totalPages: Math.ceil(invoiceRows.length / requestedPageSize), hasNextPage: requestedPageSize < invoiceRows.length, hasPreviousPage: false },
       });
     }
     if (pathname === "/api/workflow/revenue/summary") return json(route, {
@@ -119,6 +123,37 @@ test("mixed invoices use a persistent display currency without changing native a
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Display currency").last()).toHaveValue("USD", { timeout: 20_000 });
+});
+
+test("invoice rows expose page size choices and keep headers sticky", async ({ page }) => {
+  await mockCurrencyWorkspace(page);
+  await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
+
+  const pageSize = page.getByLabel("Rows per page for invoices");
+  await expect(pageSize).toHaveValue("10", { timeout: 20_000 });
+  await expect(page.getByText("Showing 1–10 of 12 invoices")).toBeVisible();
+  await expect(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Previous page" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Next page" })).toBeEnabled();
+
+  const invoiceHeader = page.getByRole("columnheader", { name: "Invoice" });
+  const scrollRegion = page.locator(".table-scroll-region").filter({ has: invoiceHeader });
+  const headerTop = await invoiceHeader.evaluate((header) => header.getBoundingClientRect().top);
+  const scrollTop = await scrollRegion.evaluate((region) => {
+    region.scrollTop = region.scrollHeight;
+    return region.scrollTop;
+  });
+  expect(scrollTop).toBeGreaterThan(0);
+  await expect.poll(() => invoiceHeader.evaluate((header) => header.getBoundingClientRect().top)).toBeCloseTo(headerTop, 0);
+  await expect(invoiceHeader).toHaveCSS("position", "sticky");
+  await expect(invoiceHeader).toHaveCSS("top", "0px");
+
+  const pageSizeRequest = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/workflow/invoices" && new URL(request.url()).searchParams.get("pageSize") === "25");
+  await pageSize.selectOption("25");
+  await pageSizeRequest;
+  await expect(pageSize).toHaveValue("25");
+  await expect(page.getByText("Showing 1–12 of 12 invoices")).toBeVisible();
+  await expect(page.getByText("Page 1 of 1")).toBeVisible();
 });
 
 test("project budgets follow the selected display currency on the list and detail page", async ({ page }) => {

@@ -291,7 +291,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="table-scroll-region">
             <table className="w-full min-w-[36rem] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">

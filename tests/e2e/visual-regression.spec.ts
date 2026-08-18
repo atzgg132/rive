@@ -87,9 +87,9 @@ async function mockVisualWorkspace(page: Page, guidance: "completed" | "active" 
         stats: { totalPaid: 5075, totalPending: 825, activeProjects: 3, totalExpenses: 522, netEarnings: 4553 },
         topClients: [], recentActivity: [],
         chartData: [
-          { month: "Mar", revenue: 900, expenses: 120 }, { month: "Apr", revenue: 1350, expenses: 80 },
-          { month: "May", revenue: 1425, expenses: 112 }, { month: "Jun", revenue: 1400, expenses: 90 },
-          { month: "Jul", revenue: 0, expenses: 120 }, { month: "Aug", revenue: 0, expenses: 0 },
+          { month: "Mar 2026", period: "2026-03", revenue: 900, expenses: 120 }, { month: "Apr 2026", period: "2026-04", revenue: 1350, expenses: 80 },
+          { month: "May 2026", period: "2026-05", revenue: 1425, expenses: 112 }, { month: "Jun 2026", period: "2026-06", revenue: 1400, expenses: 90 },
+          { month: "Jul 2026", period: "2026-07", revenue: 0, expenses: 120 }, { month: "Aug 2026", period: "2026-08", revenue: 0, expenses: 0 },
         ],
         activation: {
           goal: "organize", goalLabel: "Organize client work", outcome: "Keep client work, deadlines, and delivery in one place.", startingPath: "quickstart", activationStage: activated ? "activated" : "build", stageLabel: activated ? "Ready to run" : "Build your next useful step",
@@ -218,6 +218,21 @@ for (const { width, height } of [{ width: 1280, height: 800 }, { width: 1024, he
     });
   }
 }
+
+test("financial overview reveals exact month values without a moving tooltip", async ({ page }) => {
+  await prepareVisualPage(page, "light");
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+  const chart = page.getByRole("region", { name: "Paid invoices and expenses" });
+  await expect(chart).toBeVisible({ timeout: 20_000 });
+  await expect(chart.getByText("Jul 2026", { exact: true }).first()).toBeVisible();
+  const april = chart.getByRole("button", { name: /Apr 2026: \$1,350\.00 paid invoice value/ });
+  await april.focus();
+  await expect(april).toHaveAttribute("aria-pressed", "true");
+  await expect(chart.getByText("$1,350.00", { exact: true })).toBeVisible();
+  await expect(chart.getByText("$80.00", { exact: true })).toBeVisible();
+  await expect(chart.getByText("$1,270.00", { exact: true })).toBeVisible();
+});
 
 for (const theme of ["light", "dark"] as const) {
   test(`active guidance ${theme} visual`, async ({ page }) => {

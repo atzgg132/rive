@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
     const clientId = searchParams.get("clientId") || "";
     const projectId = searchParams.get("projectId") || "";
     const includeItems = Boolean(invoiceId);
-    const requestedPagination = parsePagination(searchParams, { pageSize: invoiceId ? 1 : 25 });
+    const requestedPagination = parsePagination(searchParams, invoiceId ? { pageSize: 1, minPageSize: 1 } : undefined);
 
     const where: Prisma.InvoiceWhereInput = {
       userId: session.userId

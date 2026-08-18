@@ -51,6 +51,7 @@ export default function ClientsPage() {
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +77,7 @@ export default function ClientsPage() {
   const loadClients = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}&page=${page}&pageSize=25`);
+      const res = await fetch(`/api/workflow/clients?search=${encodeURIComponent(debouncedSearch)}&status=${status}&page=${page}&pageSize=${pageSize}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -101,7 +102,7 @@ export default function ClientsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadClients();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status, page]);
+  }, [debouncedSearch, status, page, pageSize]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -385,7 +386,7 @@ export default function ClientsPage() {
             </div>
           ))}
         </div>
-        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="clients" onPageChange={setPage} /> : null}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="clients" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
       </>)}
 
       {/* Right Slideout Modal Drawer for adding/editing a Client */}

@@ -97,6 +97,7 @@ export default function ContractsPage() {
   const [clientFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("clientId") || "" : "");
   const [projectFilter] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("projectId") || "" : "");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [summary, setSummary] = useState<ContractSummary | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -110,7 +111,7 @@ export default function ContractsPage() {
       const selectedFilter = filters.find((item) => item.value === filter);
       const statusParam = selectedFilter?.statuses?.join(",") || "all";
       const [contractResponse, clientResponse, projectResponse] = await Promise.all([
-        fetch(`/api/workflow/contracts?search=${encodeURIComponent(search.trim())}&status=${encodeURIComponent(statusParam)}&clientId=${encodeURIComponent(clientFilter)}&projectId=${encodeURIComponent(projectFilter)}&page=${page}&pageSize=25`, { cache: "no-store" }),
+        fetch(`/api/workflow/contracts?search=${encodeURIComponent(search.trim())}&status=${encodeURIComponent(statusParam)}&clientId=${encodeURIComponent(clientFilter)}&projectId=${encodeURIComponent(projectFilter)}&page=${page}&pageSize=${pageSize}`, { cache: "no-store" }),
         fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
         fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
       ]);
@@ -156,7 +157,7 @@ export default function ContractsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, filter]);
+  }, [page, pageSize, search, filter]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -299,7 +300,7 @@ export default function ContractsPage() {
             );
           })}
         </div>
-        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="Agreements" onPageChange={setPage} /> : null}
+        {pagination ? <PaginationControls pagination={pagination} loading={loading} label="Agreements" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
       </>)}
 
       <ContractComposer

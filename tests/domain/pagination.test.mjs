@@ -5,8 +5,10 @@ import { buildPagination, paginationOffset, parsePagination } from "../../src/li
 
 test("pagination requests clamp page size and reject unsafe values", () => {
   const params = new URLSearchParams("page=0&pageSize=999999999999999999999");
-  assert.deepEqual(parsePagination(params), { page: 1, pageSize: 25 });
+  assert.deepEqual(parsePagination(params), { page: 1, pageSize: 10 });
+  assert.deepEqual(parsePagination(new URLSearchParams("page=2&pageSize=1")), { page: 2, pageSize: 10 });
   assert.deepEqual(parsePagination(new URLSearchParams("page=2&pageSize=1000")), { page: 2, pageSize: 100 });
+  assert.deepEqual(parsePagination(new URLSearchParams("pageSize=1"), { pageSize: 1, minPageSize: 1 }), { page: 1, pageSize: 1 });
 });
 
 test("pagination metadata clamps a deleted or stale page to the last page", () => {
