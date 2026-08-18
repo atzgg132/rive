@@ -154,7 +154,10 @@ export default function PortfolioDashboardPage() {
       />
 
       <div data-portfolio-sticky-actions className="sticky -top-3 z-20 flex min-h-12 flex-wrap items-center justify-end gap-2 border-y border-border bg-background px-1 py-2 sm:-top-4 sm:px-2 md:-top-6 xl:-top-8">
-        <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button><Button data-guide-target="portfolio-publish" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
+        {/* Only where the preview is not already on screen. Beside a visible pane
+            that carries its own Inspect control, this would be the same door twice. */}
+        {!sidePreviewVisible && <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button>}
+        <Button data-guide-target="portfolio-publish" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
       {portfolio.status !== "published" && readiness.score < 100 && !unstarted && (
