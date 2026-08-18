@@ -1,0 +1,87 @@
+name: Regenerate visual baselines
+
+# Screenshot baselines are rendered by Chromium on this runner's Linux font
+# stack. Regenerating them anywhere else — a developer's macOS or Windows
+# machine — produces images that differ from CI on antialiasing alone, so every
+# assertion fails for reasons unrelated to the change under review.
+#
+# Run this by hand after a deliberate visual change, download the artifact, and
+# commit the PNGs. It is manual on purpose: a workflow that rewrote baselines
+# automatically would turn every unintended visual regression into a silently
+# accepted one.
+#
+# This file must stay on the default branch. GitHub only offers a
+# workflow_dispatch trigger for workflows present on the default branch, so
+# while this lived only on dev it could not be started at all — the API
+# answered 404 and it never appeared in the Actions UI. Keeping it on main is
+# what makes it runnable; the branch selector then chooses which ref to
+# regenerate against.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: rive
+          POSTGRES_PASSWORD: rive
+          POSTGRES_DB: rive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rive -d rive_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://rive:rive@localhost:5432/rive_test
+      DATABASE_SSL: disable
+      SESSION_SECRET: ci-session-secret
+      CALENDAR_ENCRYPTION_KEY: ci-calendar-encryption-key
+      CRON_SECRET: ci-cron-secret
+      APP_URL: http://127.0.0.1:3000
+      APP_ENV: test
+      EMAIL_PROVIDER: ses
+      AWS_REGION: ap-south-1
+      ESIGN_PROVIDER: local
+      CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION: "true"
+      CONTRACTS_RECORDED_ACCEPTANCE_ENABLED: "true"
+      E2E_USER_EMAIL: e2e-workspace@rive.test
+      ADMIN_USERNAME: e2e-admin
+      ADMIN_PASSWORD_HASH: scrypt:865ae7913b63f7f5bdc6235e489624e6:04e880f8bbb611921db676efec9d960dc29efea47fd1f9aca23f62410a08d4b8bee80458cf9273511e57a10a77df376a72e55cf037f6b216cc301951ac16155d
+      E2E_ADMIN_PASSWORD: e2e-admin-not-a-real-secret
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: node scripts/seed-e2e-user.mjs
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run build
+      # Same server mode and worker count as the verify job, so the pages are
+      # rendered under the conditions the comparison will later run in.
+      - name: Rewrite baselines
+        env:
+          PLAYWRIGHT_SERVER: production
+          PLAYWRIGHT_WORKERS: 4
+        run: npx playwright test tests/e2e/visual-regression.spec.ts --update-snapshots
+      - name: Report what moved
+        if: always()
+        run: git status --porcelain tests/e2e/__screenshots__
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-baselines
+          path: tests/e2e/__screenshots__
+          retention-days: 7
