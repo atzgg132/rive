@@ -537,6 +537,22 @@ test.describe("portfolio studio", () => {
     await asleep.hover();
     await expect(asleep).toContainText("Independent product designer", { timeout: 20_000 });
 
+    /* A miniature is an entire portfolio. `aria-hidden` and `pointer-events-none`
+       hide it from assistive technology and the mouse but leave every link and
+       field in the tab order, so without `inert` the keyboard walks into six
+       hidden copies of the owner's nav and contact form. */
+    const reachable = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll("[data-portfolio-template]")];
+      return cards.reduce((count, card) => {
+        const decorative = card.querySelector("[inert]") || card.querySelector('[aria-hidden="true"]');
+        if (!decorative) return count;
+        return count + [...decorative.querySelectorAll("a[href],button,input,select,textarea")]
+          .filter((element) => (element as HTMLElement).tabIndex >= 0 && !(element as HTMLElement).inert)
+          .length;
+      }, 0);
+    });
+    expect(reachable, "no part of a template miniature may be reachable by keyboard").toBe(0);
+
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,

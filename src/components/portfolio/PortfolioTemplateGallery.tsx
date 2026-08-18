@@ -94,6 +94,12 @@ function TemplateCard({
              want an entire portfolio read out six times. */
           <div
             aria-hidden
+            /* `inert`, not just `aria-hidden` and `pointer-events-none`. Neither
+               of those takes anything out of the tab order, and a miniature is a
+               whole portfolio: without this, tabbing through Appearance walks
+               the keyboard into six hidden copies of the owner's nav links,
+               project links and contact form. */
+            inert
             className="pointer-events-none absolute left-0 top-0 origin-top-left select-none"
             style={{
               width: `${MINIATURE_WIDTH}px`,
