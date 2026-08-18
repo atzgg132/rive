@@ -43,6 +43,17 @@ export default function StudioOverlay({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  /* Held in a ref so the effect below does not depend on it. Callers pass inline
+     arrows — a new function every parent render — and re-running this effect
+     would restore focus to the opener and then pull it back to the first
+     control, over and over, while someone typed elsewhere on the page. */
+  const closeRef = useRef(onClose);
+  /* Synced in an effect rather than during render — writing a ref while
+     rendering is not safe under concurrent rendering. The initial value is
+     already correct, so the layer never holds a stale handler. */
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const overlay = ref.current;
@@ -59,7 +70,7 @@ export default function StudioOverlay({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        closeRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -83,7 +94,7 @@ export default function StudioOverlay({
       document.body.style.overflow = previousOverflow;
       restoreTo?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   if (typeof document === "undefined") return null;
 
@@ -101,7 +112,7 @@ export default function StudioOverlay({
         type="button"
         tabIndex={-1}
         aria-hidden
-        onClick={onClose}
+        onClick={() => closeRef.current()}
         className="absolute inset-0 -z-10 cursor-default"
       />
       {children}

@@ -74,14 +74,13 @@ function TemplateCard({
   const scale = width > 0 ? width / MINIATURE_WIDTH : 0;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    /* A div, not a button. The miniature below is an entire portfolio — anchors,
+       buttons, a contact form — and interactive elements cannot legally nest
+       inside a button. The click target is the overlaid button at the end. */
+    <div
       onMouseEnter={onWake}
-      onFocus={onWake}
-      aria-pressed={selected}
       data-portfolio-template={template.key}
-      className={`group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border text-left transition ${
+      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border text-left transition ${
         selected
           ? "border-primary ring-2 ring-primary/30"
           : "border-border hover:border-primary/50"
@@ -121,7 +120,15 @@ function TemplateCard({
         <div className="text-sm font-bold text-foreground dark:text-slate-100">{template.name}</div>
         <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{template.description}</div>
       </div>
-    </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        onFocus={onWake}
+        aria-pressed={selected}
+        aria-label={`Use the ${template.name} template — ${template.description}`}
+        className="absolute inset-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      />
+    </div>
   );
 }
 
