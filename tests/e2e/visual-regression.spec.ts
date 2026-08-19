@@ -361,6 +361,41 @@ test("portfolio sticky action bar stays flush with the scroll viewport", async (
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
 });
 
+test("deep portfolio form focus cannot scroll the dashboard document", async ({ page }) => {
+  await prepareVisualPage(page, "light", { width: 1920, height: 900 });
+  await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+  /* Make the editor genuinely deep, then use the browser's normal focus path
+     on a control near its bottom. This is the interaction that used to scroll
+     the document instead of the dashboard's <main> scroll region. */
+  const addProject = page.getByRole("button", { name: "Add project" });
+  for (let index = 0; index < 6; index += 1) await addProject.click();
+  const target = page.getByPlaceholder("https://example.com").last();
+  await expect(target).toBeVisible();
+  const before = await page.evaluate(() => ({
+    documentScrollHeight: document.documentElement.scrollHeight,
+    viewportHeight: document.documentElement.clientHeight,
+    shellTop: document.querySelector("[data-dashboard-shell]")?.getBoundingClientRect().top ?? 0,
+  }));
+  expect(before.documentScrollHeight).toBeLessThanOrEqual(before.viewportHeight + 1);
+  expect(before.shellTop).toBeLessThanOrEqual(1);
+
+  await target.focus();
+  await page.waitForTimeout(50);
+  const after = await page.evaluate(() => ({
+    documentScrollTop: document.documentElement.scrollTop,
+    documentScrollHeight: document.documentElement.scrollHeight,
+    viewportHeight: document.documentElement.clientHeight,
+    shellTop: document.querySelector("[data-dashboard-shell]")?.getBoundingClientRect().top ?? 0,
+    mainScrollTop: document.querySelector("main")?.scrollTop ?? 0,
+  }));
+  expect(after.documentScrollTop, "deep focus must not move the document behind the app shell").toBe(0);
+  expect(after.documentScrollHeight).toBeLessThanOrEqual(after.viewportHeight + 1);
+  expect(Math.abs(after.shellTop)).toBeLessThanOrEqual(1);
+  expect(after.mainScrollTop, "the inner workspace should own the scroll").toBeGreaterThan(0);
+});
+
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
   test(`portfolio studio avoids viewport-sized bottom whitespace ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await prepareVisualPage(page, "light", viewport);

@@ -6,14 +6,14 @@ import { ArrowLeft, Check, FileText, Plus, Settings2, Trash2 } from "lucide-reac
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button, Input, Select, Textarea } from "@/components/ui";
+import { formatMoney } from "@/lib/currency";
 
 type LineItem = { description: string; quantity: string; unitPrice: string };
 type Client = { id: string; name: string; email?: string | null };
 type Project = { id: string; title: string; client_id: string | null; currency: string };
 
 function money(value: number, currency: string): string {
-  try { return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0); }
-  catch { return `${currency} ${(Number.isFinite(value) ? value : 0).toFixed(2)}`; }
+  return formatMoney(Number.isFinite(value) ? value : 0, currency);
 }
 
 export default function NewInvoicePage() {

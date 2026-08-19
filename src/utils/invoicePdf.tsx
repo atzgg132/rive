@@ -2,6 +2,7 @@ import "server-only";
 
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { currencyFractionDigits } from "@/utils/invoiceMath";
+import { localeForCurrency } from "@/lib/currency";
 
 export type InvoicePdfSnapshot = {
   version?: number;
@@ -62,7 +63,7 @@ const styles = StyleSheet.create({
 function money(value: string, currency: string): string {
   const digits = currencyFractionDigits(currency);
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(Number(value) || 0);
+    return new Intl.NumberFormat(localeForCurrency(currency), { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(Number(value) || 0);
   } catch {
     return `${currency} ${(Number(value) || 0).toFixed(digits)}`;
   }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { formatMoney } from "@/lib/currency";
 
 type InvoiceSnapshot = {
   invoiceNumber: string;
@@ -44,7 +45,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
   if (state === "loading") return <div className="grid min-h-screen place-items-center bg-slate-50"><Loader2 className="h-7 w-7 animate-spin text-blue-600" /></div>;
   if (state === "error" || !snapshot) return <div className="grid min-h-screen place-items-center bg-slate-50 p-6"><div className="max-w-sm rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm"><AlertCircle className="mx-auto h-8 w-8 text-red-500" /><h1 className="mt-4 text-xl font-semibold text-slate-900">Invoice link unavailable</h1><p className="mt-2 text-sm text-slate-500">The link may have expired, been voided, or been replaced. Contact the sender for a fresh copy.</p></div></div>;
 
-  const formatMoney = (value: string | number) => new Intl.NumberFormat(undefined, { style: "currency", currency: snapshot.currency, maximumFractionDigits: 2 }).format(Number(value) || 0);
+  const money = (value: string | number) => formatMoney(Number(value) || 0, snapshot.currency);
   const outstanding = Math.max(Number(snapshot.outstanding ?? (Number(snapshot.total) - Number(snapshot.amountPaid))), 0);
   const isPaid = outstanding <= 0;
 
@@ -77,8 +78,8 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
           </div>
           <div className="rounded-2xl bg-blue-50 px-5 py-4 sm:min-w-52">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">{isPaid ? "Paid in full" : "Amount due"}</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">{formatMoney(outstanding)}</p>
-            {Number(snapshot.amountPaid) > 0 ? <p className="mt-1 text-xs text-slate-600">Paid {formatMoney(snapshot.amountPaid)} of {formatMoney(snapshot.total)}</p> : null}
+            <p className="mt-2 text-3xl font-bold text-slate-950">{money(outstanding)}</p>
+            {Number(snapshot.amountPaid) > 0 ? <p className="mt-1 text-xs text-slate-600">Paid {money(snapshot.amountPaid)} of {money(snapshot.total)}</p> : null}
           </div>
         </div>
 
@@ -86,10 +87,10 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
           <div className="table-scroll-region rounded-2xl border border-slate-200">
             <table className="w-full min-w-[520px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Description</th><th className="px-4 py-3 text-right">Qty</th><th className="px-4 py-3 text-right">Rate</th><th className="px-4 py-3 text-right">Amount</th></tr></thead>
-              <tbody className="divide-y divide-slate-100">{snapshot.items.map((item) => <tr key={`${item.description}-${item.amount}`}><td className="px-4 py-4 font-medium">{item.description}</td><td className="px-4 py-4 text-right text-slate-500">{item.quantity}</td><td className="px-4 py-4 text-right text-slate-500">{formatMoney(item.unitPrice)}</td><td className="px-4 py-4 text-right font-semibold">{formatMoney(item.amount)}</td></tr>)}</tbody>
+              <tbody className="divide-y divide-slate-100">{snapshot.items.map((item) => <tr key={`${item.description}-${item.amount}`}><td className="px-4 py-4 font-medium">{item.description}</td><td className="px-4 py-4 text-right text-slate-500">{item.quantity}</td><td className="px-4 py-4 text-right text-slate-500">{money(item.unitPrice)}</td><td className="px-4 py-4 text-right font-semibold">{money(item.amount)}</td></tr>)}</tbody>
             </table>
           </div>
-          <div className="ml-auto mt-6 max-w-xs space-y-2 text-sm"><div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatMoney(snapshot.subtotal)}</span></div>{Number(snapshot.discountAmount || 0) > 0 ? <div className="flex justify-between text-slate-500"><span>Discount{Number(snapshot.discountRate || 0) > 0 ? ` (${snapshot.discountRate}%)` : ""}</span><span>-{formatMoney(snapshot.discountAmount || "0")}</span></div> : null}{Number(snapshot.taxRate) > 0 ? <div className="flex justify-between text-slate-500"><span>Tax ({snapshot.taxRate}%)</span><span>{formatMoney(snapshot.taxAmount)}</span></div> : null}<div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold"><span>Total</span><span>{formatMoney(snapshot.total)}</span></div></div>
+          <div className="ml-auto mt-6 max-w-xs space-y-2 text-sm"><div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{money(snapshot.subtotal)}</span></div>{Number(snapshot.discountAmount || 0) > 0 ? <div className="flex justify-between text-slate-500"><span>Discount{Number(snapshot.discountRate || 0) > 0 ? ` (${snapshot.discountRate}%)` : ""}</span><span>-{money(snapshot.discountAmount || "0")}</span></div> : null}{Number(snapshot.taxRate) > 0 ? <div className="flex justify-between text-slate-500"><span>Tax ({snapshot.taxRate}%)</span><span>{money(snapshot.taxAmount)}</span></div> : null}<div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold"><span>Total</span><span>{money(snapshot.total)}</span></div></div>
         </div>
 
         {snapshot.notes || snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <div className="grid gap-5 px-6 py-8 sm:grid-cols-2 sm:px-10"><div>{snapshot.notes ? <><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Notes</p><p className="mt-2 whitespace-pre-line text-sm text-slate-600">{snapshot.notes}</p></> : null}</div><div>{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Payment information</p><p className="mt-2 whitespace-pre-line text-sm text-slate-600">{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms}</p></> : null}</div></div> : null}
