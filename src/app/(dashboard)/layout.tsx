@@ -244,7 +244,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency}>
-    <div className="flex h-screen min-h-0 overflow-hidden bg-background">
+    <div data-dashboard-shell className="fixed inset-0 flex h-screen min-h-0 overflow-hidden bg-background">
       <Toaster position="bottom-right" theme="system" />
       {/* ── Desktop Sidebar ── */}
       <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col justify-between border-r border-border bg-card py-5 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>

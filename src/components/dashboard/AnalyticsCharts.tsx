@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { prepareFinancialChart, type FinancialChartInput } from "@/utils/financialChart";
+import { localeForCurrency } from "@/lib/currency";
 
 export type ChartData = FinancialChartInput;
 
 function makeCurrencyFormatter(currency: string, compact: boolean): Intl.NumberFormat | null {
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(localeForCurrency(currency), {
       style: "currency",
       currency,
       notation: compact ? "compact" : "standard",
@@ -42,8 +43,8 @@ export default function AnalyticsCharts({ data, currency = "USD" }: { data: Char
     || null;
   const fullFormatter = useMemo(() => makeCurrencyFormatter(currency, false), [currency]);
   const compactFormatter = useMemo(() => makeCurrencyFormatter(currency, true), [currency]);
-  const fullMoney = (value: number) => fullFormatter?.format(value) || `${currency} ${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  const compactMoney = (value: number) => compactFormatter?.format(value) || `${currency} ${value.toLocaleString(undefined, { notation: "compact", maximumFractionDigits: 1 })}`;
+  const fullMoney = (value: number) => fullFormatter?.format(value) || `${currency} ${value.toLocaleString(localeForCurrency(currency), { maximumFractionDigits: 2 })}`;
+  const compactMoney = (value: number) => compactFormatter?.format(value) || `${currency} ${value.toLocaleString(localeForCurrency(currency), { notation: "compact", maximumFractionDigits: 1 })}`;
   const barHeight = (value: number) => value > 0 ? `${Math.max(2, (value / chart.scaleMax) * 100)}%` : "0%";
 
   if (!chart.points.length) {

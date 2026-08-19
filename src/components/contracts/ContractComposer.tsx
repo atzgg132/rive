@@ -13,6 +13,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { localeForCurrency } from "@/lib/currency";
 import {
   AlertTriangle,
   ArrowDown,
@@ -423,7 +424,7 @@ export function ContractComposer({
                   {templateLoading ? <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparing the draft…</p> : selectedClient ? (
                     <dl className="mt-3 space-y-3 text-xs">
                       <div><dt className="font-semibold text-muted-foreground">Client</dt><dd className="mt-0.5 font-medium">{selectedClient.name}{selectedClient.company ? ` · ${selectedClient.company}` : ""}</dd><dd className="text-muted-foreground">{selectedClient.email || "Email not recorded"}</dd></div>
-                      {selectedProject ? <div><dt className="font-semibold text-muted-foreground">Project snapshot</dt><dd className="mt-0.5 font-medium">{selectedProject.title}</dd><dd className="text-muted-foreground">{selectedProject.milestones.length} milestones{selectedProject.budget ? ` · ${selectedProject.currency} ${Number(selectedProject.budget).toLocaleString()}` : ""}</dd></div> : null}
+                      {selectedProject ? <div><dt className="font-semibold text-muted-foreground">Project snapshot</dt><dd className="mt-0.5 font-medium">{selectedProject.title}</dd><dd className="text-muted-foreground">{selectedProject.milestones.length} milestones{selectedProject.budget ? ` · ${selectedProject.currency} ${Number(selectedProject.budget).toLocaleString(localeForCurrency(selectedProject.currency))}` : ""}</dd></div> : null}
                     </dl>
                   ) : <p className="mt-3 text-xs leading-5 text-muted-foreground">Choose a client to pull in the named parties and prepare the terms.</p>}
                 </div>
@@ -480,7 +481,7 @@ export function ContractComposer({
                     <Sparkles className="h-4 w-4 text-primary" />
                     <p className="mr-auto text-xs font-medium">Build a schedule from {selectedProject.milestones.length} existing project milestones.</p>
                     <Button type="button" variant="outline" size="sm" onClick={() => addMilestonePayments(false)}>Add milestones</Button>
-                    {projectBudget > 0 ? <Button type="button" variant="secondary" size="sm" onClick={() => addMilestonePayments(true)}>Split {currency} {projectBudget.toLocaleString()}</Button> : null}
+                    {projectBudget > 0 ? <Button type="button" variant="secondary" size="sm" onClick={() => addMilestonePayments(true)}>Split {currency} {projectBudget.toLocaleString(localeForCurrency(currency))}</Button> : null}
                   </div>
                 ) : null}
 
@@ -512,10 +513,10 @@ export function ContractComposer({
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Parties</dt><dd className="text-right font-semibold">You + {selectedClient?.name || "client"}</dd></div>
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Clauses</dt><dd className="font-semibold">{enabledSections.length} included</dd></div>
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Payments</dt><dd className="font-semibold">{payments.length}</dd></div>
-                    <div className="flex justify-between gap-3 border-t border-border pt-2"><dt className="font-semibold">Agreement total</dt><dd className="font-extrabold">{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd></div>
-                    {projectBudget > 0 ? <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Project budget</dt><dd className="font-semibold">{currency} {projectBudget.toLocaleString()}</dd></div> : null}
+                    <div className="flex justify-between gap-3 border-t border-border pt-2"><dt className="font-semibold">Agreement total</dt><dd className="font-extrabold">{currency} {total.toLocaleString(localeForCurrency(currency), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd></div>
+                    {projectBudget > 0 ? <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Project budget</dt><dd className="font-semibold">{currency} {projectBudget.toLocaleString(localeForCurrency(currency))}</dd></div> : null}
                   </dl>
-                  {projectBudget > 0 && Math.abs(budgetDelta) >= 0.01 ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">The payment schedule is {currency} {Math.abs(budgetDelta).toLocaleString(undefined, { minimumFractionDigits: 2 })} {budgetDelta > 0 ? "above" : "below"} the project budget. That can be intentional—confirm it before saving.</p> : null}
+                  {projectBudget > 0 && Math.abs(budgetDelta) >= 0.01 ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">The payment schedule is {currency} {Math.abs(budgetDelta).toLocaleString(localeForCurrency(currency), { minimumFractionDigits: 2 })} {budgetDelta > 0 ? "above" : "below"} the project budget. That can be intentional—confirm it before saving.</p> : null}
                 </div>
                 <Alert variant="info" className="text-xs">
                   <CheckCircle2 className="h-4 w-4" />

@@ -7,6 +7,7 @@ import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRa
 import { buildActivationPlan } from "@/lib/activation-plan";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 import { normalizeActivationGoal } from "@/lib/activation";
+import { OPEN_STATUSES, collectedAmount, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
 
 export async function GET(req: NextRequest) {
   try {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
       prisma.invoice.groupBy({
         by: ["status", "currency"],
         where: { userId },
-        _sum: { total: true }
+        _sum: { total: true, amountPaid: true }
       }),
       // Active Projects Count
       prisma.project.count({
@@ -96,16 +97,18 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    // Compute revenue stats
+    // Cash in hand and money still owed, split the way the revenue workspace
+    // splits them. Keying off status alone counted a partly paid invoice at its
+    // gross value in one bucket and left it out of the other entirely, and it
+    // dropped `partially_paid` invoices that were not yet past due from both.
     let totalPaid = 0;
     let totalPending = 0;
     invoicesAggregate.forEach((grp) => {
-      const sum = convertAmount(Number(grp._sum.total || 0), grp.currency);
-      if (grp.status === "paid") {
-        totalPaid += sum;
-      } else if (grp.status === "sent" || grp.status === "viewed") {
-        totalPending += sum;
-      }
+      if (!isIssuedStatus(grp.status)) return;
+      const gross = Number(grp._sum.total || 0);
+      const paid = Number(grp._sum.amountPaid || 0);
+      totalPaid += convertAmount(collectedAmount(gross, paid), grp.currency);
+      totalPending += convertAmount(outstandingAmount(gross, paid), grp.currency);
     });
 
     const totalExpenses = expensesAggregate.reduce((sum, group) => sum + convertAmount(Number(group._sum.amount || 0), group.currency), 0);
@@ -235,8 +238,8 @@ export async function GET(req: NextRequest) {
       prisma.expense.count({ where: { userId } }),
       prisma.invoice.groupBy({
         by: ["currency"],
-        where: { userId, dueDate: { lt: now }, status: { in: ["sent", "viewed", "overdue"] } },
-        _sum: { total: true },
+        where: { userId, dueDate: { lt: now }, status: { in: [...OPEN_STATUSES] } },
+        _sum: { total: true, amountPaid: true },
         _count: { _all: true },
       }),
       prisma.project.findMany({
@@ -329,7 +332,10 @@ export async function GET(req: NextRequest) {
     }
     const topExpenseCategory = [...expenseCategoryTotals.entries()].sort((a, b) => b[1] - a[1])[0] || null;
     const overdueCount = overdueInvoiceGroups.reduce((sum, group) => sum + group._count._all, 0);
-    const overdueAmount = overdueInvoiceGroups.reduce((sum, group) => sum + convertAmount(Number(group._sum.total || 0), group.currency), 0);
+    const overdueAmount = overdueInvoiceGroups.reduce(
+      (sum, group) => sum + convertAmount(outstandingAmount(Number(group._sum.total || 0), Number(group._sum.amountPaid || 0)), group.currency),
+      0,
+    );
 
     return NextResponse.json({
       success: true,

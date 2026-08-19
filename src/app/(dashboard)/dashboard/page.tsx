@@ -154,7 +154,7 @@ export default function DashboardOverview() {
   }
 
   const statCards = [
-    { title: "Revenue collected", value: formatCurrency(stats.totalPaid), sub: `Pending: ${formatCurrency(stats.totalPending)}`, icon: DollarSign, color: "text-[#059669] dark:text-emerald-300 bg-[#ECFDF5] dark:bg-emerald-950/60 ring-1 ring-emerald-100 dark:ring-emerald-800/60" },
+    { title: "Revenue collected", value: formatCurrency(stats.totalPaid), sub: `Outstanding: ${formatCurrency(stats.totalPending)}`, icon: DollarSign, color: "text-[#059669] dark:text-emerald-300 bg-[#ECFDF5] dark:bg-emerald-950/60 ring-1 ring-emerald-100 dark:ring-emerald-800/60" },
     { title: "Active projects", value: stats.activeProjects, sub: "Currently in progress", icon: Briefcase, color: "text-primary dark:text-blue-300 bg-accent dark:bg-blue-950/60 ring-1 ring-blue-100 dark:ring-blue-800/60" },
     { title: "Expenses logged", value: formatCurrency(stats.totalExpenses), sub: "All categorized business costs", icon: Receipt, color: "text-[#DC2626] dark:text-red-300 bg-[#FEF2F2] dark:bg-red-950/60 ring-1 ring-red-100 dark:ring-red-800/60" },
     { title: "Net earnings", value: formatCurrency(stats.netEarnings), sub: "Collected revenue minus expenses", icon: TrendingUp, color: "text-[#7C3AED] dark:text-violet-300 bg-[#F5F3FF] dark:bg-violet-950/60 ring-1 ring-violet-100 dark:ring-violet-800/60" },

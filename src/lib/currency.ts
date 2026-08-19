@@ -45,21 +45,70 @@ export function convertWithUsdRates(
   return amount * (toRate / fromRate);
 }
 
+const FALLBACK_LOCALE = "en-US";
+
+// Digit grouping belongs to the money, not to whoever happens to be looking at
+// it. Letting Intl resolve the runtime default meant the same stored amount
+// rendered ₹60,56,458.23 to a reader whose browser reported en-IN and
+// ₹6,056,458.23 to one reporting en-US — and because these views server-render
+// before they hydrate, the Node process locale could disagree with the browser
+// on the very first paint of the same page.
+//
+// So every currency is pinned to the locale of the market it belongs to,
+// preferring that market's English locale where CLDR has one so the numerals
+// read the way the rest of this English-language product does. INR is the case
+// that carries real weight: lakh/crore grouping is what an Indian reader
+// expects, and it is not something a US reader should be shown instead of.
+const CURRENCY_LOCALES: Record<string, string> = {
+  USD: "en-US",
+  INR: "en-IN",
+  EUR: "en-IE",
+  GBP: "en-GB",
+  AUD: "en-AU",
+  CAD: "en-CA",
+  SGD: "en-SG",
+  AED: "en-AE",
+  JPY: "en-JP",
+  CHF: "en-CH",
+  NZD: "en-NZ",
+  CNY: "zh-CN",
+  HKD: "en-HK",
+};
+
+/**
+ * The locale a given currency is rendered in. Currencies outside the display
+ * picker are still valid on projects and contracts, so an unknown code gets a
+ * stable fallback rather than the reader's environment.
+ */
+export function localeForCurrency(currency: string): string {
+  return CURRENCY_LOCALES[currency.trim().toUpperCase()] || FALLBACK_LOCALE;
+}
+
+/**
+ * `locale` is an override for callers that have a better answer than the
+ * currency does. Omitting it does not mean "ask the browser" — it means the
+ * currency decides, so a bare call renders identically for every reader.
+ */
 export function formatMoney(amount: number, currency: string, locale?: string): string {
   const normalizedCurrency = currency.trim().toUpperCase() || "USD";
+  const resolvedLocale = locale || localeForCurrency(normalizedCurrency);
+  const maximumFractionDigits = normalizedCurrency === "JPY" ? 0 : 2;
   try {
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(resolvedLocale, {
       style: "currency",
       currency: normalizedCurrency,
       currencyDisplay: "narrowSymbol",
-      maximumFractionDigits: normalizedCurrency === "JPY" ? 0 : 2,
+      maximumFractionDigits,
     }).format(amount);
   } catch {
     // Project and contract currencies are intentionally extensible beyond the
     // display-currency picker. Keep an unknown three-letter code visible
     // instead of allowing Intl to take down a whole workspace view.
-    return `${normalizedCurrency} ${new Intl.NumberFormat(locale, {
-      maximumFractionDigits: normalizedCurrency === "JPY" ? 0 : 2,
-    }).format(amount)}`;
+    try {
+      return `${normalizedCurrency} ${new Intl.NumberFormat(resolvedLocale, { maximumFractionDigits }).format(amount)}`;
+    } catch {
+      // A caller-supplied locale Intl rejects must not take the view down either.
+      return `${normalizedCurrency} ${new Intl.NumberFormat(FALLBACK_LOCALE, { maximumFractionDigits }).format(amount)}`;
+    }
   }
 }

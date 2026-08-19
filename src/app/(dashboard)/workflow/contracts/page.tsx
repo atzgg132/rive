@@ -26,6 +26,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { PaginationMeta } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { localeForCurrency } from "@/lib/currency";
 
 type ContractListItem = {
   id: string;
@@ -334,7 +335,7 @@ function ContractsWorkspace() {
                     <div className="mt-auto grid grid-cols-3 gap-3 border-t border-border pt-4 text-xs">
                       <Metric icon={Users} value={`${signedCount}/2`} label="accepted" />
                       <Metric icon={Clock3} value={`v${contract.current_version?.version || 1}`} label={new Date(contract.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
-                      <Metric icon={CircleDollarSign} value={contract.payment_plan.length ? `${contract.currency} ${paymentTotal.toLocaleString()}` : "Manual"} label={contract.payment_plan.length ? `${contract.payment_plan.length} trigger${contract.payment_plan.length === 1 ? "" : "s"}` : "billing"} />
+                      <Metric icon={CircleDollarSign} value={contract.payment_plan.length ? `${contract.currency} ${paymentTotal.toLocaleString(localeForCurrency(contract.currency))}` : "Manual"} label={contract.payment_plan.length ? `${contract.payment_plan.length} trigger${contract.payment_plan.length === 1 ? "" : "s"}` : "billing"} />
                     </div>
                     <span className="inline-flex items-center justify-end gap-1 text-xs font-bold text-primary opacity-70 transition group-hover:opacity-100">Open Agreement <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" /></span>
                   </CardContent>

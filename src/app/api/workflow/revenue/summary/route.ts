@@ -4,8 +4,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { monthlyCohortRows } from "@/utils/revenueTrend";
 import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
-
-const ISSUED = new Set(["sent", "viewed", "overdue", "partially_paid", "paid"]);
+import { collectedAmount, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
 
 type CurrencySummary = {
   currency: string;
@@ -75,19 +74,19 @@ export async function GET(req: NextRequest) {
     for (const invoice of invoices) {
       const currency = invoice.currency.toUpperCase();
       const total = Number(invoice.total);
-      const collected = Math.min(Math.max(Number(invoice.amountPaid), 0), Math.max(total, 0));
-      const outstanding = Math.max(total - collected, 0);
+      const collected = collectedAmount(total, Number(invoice.amountPaid));
+      const outstanding = outstandingAmount(total, Number(invoice.amountPaid));
       const summary = addCurrency(byCurrency, currency);
       summary.invoiceCount += 1;
       if (invoice.status === "paid") summary.paidCount += 1;
       if (invoice.status === "draft") summary.draft += total;
-      if (ISSUED.has(invoice.status)) {
+      if (isIssuedStatus(invoice.status)) {
         summary.issued += total;
         summary.collected += collected;
         summary.outstanding += outstanding;
       }
 
-      if (outstanding > 0 && ISSUED.has(invoice.status)) {
+      if (outstanding > 0 && isIssuedStatus(invoice.status)) {
         const overdueDays = daysPastDue(invoice.dueDate, now);
         if (overdueDays !== null) {
           summary.overdue += outstanding;
@@ -109,12 +108,12 @@ export async function GET(req: NextRequest) {
       const client = invoice.client?.name || "Unassigned client";
       const clientKey = `${client}:${currency}`;
       const clientRow = byClient.get(clientKey) || { client, currency, invoiced: 0, collected: 0, outstanding: 0 };
-      if (ISSUED.has(invoice.status)) { clientRow.invoiced += total; clientRow.collected += collected; clientRow.outstanding += outstanding; }
+      if (isIssuedStatus(invoice.status)) { clientRow.invoiced += total; clientRow.collected += collected; clientRow.outstanding += outstanding; }
       byClient.set(clientKey, clientRow);
       const project = invoice.project?.title || "Unassigned project";
       const projectKey = `${project}:${currency}`;
       const projectRow = byProject.get(projectKey) || { project, currency, invoiced: 0, collected: 0, outstanding: 0 };
-      if (ISSUED.has(invoice.status)) { projectRow.invoiced += total; projectRow.collected += collected; projectRow.outstanding += outstanding; }
+      if (isIssuedStatus(invoice.status)) { projectRow.invoiced += total; projectRow.collected += collected; projectRow.outstanding += outstanding; }
       byProject.set(projectKey, projectRow);
 
       const overdueDays = daysPastDue(invoice.dueDate, now);
@@ -135,7 +134,7 @@ export async function GET(req: NextRequest) {
          carries its tests. */
       monthlyRevenue: monthlyCohortRows(
         invoices
-          .filter((invoice) => ISSUED.has(invoice.status))
+          .filter((invoice) => isIssuedStatus(invoice.status))
           .map((invoice) => ({
             currency: invoice.currency,
             total: Number(invoice.total),
