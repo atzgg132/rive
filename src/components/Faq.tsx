@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     question: "How much does rive. cost?",
-    answer: "The current early-access workspace is free. We will share clear pricing before introducing paid plans, and early users will receive advance notice.",
+    answer: "The open-beta workspace is free. We will share clear pricing before introducing paid plans, and early users will receive advance notice.",
   },
   {
     question: "What makes the workspace connected?",

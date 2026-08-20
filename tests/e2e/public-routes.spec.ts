@@ -97,6 +97,34 @@ test("registration password visibility control works for invited users", async (
   await expect(page.locator('input[type="text"]')).toHaveCount(2);
 });
 
+test("marketing does not claim Google Calendar is available", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Google Calendar" })).toHaveCount(0);
+
+  await page.goto("/roadmap", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Apple Calendar feed", { exact: true })).toBeVisible();
+  await expect(page.getByText("activation analytics")).toHaveCount(0);
+  await expect(page.getByText("once Google approves the integration")).toBeVisible();
+});
+
+test("changelog and roadmap describe the open-beta product, not a private alpha", async ({ page }) => {
+  await page.goto("/changelog", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Open beta", exact: true })).toBeVisible();
+  await expect(page.getByText("Latest", { exact: true }).first()).toBeVisible();
+
+  await page.goto("/roadmap", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Open beta is live. Next we make it dependable." })).toBeVisible();
+  await expect(page.getByText("private-alpha")).toHaveCount(0);
+  await expect(page.getByText("early-access")).toHaveCount(0);
+});
+
+test("guides do not advertise unshipped Remit transfers or an AI co-pilot", async ({ page }) => {
+  await page.goto("/guides", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("ai co-pilot", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("sending your first payment with remit", { exact: false })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Reviewing and recording an Agreement" })).toBeVisible();
+});
+
 test("legacy waitlist URL gracefully redirects to open signup", async ({ page }) => {
   await page.goto("/waitlist", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/register$/);

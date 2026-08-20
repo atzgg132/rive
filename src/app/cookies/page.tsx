@@ -4,12 +4,12 @@ const fontD = { fontFamily: "var(--font-display)" };
 const font  = { fontFamily: "var(--font-body)" };
 
 const toc = [
-  { id: "what",    label: "1. what are cookies" },
-  { id: "types",   label: "2. cookies we use" },
-  { id: "manage",  label: "3. managing cookies" },
-  { id: "third",   label: "4. third-party cookies" },
-  { id: "changes", label: "5. changes to this policy" },
-  { id: "contact", label: "6. contact us" },
+  { id: "what",    label: "1. What are cookies" },
+  { id: "types",   label: "2. Cookies we use" },
+  { id: "manage",  label: "3. Managing cookies" },
+  { id: "third",   label: "4. Third-party cookies" },
+  { id: "changes", label: "5. Changes to this policy" },
+  { id: "contact", label: "6. Contact us" },
 ];
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -22,9 +22,9 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 const cookieTypes = [
-  { name: "essential",    desc: "required for the website to function. these cannot be disabled. they include session management and security tokens.", label: "always active" },
-  { name: "analytics",    desc: "used to understand how visitors interact with the site. we use Vercel Analytics, which is privacy-first and uses no persistent cookies.", label: "no cookies set" },
-  { name: "preferences",  desc: "remember your settings and preferences across visits (e.g. language, theme). these are optional and minimal.", label: "optional" },
+  { name: "Essential",    desc: "Required for the website to function. These cannot be disabled. They include session management and security tokens.", label: "Always active" },
+  { name: "Analytics",    desc: "Used to understand how visitors interact with the site. We use Vercel Analytics, which is privacy-first and uses no persistent cookies.", label: "No cookies set" },
+  { name: "Preferences",  desc: "Remember your settings and preferences across visits, such as language and theme. These are optional and minimal.", label: "Optional" },
 ];
 
 export default function CookiesPage() {

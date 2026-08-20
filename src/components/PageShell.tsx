@@ -11,9 +11,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navLinks = [
   { label: "Features", href: "/#features" },
-  { label: "Opportunities", href: "/#gig-board" },
-  { label: "Pricing", href: "/#pricing" },
+  { label: "Connections", href: "/#connections" },
+  { label: "Agreements", href: "/#agreements" },
+  { label: "Portfolio", href: "/#portfolio" },
   { label: "Remit", href: "/#remit" },
+  { label: "Pricing", href: "/#pricing" },
 ];
 
 export default function PageShell({ children }: { children: ReactNode }) {
@@ -72,12 +74,9 @@ export default function PageShell({ children }: { children: ReactNode }) {
           <p className="text-slate-400 dark:text-slate-500 text-sm font-medium" style={{ fontFamily: "var(--font-body)" }}>
             © 2026 rive. All rights reserved.
           </p>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="text-xs text-slate-400 dark:text-slate-500 font-medium" style={{ fontFamily: "var(--font-body)" }}>
-              All systems operational
-            </span>
-          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium" style={{ fontFamily: "var(--font-body)" }}>
+            Built for modern service businesses.
+          </p>
         </div>
       </footer>
     </div>

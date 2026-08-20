@@ -8,18 +8,18 @@ import { useRouter } from "next/navigation";
 const values = [
   {
     icon: Hammer,
-    title: 'built from real client work',
+    title: 'Built from real client work',
     desc: 'Every feature is grounded in the realities of selling, delivering, and operating a digital service business.',
   },
   {
     icon: Eye,
-    title: 'radically transparent',
-    desc: 'no hidden fees, no opaque algorithms, no shadowy pricing tiers. what you see is exactly what you get.',
+    title: 'Radically transparent',
+    desc: 'No hidden fees, no opaque algorithms, no shadowy pricing tiers. What you see is exactly what you get.',
   },
   {
     icon: Shield,
-    title: 'privacy first',
-    desc: 'your data belongs to you. we never sell it, never monetise it. full stop.',
+    title: 'Privacy first',
+    desc: 'Your data belongs to you. We never sell it, never monetise it. Full stop.',
   },
 ];
 
@@ -27,19 +27,19 @@ const team = [
   {
     initials: 'AB',
     name: 'Arnav Bhattacharya',
-    role: 'founder · product & engineering',
+    role: 'Founder · Product & Engineering',
     bio: 'Software engineer and builder based in Bengaluru, creating Rive—an operating workspace for managing clients, projects, revenue, expenses, and business development in one place. Arnav works across full-stack product development, payments, APIs, databases, and systems operations, with a focus on practical, dependable business software.',
   },
   {
     initials: 'AC',
     name: 'Agnik Chakravorty',
-    role: 'cofounder · markets, ops & community',
+    role: 'Cofounder · Markets, ops & community',
     bio: 'Agnik brings a people-first lens to markets, operations, and community. He has analyzed markets, researched cloud adoption, managed vendors across hospitality businesses, and reduced travel transport costs by 18% through smarter routing. Bloomberg certified, he balances the team’s numbers side with a deep understanding of how people and businesses actually operate.',
   },
   {
     initials: 'DB',
     name: 'Druhin Basu',
-    role: 'cofounder · strategy & growth',
+    role: 'Cofounder · Strategy & growth',
     bio: 'Druhin is a business strategist, case writer, and storyteller who looks at companies from the inside out. He built an investor CRM and led cold outreach, tiering, and market mapping for a fintech fundraising process. With competition wins against leading business-school teams and experience speaking to trust-driven categories, he brings structure and clarity to rive.’s growth.',
   },
 ];
@@ -78,14 +78,14 @@ export default function AboutPage() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-            our story
+            Our story
           </span>
 
           <h1
             className="text-6xl md:text-7xl lg:text-8xl font-black text-foreground dark:text-white leading-[1.05] mb-7"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}
           >
-            about{' '}
+            About{' '}
             <span className="gradient-text">rive.</span>
           </h1>
 
@@ -121,7 +121,7 @@ export default function AboutPage() {
               className="inline-block text-xs font-bold tracking-widest text-sky-400 mb-6 uppercase"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              our mission
+              Our mission
             </span>
 
             <p
@@ -145,13 +145,13 @@ export default function AboutPage() {
               className="text-xs font-bold tracking-widest text-blue-600 uppercase"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              what we stand for
+              What we stand for
             </span>
             <h2
               className="mt-3 text-4xl md:text-5xl font-black text-foreground dark:text-white"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
             >
-              our values
+              Our values
             </h2>
           </div>
 
@@ -197,13 +197,13 @@ export default function AboutPage() {
               className="text-xs font-bold tracking-widest text-blue-600 uppercase"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              the people
+              The people
             </span>
             <h2
               className="mt-3 text-4xl md:text-5xl font-black text-foreground dark:text-white"
               style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
             >
-              meet the team
+              Meet the team
             </h2>
           </div>
 
@@ -253,7 +253,7 @@ export default function AboutPage() {
             className="text-4xl md:text-5xl font-black text-foreground dark:text-white mb-5"
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.025em' }}
           >
-            ready to shape the future?
+            Ready to shape the future?
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mb-10 text-lg" style={{ fontFamily: 'var(--font-body)' }}>
             Be among the first to experience a platform built for serious client work.
@@ -265,7 +265,7 @@ export default function AboutPage() {
             className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-base hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/20 hover:-translate-y-px"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            create a free account
+            Create a free account
           </Button>
         </div>
       </section>

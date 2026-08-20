@@ -4,15 +4,15 @@ const fontD = { fontFamily: "var(--font-display)" };
 const font  = { fontFamily: "var(--font-body)" };
 
 const toc = [
-  { id: "intro",      label: "1. introduction" },
-  { id: "collect",    label: "2. information we collect" },
-  { id: "use",        label: "3. how we use it" },
-  { id: "retention",  label: "4. data retention" },
-  { id: "third",      label: "5. third-party services" },
-  { id: "rights",     label: "6. your rights" },
-  { id: "children",   label: "7. children's privacy" },
-  { id: "changes",    label: "8. changes to this policy" },
-  { id: "contact",    label: "9. contact us" },
+  { id: "intro",      label: "1. Introduction" },
+  { id: "collect",    label: "2. Information we collect" },
+  { id: "use",        label: "3. How we use it" },
+  { id: "retention",  label: "4. Data retention" },
+  { id: "third",      label: "5. Third-party services" },
+  { id: "rights",     label: "6. Your rights" },
+  { id: "children",   label: "7. Children's privacy" },
+  { id: "changes",    label: "8. Changes to this policy" },
+  { id: "contact",    label: "9. Contact us" },
 ];
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {

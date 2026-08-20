@@ -8,12 +8,14 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const endpoints = [
-  { method: "GET",  path: "/api/workflow/projects", desc: "list projects for the authenticated user" },
-  { method: "POST", path: "/api/workflow/invoices", desc: "create an invoice with line items" },
-  { method: "GET",  path: "/api/workflow/clients", desc: "list clients for the authenticated user" },
-  { method: "POST", path: "/api/workflow/expenses", desc: "record a project or business expense" },
-  { method: "GET",  path: "/api/workflow/dashboard", desc: "retrieve dashboard totals and activity" },
-  { method: "GET",  path: "/api/rates", desc: "retrieve current USD exchange rates" },
+  { method: "GET",  path: "/api/workflow/clients", desc: "List clients for the signed-in workspace" },
+  { method: "GET",  path: "/api/workflow/projects", desc: "List projects, milestones, and delivery context" },
+  { method: "GET",  path: "/api/workflow/contracts", desc: "List Agreements for review, acceptance, and billing" },
+  { method: "GET",  path: "/api/workflow/invoices", desc: "List invoices, payment history, and outstanding balance" },
+  { method: "GET",  path: "/api/calendar/events", desc: "Read the connected workspace calendar" },
+  { method: "GET",  path: "/api/portfolio", desc: "Read the signed-in user's portfolio draft and publish state" },
+  { method: "POST", path: "/api/migrations", desc: "Start a CSV, XLSX, or connector import through the Migration Engine" },
+  { method: "GET",  path: "/api/rates", desc: "Indicative exchange rates for the Remit preview. Not a transfer API." },
 ];
 
 const methodColor: Record<string, string> = {
@@ -28,11 +30,11 @@ export default function APIRefPage() {
       <section className="relative py-24 overflow-hidden">
         <div className="absolute top-0 right-1/4 w-[400px] h-[250px] bg-blue-100/15 rounded-full blur-[100px] pointer-events-none" />
         <div className="relative max-w-3xl mx-auto px-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>Api reference</div>
-          <h1 className="text-5xl font-bold text-foreground dark:text-white tracking-tight mb-3" style={fontD}>Api reference</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-4 leading-relaxed" style={font}>The current application API is organized under <code>/api</code> and powers the workspace, product analytics, public invoice links, and rates features.</p>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>API reference</div>
+          <h1 className="text-5xl font-bold text-foreground dark:text-white tracking-tight mb-3" style={fontD}>API reference</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-lg mb-4 leading-relaxed" style={font}>These routes power the Rive workspace. They are not a public API product — authenticated calls use the session cookie after email verification. A public API remains on the later roadmap.</p>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 text-amber-700 dark:text-amber-300 text-xs font-bold mb-12" style={font}>
-            email verification is required for workspace access
+            Session cookie. Not a public integration contract.
           </div>
 
           {/* Endpoints */}
@@ -53,7 +55,7 @@ export default function APIRefPage() {
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15"
             style={fontD}
           >
-            create a free account →
+            Create a free account →
           </Button>
         </div>
       </section>

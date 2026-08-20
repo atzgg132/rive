@@ -11,7 +11,6 @@ import Footer from "@/components/Footer";
 import MarketingPortfolioSection from "@/components/MarketingPortfolioSection";
 import MarketingAgreementsSection from "@/components/MarketingAgreementsSection";
 import MarketingConnectionsSection from "@/components/MarketingConnectionsSection";
-import { googleCalendarAvailable } from "@/utils/connectorConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +20,12 @@ export default function Home() {
   // routes, but a dev-only runtime flag must not make the marketing page fall
   // back to an older, incomplete layout.
   const marketingAgreementsEnabled = true;
-  const googleAvailable = googleCalendarAvailable();
   return <main className="min-h-screen overflow-hidden bg-background">
     <Navbar />
     <Hero />
     <Features agreementsEnabled={marketingAgreementsEnabled} />
     <ConnectedProductSection agreementsEnabled={marketingAgreementsEnabled} />
-    <MarketingConnectionsSection googleCalendarEnabled={googleAvailable} />
+    <MarketingConnectionsSection />
     {marketingAgreementsEnabled && <MarketingAgreementsSection />}
     <MarketingPortfolioSection />
     <AISection />
@@ -43,7 +41,7 @@ function ConnectedProductSection({ agreementsEnabled }: { agreementsEnabled: boo
   return <section className="relative overflow-hidden border-y border-slate-200/80 bg-white py-24 dark:border-slate-800 dark:bg-slate-950 sm:py-32">
     <div className="mx-auto max-w-7xl px-5 sm:px-8">
       <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-black uppercase tracking-[.16em] text-blue-600 dark:text-blue-400">The connected workspace</p><h2 className="mt-4 max-w-2xl text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight text-slate-900 dark:text-white">Every part of the business, finally pulling in the same direction.</h2></div><p className="max-w-xl text-lg leading-8 text-slate-500 dark:text-slate-400">Your client record connects to projects{agreementsEnabled ? " and Agreements" : ""}. Projects connect to dates, tasks, invoices, and expenses. Rive turns those relationships into a workspace that helps you decide what to do next.</p></div>
-      <div className="mt-14 grid gap-4 md:grid-cols-2"><ConnectedCard icon={<Link2 />} title="Work stays connected" text={agreementsEnabled ? "Clients, contracts, projects, tasks, deadlines, invoices, and expenses share the same context." : "Clients, projects, tasks, deadlines, invoices, and expenses share the same context."} /><ConnectedCard icon={<BarChart3 />} title="Signals replace guesswork" text="See revenue, collections, margins, workload, upcoming work, and portfolio engagement at a glance." /><ConnectedCard icon={<FileUp />} title="Start with momentum" text="Import CSV or XLSX exports, connect calendars when available, and start with a guided first workflow instead of an empty dashboard." /><ConnectedCard icon={<CheckCircle2 />} title="Nothing important slips" text="See overdue payments, approaching deadlines, and work that needs your attention before it becomes a problem." /></div>
+      <div className="mt-14 grid gap-4 md:grid-cols-2"><ConnectedCard icon={<Link2 />} title="Work stays connected" text={agreementsEnabled ? "Clients, contracts, projects, tasks, deadlines, invoices, and expenses share the same context." : "Clients, projects, tasks, deadlines, invoices, and expenses share the same context."} /><ConnectedCard icon={<BarChart3 />} title="Signals replace guesswork" text="See revenue, collections, margins, workload, upcoming work, and portfolio engagement at a glance." /><ConnectedCard icon={<FileUp />} title="Start with momentum" text="Import CSV or XLSX exports, subscribe to an Apple Calendar feed, and start with a guided first workflow instead of an empty dashboard." /><ConnectedCard icon={<CheckCircle2 />} title="Nothing important slips" text="See overdue payments, approaching deadlines, and work that needs your attention before it becomes a problem." /></div>
     </div>
   </section>;
 }

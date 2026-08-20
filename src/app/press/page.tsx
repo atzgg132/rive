@@ -13,13 +13,13 @@ export default function PressPage() {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>Media</div>
           <h1 className="text-6xl font-bold text-foreground dark:text-white tracking-tight mb-4" style={fontD}>Press &amp; media.</h1>
           <p className="text-slate-500 dark:text-slate-400 text-lg mb-16 leading-relaxed" style={font}>
-            for press inquiries, contact <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>
+            For press inquiries, contact <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a>
           </p>
 
           {/* Brand assets */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 mb-6 transition-colors">
             <h2 className="text-xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Brand assets</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6" style={font}>Available in SVG, PNG, and JPEG. use on white or light backgrounds.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6" style={font}>Available in SVG, PNG, and JPEG. Use on white or light backgrounds.</p>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               <div className="bg-background dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-6 flex items-center justify-center">
                 <Image src="/brand-assets/logo.png" alt="rive. logo" width={160} height={64} style={{ objectFit: "contain" }} />
@@ -28,12 +28,12 @@ export default function PressPage() {
                 <a href="/brand-assets/logo.svg" download
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-md shadow-blue-600/15 w-fit"
                   style={fontD}>
-                  ↓ download svg
+                  ↓ Download SVG
                 </a>
                 <a href="/brand-assets/logo.png" download
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:border-blue-200 dark:hover:border-blue-700 hover:text-blue-600 dark:hover:text-blue-400 transition-all w-fit"
                   style={fontD}>
-                  ↓ download png
+                  ↓ Download PNG
                 </a>
               </div>
             </div>

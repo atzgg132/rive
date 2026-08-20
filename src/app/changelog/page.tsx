@@ -4,12 +4,18 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const timeline = [
-  { date: "July 2026", title: "connected onboarding and workspace migration", desc: "New accounts can preview and import operational CSV data, build a connected first workflow, and receive an automatically prefilled portfolio instead of opening an empty workspace.", badge: "latest" },
-  { date: "July 2026", title: "portfolio studio shipped", desc: "create one polished, public portfolio from the work already in your workspace. choose from six starting templates, edit your identity and case studies, customize the visual system, and publish a shareable link.", badge: null },
-  { date: "July 2026", title: "portfolio analytics shipped", desc: "understand how your public work is performing with total views, unique visitors, daily reach, peak days, referral sources, and device breakdowns.", badge: null },
-  { date: "June 2026", title: "case studies and media uploads", desc: "portfolio projects now support challenge, approach, outcome, tools, deliverables, galleries, direct image uploads, and HTTPS image URLs — with dedicated public case-study pages.", badge: null },
-  { date: "June 2026", title: "connected service workflows", desc: "The core workspace now brings together dashboard reporting, clients, projects, milestones, revenue, invoices, and expenses so the business behind the work stays connected.", badge: null },
-  { date: "May 2026", title: "production-ready portfolio foundation", desc: "added one-portfolio-per-user enforcement, server-side content and URL validation, safe media limits, draft and published states, SEO controls, responsive previews, and light or dark presentation modes.", badge: null },
+  { date: "August 2026", title: "Open beta", desc: "Rive is open to everyone. Create a free account, verify your email, and use the workspace. No invitation required. The product stays free while we learn from real workflows.", badge: "Latest" },
+  { date: "August 2026", title: "Agreements, review, and recorded acceptance", desc: "Draft a contract from the client and project context you already have, share a review link, collect recorded acceptance, and turn agreed payment terms into deliberate invoice triggers. This is not a regulated e-signature product.", badge: null },
+  { date: "August 2026", title: "Migration Engine", desc: "Preview CSV or XLSX exports, and Zoho Books when connected. Match relationships, commit with rollback, and start from real records instead of an empty workspace.", badge: null },
+  { date: "August 2026", title: "Apple Calendar feed", desc: "Subscribe to a private Apple Calendar feed of Rive deadlines and scheduled work.", badge: null },
+  { date: "August 2026", title: "Invoices you can stand behind", desc: "Void with confirmation, share a public invoice link, record payment history, and show an outstanding balance that matches what the client sees.", badge: null },
+  { date: "August 2026", title: "Richer portfolios", desc: "Mixed media, multi-practice sites, inquiry capture, and analytics for views, devices, and referrers, so published work can actually win the next conversation.", badge: null },
+  { date: "July 2026", title: "Connected onboarding and workspace migration", desc: "New accounts can preview and import operational CSV data, build a connected first workflow, and receive an automatically prefilled portfolio instead of opening an empty workspace.", badge: null },
+  { date: "July 2026", title: "Portfolio studio shipped", desc: "Create one polished, public portfolio from the work already in your workspace. Choose from six starting templates, edit your identity and case studies, customize the visual system, and publish a shareable link.", badge: null },
+  { date: "July 2026", title: "Portfolio analytics shipped", desc: "Understand how your public work is performing with total views, unique visitors, daily reach, peak days, referral sources, and device breakdowns.", badge: null },
+  { date: "June 2026", title: "Case studies and media uploads", desc: "Portfolio projects now support challenge, approach, outcome, tools, deliverables, galleries, direct image uploads, and HTTPS image URLs, with dedicated public case-study pages.", badge: null },
+  { date: "June 2026", title: "Connected service workflows", desc: "The core workspace now brings together dashboard reporting, clients, projects, milestones, revenue, invoices, and expenses so the business behind the work stays connected.", badge: null },
+  { date: "May 2026", title: "Production-ready portfolio foundation", desc: "Added one-portfolio-per-user enforcement, server-side content and URL validation, safe media limits, draft and published states, SEO controls, responsive previews, and light or dark presentation modes.", badge: null },
 ];
 
 export default function ChangelogPage() {

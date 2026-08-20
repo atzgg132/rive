@@ -21,14 +21,14 @@ const loadPortfolio = cache(async (slug: string) => {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const portfolio = await loadPortfolio(slug);
-  if (!portfolio) return { title: "portfolio not found · rive." };
+  if (!portfolio) return { title: "Portfolio not found · rive." };
   const content = mergePortfolioContent(portfolio.content);
   const seo = (portfolio.seo && typeof portfolio.seo === "object" ? portfolio.seo : {}) as { title?: string; description?: string; indexable?: boolean };
   return {
-    title: seo.title || `${content.name} · portfolio`,
+    title: seo.title || `${content.name} · Portfolio`,
     description: seo.description || content.bio,
     robots: seo.indexable === false ? { index: false, follow: false } : undefined,
-    openGraph: { title: seo.title || `${content.name} · portfolio`, description: seo.description || content.bio, type: "website" },
+    openGraph: { title: seo.title || `${content.name} · Portfolio`, description: seo.description || content.bio, type: "website" },
   };
 }
 
