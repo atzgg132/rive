@@ -94,9 +94,8 @@ export default function LoginPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center">
+              <div>
                 <label htmlFor="login-password" className="text-xs font-bold text-foreground dark:text-slate-300 tracking-wide">Password</label>
-                <Link href="/forgot-password" className="text-xs text-primary dark:text-blue-400 hover:underline font-semibold">Forgot password?</Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
@@ -110,6 +109,7 @@ export default function LoginPage() {
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-border dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all duration-200 disabled:opacity-60 bg-white/50 dark:bg-slate-800/50"
                 />
               </div>
+              <Link href="/forgot-password" className="self-end text-xs text-primary dark:text-blue-400 hover:underline font-semibold">Forgot password?</Link>
             </div>
 
             <Button
