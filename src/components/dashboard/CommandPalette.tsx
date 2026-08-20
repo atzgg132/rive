@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
-import { Search, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, LayoutDashboard, CalendarDays, FileSignature } from "lucide-react";
+import { Search, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, LayoutDashboard, CalendarDays, FileSignature, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 
@@ -11,6 +11,10 @@ export default function CommandPalette({ open, setOpen, agreementsEnabled = fals
   const router = useRouter();
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [query, setQuery] = useState("");
+  const [invoiceSearchTerm, setInvoiceSearchTerm] = useState("");
+  const [invoiceResults, setInvoiceResults] = useState<Array<{ id: string; invoice_number: string; client_name: string | null; project_title: string | null; status: string }>>([]);
+  const [isSearchingInvoices, setIsSearchingInvoices] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -25,15 +29,59 @@ export default function CommandPalette({ open, setOpen, agreementsEnabled = fals
     return () => document.removeEventListener("keydown", down);
   }, [setOpen]);
 
-  const runCommand = (command: () => void) => {
+  useEffect(() => {
+    const search = query.trim();
+    if (!open || !search) return;
+
+    const controller = new AbortController();
+    // Searching should acknowledge the new term immediately instead of showing
+    // results from a previous query during the debounce window.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsSearchingInvoices(true);
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/workflow/invoices?search=${encodeURIComponent(search)}&pageSize=10`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.success || !Array.isArray(data.invoices)) throw new Error("Invoice search failed");
+        if (!controller.signal.aborted) {
+          setInvoiceResults(data.invoices);
+          setInvoiceSearchTerm(search);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setInvoiceResults([]);
+          setInvoiceSearchTerm(search);
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsSearchingInvoices(false);
+      }
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [open, query]);
+
+  const close = () => {
     setOpen(false);
+    setQuery("");
+    setInvoiceSearchTerm("");
+    setInvoiceResults([]);
+  };
+
+  const runCommand = (command: () => void) => {
+    close();
     command();
   };
 
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={close}>
       <div
         className="w-full max-w-xl bg-white dark:bg-background rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
@@ -45,13 +93,36 @@ export default function CommandPalette({ open, setOpen, agreementsEnabled = fals
               className="w-full bg-transparent px-3 py-4 text-sm outline-none placeholder:text-slate-400 dark:text-white"
               placeholder="Search features, commands, or settings..."
               autoFocus
+              value={query}
+              onValueChange={setQuery}
             />
           </div>
 
           <Command.List className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin">
             <Command.Empty className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-              No results found.
+              {isSearchingInvoices ? "Searching invoices..." : "No results found."}
             </Command.Empty>
+
+            {query.trim() && invoiceSearchTerm === query.trim() ? (
+              <Command.Group heading="Invoices" className="px-2 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {invoiceResults.map((invoice) => (
+                  <Command.Item
+                    key={invoice.id}
+                    value={`${invoice.invoice_number} ${invoice.client_name || ""} ${invoice.project_title || ""}`}
+                    onSelect={() => runCommand(() => router.push(`/workflow/invoices/${invoice.id}`))}
+                    className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-lg text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 aria-selected:bg-blue-50 aria-selected:text-blue-700 dark:aria-selected:bg-blue-900/30 dark:aria-selected:text-blue-400"
+                  >
+                    <FileText className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block font-medium">{invoice.invoice_number}</span>
+                      <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
+                        {[invoice.client_name, invoice.project_title].filter(Boolean).join(" · ") || "No client or project"}
+                      </span>
+                    </span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            ) : null}
 
             <Command.Group heading="Navigation" className="px-2 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
               <Command.Item

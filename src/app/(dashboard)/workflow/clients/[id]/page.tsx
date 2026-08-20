@@ -302,7 +302,15 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                   <tbody>
                     {client.invoices.map((inv) => (
                       <tr key={inv.id} className="border-b border-border hover:bg-background transition-colors">
-                        <td className="py-3 pr-4 text-sm font-semibold text-foreground dark:text-slate-200">{inv.invoiceNumber}</td>
+                        <td className="py-3 pr-4 text-sm font-semibold text-foreground dark:text-slate-200">
+                          <Link
+                            href={`/workflow/invoices/${inv.id}`}
+                            aria-label={`View invoice ${inv.invoiceNumber}`}
+                            className="rounded-sm hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                          >
+                            {inv.invoiceNumber}
+                          </Link>
+                        </td>
                         <td className="py-3 pr-4 text-xs text-muted-foreground">{formatDate(inv.issueDate)}</td>
                         <td className="py-3 pr-4 text-sm font-bold text-foreground dark:text-slate-200">
                           <span className="block">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
