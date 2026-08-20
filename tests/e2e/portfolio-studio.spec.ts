@@ -415,7 +415,7 @@ test.describe("portfolio studio", () => {
     await db.prisma.portfolio.update({ where: { userId: user.id }, data: { status: "published" } });
     await page.goto(`/p/${portfolio?.slug}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator('img[alt$="profile"]')).toHaveCount(0);
-    await expect(page.locator("main > section")).toHaveClass(/block/);
+    await expect(page.locator("main > section").first()).toHaveClass(/block/);
 
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: /^Profile/i }).click();
@@ -428,7 +428,7 @@ test.describe("portfolio studio", () => {
 
     await page.goto(`/p/${portfolio?.slug}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator('img[alt="Studio profile-photo profile"]')).toBeVisible();
-    await expect(page.locator("main > section")).toHaveClass(/grid/);
+    await expect(page.locator("main > section").first()).toHaveClass(/grid/);
   });
 
   test("typed work survives leaving a section, and autosave never publishes", async ({ page, context }) => {
