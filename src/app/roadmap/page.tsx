@@ -9,38 +9,38 @@ const phases = [
   {
     label: "Available now",
     status: "shipped",
-    description: "The private-alpha foundation running today.",
+    description: "The open-beta workspace running today.",
     items: [
-      "clients, projects, milestones, invoices, and expenses",
-      "connected dashboard and business insights",
-      "Google Calendar and Apple Calendar foundations",
-      "CSV migration with preview, matching, and rollback",
-      "public portfolio studio and analytics",
-      "secure AWS deployment across dev, test, and production",
+      "Clients, projects, milestones, invoices, and expenses",
+      "Agreements with review, recorded acceptance, and invoice triggers",
+      "Connected dashboard and business insights",
+      "Apple Calendar feed",
+      "CSV/XLSX and Zoho Books import through the Migration Engine, with preview, matching, and rollback",
+      "Public portfolio studio, mixed media, inquiries, and analytics",
+      "Open signup with email verification, free during open beta",
     ],
   },
   {
     label: "Next",
     status: "active",
-    description: "The work required for a reliable early-access launch.",
+    description: "Make onboarding, connectors, and invoicing dependable with real customer data.",
     items: [
-      "production verification for Google Calendar",
-      "Zoho Books organization review and record ingestion",
-      "end-to-end onboarding and connector acceptance testing",
-      "activation analytics and migration quality improvements",
-      "controlled early-access rollout",
+      "Google Calendar, once Google approves the integration",
+      "More reliable Zoho Books import",
+      "Clearer onboarding and migration",
+      "Invoice email delivery you can trust",
     ],
   },
   {
     label: "Later",
     status: "planned",
-    description: "Sequenced by evidence from early-access users.",
+    description: "Sequenced by evidence from open-beta users.",
     items: [
       "QuickBooks Online and Xero connectors",
       "FreshBooks and additional migration sources",
-      "payments and opportunity workflows",
-      "teams and agency workspaces",
-      "mobile applications and public API access",
+      "Payments and opportunity workflows",
+      "Teams and agency workspaces",
+      "Mobile applications and public API access",
     ],
   },
 ] as const;
@@ -50,19 +50,19 @@ const statusStyles = {
     card: "border-emerald-200 dark:border-emerald-900/70",
     badge: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
     icon: "text-emerald-600 dark:text-emerald-400",
-    label: "shipped",
+    label: "Shipped",
   },
   active: {
     card: "border-blue-200 shadow-lg dark:border-blue-800/80 dark:shadow-none",
     badge: "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
     icon: "text-blue-600 dark:text-blue-400",
-    label: "in progress",
+    label: "In progress",
   },
   planned: {
     card: "border-slate-100 dark:border-slate-800",
     badge: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
     icon: "text-slate-400",
-    label: "planned",
+    label: "Planned",
   },
 } as const;
 
@@ -82,7 +82,7 @@ export default function RoadmapPage() {
             className="mb-4 text-5xl font-bold tracking-tight text-foreground dark:text-white sm:text-6xl"
             style={fontD}
           >
-            Building toward a reliable open beta.
+            Open beta is live. Next we make it dependable.
           </h1>
           <p
             className="mb-5 max-w-2xl text-lg leading-relaxed text-slate-500 dark:text-slate-400"
@@ -94,7 +94,7 @@ export default function RoadmapPage() {
           </p>
           <p className="mb-16 max-w-2xl text-sm text-slate-400 dark:text-slate-500" style={font}>
             Priorities may change as open-beta feedback arrives. We mark work
-            as shipped only when it is available in the product.
+            as shipped only when it is available to people using the product.
           </p>
 
           <div className="mb-16 grid gap-6 md:grid-cols-3">

@@ -8,11 +8,11 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const sidebarItems = [
-  { id: "getting-started", label: "getting started" },
-  { id: "core-concepts", label: "core concepts" },
-  { id: "api", label: "remit payments api" },
-  { id: "workflow", label: "workflow" },
-  { id: "webhooks", label: "webhooks" },
+  { id: "getting-started", label: "Getting started" },
+  { id: "core-concepts", label: "Core concepts" },
+  { id: "workflow", label: "Workflow" },
+  { id: "imports", label: "Imports and calendars" },
+  { id: "api", label: "Application API" },
 ];
 
 const codeSnippet = `POST /api/auth/register
@@ -55,7 +55,7 @@ export default function DocsPage() {
               <div className="w-3 h-3 rounded-full bg-red-400" />
               <div className="w-3 h-3 rounded-full bg-amber-400" />
               <div className="w-3 h-3 rounded-full bg-emerald-400" />
-              <span className="text-white/40 text-xs ml-2 font-mono">rive. api — preview</span>
+              <span className="text-white/40 text-xs ml-2 font-mono">Create an account</span>
             </div>
             <pre className="p-5 text-sm font-mono text-emerald-300 leading-relaxed overflow-x-auto">{codeSnippet}</pre>
           </div>
@@ -63,23 +63,23 @@ export default function DocsPage() {
           <div className="flex flex-col gap-8 text-slate-600 dark:text-slate-300" style={font}>
             <section id="getting-started">
               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Getting started</h2>
-              <p>Create an account, then open the workspace overview to manage clients, projects, invoices, and expenses. every record is scoped to your account.</p>
+              <p>Create a free account, verify your email, then open the workspace overview. Every client, project, Agreement, invoice, expense, and portfolio record is scoped to your account.</p>
             </section>
             <section id="core-concepts">
               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Core concepts</h2>
-              <p>Clients own the relationship, projects track delivery, invoices track money owed, and expenses track costs. link records together to keep financial reporting accurate.</p>
-            </section>
-            <section id="api">
-              <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Api access</h2>
-              <p>The current application API is available under <code className="text-blue-600 dark:text-blue-400">/api</code>. Authenticated workflow requests use the rive session cookie; public rates and invoice links are the deliberate unauthenticated surfaces.</p>
+              <p>Clients own the relationship. Projects track delivery. Agreements capture scope, review, and recorded acceptance. Invoices track money owed. Expenses track costs. The calendar and dashboard reuse those same records so dates, collections, and next actions stay connected.</p>
             </section>
             <section id="workflow">
               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Workflow</h2>
-              <p>Start with a client, create a project, add milestones, issue invoices, and record expenses. the dashboard aggregates paid invoices and expenses into your net earnings.</p>
+              <p>Start with a client, create a project, add milestones, optionally send an Agreement for review, issue invoices, and record expenses. Paid invoices and expenses roll into net earnings. Completed work can become a public portfolio with inquiries and analytics.</p>
             </section>
-            <section id="webhooks">
-              <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Webhooks</h2>
-              <p>Webhook delivery is not enabled in the current release. Create a free account to use the workspace while integration contracts are finalized.</p>
+            <section id="imports">
+              <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Imports and calendars</h2>
+              <p>Bring clients, projects, invoices, and expenses in from CSV or XLSX. The Migration Engine previews matches and can roll a commit back. Subscribe to a private Apple Calendar feed of Rive deadlines. Zoho Books import is available when connected.</p>
+            </section>
+            <section id="api">
+              <h2 className="text-2xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Application API</h2>
+              <p>There is no public API or webhook product in open beta. The routes under <code className="text-blue-600 dark:text-blue-400">/api</code> power the workspace itself and use the Rive session cookie. Public invoice links, public portfolio pages, and the rates preview are the deliberate unauthenticated surfaces. A public API remains on the later roadmap.</p>
             </section>
           </div>
 
@@ -88,7 +88,7 @@ export default function DocsPage() {
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15"
             style={fontD}
           >
-            create a free account →
+            Create a free account →
           </Button>
         </main>
       </div>

@@ -95,6 +95,8 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [mobile, setMobile] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const helpPanelRef = useRef<HTMLDivElement>(null);
+  const [helpHoverReady, setHelpHoverReady] = useState(false);
   const previousPlanRef = useRef<ActivationPlan | null>(null);
   const previousTargetRef = useRef<HTMLElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -241,7 +243,10 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
 
   useEffect(() => {
     if (!guideOpen && !helpOpen) return;
-    const timer = guideOpen ? window.setTimeout(() => dialogRef.current?.focus(), 0) : undefined;
+    const timer = window.setTimeout(() => {
+      if (guideOpen) dialogRef.current?.focus();
+      else helpPanelRef.current?.focus();
+    }, 0);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -251,13 +256,16 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      if (timer) window.clearTimeout(timer);
+      window.clearTimeout(timer);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [activeMode, closeGuide, guideOpen, helpOpen]);
 
   useEffect(() => {
-    const openFromShell = () => setHelpOpen(true);
+    const openFromShell = () => {
+      setHelpHoverReady(false);
+      setHelpOpen(true);
+    };
     window.addEventListener("rive:open-help", openFromShell);
     return () => window.removeEventListener("rive:open-help", openFromShell);
   }, []);
@@ -291,7 +299,16 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
 
   const helpPanel = helpOpen ? (
     <Portal>
-      <div id="help-guides-panel" className="fixed inset-x-3 bottom-3 z-[70] w-auto rounded-2xl border border-border bg-popover p-4 text-popover-foreground shadow-overlay md:bottom-auto md:left-auto md:right-4 md:top-20 md:w-80" role="dialog" aria-labelledby="help-guides-title" data-testid="help-guides-panel">
+      <div
+        ref={helpPanelRef}
+        id="help-guides-panel"
+        tabIndex={-1}
+        className="fixed inset-x-3 bottom-3 z-[70] w-auto rounded-2xl border border-border bg-popover p-4 text-popover-foreground shadow-overlay outline-none md:bottom-auto md:left-auto md:right-4 md:top-20 md:w-80"
+        role="dialog"
+        aria-labelledby="help-guides-title"
+        data-testid="help-guides-panel"
+        onPointerMove={() => { if (!helpHoverReady) setHelpHoverReady(true); }}
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p id="help-guides-title" className="text-sm font-black">Help &amp; guides</p>
@@ -303,9 +320,18 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
         </div>
         <div className="mt-3 grid gap-1" role="list">
           {GUIDE_OPTIONS.map((option) => (
-            <Button key={option.id} type="button" variant="ghost" onClick={() => startGuide(option.id)} className="h-auto min-h-11 justify-start gap-3 rounded-xl px-3 py-2.5 text-left">
-              <Compass className="h-4 w-4 shrink-0 text-primary" />
-              <span className="min-w-0"><span className="block text-xs font-bold text-foreground">{option.label}</span><span className="mt-0.5 block text-xs leading-4 text-muted-foreground">{option.description}</span></span>
+            <Button
+              key={option.id}
+              type="button"
+              variant="ghost"
+              onClick={() => startGuide(option.id)}
+              className={`h-auto min-h-11 w-full items-start justify-start gap-3 whitespace-normal rounded-xl px-3 py-2.5 text-left hover:text-foreground ${helpHoverReady ? "hover:bg-muted/70" : "hover:bg-transparent"}`}
+            >
+              <Compass className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span className="min-w-0">
+                <span className="block text-xs font-bold leading-4 text-foreground">{option.label}</span>
+                <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">{option.description}</span>
+              </span>
             </Button>
           ))}
         </div>
@@ -361,7 +387,10 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
         size="sm"
         aria-expanded={helpOpen}
         aria-controls="help-guides-panel"
-        onClick={() => setHelpOpen((open) => !open)}
+        onClick={() => {
+          setHelpHoverReady(false);
+          setHelpOpen((open) => !open);
+        }}
         className="hidden gap-2 text-xs font-semibold text-muted-foreground md:inline-flex"
       >
         <CircleHelp className="h-4 w-4" />

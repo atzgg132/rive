@@ -471,6 +471,15 @@ test.describe("goal-aware activation", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("guide-popover")).toBeHidden();
     await page.getByRole("button", { name: "Help & guides" }).click();
+    const firstGuide = page.getByRole("button", { name: "Getting started with Rive" });
+    await expect(firstGuide).toBeVisible();
+    await expect.poll(async () => firstGuide.evaluate((el) => getComputedStyle(el).backgroundColor)).toMatch(/^(rgba?\(0,\s*0,\s*0,\s*0\)|transparent)$/);
+    await firstGuide.hover();
+    await expect.poll(async () => firstGuide.evaluate((el) => {
+      const bg = getComputedStyle(el).backgroundColor;
+      const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().split(/\s+/).join(", ");
+      return bg === `rgb(${accent})` ? "accent" : "ok";
+    })).toBe("ok");
     await page.getByRole("button", { name: "Organize clients & projects" }).click();
     await expect(page.getByTestId("guide-popover")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Add your first client" })).toBeVisible();

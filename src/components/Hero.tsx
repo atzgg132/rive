@@ -109,7 +109,7 @@ export default function Hero() {
           {/* Panel header */}
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-100 px-5 py-3 dark:border-slate-800 dark:bg-slate-900">
             <span className="text-[11px] font-medium text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-              app.rive.work
+              www.rive.work
             </span>
             <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300">
               Overview
@@ -128,7 +128,7 @@ export default function Hero() {
                 </div>
                 <span className="text-slate-800 dark:text-slate-200 text-xs font-semibold" style={{ fontFamily: "var(--font-display)" }}>rive.</span>
               </div>
-              {["Overview", "Calendar", "Projects", "Clients", "Revenue", "Portfolio"].map((item, i) => (
+              {["Overview", "Calendar", "Projects", "Clients", "Contracts", "Revenue", "Portfolio"].map((item, i) => (
                 <div
                   key={item}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors"

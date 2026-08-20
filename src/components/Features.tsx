@@ -12,7 +12,7 @@ import {
   TrendingUp,
   Bot,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const features = [
   {
@@ -60,12 +60,11 @@ const features = [
   {
     icon: CalendarDays,
     title: "Imports and onboarding",
-    description: "Bring in CSV/XLSX exports, connect supported calendars, and start with a guided first workflow instead of an empty session.",
+    description: "Bring in CSV/XLSX exports, subscribe to an Apple Calendar feed, and start with a guided first workflow instead of an empty session.",
   },
 ];
 
 export default function Features({ agreementsEnabled = true }: { agreementsEnabled?: boolean }) {
-  const router = useRouter();
   const visibleFeatures = agreementsEnabled
     ? features
     : features.filter((feature) => feature.title !== "Contracts & acceptance");
@@ -105,8 +104,7 @@ export default function Features({ agreementsEnabled = true }: { agreementsEnabl
             return (
               <div
                 key={title}
-                onClick={() => router.push("/register")}
-                className={`relative group rounded-2xl p-7 border transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-blue-900/20 cursor-pointer ${
+                className={`relative group rounded-2xl p-7 border transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-blue-900/20 ${
                   highlight
                     ? "bg-blue-50/50 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/40"
                     : "bg-white border-slate-100 dark:bg-slate-900/90 dark:border-slate-800/80"
@@ -143,19 +141,20 @@ export default function Features({ agreementsEnabled = true }: { agreementsEnabl
                       {description}
                     </p>
                   </div>
-
-                  {/* Hover link */}
-                  <div
-                    className="flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-1"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    Learn more
-                    <span className="group-hover:translate-x-0.5 transition-transform inline-block">→</span>
-                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-12 flex justify-center">
+          <Link
+            href="/register"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/15 transition hover:-translate-y-px hover:from-blue-700 hover:to-sky-600"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Create a free account
+          </Link>
         </div>
       </div>
     </section>

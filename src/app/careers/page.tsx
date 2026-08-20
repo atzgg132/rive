@@ -8,16 +8,16 @@ const font = { fontFamily: "var(--font-body)" };
 const fontD = { fontFamily: "var(--font-display)" };
 
 const roles = [
-  { title: "senior full-stack engineer", type: "remote · full-time · equity + salary", desc: "build the core platform. own critical infrastructure. work with node, next.js, postgres, and ai." },
-  { title: "product designer", type: "remote · full-time · equity + salary", desc: "define the look and feel of rive. from the ground up. own design systems, user flows, and brand." },
-  { title: "growth & community lead", type: "remote · full-time · equity + salary", desc: "grow the open-beta community, build feedback loops, and shape how the world discovers rive." },
+  { title: "Senior full-stack engineer", type: "Remote · Full-time · Equity + salary", desc: "Build the core platform. Own critical infrastructure. Work with Node, Next.js, Postgres, and AI." },
+  { title: "Product designer", type: "Remote · Full-time · Equity + salary", desc: "Define the look and feel of Rive from the ground up. Own design systems, user flows, and brand." },
+  { title: "Growth & community lead", type: "Remote · Full-time · Equity + salary", desc: "Grow the open-beta community, build feedback loops, and shape how the world discovers Rive." },
 ];
 
 const values = [
-  { emoji: "🚀", title: "high ownership", desc: "you own what you build. end to end." },
-  { emoji: "🌍", title: "fully remote", desc: "work from anywhere. we are async-first." },
-  { emoji: "💡", title: "builders first", desc: "everyone ships. design, code, ideas — all welcome." },
-  { emoji: "🤝", title: "honest equity", desc: "real equity. real upside. we grow together." },
+  { emoji: "🚀", title: "High ownership", desc: "You own what you build, end to end." },
+  { emoji: "🌍", title: "Fully remote", desc: "Work from anywhere. We are async-first." },
+  { emoji: "💡", title: "Builders first", desc: "Everyone ships. Design, code, ideas: all welcome." },
+  { emoji: "🤝", title: "Honest equity", desc: "Real equity. Real upside. We grow together." },
 ];
 
 export default function CareersPage() {
@@ -32,7 +32,7 @@ export default function CareersPage() {
           <div className="max-w-2xl mb-16">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/40 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-5" style={font}>Careers at rive.</div>
             <h1 className="text-6xl font-bold text-foreground dark:text-white tracking-tight mb-4 leading-tight" style={fontD}>Build the future of work with us.</h1>
-            <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed" style={font}>Small team, high ownership. everyone ships. everyone matters.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed" style={font}>Small team, high ownership. Everyone ships. Everyone matters.</p>
           </div>
 
           {/* Values */}
@@ -57,11 +57,11 @@ export default function CareersPage() {
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-lg" style={font}>{role.desc}</p>
                 </div>
                 <Button
-                  onClick={() => router.push("/register")}
+                  onClick={() => router.push("/contact")}
                   className="shrink-0 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all shadow-lg shadow-blue-600/15 whitespace-nowrap"
                   style={fontD}
                 >
-                  apply
+                  Apply
                 </Button>
               </div>
             ))}
@@ -70,7 +70,7 @@ export default function CareersPage() {
           {/* Bottom CTA */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none p-8 text-center transition-colors">
             <h3 className="text-xl font-bold text-foreground dark:text-white mb-2" style={fontD}>Don&apos;t see your role?</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-1" style={font}>We&apos;re always open to exceptional people. reach out directly.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-1" style={font}>We&apos;re always open to exceptional people. Reach out directly.</p>
             <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 font-semibold text-sm hover:text-blue-700 dark:hover:text-blue-300 transition-colors" style={fontD}>hello@rive.work →</a>
           </div>
         </div>

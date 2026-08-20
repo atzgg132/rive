@@ -1,13 +1,9 @@
 "use client";
 
-import { ArrowRight, CalendarDays, CheckCircle2, FileSpreadsheet, Rss } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileSpreadsheet, Rss } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-type MarketingConnectionsSectionProps = {
-  googleCalendarEnabled: boolean;
-};
-
-export default function MarketingConnectionsSection({ googleCalendarEnabled }: MarketingConnectionsSectionProps) {
+export default function MarketingConnectionsSection() {
   const router = useRouter();
   const connections = [
     {
@@ -22,14 +18,6 @@ export default function MarketingConnectionsSection({ googleCalendarEnabled }: M
       status: "Available now",
       description: "Subscribe to a private, read-only feed of Rive deadlines, tasks, and scheduled work.",
     },
-    ...(googleCalendarEnabled
-      ? [{
-          icon: CalendarDays,
-          title: "Google Calendar",
-          status: "Available now",
-          description: "Discover calendars, import events, and sync new Rive events back to Google.",
-        }]
-      : []),
   ];
 
   return (
@@ -44,11 +32,11 @@ export default function MarketingConnectionsSection({ googleCalendarEnabled }: M
             </h2>
           </div>
           <p className="max-w-xl text-lg leading-8 text-slate-500 dark:text-slate-400">
-            Rive gives you a practical way in: import exports, connect calendars, and keep the records that matter linked to the workflows they power. Direct accounting connections stay gated until their import and recovery paths are ready for production.
+            Rive gives you a practical way in: import the exports you already have, subscribe to an Apple Calendar feed, and keep those records linked to the workflows they power. Zoho Books import is available when connected.
           </p>
         </div>
 
-        <div className={`mt-14 grid gap-4 ${connections.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+        <div className="mt-14 grid gap-4 md:grid-cols-2">
           {connections.map(({ icon: Icon, title, status, description }) => (
             <article key={title} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800 dark:bg-slate-950/70 sm:p-8">
               <div className="flex items-center justify-between gap-3">
