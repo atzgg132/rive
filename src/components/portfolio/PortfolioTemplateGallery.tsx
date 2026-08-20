@@ -14,16 +14,10 @@ import { miniatureContent } from "@/utils/portfolioMiniature";
  * at 96px. So each card renders the actual portfolio renderer, with the owner's
  * actual projects, at the template it is offering.
  *
- * Not six on arrival, though: six renderers is six portfolios rendering, on a
- * page that already has a live preview in it. Only the chosen template renders
- * at first; the others wake on hover or keyboard focus, and having woken they
- * stay mounted rather than being torn down on the way out.
- *
- * That is a deliberate trade, and it does mean someone who runs the pointer
- * across every card ends up with all six mounted. Unmounting on exit was worse:
- * it threw away the painted frame, so moving back over a card you had already
- * seen flashed white and re-rendered. Cheap content is what makes it affordable
- * — see `miniatureContent`, which strips the media before any of this happens.
+ * All six renderers are mounted on arrival so the appearance choices are
+ * immediately comparable. The content is intentionally cheap — see
+ * `miniatureContent`, which strips media before any of this happens — and each
+ * miniature is inert because it is a picture of a layout, not a page to use.
  */
 
 /** The viewport each miniature is rendered at before being scaled to the card. */
@@ -56,19 +50,13 @@ function TemplateCard({
   content,
   theme,
   selected,
-  render,
   onSelect,
-  onWake,
 }: {
   template: (typeof PORTFOLIO_TEMPLATES)[number];
   content: PortfolioContent;
   theme: PortfolioTheme;
   selected: boolean;
-  /** Mount the real renderer. Stays true once woken, so crossing back over a
-   *  row already seen shows the painted frame instead of flashing white. */
-  render: boolean;
   onSelect: () => void;
-  onWake: () => void;
 }) {
   const [ref, width] = useCardWidth();
   const scale = width > 0 ? width / MINIATURE_WIDTH : 0;
@@ -78,7 +66,6 @@ function TemplateCard({
        buttons, a contact form — and interactive elements cannot legally nest
        inside a button. The click target is the overlaid button at the end. */
     <div
-      onMouseEnter={onWake}
       data-portfolio-template={template.key}
       className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border text-left transition ${
         selected
@@ -87,7 +74,7 @@ function TemplateCard({
       }`}
     >
       <div ref={ref} className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-        {render && scale > 0 ? (
+        {scale > 0 ? (
           /* Inert on purpose: this is a picture of a layout, not a page to use.
              It is hidden from assistive technology because the card's own name
              and description already say what it is, and a screen reader does not
@@ -129,7 +116,6 @@ function TemplateCard({
       <button
         type="button"
         onClick={onSelect}
-        onFocus={onWake}
         aria-pressed={selected}
         aria-label={`Use the ${template.name} template — ${template.description}`}
         className="absolute inset-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -149,13 +135,8 @@ export default function PortfolioTemplateGallery({
   templateKey: string;
   onChooseTemplate: (templateKey: string, accent: string) => void;
 }) {
-  /* Which cards have ever been shown live. Tracked here, in the handlers that
-     cause it, rather than in an effect reacting to it. */
-  const [awakened, setAwakened] = useState<Set<string>>(() => new Set([templateKey]));
   const miniature = useMemo(() => miniatureContent(content), [content]);
   const hasWork = content.projects.some((project) => project.title.trim());
-
-  const wake = (key: string) => setAwakened((current) => (current.has(key) ? current : new Set(current).add(key)));
 
   return (
     <div>
@@ -167,12 +148,7 @@ export default function PortfolioTemplateGallery({
             content={miniature}
             theme={theme}
             selected={templateKey === template.key}
-            render={templateKey === template.key || awakened.has(template.key)}
-            onSelect={() => {
-              wake(template.key);
-              onChooseTemplate(template.key, template.accent);
-            }}
-            onWake={() => wake(template.key)}
+            onSelect={() => onChooseTemplate(template.key, template.accent)}
           />
         ))}
       </div>

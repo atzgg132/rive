@@ -425,6 +425,8 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
      showed the placeholder while holding perfectly good photographs. */
   const featuredProject = publicProjects.find((project) => resolveProjectCoverImage(project)) || publicProjects[0];
   const featuredCoverImage = featuredProject ? resolveProjectCoverImage(featuredProject) : "";
+  const showProfileImage = content.showProfileImage && Boolean(content.profileImageUrl);
+  const heroVisual = showProfileImage ? "profile" : featuredCoverImage ? "work" : null;
   const visible = (key: PortfolioContent["sections"][number]["key"]) =>
     content.sections.find((section) => section.key === key)?.visible ?? true;
   const contactHref = content.contactEmail ? `mailto:${content.contactEmail}` : null;
@@ -487,7 +489,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
       </header>
 
       <main id="top">
-        <section className={`relative mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-12 sm:px-10 sm:pb-24 sm:pt-20 lg:px-14 ${profile.heroClass}`}>
+        <section className={`relative mx-auto max-w-7xl gap-10 px-5 pb-16 pt-12 sm:px-10 sm:pb-24 sm:pt-20 lg:px-14 ${heroVisual ? `grid ${profile.heroClass}` : "block"}`}>
           <div className="relative z-10 self-center">
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--portfolio-accent)]">
@@ -533,10 +535,10 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
             )}
           </div>
 
-          <div className="relative min-h-72 self-stretch sm:min-h-96">
+          {heroVisual && <div className="relative min-h-72 self-stretch sm:min-h-96">
             <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-[var(--portfolio-radius-large)] border border-[var(--portfolio-border)] sm:translate-x-5 sm:translate-y-5" />
             <div className="relative h-full min-h-72 overflow-hidden rounded-[var(--portfolio-radius-large)] bg-[var(--portfolio-soft)] sm:min-h-96">
-              {featuredProject && featuredCoverImage ? (
+              {heroVisual === "work" ? (
                 <>
                   <img src={featuredCoverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-transparent" />
@@ -547,39 +549,24 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                   </div>
                 </>
               ) : (
-                <div className="flex h-full min-h-72 flex-col justify-between p-6 sm:min-h-96 sm:p-9">
-                  {content.profileImageUrl ? (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="relative h-60 w-full max-w-xs overflow-hidden rounded-[var(--portfolio-radius)] bg-[var(--portfolio-card)] shadow-2xl shadow-black/10 ring-1 ring-[var(--portfolio-border)] sm:h-80">
-                        <img
-                          src={content.profileImageUrl}
-                          alt={`${content.name} profile`}
-                          className="absolute inset-0 h-full w-full object-cover object-center"
-                          style={{ filter: "saturate(.86) contrast(1.04)" }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/5" />
-                        <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
-                          <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/70">Portfolio of</p>
-                          <p className="mt-2 truncate text-2xl font-black tracking-[-0.045em] sm:text-3xl">{content.name}</p>
-                        </div>
-                      </div>
+                <div className="flex h-full min-h-72 items-center justify-center p-6 sm:min-h-96 sm:p-9">
+                  <div className="relative aspect-square w-full max-w-xs overflow-hidden rounded-[var(--portfolio-radius)] bg-[var(--portfolio-card)] shadow-2xl shadow-black/10 ring-1 ring-[var(--portfolio-border)]">
+                    <img
+                      src={content.profileImageUrl}
+                      alt={`${content.name} profile`}
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      style={{ filter: "saturate(.86) contrast(1.04)" }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/5" />
+                    <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
+                      <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/70">Portfolio of</p>
+                      <p className="mt-2 truncate text-2xl font-black tracking-[-0.045em] sm:text-3xl">{content.name}</p>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-start justify-between">
-                        <Sparkles className="h-9 w-9 text-[var(--portfolio-accent)]" strokeWidth={1.5} />
-                        <span className="text-xs font-bold text-[var(--portfolio-muted)]">{new Date().getFullYear()}</span>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--portfolio-muted)]">Portfolio of</p>
-                        <p className="mt-3 text-4xl font-black tracking-[-0.055em] text-[var(--portfolio-ink)] sm:text-5xl">{content.name}</p>
-                      </div>
-                    </>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          </div>}
         </section>
 
         <section className="border-y border-[var(--portfolio-border)] bg-[var(--portfolio-card)]">
