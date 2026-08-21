@@ -164,10 +164,6 @@ textarea {
   box-shadow: 0 0 0 7px rgb(59 130 246 / 0.08);
 }
 
-[data-testid="guide-popover"] > * {
-  pointer-events: auto;
-}
-
 /* Legacy marketing pages used desktop-only spacing. Keep their authored
    desktop rhythm while providing a safe mobile gutter everywhere. */
 @media (max-width: 639px) {

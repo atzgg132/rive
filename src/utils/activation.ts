@@ -16,6 +16,9 @@ export const ACTIVATION_EVENTS = {
   guidanceSkipped: "guidance.skipped",
   guidanceCompleted: "guidance.completed",
   guideReplayed: "guidance.replayed",
+  guideMinimized: "guidance.minimized",
+  guideResumed: "guidance.resumed",
+  guideStepOpened: "guidance.step_opened",
 } as const;
 
 type ActivationMetadata = Record<string, string | number | boolean | null>;

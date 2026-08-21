@@ -439,23 +439,45 @@ test.describe("goal-aware activation", () => {
     await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
   });
 
-  test("automatic guidance is skippable and does not return after refresh", async ({ page }) => {
+  test("automatic guidance is collapsed by default and can be deferred without blocking the workspace", async ({ page }) => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("guide-popover")).toBeVisible();
+    const dock = page.getByTestId("guide-dock");
+    await expect(dock).toBeVisible();
+    await expect(dock).toHaveAttribute("data-guide-state", "collapsed");
+    await expect(page.locator('[data-guide-target="activation-primary"]').last()).not.toHaveAttribute("data-guide-highlight", "true");
+    await page.getByRole("button", { name: "Expand guide" }).click();
+    await expect(dock).toHaveAttribute("data-guide-state", "expanded");
     await expect(page.locator('[data-guide-target="activation-primary"]').last()).toHaveAttribute("data-guide-highlight", "true");
-    await page.getByRole("button", { name: "Skip" }).click();
-    await expect(page.getByTestId("guide-popover")).toBeHidden();
-    expect(state.guidanceDismissed).toBe(true);
+    await page.getByRole("button", { name: "Maybe later" }).click();
+    await expect(dock).toBeHidden();
+    expect(state.guidanceDismissed).not.toBe(true);
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("guide-popover")).toBeHidden();
+    await expect(page.getByTestId("guide-dock")).toBeHidden();
+  });
+
+  test("the active guide can be minimized and resumed without losing the workspace context", async ({ page }) => {
+    const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
+    await installWorkspaceMocks(page, state);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    const dock = page.getByTestId("guide-dock");
+    await page.getByRole("button", { name: "Expand guide" }).click();
+    await expect(dock).toHaveAttribute("data-guide-state", "expanded");
+    await page.getByRole("button", { name: "Minimize guide" }).click();
+    await expect(dock).toHaveAttribute("data-guide-state", "collapsed");
+    await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
+    await expect(page.locator('[data-guide-target="activation-primary"]').last()).not.toHaveAttribute("data-guide-highlight", "true");
+    await page.getByRole("button", { name: "Expand guide" }).click();
+    await expect(dock).toHaveAttribute("data-guide-state", "expanded");
+    await expect(page.locator('[data-guide-target="activation-primary"]').last()).toHaveAttribute("data-guide-highlight", "true");
   });
 
   test("guidance follows real workflow mutations instead of advancing on Next", async ({ page }) => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "Expand guide" }).click();
     await expect(page.getByRole("heading", { name: "Add your first client" })).toBeVisible();
     await page.evaluate(() => fetch("/api/workflow/clients", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Client A" }) }));
     await expect(page.getByRole("heading", { name: "Create your first project" })).toBeVisible({ timeout: 8_000 });
@@ -469,23 +491,23 @@ test.describe("goal-aware activation", () => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, guidanceDismissed: true, startingPath: "quickstart" };
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("guide-popover")).toBeHidden();
+    await expect(page.getByTestId("guide-dock")).toBeHidden();
     await page.getByRole("button", { name: "Help & guides" }).click();
-    const firstGuide = page.getByRole("button", { name: "Getting started with Rive" });
+    const firstGuide = page.getByRole("button", { name: /Start with one client job/ });
     await expect(firstGuide).toBeVisible();
     await expect.poll(async () => firstGuide.evaluate((el) => getComputedStyle(el).backgroundColor)).toMatch(/^(rgba?\(0,\s*0,\s*0,\s*0\)|transparent)$/);
     await firstGuide.hover();
     await expect.poll(async () => firstGuide.evaluate((el) => {
       const bg = getComputedStyle(el).backgroundColor;
       const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().split(/\s+/).join(", ");
-      return bg === `rgb(${accent})` ? "accent" : "ok";
-    })).toBe("ok");
-    await page.getByRole("button", { name: "Organize clients & projects" }).click();
-    await expect(page.getByTestId("guide-popover")).toBeVisible();
+      return bg === `rgb(${accent})`;
+    })).toBe(true);
+    await page.getByRole("button", { name: /Organize a client job/ }).click();
+    await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "expanded");
     await expect(page.getByRole("heading", { name: "Add your first client" })).toBeVisible();
     expect(state.guidanceDismissed).toBe(true);
     await page.getByRole("button", { name: "Close guide" }).click();
-    await expect(page.getByTestId("guide-popover")).toBeHidden();
+    await expect(page.getByTestId("guide-dock")).toBeHidden();
   });
 
   test("manual replay adapts when a workspace already has the guided outcome", async ({ page }) => {
@@ -493,7 +515,7 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Help & guides" }).click();
-    await page.getByRole("button", { name: "Organize clients & projects" }).click();
+    await page.getByRole("button", { name: /Organize a client job/ }).click();
     await expect(page.getByRole("heading", { name: "You are ready to run with it" })).toBeVisible();
     await expect(page.getByText("Add your first client", { exact: true })).toHaveCount(0);
     expect(state.guidanceDismissed).toBe(true);
@@ -506,21 +528,23 @@ test.describe("goal-aware activation", () => {
     await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Project A" })).toBeVisible();
     await page.getByRole("button", { name: "Help & guides" }).click();
-    await page.getByRole("button", { name: "Organize clients & projects" }).click();
+    await page.getByRole("button", { name: /Organize a client job/ }).click();
     await expect(page.getByRole("heading", { name: "Add a project deadline" })).toBeVisible();
     await page.getByRole("button", { name: "Open step", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Edit project" })).toBeVisible();
   });
 
-  test("mobile guidance uses a bottom card and keeps the page within the viewport", async ({ page }) => {
+  test("mobile guidance starts as a compact dock and keeps the page within the viewport", async ({ page }) => {
     const state: MockState = { goal: "get_paid", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("guide-popover")).toBeVisible();
+    await expect(page.getByTestId("guide-dock")).toBeVisible();
+    await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "collapsed");
     await expect(page.getByRole("button", { name: "Open Help & guides" })).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.getByRole("button", { name: "Skip" }).click();
+    await page.getByRole("button", { name: "Expand guide" }).click();
+    await page.getByRole("button", { name: "Maybe later" }).click();
   });
 
   test("Escape closes automatic guidance and Help is keyboard reachable", async ({ page }) => {
@@ -528,7 +552,7 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.keyboard.press("Escape");
-    await expect(page.getByTestId("guide-popover")).toBeHidden();
+    await expect(page.getByTestId("guide-dock")).toBeHidden();
     await page.getByRole("button", { name: "Help & guides" }).focus();
     await page.keyboard.press("Enter");
     await expect(page.getByTestId("help-guides-panel")).toBeVisible();
