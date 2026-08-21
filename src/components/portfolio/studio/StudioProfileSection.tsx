@@ -1,12 +1,9 @@
 "use client";
 
-import { Button, Input, Textarea } from "@/components/ui";
-import { Upload } from "lucide-react";
+import { Input, Textarea } from "@/components/ui";
 import { MAX_TAGLINE_LENGTH, templateEyebrow, type PortfolioContent } from "@/utils/portfolio";
 import { inputClass, labelClass, sectionClass } from "@/components/portfolio/studio/studioStyles";
-
-/* Validated portfolio uploads and remote image hosts cannot use a static Next image allowlist. */
-/* eslint-disable @next/next/no-img-element */
+import StudioProfileImageEditor from "@/components/portfolio/studio/StudioProfileImageEditor";
 
 type Props = {
   content: PortfolioContent;
@@ -15,7 +12,7 @@ type Props = {
   saving: boolean;
   onUpdateContent: (update: Partial<PortfolioContent>) => void;
   onUpdateSlug: (value: string) => void;
-  onUploadProfileImage: (file: File | undefined) => void;
+  onUploadProfileImage: (file: File | undefined) => Promise<boolean>;
   onPersistProfileImage: (profileImageUrl: string, message: string) => void;
 };
 
@@ -35,22 +32,15 @@ export default function StudioProfileSection({
         <h2 className="font-bold text-foreground dark:text-white">Basic profile</h2>
         <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">Add a name, headline, introduction, and contact email before you publish. Location and availability are optional.</p>
       </div>
-      <div className="mb-6 flex flex-col gap-4 border-b border-border pb-6 dark:border-slate-800 sm:flex-row sm:items-center">
-        <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl bg-slate-100 text-2xl font-black text-slate-400 dark:bg-slate-800">
-          {content.profileImageUrl ? <img src={content.profileImageUrl} alt="" className="h-full w-full object-cover" /> : (content.name || "Y").slice(0, 1).toUpperCase()}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-foreground dark:text-white">Profile photo</p>
-          <p className="mt-1 max-w-lg text-xs leading-5 text-slate-500 dark:text-slate-400">Used in your public portfolio hero and synced from onboarding. A square portrait with a simple background works best.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">
-              <Upload className="h-3.5 w-3.5" /> Upload photo
-              <Input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(event) => { onUploadProfileImage(event.target.files?.[0]); event.currentTarget.value = ""; }} />
-            </label>
-            {content.profileImageUrl && <Button type="button" onClick={() => onPersistProfileImage("", "profile photo removed")} disabled={saving} className="rounded-xl border border-border px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300">Remove</Button>}
-          </div>
-        </div>
-      </div>
+      <StudioProfileImageEditor
+        imageUrl={content.profileImageUrl}
+        name={content.name}
+        showOnPortfolio={content.showProfileImage}
+        saving={saving}
+        onShowOnPortfolioChange={(showProfileImage) => onUpdateContent({ showProfileImage })}
+        onUpload={onUploadProfileImage}
+        onRemove={() => onPersistProfileImage("", "profile photo removed")}
+      />
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-2"><span className={labelClass}>Display name</span><Input className={inputClass} value={content.name || ""} placeholder="Your name" onChange={(event) => onUpdateContent({ name: event.target.value })} /></label>
         <label className="flex flex-col gap-2"><span className={labelClass}>Public URL</span><div className="flex items-center"><span className="rounded-l-xl border border-r-0 border-border bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800">/p/</span><Input className={`${inputClass} rounded-l-none`} value={slug} placeholder="your-name" onChange={(event) => onUpdateSlug(event.target.value)} /></div></label>

@@ -55,6 +55,7 @@ function studioContent() {
   return {
     name: "Studio Fixture",
     profileImageUrl: "",
+    showProfileImage: false,
     headline: "Independent product designer",
     bio: "Fixture portfolio for studio tests.",
     location: "Remote",
@@ -75,6 +76,13 @@ function studioContent() {
       { key: "contact" as const, visible: true },
     ],
   };
+}
+
+function profilePhotoFixture() {
+  return Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  );
 }
 
 /**
@@ -368,6 +376,61 @@ test.describe("portfolio studio", () => {
     await expect(review).toBeHidden();
   });
 
+  test("profile photos can be cropped, opted into, and laid out publicly", async ({ page, context }) => {
+    const { token, user } = await studioUser("profile-photo");
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: /^Profile/i }).click();
+    const editor = page.locator("[data-profile-image-editor]");
+    const displaySwitch = editor.getByRole("switch", { name: "Show profile photo on public portfolio" });
+    await expect(displaySwitch).toBeDisabled();
+
+    await editor.locator('input[type="file"]').setInputFiles({
+      name: "profile.png",
+      mimeType: "image/png",
+      buffer: profilePhotoFixture(),
+    });
+    const cropDialog = page.getByRole("dialog", { name: /Adjust your profile photo/i });
+    await expect(cropDialog).toBeVisible();
+    await expect(cropDialog.locator("[data-profile-image-cropper]")).toBeVisible();
+    await page.getByRole("button", { name: "Rotate photo right" }).click();
+    await expect(page.getByRole("button", { name: "Save crop" })).toBeEnabled();
+    await page.getByRole("button", { name: "Save crop" }).click();
+    await expect(cropDialog).toBeHidden({ timeout: 20_000 });
+    await expect(displaySwitch).toBeEnabled();
+
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { content: true } });
+      const content = portfolio?.content as { profileImageUrl?: unknown; showProfileImage?: unknown } | null;
+      return {
+        hasImage: typeof content?.profileImageUrl === "string" && content.profileImageUrl.startsWith("data:image/"),
+        showProfileImage: content?.showProfileImage,
+      };
+    }, { timeout: 20_000 }).toEqual({ hasImage: true, showProfileImage: false });
+
+    const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { slug: true } });
+    expect(portfolio?.slug).toBeTruthy();
+    await db.prisma.portfolio.update({ where: { userId: user.id }, data: { status: "published" } });
+    await page.goto(`/p/${portfolio?.slug}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator('img[alt$="profile"]')).toHaveCount(0);
+    await expect(page.locator("main > section").first()).toHaveClass(/block/);
+
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: /^Profile/i }).click();
+    await expect(displaySwitch).toBeEnabled();
+    await displaySwitch.click();
+    await expect.poll(async () => {
+      const saved = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { content: true } });
+      return (saved?.content as { showProfileImage?: unknown } | null)?.showProfileImage;
+    }, { timeout: 20_000 }).toBe(true);
+
+    await page.goto(`/p/${portfolio?.slug}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator('img[alt$="profile"]')).toBeVisible();
+    await expect(page.locator("main > section").first()).toHaveClass(/grid/);
+  });
+
   test("typed work survives leaving a section, and autosave never publishes", async ({ page, context }) => {
     const { token, user } = await studioUser("autosave");
     await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
@@ -562,18 +625,11 @@ test.describe("portfolio studio", () => {
     await page.getByRole("button", { name: /Appearance/i }).click();
     await expect(page.locator("[data-portfolio-template]")).toHaveCount(6);
 
-    /* The fixture's template renders live on arrival, with the fixture's own
-       headline inside it — that is the difference between comparing and
-       guessing. The others stay asleep until asked for. */
-    const selected = page.locator('[data-portfolio-template="minimal-pro"]');
-    await expect(selected).toContainText("Independent product designer", { timeout: 20_000 });
-
-    const asleep = page.locator('[data-portfolio-template="creator"]');
-    await expect(asleep).not.toContainText("Independent product designer");
-
-    // Hovering wakes one, and it renders the same portfolio at its own template.
-    await asleep.hover();
-    await expect(asleep).toContainText("Independent product designer", { timeout: 20_000 });
+    /* Every template renders live on arrival, with the fixture's own headline
+       inside it — that is the difference between comparing and guessing. */
+    for (const template of ["minimal-pro", "visual-studio", "digital-builder", "expert-profile", "creator", "agency"]) {
+      await expect(page.locator(`[data-portfolio-template="${template}"]`)).toContainText("Independent product designer", { timeout: 20_000 });
+    }
 
     /* A miniature is an entire portfolio. `aria-hidden` and `pointer-events-none`
        hide it from assistive technology and the mouse but leave every link and

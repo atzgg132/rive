@@ -6,6 +6,7 @@ import {
   DEFAULT_PORTFOLIO_CONTENT,
   getPublicPortfolioContent,
   mergePortfolioContent,
+  PROFILE_IMAGE_ASPECT_RATIO,
   resolveProjectCoverImage,
   resolveProjectPlayableCover,
   validatePortfolioContent,
@@ -124,6 +125,28 @@ test("a portfolio with no practices keeps today's shape", () => {
   assert.equal(merged.practiceLayout, "unified");
   assert.equal(merged.mediaSettings.autoplayOnScroll, false);
   assert.deepEqual(merged.projects[0].media, []);
+});
+
+test("profile photos are opt-in and hidden assets are removed from public content", () => {
+  assert.equal(PROFILE_IMAGE_ASPECT_RATIO, 1);
+
+  const legacy = mergePortfolioContent({
+    name: "Ada",
+    profileImageUrl: "https://example.com/me.png",
+  });
+  assert.equal(legacy.showProfileImage, false);
+  assert.equal(getPublicPortfolioContent(legacy).profileImageUrl, "");
+  assert.equal(getPublicPortfolioContent(legacy).showProfileImage, false);
+
+  const optedIn = mergePortfolioContent({ ...legacy, showProfileImage: true });
+  const publicContent = getPublicPortfolioContent(optedIn);
+  assert.equal(publicContent.showProfileImage, true);
+  assert.equal(publicContent.profileImageUrl, "https://example.com/me.png");
+
+  assert.match(
+    validatePortfolioContent(baseContent({ showProfileImage: "yes" })),
+    /display preference is invalid/,
+  );
 });
 
 test("upgrades a legacy image gallery into media with stable identifiers", () => {

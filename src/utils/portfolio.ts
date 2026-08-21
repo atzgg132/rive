@@ -118,6 +118,7 @@ export type PortfolioTestimonial = {
 export type PortfolioContent = {
   name: string;
   profileImageUrl: string;
+  showProfileImage: boolean;
   /**
    * The small line above the headline. Blank falls back to the template's own.
    *
@@ -174,6 +175,7 @@ export function templateEyebrow(templateKey: string): string {
 export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
   name: "",
   profileImageUrl: "",
+  showProfileImage: false,
   tagline: "",
   headline: "",
   bio: "",
@@ -205,6 +207,10 @@ export const DEFAULT_PORTFOLIO_THEME: PortfolioTheme = {
   mode: "light",
   radius: "soft",
 };
+
+/** The profile photo is rendered in the same square slot at every breakpoint. */
+export const PROFILE_IMAGE_ASPECT_RATIO = 1;
+export const MAX_PROFILE_IMAGE_UPLOAD_BYTES = 2 * 1024 * 1024;
 
 type PortfolioSeedData = {
   name?: string | null;
@@ -342,6 +348,8 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
     ...DEFAULT_PORTFOLIO_CONTENT,
     ...input,
     name: clearLegacyStarterCopy(input.name),
+    profileImageUrl: text(input.profileImageUrl),
+    showProfileImage: input.showProfileImage === true,
     tagline: text(input.tagline),
     headline: clearLegacyStarterCopy(input.headline),
     bio: clearLegacyStarterCopy(input.bio),
@@ -470,6 +478,9 @@ export function getPublicPortfolioContent(value: unknown): PortfolioContent {
   const inVisiblePractice = (item: { practiceId?: string }) => !item.practiceId || visiblePracticeIds.has(item.practiceId);
   return {
     ...content,
+    // A hidden profile photo is an account asset, not public portfolio content.
+    profileImageUrl: content.showProfileImage ? content.profileImageUrl : "",
+    showProfileImage: content.showProfileImage && Boolean(content.profileImageUrl),
     practices,
     projects: content.projects.filter((project) => project.visibility !== "private" && inVisiblePractice(project)),
     services: content.services.filter(inVisiblePractice),
@@ -626,6 +637,7 @@ function validateMediaSettings(settings: unknown): string | null {
 export function validatePortfolioContent(value: unknown): string | null {
   if (!value || typeof value !== "object") return "Portfolio content must be an object.";
   const input = value as Partial<PortfolioContent>;
+  if (input.showProfileImage !== undefined && typeof input.showProfileImage !== "boolean") return "Profile photo display preference is invalid.";
   if (input.profileImageUrl) {
     if (typeof input.profileImageUrl !== "string" || input.profileImageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Profile image is too large.";
     if (!INLINE_IMAGE.test(input.profileImageUrl) && !isManagedPortfolioImageUrl(input.profileImageUrl) && !isSafePortfolioUrl(input.profileImageUrl)) return "Profile image must be an HTTPS URL or supported image upload.";

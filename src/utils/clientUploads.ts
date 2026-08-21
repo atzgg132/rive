@@ -5,6 +5,7 @@ import {
   maxBytesFor,
   type PortfolioAssetKind,
 } from "@/utils/portfolioMedia";
+import { MAX_PROFILE_IMAGE_UPLOAD_BYTES } from "@/utils/portfolio";
 
 type PresignResponse = {
   uploadUrl: string;
@@ -148,6 +149,97 @@ export function describeUploadRejection(file: File): string | null {
 function withObjectUrl<T>(file: File, read: (url: string) => Promise<T>): Promise<T> {
   const url = URL.createObjectURL(file);
   return read(url).finally(() => URL.revokeObjectURL(url));
+}
+
+export type CropAreaPixels = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+function loadImageForCrop(source: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    if (!source.startsWith("data:") && !source.startsWith("blob:")) image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("This image could not be prepared for editing."));
+    image.src = source;
+  });
+}
+
+function rotateSize(width: number, height: number, rotation: number) {
+  const radians = (rotation * Math.PI) / 180;
+  return {
+    width: Math.abs(Math.cos(radians) * width) + Math.abs(Math.sin(radians) * height),
+    height: Math.abs(Math.sin(radians) * width) + Math.abs(Math.cos(radians) * height),
+  };
+}
+
+function canvasBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("The edited image could not be encoded."));
+    }, type, quality);
+  });
+}
+
+/** Render the crop selected by react-easy-crop as the final upload file. */
+export async function createCroppedProfileImage(
+  source: string,
+  crop: CropAreaPixels,
+  rotation: number,
+): Promise<File> {
+  const image = await loadImageForCrop(source);
+  const rotated = rotateSize(image.naturalWidth, image.naturalHeight, rotation);
+  const rotatedCanvas = document.createElement("canvas");
+  rotatedCanvas.width = Math.max(1, Math.round(rotated.width));
+  rotatedCanvas.height = Math.max(1, Math.round(rotated.height));
+  const rotatedContext = rotatedCanvas.getContext("2d");
+  if (!rotatedContext) throw new Error("Your browser could not prepare the edited image.");
+
+  rotatedContext.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+  rotatedContext.rotate((rotation * Math.PI) / 180);
+  rotatedContext.translate(-image.naturalWidth / 2, -image.naturalHeight / 2);
+  rotatedContext.drawImage(image, 0, 0);
+
+  const cropWidth = Math.max(1, Math.round(crop.width));
+  const cropHeight = Math.max(1, Math.round(crop.height));
+  const outputSize = Math.min(1200, cropWidth, cropHeight);
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = outputSize;
+  outputCanvas.height = outputSize;
+  const outputContext = outputCanvas.getContext("2d");
+  if (!outputContext) throw new Error("Your browser could not prepare the edited image.");
+
+  outputContext.drawImage(
+    rotatedCanvas,
+    Math.max(0, Math.round(crop.x)),
+    Math.max(0, Math.round(crop.y)),
+    cropWidth,
+    cropHeight,
+    0,
+    0,
+    outputSize,
+    outputSize,
+  );
+
+  const candidates = [
+    { type: "image/webp", extension: "webp", quality: 0.9 },
+    { type: "image/jpeg", extension: "jpg", quality: 0.86 },
+    { type: "image/jpeg", extension: "jpg", quality: 0.72 },
+  ];
+  let lastBlob: Blob | null = null;
+  let extension = "jpg";
+  for (const candidate of candidates) {
+    const blob = await canvasBlob(outputCanvas, candidate.type, candidate.quality);
+    lastBlob = blob;
+    extension = blob.type === "image/webp" ? "webp" : "jpg";
+    if (blob.size <= MAX_PROFILE_IMAGE_UPLOAD_BYTES) break;
+  }
+  if (!lastBlob) throw new Error("The edited image could not be encoded.");
+  return new File([lastBlob], `profile-photo.${extension}`, { type: lastBlob.type });
 }
 
 /** Grab a representative frame so video has a cover without a server render. */
