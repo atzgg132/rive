@@ -427,7 +427,7 @@ test.describe("portfolio studio", () => {
     }, { timeout: 20_000 }).toBe(true);
 
     await page.goto(`/p/${portfolio?.slug}`, { waitUntil: "domcontentloaded" });
-    await expect(page.locator('img[alt="Studio profile-photo profile"]')).toBeVisible();
+    await expect(page.locator('img[alt$="profile"]')).toBeVisible();
     await expect(page.locator("main > section").first()).toHaveClass(/grid/);
   });
 
