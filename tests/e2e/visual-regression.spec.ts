@@ -270,7 +270,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Help & guides" }).click();
     await page.getByTestId("guide-option-organize").click();
-    await expect(page.getByRole("heading", { name: "You are ready to run with it" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Guide completed" })).toBeVisible();
     await expect(page).toHaveScreenshot(`guidance-complete-${theme}-1440x900.png`, { fullPage: false });
   });
 }
