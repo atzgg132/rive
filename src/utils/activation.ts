@@ -19,6 +19,7 @@ export const ACTIVATION_EVENTS = {
   guideMinimized: "guidance.minimized",
   guideResumed: "guidance.resumed",
   guideStepOpened: "guidance.step_opened",
+  guideStepCompleted: "guidance.step_completed",
 } as const;
 
 type ActivationMetadata = Record<string, string | number | boolean | null>;
@@ -53,6 +54,26 @@ export async function recordActivationEvent(
     eventName: action,
     module: "activation",
     dedupeKey: `activation:${userId}:${action}`,
+    properties: metadata,
+  });
+}
+
+/**
+ * Re-playable guide interactions are intentionally not written through the
+ * audit-event upsert. Audit events answer "has this milestone happened?";
+ * product events answer "how often did people need this help?". Keeping the
+ * two paths separate prevents a unique audit key from deleting the meaning of
+ * a second replay or a forgotten step.
+ */
+export async function recordGuidanceEvent(
+  userId: string,
+  action: string,
+  metadata?: ActivationMetadata,
+): Promise<void> {
+  await recordProductEvent({
+    userId,
+    eventName: action,
+    module: "activation",
     properties: metadata,
   });
 }

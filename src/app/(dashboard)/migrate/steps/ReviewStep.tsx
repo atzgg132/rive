@@ -310,7 +310,7 @@ export default function ReviewStep({
               Rechecking
             </span>
           ) : null}
-          <Button type="button" onClick={onContinue} disabled={busy}>
+          <Button type="button" data-guide-target="migration-review" onClick={onContinue} disabled={busy}>
             See what will be imported
           </Button>
         </div>

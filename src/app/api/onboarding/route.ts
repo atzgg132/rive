@@ -174,7 +174,14 @@ export async function PATCH(req: NextRequest) {
         await transaction.portfolio.update({
           where: { userId: session.userId },
           data: {
-            content: { ...content, profileImageUrl: updated.avatarUrl || "" },
+            content: {
+              ...content,
+              profileImageUrl: updated.avatarUrl || "",
+              // Avatar changes replace the source image too; otherwise an
+              // existing private recrop source could belong to the previous
+              // avatar and make the next edit open the wrong photo.
+              profileImageSourceUrl: updated.avatarUrl || "",
+            },
             revision: { increment: 1 },
           },
         });

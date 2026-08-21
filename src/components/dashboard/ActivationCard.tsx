@@ -118,7 +118,15 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
           <Settings2 className="mr-1.5 h-3.5 w-3.5" />
           {detailsOpen ? "Hide Getting Started" : "Open Getting Started"}
         </Button>
-        <Link href="/onboarding?restart=1&focus=goal" className="text-xs font-bold text-blue-100 hover:text-white hover:underline">Change goal</Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => window.dispatchEvent(new Event("rive:open-help"))}
+          className="h-auto px-0 text-xs font-bold text-blue-100 hover:bg-transparent hover:text-white hover:underline"
+        >
+          Explore another guide
+        </Button>
         <Button type="button" variant="ghost" size="sm" onClick={() => void dismissGuidance()} disabled={saving} className="ml-auto h-auto px-0 text-xs font-bold text-blue-100 hover:bg-transparent hover:text-white">
           <X className="mr-1.5 h-3.5 w-3.5" />
           Hide setup guidance
@@ -135,7 +143,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
             <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-blue-100">{plan.completed}/{plan.total}</span>
           </div>
           {plan.unresolvedImportIssues > 0 && (
-            <Link href="/onboarding?restart=1&focus=import" className="mt-3 inline-flex text-xs font-bold text-amber-100 underline">
+            <Link href="/migrate" className="mt-3 inline-flex text-xs font-bold text-amber-100 underline">
               {plan.unresolvedImportIssues} imported relationship{plan.unresolvedImportIssues === 1 ? "" : "s"} need review
             </Link>
           )}

@@ -12,8 +12,8 @@ type Props = {
   saving: boolean;
   onUpdateContent: (update: Partial<PortfolioContent>) => void;
   onUpdateSlug: (value: string) => void;
-  onUploadProfileImage: (file: File | undefined) => Promise<boolean>;
-  onPersistProfileImage: (profileImageUrl: string, message: string) => void;
+  onUploadProfileImage: (file: File | undefined, sourceFile?: File) => Promise<boolean>;
+  onPersistProfileImage: (profileImageUrl: string, message: string, profileImageSourceUrl?: string) => void;
 };
 
 export default function StudioProfileSection({
@@ -34,6 +34,7 @@ export default function StudioProfileSection({
       </div>
       <StudioProfileImageEditor
         imageUrl={content.profileImageUrl}
+        sourceImageUrl={content.profileImageSourceUrl}
         name={content.name}
         showOnPortfolio={content.showProfileImage}
         saving={saving}

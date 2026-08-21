@@ -16,6 +16,12 @@ type MockState = {
   projectDeadlineCount?: number;
   importJobCount?: number;
   unresolvedImportIssues?: number;
+  guideProgress?: Record<string, {
+    status: "not_started" | "in_progress" | "completed";
+    currentStepId: string | null;
+    completedStepIds: string[];
+    runCount: number;
+  }>;
 };
 
 const goalLabels: Record<Goal, string> = {
@@ -41,7 +47,7 @@ function makePlan(state: MockState) {
   ];
   if (state.goal === "get_paid") {
     if (counts.clients > 0 && counts.projects === 0) recommendedAction = action("first_project", "Create your first project", "/workflow/projects?new=true");
-    else if (counts.projects > 0 && counts.invoices === 0) recommendedAction = action("create_invoice", "Create your first invoice", "/workflow/revenue?new=true");
+    else if (counts.projects > 0 && counts.invoices === 0) recommendedAction = action("create_invoice", "Create your first invoice", "/workflow/invoices/new");
     else if (counts.invoices > 0) recommendedAction = action("send_invoice", "Review and send an invoice", "/workflow/revenue");
     milestones = [
       { id: "client", label: "First client", complete: counts.clients > 0, href: "/workflow/clients" },
@@ -51,9 +57,9 @@ function makePlan(state: MockState) {
     ];
   } else if (state.goal === "understand_finances") {
     recommendedAction = !hasFinancialContext && !state.importJobCount
-      ? action("import_work", "Import your work", "/onboarding?restart=1&focus=import")
+      ? action("import_work", "Import your work", "/migrate")
       : counts.invoices === 0
-        ? action("create_invoice", "Create your first invoice", "/workflow/revenue?new=true")
+        ? action("create_invoice", "Create your first invoice", "/workflow/invoices/new")
         : action("add_expense", "Log your first expense", "/workflow/expenses?new=true");
     milestones = [
       { id: "context", label: "Financial context", complete: hasFinancialContext, href: "/workflow/revenue" },
@@ -69,11 +75,11 @@ function makePlan(state: MockState) {
     ];
   } else if (state.goal === "migrate") {
     recommendedAction = state.importJobCount
-      ? action("resolve_import", "Resolve imported records", "/onboarding?restart=1&focus=import")
-      : action("import_work", "Import your work", "/onboarding?restart=1&focus=import");
+      ? action("resolve_import", "Resolve imported records", "/migrate")
+      : action("import_work", "Import your work", "/migrate");
     milestones = [
-      { id: "import", label: "Work imported", complete: Boolean(state.importJobCount), href: "/onboarding?restart=1&focus=import" },
-      { id: "resolved", label: "Records reviewed", complete: Boolean(state.importJobCount) && !state.unresolvedImportIssues, href: "/onboarding?restart=1&focus=import" },
+      { id: "import", label: "Work imported", complete: Boolean(state.importJobCount), href: "/migrate" },
+      { id: "resolved", label: "Records reviewed", complete: Boolean(state.importJobCount) && !state.unresolvedImportIssues, href: "/migrate" },
       { id: "workspace", label: "Workspace ready", complete: counts.clients + counts.projects + counts.invoices + counts.expenses > 0, href: "/dashboard" },
     ];
   } else if (counts.clients > 0 && counts.projects === 0) {
@@ -100,6 +106,8 @@ function makePlan(state: MockState) {
     automaticGuidanceStatus: state.guidanceCompleted ? "completed" : state.guidanceDismissed ? "dismissed" : "available",
     hasMeaningfulContext: counts.clients + counts.projects + counts.invoices + counts.expenses > 0,
     unresolvedImportIssues: state.unresolvedImportIssues || 0,
+    calendarConnectionCount: 0,
+    guideProgress: state.guideProgress || {},
     counts,
     steps: milestones,
     next: milestones.find((item) => !item.complete) || null,
@@ -138,7 +146,17 @@ async function installWorkspaceMocks(page: Page, state: MockState) {
       const body = request.postDataJSON() as Record<string, unknown> | null;
       if (body?.event === "skipped" && body.mode === "automatic") state.guidanceDismissed = true;
       if (body?.event === "completed" && body.mode === "automatic") state.guidanceCompleted = true;
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
+      const guideId = typeof body?.guideId === "string" ? body.guideId : "getting_started";
+      const current = state.guideProgress?.[guideId] || { status: "not_started" as const, currentStepId: null, completedStepIds: [], runCount: 0 };
+      const incoming = Array.isArray(body?.completedStepIds) ? body.completedStepIds.filter((step): step is string => typeof step === "string") : [];
+      const next = {
+        ...current,
+        status: body?.event === "completed" ? "completed" as const : current.status === "completed" ? "completed" as const : "in_progress" as const,
+        completedStepIds: Array.from(new Set([...current.completedStepIds, ...incoming])),
+        runCount: current.runCount + (body?.event === "replayed" || body?.event === "started" ? 1 : 0),
+      };
+      state.guideProgress = { ...(state.guideProgress || {}), [guideId]: next };
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, guideProgress: state.guideProgress }) });
     }
     if (pathname === "/api/notifications") {
       if (request.method() === "PATCH") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
@@ -316,6 +334,7 @@ test.describe("goal-aware activation", () => {
     state.goal = "migrate";
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.getByText("Import your work").first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Import your work" }).first()).toHaveAttribute("href", "/migrate");
   });
 
   test("start-clean and incomplete onboarding remain resumable", async ({ page }) => {
@@ -464,7 +483,8 @@ test.describe("goal-aware activation", () => {
     const dock = page.getByTestId("guide-dock");
     await page.getByRole("button", { name: "Expand guide" }).click();
     await expect(dock).toHaveAttribute("data-guide-state", "expanded");
-    await page.getByRole("button", { name: "Minimize guide" }).click();
+    // Any page click outside the coach dialog is a pause, not a dismissal.
+    await page.getByRole("heading", { name: "Today" }).click();
     await expect(dock).toHaveAttribute("data-guide-state", "collapsed");
     await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
     await expect(page.locator('[data-guide-target="activation-primary"]').last()).not.toHaveAttribute("data-guide-highlight", "true");
@@ -484,7 +504,7 @@ test.describe("goal-aware activation", () => {
     await page.evaluate(() => fetch("/api/workflow/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "Project A" }) }));
     await expect(page.getByRole("heading", { name: "Add a project deadline" })).toBeVisible({ timeout: 8_000 });
     await page.evaluate(() => fetch("/api/workflow/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "Project B", due_date: "2026-09-01" }) }));
-    await expect(page.getByText("Meaningful first outcome reached.")).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText("All required steps are true in your workspace.")).toBeVisible({ timeout: 8_000 });
   });
 
   test("existing users can launch an adaptive guide from Help without changing activation state", async ({ page }) => {
@@ -493,7 +513,7 @@ test.describe("goal-aware activation", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("guide-dock")).toBeHidden();
     await page.getByRole("button", { name: "Help & guides" }).click();
-    const firstGuide = page.getByRole("button", { name: /Start with one client job/ });
+    const firstGuide = page.getByTestId("guide-option-getting_started");
     await expect(firstGuide).toBeVisible();
     await expect.poll(async () => firstGuide.evaluate((el) => getComputedStyle(el).backgroundColor)).toMatch(/^(rgba?\(0,\s*0,\s*0,\s*0\)|transparent)$/);
     await firstGuide.hover();
@@ -502,7 +522,7 @@ test.describe("goal-aware activation", () => {
       const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().split(/\s+/).join(", ");
       return bg === `rgb(${accent})`;
     })).toBe(true);
-    await page.getByRole("button", { name: /Organize a client job/ }).click();
+    await page.getByTestId("guide-option-organize").click();
     await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "expanded");
     await expect(page.getByRole("heading", { name: "Add your first client" })).toBeVisible();
     expect(state.guidanceDismissed).toBe(true);
@@ -515,9 +535,10 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Help & guides" }).click();
-    await page.getByRole("button", { name: /Organize a client job/ }).click();
-    await expect(page.getByRole("heading", { name: "You are ready to run with it" })).toBeVisible();
-    await expect(page.getByText("Add your first client", { exact: true })).toHaveCount(0);
+    await page.getByTestId("guide-option-organize").click();
+    await expect(page.getByRole("heading", { name: "Guide completed" })).toBeVisible();
+    await expect(page.getByTestId("guide-checklist").getByText("Add your first client", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("guide-next-step")).toHaveCount(0);
     expect(state.guidanceDismissed).toBe(true);
     await page.getByRole("button", { name: "Done" }).click();
   });
@@ -528,7 +549,7 @@ test.describe("goal-aware activation", () => {
     await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Project A" })).toBeVisible();
     await page.getByRole("button", { name: "Help & guides" }).click();
-    await page.getByRole("button", { name: /Organize a client job/ }).click();
+    await page.getByTestId("guide-option-organize").click();
     await expect(page.getByRole("heading", { name: "Add a project deadline" })).toBeVisible();
     await page.getByRole("button", { name: "Open step", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Edit project" })).toBeVisible();

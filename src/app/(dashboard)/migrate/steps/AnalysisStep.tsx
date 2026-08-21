@@ -133,7 +133,7 @@ export default function AnalysisStep({
             <Button type="button" variant="secondary" onClick={onReview}>
               {attention > 0 ? "Review these" : "Check the details"}
             </Button>
-            <Button type="button" onClick={onContinue} disabled={plan.totals.create + plan.totals.link === 0}>
+            <Button type="button" data-guide-target="migration-review" onClick={onContinue} disabled={plan.totals.create + plan.totals.link === 0}>
               See what will be imported
             </Button>
           </div>

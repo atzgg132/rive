@@ -395,6 +395,21 @@ test.describe("portfolio studio", () => {
     const cropDialog = page.getByRole("dialog", { name: /Adjust your profile photo/i });
     await expect(cropDialog).toBeVisible();
     await expect(cropDialog.locator("[data-profile-image-cropper]")).toBeVisible();
+    const dialogLayout = await cropDialog.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const save = Array.from(element.querySelectorAll("button")).find((button) => button.textContent?.includes("Save crop"));
+      const saveBounds = save?.getBoundingClientRect();
+      return {
+        dialogBottom: bounds.bottom,
+        saveBottom: saveBounds?.bottom ?? Number.POSITIVE_INFINITY,
+        viewportHeight: window.innerHeight,
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+      };
+    });
+    expect(dialogLayout.dialogBottom).toBeLessThanOrEqual(dialogLayout.viewportHeight + 1);
+    expect(dialogLayout.saveBottom).toBeLessThanOrEqual(dialogLayout.viewportHeight + 1);
+    expect(dialogLayout.scrollHeight).toBeLessThanOrEqual(dialogLayout.clientHeight + 1);
     await page.getByRole("button", { name: "Rotate photo right" }).click();
     await expect(page.getByRole("button", { name: "Save crop" })).toBeEnabled();
     await page.getByRole("button", { name: "Save crop" }).click();
@@ -403,12 +418,13 @@ test.describe("portfolio studio", () => {
 
     await expect.poll(async () => {
       const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { content: true } });
-      const content = portfolio?.content as { profileImageUrl?: unknown; showProfileImage?: unknown } | null;
+      const content = portfolio?.content as { profileImageUrl?: unknown; profileImageSourceUrl?: unknown; showProfileImage?: unknown } | null;
       return {
         hasImage: typeof content?.profileImageUrl === "string" && content.profileImageUrl.startsWith("data:image/"),
+        hasOriginal: typeof content?.profileImageSourceUrl === "string" && content.profileImageSourceUrl.startsWith("data:image/"),
         showProfileImage: content?.showProfileImage,
       };
-    }, { timeout: 20_000 }).toEqual({ hasImage: true, showProfileImage: false });
+    }, { timeout: 20_000 }).toEqual({ hasImage: true, hasOriginal: true, showProfileImage: false });
 
     const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { slug: true } });
     expect(portfolio?.slug).toBeTruthy();
@@ -420,6 +436,12 @@ test.describe("portfolio studio", () => {
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: /^Profile/i }).click();
     await expect(displaySwitch).toBeEnabled();
+    const savedContent = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { content: true } });
+    const originalImageUrl = (savedContent?.content as { profileImageSourceUrl?: string } | null)?.profileImageSourceUrl;
+    await page.getByRole("button", { name: "Edit crop" }).click();
+    const recropSource = await page.getByRole("dialog", { name: /Adjust your profile photo/i }).locator('img[alt="Profile photo being edited"]').getAttribute("src");
+    expect(recropSource).toBe(originalImageUrl);
+    await page.getByRole("button", { name: "Cancel" }).click();
     await displaySwitch.click();
     await expect.poll(async () => {
       const saved = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { content: true } });
@@ -429,6 +451,32 @@ test.describe("portfolio studio", () => {
     await page.goto(`/p/${portfolio?.slug}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator('img[alt$="profile"]')).toBeVisible();
     await expect(page.locator("main > section").first()).toHaveClass(/grid/);
+  });
+
+  test("inline cover uploads stay compact and keep the studio rendered", async ({ page, context }) => {
+    const { token } = await studioUser("inline-cover");
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.route("**/api/uploads/presign", async (route) => route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Inline upload fallback" }),
+    }));
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    const project = page.locator("article").first();
+    const coverInput = project.locator('input[type="file"]').first();
+    await coverInput.setInputFiles({
+      name: "cover.png",
+      mimeType: "image/png",
+      buffer: profilePhotoFixture(),
+    });
+
+    await expect(page.getByText("image added", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(project.locator("[data-project-cover-preview]")).toBeVisible();
+    await expect(project.getByText("Cover image ready", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible();
+    await expect(page.locator("main")).toContainText("Selected work");
   });
 
   test("typed work survives leaving a section, and autosave never publishes", async ({ page, context }) => {

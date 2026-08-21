@@ -118,6 +118,8 @@ export type PortfolioTestimonial = {
 export type PortfolioContent = {
   name: string;
   profileImageUrl: string;
+  /** The original uploaded image, kept privately so owners can recrop it later. */
+  profileImageSourceUrl: string;
   showProfileImage: boolean;
   /**
    * The small line above the headline. Blank falls back to the template's own.
@@ -175,6 +177,7 @@ export function templateEyebrow(templateKey: string): string {
 export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
   name: "",
   profileImageUrl: "",
+  profileImageSourceUrl: "",
   showProfileImage: false,
   tagline: "",
   headline: "",
@@ -250,6 +253,10 @@ export function buildPrefilledPortfolioContent(user: PortfolioSeedData): Portfol
     ...DEFAULT_PORTFOLIO_CONTENT,
     name: user.name?.trim() || user.email.split("@")[0] || DEFAULT_PORTFOLIO_CONTENT.name,
     profileImageUrl: user.avatarUrl || "",
+    // An account avatar may already be the owner's chosen source image. Keep
+    // it private so the first crop does not make every later recrop start from
+    // an already-cropped derivative.
+    profileImageSourceUrl: user.avatarUrl || "",
     headline: user.profession?.trim()
       ? `${user.profession.trim()} delivering thoughtful, dependable work.`
       : projects.length > 0
@@ -349,6 +356,7 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
     ...input,
     name: clearLegacyStarterCopy(input.name),
     profileImageUrl: text(input.profileImageUrl),
+    profileImageSourceUrl: text(input.profileImageSourceUrl),
     showProfileImage: input.showProfileImage === true,
     tagline: text(input.tagline),
     headline: clearLegacyStarterCopy(input.headline),
@@ -480,6 +488,7 @@ export function getPublicPortfolioContent(value: unknown): PortfolioContent {
     ...content,
     // A hidden profile photo is an account asset, not public portfolio content.
     profileImageUrl: content.showProfileImage ? content.profileImageUrl : "",
+    profileImageSourceUrl: "",
     showProfileImage: content.showProfileImage && Boolean(content.profileImageUrl),
     practices,
     projects: content.projects.filter((project) => project.visibility !== "private" && inVisiblePractice(project)),
@@ -641,6 +650,10 @@ export function validatePortfolioContent(value: unknown): string | null {
   if (input.profileImageUrl) {
     if (typeof input.profileImageUrl !== "string" || input.profileImageUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Profile image is too large.";
     if (!INLINE_IMAGE.test(input.profileImageUrl) && !isManagedPortfolioImageUrl(input.profileImageUrl) && !isSafePortfolioUrl(input.profileImageUrl)) return "Profile image must be an HTTPS URL or supported image upload.";
+  }
+  if (input.profileImageSourceUrl) {
+    if (typeof input.profileImageSourceUrl !== "string" || input.profileImageSourceUrl.length > MAX_INLINE_IMAGE_LENGTH) return "Original profile image is too large.";
+    if (!INLINE_IMAGE.test(input.profileImageSourceUrl) && !isManagedPortfolioImageUrl(input.profileImageSourceUrl) && !isSafePortfolioUrl(input.profileImageSourceUrl)) return "Original profile image must be an HTTPS URL or supported image upload.";
   }
   if (input.projects !== undefined) {
     if (!Array.isArray(input.projects) || input.projects.length > 30) return "Add up to 30 projects.";

@@ -5,8 +5,8 @@ import { mergePortfolioContent } from "@/utils/portfolio";
 import { normalizeCurrency } from "@/lib/currency";
 import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRates";
 import { buildActivationPlan } from "@/lib/activation-plan";
-import { migrationEngineAvailable } from "@/utils/migration/config";
 import { normalizeActivationGoal } from "@/lib/activation";
+import { normalizeGuideProgress } from "@/lib/guides";
 import { OPEN_STATUSES, collectedAmount, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
 
 export async function GET(req: NextRequest) {
@@ -226,11 +226,13 @@ export async function GET(req: NextRequest) {
       workspaceUser,
       calendarConnectionCount,
       portfolio,
-      legacyImportIssues,
       projectDeadlineCount,
       sentInvoiceCount,
       importJobCount,
+      completedImportJobCount,
+      activeImportJobCount,
       migrationsNeedingReview,
+      latestResumableMigration,
     ] = await Promise.all([
       prisma.client.count({ where: { userId } }),
       prisma.project.count({ where: { userId } }),
@@ -259,18 +261,40 @@ export async function GET(req: NextRequest) {
       }),
       prisma.calendarConnection.count({ where: { userId, status: "connected" } }),
       prisma.portfolio.findUnique({ where: { userId }, select: { id: true, status: true, publishedAt: true, content: true } }),
-      prisma.importIssue.count({
-        where: { importJob: { userId }, resolvedAt: null, severity: { in: ["warning", "blocking"] } },
-      }),
       prisma.project.count({ where: { userId, dueDate: { not: null } } }),
       prisma.invoice.count({ where: { userId, status: { in: ["sent", "viewed", "overdue", "paid"] } } }),
-      prisma.importJob.count({ where: { userId } }),
-      // The migration engine records outstanding questions on the job itself
-      // rather than as ImportIssue rows, so activation counts both.
-      prisma.importJob.count({ where: { userId, engineVersion: 2, status: "review_required" } }),
+      prisma.importJob.count({ where: { userId, engineVersion: 2 } }),
+      prisma.importJob.count({
+        where: {
+          userId,
+          engineVersion: 2,
+          status: { in: ["completed", "completed_with_issues"] },
+          OR: [{ createdRecords: { gt: 0 } }, { updatedRecords: { gt: 0 } }],
+        },
+      }),
+      prisma.importJob.count({
+        where: {
+          userId,
+          engineVersion: 2,
+          status: { in: ["created", "uploading", "profiling", "mapping", "review_required", "ready", "failed", "committing"] },
+        },
+      }),
+      prisma.importJob.aggregate({
+        where: { userId, engineVersion: 2, status: "review_required" },
+        _sum: { unresolvedCount: true },
+      }),
+      prisma.importJob.findFirst({
+        where: {
+          userId,
+          engineVersion: 2,
+          status: { in: ["created", "uploading", "profiling", "mapping", "review_required", "ready", "failed", "committing"] },
+        },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true },
+      }),
     ]);
 
-    const unresolvedImportIssues = legacyImportIssues + migrationsNeedingReview;
+    const unresolvedImportIssues = migrationsNeedingReview._sum.unresolvedCount || 0;
 
     const receivableBase = totalPaid + totalPending;
     const collectionRate = receivableBase > 0 ? Math.round((totalPaid / receivableBase) * 100) : 0;
@@ -282,7 +306,10 @@ export async function GET(req: NextRequest) {
         ? [workspaceUser.businessType]
         : [];
     const profileSignals = [
-      { id: "identity", label: "Identity", complete: Boolean(workspaceUser?.name && workspaceUser.profession && businessTypes.length > 0), href: "/onboarding?restart=1" },
+      // Completed users should stay in the dashboard-owned portfolio studio;
+      // onboarding is only for incomplete account setup and must not be a
+      // destination for a normal workspace task.
+      { id: "identity", label: "Identity", complete: Boolean(workspaceUser?.name && workspaceUser.profession && businessTypes.length > 0), href: "/portfolio" },
       { id: "story", label: "Headline & introduction", complete: Boolean(portfolioContent?.headline.trim() && portfolioContent.bio.trim()), href: "/portfolio" },
       { id: "service", label: "At least one service", complete: Boolean(portfolioContent?.services.some((service) => service.title.trim())), href: "/portfolio" },
       { id: "work", label: "At least one selected project", complete: Boolean(portfolioContent?.projects.some((project) => project.visibility !== "private" && project.title.trim())), href: "/portfolio" },
@@ -320,10 +347,14 @@ export async function GET(req: NextRequest) {
       sentInvoiceCount,
       calendarConnectionCount,
       importJobCount,
+      completedImportJobCount,
+      activeImportJobCount,
       unresolvedImportIssues,
-      // The migration engine owns the import journey once it is switched on, so
-      // activation points at it rather than the original onboarding importer.
-      migrationHref: migrationEngineAvailable() ? "/migrate" : undefined,
+      // Resume an unfinished session when one exists; never create a second
+      // import flow or fall back to onboarding for a dashboard user.
+      migrationHref: latestResumableMigration ? `/migrate?id=${encodeURIComponent(latestResumableMigration.id)}` : "/migrate",
+      migrationReviewHref: latestResumableMigration ? `/migrate?id=${encodeURIComponent(latestResumableMigration.id)}` : "/migrate",
+      guideProgress: normalizeGuideProgress((workspaceUser?.onboardingData as Record<string, unknown> | null)?.guideProgress),
     });
 
     const expenseCategoryTotals = new Map<string, number>();

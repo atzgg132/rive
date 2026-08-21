@@ -107,7 +107,10 @@ export default function MigrationHistory({ onResume }: { onResume: (id: string) 
 }
 
 function isResumable(status: string): boolean {
-  return ["created", "uploading", "profiling", "mapping", "review_required", "ready", "failed"].includes(status);
+  // A commit in flight is safe to reopen: the wizard only observes it and
+  // polls until the server reaches a terminal state. It never starts a second
+  // commit from this button.
+  return ["created", "uploading", "profiling", "mapping", "review_required", "ready", "failed", "committing"].includes(status);
 }
 
 function statusLabel(status: string): string {

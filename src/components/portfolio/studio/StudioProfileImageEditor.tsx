@@ -27,11 +27,12 @@ import {
 
 type Props = {
   imageUrl: string;
+  sourceImageUrl: string;
   name: string;
   showOnPortfolio: boolean;
   saving: boolean;
   onShowOnPortfolioChange: (show: boolean) => void;
-  onUpload: (file: File) => Promise<boolean>;
+  onUpload: (file: File, sourceFile?: File) => Promise<boolean>;
   onRemove: () => void;
 };
 
@@ -39,6 +40,7 @@ const INITIAL_CROP: Point = { x: 0, y: 0 };
 
 export default function StudioProfileImageEditor({
   imageUrl,
+  sourceImageUrl,
   name,
   showOnPortfolio,
   saving,
@@ -48,6 +50,7 @@ export default function StudioProfileImageEditor({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef("");
+  const sourceFileRef = useRef<File | null>(null);
   const [open, setOpen] = useState(false);
   const [imageSource, setImageSource] = useState("");
   const [crop, setCrop] = useState<Point>(INITIAL_CROP);
@@ -67,14 +70,16 @@ export default function StudioProfileImageEditor({
     setImageSource("");
     setCroppedAreaPixels(null);
     setEditorError("");
+    sourceFileRef.current = null;
     revokeObjectUrl();
   }, [revokeObjectUrl]);
 
   useEffect(() => () => revokeObjectUrl(), [revokeObjectUrl]);
 
-  const openEditor = (source: string, objectUrl = "") => {
+  const openEditor = (source: string, objectUrl = "", sourceFile: File | null = null) => {
     revokeObjectUrl();
     objectUrlRef.current = objectUrl;
+    sourceFileRef.current = sourceFile;
     setImageSource(source);
     setCrop(INITIAL_CROP);
     setZoom(1);
@@ -95,7 +100,7 @@ export default function StudioProfileImageEditor({
       return;
     }
     const objectUrl = URL.createObjectURL(file);
-    openEditor(objectUrl, objectUrl);
+    openEditor(objectUrl, objectUrl, file);
   };
 
   const saveCrop = async () => {
@@ -104,7 +109,7 @@ export default function StudioProfileImageEditor({
     setEditorError("");
     try {
       const file = await createCroppedProfileImage(imageSource, croppedAreaPixels, rotation);
-      const saved = await onUpload(file);
+      const saved = await onUpload(file, sourceFileRef.current || undefined);
       if (saved) closeEditor();
       else setEditorError("The photo could not be saved. Try again.");
     } catch (error) {
@@ -148,7 +153,7 @@ export default function StudioProfileImageEditor({
             {imageUrl && (
               <Button
                 type="button"
-                onClick={() => openEditor(imageUrl)}
+                onClick={() => openEditor(sourceImageUrl || imageUrl)}
                 disabled={busy}
                 className="rounded-xl border border-border px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
               >
@@ -185,15 +190,19 @@ export default function StudioProfileImageEditor({
 
       <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) closeEditor(); }}>
         <DialogContent
-          className="max-w-2xl data-[ending-style]:translate-y-0 data-[ending-style]:scale-100 data-[starting-style]:translate-y-0 data-[starting-style]:scale-100"
+          className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-y-auto data-[ending-style]:translate-y-0 data-[ending-style]:scale-100 data-[starting-style]:translate-y-0 data-[starting-style]:scale-100"
           aria-label="Edit profile photo"
         >
-          <DialogTitle>Adjust your profile photo</DialogTitle>
-          <DialogDescription className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">
+          <DialogTitle className="shrink-0 pr-8">Adjust your profile photo</DialogTitle>
+          <DialogDescription className="mt-1 shrink-0 max-w-xl text-sm leading-6 text-muted-foreground">
             Drag the image to choose the section visitors will see. The final image is cropped to the same square shape used in your portfolio.
           </DialogDescription>
 
-          <div className="relative mx-auto mt-5 aspect-square w-full max-w-[36rem] overflow-hidden rounded-2xl bg-slate-950" data-profile-image-cropper>
+          <div
+            className="relative mx-auto mt-4 aspect-square shrink-0 overflow-hidden rounded-2xl bg-slate-950"
+            style={{ width: "min(36rem, calc(100vw - 2rem), 52dvh)" }}
+            data-profile-image-cropper
+          >
             {imageSource && (
               <Cropper
                 image={imageSource}
@@ -217,7 +226,7 @@ export default function StudioProfileImageEditor({
             )}
           </div>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="mt-4 shrink-0 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <label className="flex flex-col gap-2 text-xs font-bold text-foreground dark:text-white" htmlFor="profile-photo-zoom">
               Zoom
               <input
@@ -244,7 +253,7 @@ export default function StudioProfileImageEditor({
 
           {editorError && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-xs leading-5 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">{editorError}</p>}
 
-          <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-border pt-4 dark:border-slate-800">
+          <div className="mt-5 flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-popover pt-4 dark:border-slate-800">
             <Button type="button" onClick={closeEditor} disabled={busy} className="rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">
               <X className="h-4 w-4" /> Cancel
             </Button>
