@@ -48,7 +48,10 @@ export type ProductEventName = CoreProductEventName
   | "guidance.started"
   | "guidance.skipped"
   | "guidance.completed"
-  | "guidance.replayed";
+  | "guidance.replayed"
+  | "guidance.minimized"
+  | "guidance.resumed"
+  | "guidance.step_opened";
 
 export const ACTIVATION_EVENT_NAMES = new Set([
   "activation.registered",
@@ -62,6 +65,9 @@ export const ACTIVATION_EVENT_NAMES = new Set([
   "guidance.skipped",
   "guidance.completed",
   "guidance.replayed",
+  "guidance.minimized",
+  "guidance.resumed",
+  "guidance.step_opened",
 ]);
 
 export const REAL_DATA_ORIGINS = new Set(["user", "imported"]);
@@ -125,6 +131,9 @@ export const PRODUCT_EVENT_CONTRACTS: Record<ProductEventName, ProductEventContr
   "guidance.skipped": { version: 1, requirements: identityAndModule, description: "Product guidance was skipped." },
   "guidance.completed": { version: 1, requirements: identityAndModule, description: "Product guidance was completed." },
   "guidance.replayed": { version: 1, requirements: identityAndModule, description: "Product guidance was replayed." },
+  "guidance.minimized": { version: 1, requirements: identityAndModule, description: "An active guide was minimized." },
+  "guidance.resumed": { version: 1, requirements: identityAndModule, description: "A minimized guide was resumed." },
+  "guidance.step_opened": { version: 1, requirements: identityAndModule, description: "A guide's recommended step was opened." },
 };
 
 export const PRODUCT_EVENT_NAMES = new Set<string>([

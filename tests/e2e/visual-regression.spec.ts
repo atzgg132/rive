@@ -238,7 +238,8 @@ for (const theme of ["light", "dark"] as const) {
   test(`active guidance ${theme} visual`, async ({ page }) => {
     await prepareVisualPage(page, theme, { width: 1440, height: 900 }, "active");
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("guide-popover")).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: "Expand guide" }).click();
+    await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "expanded");
     await expect(page.locator('[data-guide-target="activation-primary"]').last()).toHaveAttribute("data-guide-highlight", "true");
     await expect(page).toHaveScreenshot(`guidance-active-${theme}-1440x900.png`, { fullPage: false });
   });
@@ -268,7 +269,7 @@ for (const theme of ["light", "dark"] as const) {
     await prepareVisualPage(page, theme, { width: 1440, height: 900 }, "activated");
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Help & guides" }).click();
-    await page.getByRole("button", { name: "Organize clients & projects" }).click();
+    await page.getByRole("button", { name: /Organize a client job/ }).click();
     await expect(page.getByRole("heading", { name: "You are ready to run with it" })).toBeVisible();
     await expect(page).toHaveScreenshot(`guidance-complete-${theme}-1440x900.png`, { fullPage: false });
   });
@@ -277,7 +278,8 @@ for (const theme of ["light", "dark"] as const) {
 test("active guidance mobile visual", async ({ page }) => {
   await prepareVisualPage(page, "light", { width: 390, height: 844 }, "active");
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  await expect(page.getByTestId("guide-popover")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Expand guide" }).click();
+  await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "expanded");
   await expect(page).toHaveScreenshot("guidance-active-light-390x844.png", { fullPage: false });
 });
 

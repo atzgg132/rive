@@ -43,22 +43,22 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
     <section
       aria-label="Getting started"
       data-testid="activation-card"
-      className={`overflow-hidden rounded-2xl border border-blue-400/40 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-600/10 ${firstRun ? "p-6 sm:p-8" : "p-5 sm:p-6"}`}
+      className={`overflow-hidden rounded-2xl border border-blue-400/40 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-600/10 ${firstRun ? "p-5 sm:p-6" : "p-4 sm:p-5"}`}
     >
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 max-w-2xl">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-blue-100">
             <Target className="h-4 w-4" />
             Today · {plan.stageLabel}
           </div>
-          <h2 className={`mt-2 font-black tracking-tight ${firstRun ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"}`}>
+          <h2 className={`mt-2 font-black tracking-tight ${firstRun ? "text-xl sm:text-2xl" : "text-lg sm:text-xl"}`}>
             {plan.goalLabel}
           </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-blue-100">{plan.outcome}</p>
+          <p className="mt-1.5 max-w-xl text-sm leading-5 text-blue-100">{plan.outcome}</p>
 
-          <div className="mt-5 max-w-xl rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+          <div className="mt-4 max-w-xl rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-blue-700">
+              <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-blue-700">
                 <ChevronRight className="h-4 w-4" />
               </span>
               <div className="min-w-0">
@@ -70,11 +70,11 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
                 ) : (
                   <p className="mt-1 text-sm font-black text-white">Review your workspace</p>
                 )}
-                <p className="mt-1 text-xs leading-5 text-blue-100">{recommended?.description || "Your useful context is ready for a quick review."}</p>
+                <p className="mt-1 text-xs leading-4 text-blue-100">{recommended?.description || "Your useful context is ready for a quick review."}</p>
               </div>
             </div>
             {recommended && (
-              <Link href={recommended.href} data-guide-target="activation-primary" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50">
+              <Link href={recommended.href} data-guide-target="activation-primary" className="mt-2 inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs font-black text-blue-700 hover:bg-blue-50">
                 {recommended.label}
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>
@@ -82,15 +82,15 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
           </div>
         </div>
 
-        <div className="min-w-0 xl:w-[420px]">
+        <div className="min-w-0 xl:w-[360px]">
           <div className="flex items-center justify-between gap-3 text-xs font-bold">
             <span>{plan.completed} of {plan.total} steps complete</span>
             <span>{plan.percentage}%</span>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/15">
             <div className="h-full rounded-full bg-white transition-[width]" style={{ width: `${plan.percentage}%` }} />
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {plan.milestones.map((item) => (
               <Link key={item.id} href={item.href} className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-white/10 px-3 py-2.5 text-xs font-bold ring-1 ring-white/15 transition hover:bg-white/15">
                 <span className="flex min-w-0 items-center gap-2">
@@ -113,7 +113,7 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/15 pt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/15 pt-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => setDetailsOpen((value) => !value)} className="h-auto px-0 text-xs font-bold text-white hover:bg-transparent hover:text-blue-100">
           <Settings2 className="mr-1.5 h-3.5 w-3.5" />
           {detailsOpen ? "Hide Getting Started" : "Open Getting Started"}

@@ -3,7 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 
-const GUIDANCE_EVENTS = new Set(["started", "skipped", "completed", "replayed"]);
+const GUIDANCE_EVENTS = new Set(["started", "skipped", "completed", "replayed", "minimized", "resumed", "step_opened"]);
 const GUIDANCE_MODES = new Set(["automatic", "manual"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -38,8 +38,14 @@ export async function POST(req: NextRequest) {
     : body.event === "skipped"
       ? ACTIVATION_EVENTS.guidanceSkipped
       : body.event === "completed"
-        ? ACTIVATION_EVENTS.guidanceCompleted
-        : ACTIVATION_EVENTS.guideReplayed;
+      ? ACTIVATION_EVENTS.guidanceCompleted
+        : body.event === "replayed"
+          ? ACTIVATION_EVENTS.guideReplayed
+          : body.event === "minimized"
+            ? ACTIVATION_EVENTS.guideMinimized
+            : body.event === "resumed"
+              ? ACTIVATION_EVENTS.guideResumed
+              : ACTIVATION_EVENTS.guideStepOpened;
   await recordActivationEvent(session.userId, action, { guideId, mode });
 
   return NextResponse.json({ success: true });
