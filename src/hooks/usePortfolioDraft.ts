@@ -6,6 +6,7 @@ import { uploadImage } from "@/utils/clientUploads";
 import {
   DEFAULT_PORTFOLIO_CONTENT,
   DEFAULT_PORTFOLIO_THEME,
+  MAX_PROFILE_IMAGE_UPLOAD_BYTES,
   mergePortfolioContent,
   normalizeSlug,
   type PortfolioContent,
@@ -447,27 +448,33 @@ export function usePortfolioDraft() {
   };
 
   const persistProfileImage = (profileImageUrl: string, message: string) => {
-    const nextContent = { ...contentRef.current, profileImageUrl };
+    const nextContent = {
+      ...contentRef.current,
+      profileImageUrl,
+      ...(profileImageUrl ? {} : { showProfileImage: false }),
+    };
     contentRef.current = nextContent;
     setContent(nextContent);
     markDirty({ content: nextContent });
     toast.success(message);
   };
 
-  const handleProfileImageUpload = async (file: File | undefined) => {
-    if (!file) return;
+  const handleProfileImageUpload = async (file: File | undefined): Promise<boolean> => {
+    if (!file) return false;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       toast.error("choose a PNG, JPEG, or WebP image");
-      return;
+      return false;
     }
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > MAX_PROFILE_IMAGE_UPLOAD_BYTES) {
       toast.error("profile photos must be 2 MB or smaller");
-      return;
+      return false;
     }
     try {
       persistProfileImage(await uploadImage(file), "profile photo saved");
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "could not upload profile photo");
+      return false;
     }
   };
 

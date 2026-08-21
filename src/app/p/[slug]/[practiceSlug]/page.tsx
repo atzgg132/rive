@@ -8,9 +8,9 @@ import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
 import { portfolioViewRequestContext, recordPortfolioView } from "@/utils/portfolioViews";
 import {
   DEFAULT_PORTFOLIO_THEME,
+  getPublicPortfolioContent,
   getVisiblePractices,
   isPortfolioPublished,
-  mergePortfolioContent,
   type PortfolioTheme,
 } from "@/utils/portfolio";
 
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 const loadPractice = cache(async (slug: string, practiceSlug: string) => {
   const portfolio = await prisma.portfolio.findUnique({ where: { slug } });
   if (!portfolio || !isPortfolioPublished(portfolio.status)) return null;
-  const content = mergePortfolioContent(portfolio.content);
+  const content = getPublicPortfolioContent(portfolio.content);
   const practice = getVisiblePractices(content).find((item) => item.slug === practiceSlug);
   if (!practice) return null;
   return { portfolio, content, practice };

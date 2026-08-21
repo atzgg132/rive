@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { prisma } from "@/utils/db";
 import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
 import { portfolioViewRequestContext, recordPortfolioView } from "@/utils/portfolioViews";
-import { isPortfolioPublished, mergePortfolioContent, DEFAULT_PORTFOLIO_THEME, type PortfolioTheme } from "@/utils/portfolio";
+import { DEFAULT_PORTFOLIO_THEME, getPublicPortfolioContent, isPortfolioPublished, type PortfolioTheme } from "@/utils/portfolio";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const portfolio = await loadPortfolio(slug);
   if (!portfolio) return { title: "Portfolio not found · rive." };
-  const content = mergePortfolioContent(portfolio.content);
+  const content = getPublicPortfolioContent(portfolio.content);
   const seo = (portfolio.seo && typeof portfolio.seo === "object" ? portfolio.seo : {}) as { title?: string; description?: string; indexable?: boolean };
   return {
     title: seo.title || `${content.name} · Portfolio`,
@@ -50,5 +50,5 @@ export default async function PublicPortfolioPage({ params }: Props) {
   });
 
   const theme = (portfolio.theme && typeof portfolio.theme === "object" ? portfolio.theme : DEFAULT_PORTFOLIO_THEME) as PortfolioTheme;
-  return <PortfolioRenderer content={mergePortfolioContent(portfolio.content)} theme={theme} templateKey={portfolio.templateKey} portfolioSlug={slug} />;
+  return <PortfolioRenderer content={getPublicPortfolioContent(portfolio.content)} theme={theme} templateKey={portfolio.templateKey} portfolioSlug={slug} />;
 }

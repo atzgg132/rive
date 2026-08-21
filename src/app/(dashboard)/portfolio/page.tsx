@@ -267,7 +267,7 @@ export default function PortfolioDashboardPage() {
               saving={saving}
               onUpdateContent={updateContent}
               onUpdateSlug={updateSlug}
-              onUploadProfileImage={(file) => { void handleProfileImageUpload(file); }}
+              onUploadProfileImage={handleProfileImageUpload}
               onPersistProfileImage={persistProfileImage}
             />
           )}
