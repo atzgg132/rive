@@ -170,3 +170,16 @@ test("project budgets follow the selected display currency on the list and detai
   await expect(page.getByText(/₹8,300\.00/)).toBeVisible();
   await expect(page.getByText("Originally $100.00", { exact: true })).toBeVisible();
 });
+
+test("currency options stay readable in dark mode", async ({ page }) => {
+  await mockCurrencyWorkspace(page);
+  await page.addInitScript(() => window.localStorage.setItem("rive-color-theme", "dark"));
+  await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
+
+  const selector = page.getByLabel("Display currency").last();
+  const option = selector.locator("option").first();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(selector).toHaveValue("INR", { timeout: 20_000 });
+  await expect(option).toHaveCSS("background-color", "rgb(15, 23, 42)");
+  await expect(option).toHaveCSS("color", "rgb(241, 245, 249)");
+});

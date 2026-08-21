@@ -32,7 +32,7 @@ export function CurrencySwitcher({ compact = false }: { compact?: boolean }) {
         onChange={(event) => void changeCurrency(event.target.value)}
         className={`${compact ? "w-20 min-w-20" : "w-40 min-w-40"} h-7 shrink-0 border-0 bg-transparent py-0 pl-1 pr-7 text-xs font-semibold text-foreground shadow-none [color-scheme:light] focus:ring-0 dark:[color-scheme:dark]`}
       >
-        {DISPLAY_CURRENCIES.map(({ code, label }) => <option key={code} value={code}>{code}{compact ? "" : ` · ${label}`}</option>)}
+        {DISPLAY_CURRENCIES.map(({ code, label }) => <option key={code} value={code} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">{code}{compact ? "" : ` · ${label}`}</option>)}
       </Select>
     </label>
   );
