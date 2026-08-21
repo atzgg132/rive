@@ -500,8 +500,8 @@ test.describe("goal-aware activation", () => {
     await expect.poll(async () => firstGuide.evaluate((el) => {
       const bg = getComputedStyle(el).backgroundColor;
       const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().split(/\s+/).join(", ");
-      return bg === `rgb(${accent})` ? "accent" : "ok";
-    })).toBe("ok");
+      return bg === `rgb(${accent})`;
+    })).toBe(true);
     await page.getByRole("button", { name: /Organize a client job/ }).click();
     await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "expanded");
     await expect(page.getByRole("heading", { name: "Add your first client" })).toBeVisible();
