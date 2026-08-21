@@ -346,12 +346,12 @@ export default function PortfolioMediaEditor({ media, onChange }: Props) {
       )}
 
       {media.length > 0 && (
-        <ul className="mt-4 divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+        <ul className="mt-4 grid gap-2">
           {media.map((item, index) => {
             const Icon = KIND_ICON[item.kind] || ImageIcon;
             const thumbnail = item.kind === "image" ? item.url : item.posterUrl;
             return (
-              <li key={item.id} className="grid gap-3 py-3 sm:grid-cols-[56px_1fr_auto]">
+              <li key={item.id} data-portfolio-media-item className="grid gap-3 rounded-xl border border-slate-200 bg-background p-2.5 dark:border-slate-700 dark:bg-slate-900/40 sm:grid-cols-[56px_1fr_auto]">
                 <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
                   {thumbnail ? <img src={thumbnail} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5" />}
                 </div>

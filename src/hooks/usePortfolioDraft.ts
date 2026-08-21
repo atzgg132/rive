@@ -447,10 +447,13 @@ export function usePortfolioDraft() {
     }
   };
 
-  const persistProfileImage = (profileImageUrl: string, message: string) => {
+  const persistProfileImage = (profileImageUrl: string, message: string, profileImageSourceUrl?: string) => {
     const nextContent = {
       ...contentRef.current,
       profileImageUrl,
+      profileImageSourceUrl: profileImageUrl
+        ? (profileImageSourceUrl ?? contentRef.current.profileImageSourceUrl) || profileImageUrl
+        : "",
       ...(profileImageUrl ? {} : { showProfileImage: false }),
     };
     contentRef.current = nextContent;
@@ -459,7 +462,7 @@ export function usePortfolioDraft() {
     toast.success(message);
   };
 
-  const handleProfileImageUpload = async (file: File | undefined): Promise<boolean> => {
+  const handleProfileImageUpload = async (file: File | undefined, sourceFile?: File): Promise<boolean> => {
     if (!file) return false;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       toast.error("choose a PNG, JPEG, or WebP image");
@@ -469,8 +472,14 @@ export function usePortfolioDraft() {
       toast.error("profile photos must be 2 MB or smaller");
       return false;
     }
+    if (sourceFile && (!["image/png", "image/jpeg", "image/webp"].includes(sourceFile.type) || sourceFile.size > MAX_PROFILE_IMAGE_UPLOAD_BYTES)) {
+      toast.error("the original profile photo must be a PNG, JPEG, or WebP image no larger than 2 MB");
+      return false;
+    }
     try {
-      persistProfileImage(await uploadImage(file), "profile photo saved");
+      const sourceUrl = sourceFile ? await uploadImage(sourceFile) : contentRef.current.profileImageSourceUrl;
+      const imageUrl = await uploadImage(file);
+      persistProfileImage(imageUrl, "profile photo saved", sourceUrl || imageUrl);
       return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "could not upload profile photo");

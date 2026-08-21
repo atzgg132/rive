@@ -564,7 +564,7 @@ export default function CalendarPage() {
         description="Plan meetings and focus time alongside project deadlines, tasks, milestones, and invoice due dates."
         actions={<>
           {guideReady && !showGuide && <Button variant="ghost" onClick={() => setShowGuide(true)} className="hidden sm:inline-flex"><Info /> How it connects</Button>}
-          <Button variant="outline" onClick={() => setConnectionsOpen(true)}><span className={`h-2 w-2 rounded-full ${visibleConnections.length ? "bg-success" : "bg-warning"}`} /><Link2 /> {visibleConnections.length ? `${connectedCalendars} synced` : "Calendar feeds"}</Button>
+          <Button data-guide-target="calendar-connect" variant="outline" onClick={() => setConnectionsOpen(true)}><span className={`h-2 w-2 rounded-full ${visibleConnections.length ? "bg-success" : "bg-warning"}`} /><Link2 /> {visibleConnections.length ? `${connectedCalendars} synced` : "Calendar feeds"}</Button>
           <Button variant="outline" onClick={openTaskComposer} className="hidden sm:inline-flex"><ListTodo /> Add task</Button>
           <Button onClick={() => openCreate()}><Plus /> New event</Button>
         </>}
@@ -584,7 +584,7 @@ export default function CalendarPage() {
         {!visibleConnections.length && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 dark:border-blue-900/60 dark:from-blue-950/30 dark:to-indigo-950/20">
             <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-600 text-white"><Sparkles className="h-4 w-4" /></span><div><p className="text-xs font-black text-slate-800 dark:text-white">See Rive alongside your other calendars</p><p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{googleCalendarAvailable ? "Connect Google Calendar for two-way sync, or add a private Rive feed to Apple Calendar." : "Add a private Rive feed to Apple Calendar."}</p></div></div>
-            <Button onClick={() => setConnectionsOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Connect calendar <ArrowRight className="h-3.5 w-3.5" /></Button>
+            <Button data-guide-target="calendar-connect" onClick={() => setConnectionsOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Connect calendar <ArrowRight className="h-3.5 w-3.5" /></Button>
           </div>
         )}
         <p className="mt-3 text-xs leading-5 text-slate-400">Client details provide context through projects and invoices. Expenses and portfolio publishing stay out of the calendar.</p>

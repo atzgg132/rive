@@ -101,7 +101,7 @@ export default function PlanStep({
         <Button type="button" variant="ghost" onClick={onBack} disabled={committing}>
           Back to review
         </Button>
-        <Button type="button" onClick={onCommit} disabled={committing || plan.totals.create + plan.totals.link === 0}>
+        <Button type="button" data-guide-target="migration-upload" onClick={onCommit} disabled={committing || plan.totals.create + plan.totals.link === 0}>
           {committing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
           {committing ? "Importing" : "Import workspace"}
         </Button>

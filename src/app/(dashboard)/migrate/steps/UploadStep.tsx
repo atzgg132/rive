@@ -51,6 +51,7 @@ export default function UploadStep({
     <Card>
       <CardContent className="space-y-6">
         <div
+          data-guide-target="migration-upload"
           onDragOver={(event) => {
             event.preventDefault();
             setDragging(true);

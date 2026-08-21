@@ -166,6 +166,7 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
   async function handleCommit() {
     if (!migrationId || !detail?.plan) return;
     setCommitting(true);
+    setStep("committing");
     try {
       const response = await fetch(`/api/migrations/${migrationId}/commit`, {
         method: "POST",
@@ -192,7 +193,12 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
       setStep("done");
     } catch {
       toast.error("The import could not be completed. Open the migration again to see what happened.");
-      await refresh();
+      const refreshed = await refresh();
+      if (refreshed) {
+        const nextStep = stepForState(refreshed);
+        if (nextStep === "done") setResult(resultFromSummary(refreshed.summary));
+        setStep(nextStep);
+      }
     } finally {
       setCommitting(false);
     }

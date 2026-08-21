@@ -1,16 +1,20 @@
 "use client";
 
 import { Button, Input, Select, Textarea } from "@/components/ui";
-import { ChevronDown, ChevronUp, GripVertical, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical, Image as ImageIcon, Trash2, Upload } from "lucide-react";
 import PortfolioMediaEditor from "@/components/portfolio/PortfolioMediaEditor";
 import type { PortfolioPractice, PortfolioProject } from "@/utils/portfolio";
 
 const inputClass = "w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:ring-blue-950";
 const labelClass = "text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground dark:text-slate-400";
 
-function isManagedImage(value: string) {
-  return value.startsWith("/api/public/assets/portfolio/");
+function isUploadedImage(value: string) {
+  return value.startsWith("/api/public/assets/portfolio/") || value.startsWith("data:image/");
 }
+
+/* Portfolio image URLs are validated before they become public, but the editor
+   also previews safe pasted URLs and inline fallback uploads. */
+/* eslint-disable @next/next/no-img-element */
 
 type Props = {
   project: PortfolioProject;
@@ -88,10 +92,21 @@ export default function PortfolioProjectEditor({ project, index, total, practice
       <div className="mt-5 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60">
         <div className="mb-3"><p className="text-sm font-bold text-foreground dark:text-white">Cover image</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">This is the main image shown on your selected-work card. The gallery below is for additional screenshots.</p></div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300"><Upload className="h-3.5 w-3.5" /> Upload cover<Input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(event) => { onUploadCover(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
-          <Input className={inputClass} value={isManagedImage(project.imageUrl || "") ? "Uploaded image" : project.imageUrl || ""} readOnly={isManagedImage(project.imageUrl || "")} placeholder="Or paste an image URL" onChange={(event) => onChange({ imageUrl: event.target.value })} />
+          <label className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300"><Upload className="h-3.5 w-3.5" /> {project.imageUrl ? "Replace cover" : "Upload cover"}<Input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(event) => { onUploadCover(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
+          {!isUploadedImage(project.imageUrl || "") && <Input className={inputClass} value={project.imageUrl || ""} placeholder="Or paste an image URL" onChange={(event) => onChange({ imageUrl: event.target.value })} />}
           {project.imageUrl && <Button type="button" onClick={() => onChange({ imageUrl: "" })} className="shrink-0 rounded-xl border border-border px-3 py-2.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">Remove</Button>}
         </div>
+        {project.imageUrl && (
+          <div data-project-cover-preview className="mt-3 flex max-w-sm items-center gap-3 rounded-xl border border-border bg-background p-2 dark:border-slate-700">
+            <div className="grid h-12 w-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
+              <img src={project.imageUrl} alt="" className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-foreground dark:text-white">Cover image ready</p>
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><ImageIcon className="h-3 w-3 shrink-0" /> Small preview · shown on the project card</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <details className="mt-5 rounded-xl border border-slate-200 dark:border-slate-700">

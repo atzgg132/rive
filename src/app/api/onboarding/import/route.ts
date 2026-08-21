@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
@@ -532,12 +533,23 @@ export async function POST(req: NextRequest) {
 
     const imported = counts.clients + counts.projects + counts.invoices + counts.expenses;
     if (imported > 0) {
+      const currentUser = await transaction.user.findUnique({
+        where: { id: session.userId },
+        select: { onboardingData: true },
+      });
+      const onboardingData = currentUser?.onboardingData && typeof currentUser.onboardingData === "object" && !Array.isArray(currentUser.onboardingData)
+        ? currentUser.onboardingData as Record<string, unknown>
+        : {};
       await transaction.user.update({
         where: { id: session.userId },
         data: {
           onboardingStatus: "complete",
           onboardingStep: 5,
-          onboardingData: { importReport: counts, importedAt: new Date().toISOString() },
+          onboardingData: {
+            ...onboardingData,
+            importReport: counts,
+            importedAt: new Date().toISOString(),
+          } as Prisma.InputJsonValue,
         },
       });
       await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.importCommitted, module: "migration", entityType: "migration", entityId: job.id, dataOrigin: "imported", properties: { total: imported } });

@@ -19,6 +19,25 @@ export type ActivationStartingPath = (typeof ACTIVATION_STARTING_PATHS)[number];
 export type ActivationStage = "start" | "build" | "review" | "activated";
 export type ActivationGuidanceStatus = "available" | "dismissed" | "completed";
 
+/**
+ * Guide progress is deliberately separate from activation. Activation tells
+ * us what is true in the workspace; this tells us how a person has used a
+ * guide. A user can finish a guide, revisit it, or need attention again when
+ * the underlying workspace changes without corrupting either concept.
+ */
+export type GuideProgressStatus = "not_started" | "in_progress" | "completed";
+
+export type GuideProgress = {
+  status: GuideProgressStatus;
+  currentStepId: string | null;
+  completedStepIds: string[];
+  runCount: number;
+  lastSeenAt?: string;
+  completedAt?: string;
+};
+
+export type GuideProgressMap = Record<string, GuideProgress>;
+
 export type ActivationAction = {
   id: string;
   label: string;
@@ -51,6 +70,8 @@ export type ActivationPlan = {
   automaticGuidanceStatus: ActivationGuidanceStatus;
   hasMeaningfulContext: boolean;
   unresolvedImportIssues: number;
+  calendarConnectionCount: number;
+  guideProgress: GuideProgressMap;
   counts: {
     clients: number;
     projects: number;
@@ -90,7 +111,9 @@ export const ACTIVATION_GOAL_NAV_PATHS: Record<ActivationGoal, string[]> = {
   get_paid: ["/workflow/clients", "/workflow/projects", "/workflow/revenue"],
   understand_finances: ["/workflow/revenue", "/workflow/expenses", "/calendar"],
   publish_portfolio: ["/portfolio", "/workflow/projects", "/workflow/clients"],
-  migrate: ["/onboarding?restart=1&focus=import", "/workflow/projects", "/workflow/revenue"],
+  // Import is a workspace capability, not a second onboarding pass. Keeping
+  // this route dashboard-owned means completed users can return to it later.
+  migrate: ["/migrate", "/workflow/projects", "/workflow/revenue"],
 };
 
 export function normalizeActivationGoal(value: unknown): ActivationGoal {

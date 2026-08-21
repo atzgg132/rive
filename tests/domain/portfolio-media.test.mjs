@@ -4,6 +4,7 @@ import test from "node:test";
 import { embedSrcFor, parseEmbedInput } from "../../src/utils/portfolioEmbeds.ts";
 import {
   DEFAULT_PORTFOLIO_CONTENT,
+  buildPrefilledPortfolioContent,
   getPublicPortfolioContent,
   mergePortfolioContent,
   PROFILE_IMAGE_ASPECT_RATIO,
@@ -142,11 +143,36 @@ test("profile photos are opt-in and hidden assets are removed from public conten
   const publicContent = getPublicPortfolioContent(optedIn);
   assert.equal(publicContent.showProfileImage, true);
   assert.equal(publicContent.profileImageUrl, "https://example.com/me.png");
+  assert.equal(publicContent.profileImageSourceUrl, "");
+
+  const withPrivateSource = mergePortfolioContent({
+    ...legacy,
+    profileImageSourceUrl: "https://example.com/original-me.png",
+    showProfileImage: true,
+  });
+  assert.equal(withPrivateSource.profileImageSourceUrl, "https://example.com/original-me.png");
+  assert.equal(getPublicPortfolioContent(withPrivateSource).profileImageSourceUrl, "");
 
   assert.match(
     validatePortfolioContent(baseContent({ showProfileImage: "yes" })),
     /display preference is invalid/,
   );
+  assert.match(
+    validatePortfolioContent(baseContent({ profileImageSourceUrl: "http://example.com/original-me.png" })),
+    /Original profile image must be an HTTPS URL/,
+  );
+});
+
+test("prefilled account avatars remain available as a private recrop source", () => {
+  const content = buildPrefilledPortfolioContent({
+    name: "Ada",
+    email: "ada@example.com",
+    avatarUrl: "https://example.com/avatar.png",
+    projects: [],
+  });
+  assert.equal(content.profileImageUrl, "https://example.com/avatar.png");
+  assert.equal(content.profileImageSourceUrl, "https://example.com/avatar.png");
+  assert.equal(getPublicPortfolioContent(content).profileImageSourceUrl, "");
 });
 
 test("upgrades a legacy image gallery into media with stable identifiers", () => {
