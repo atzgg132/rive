@@ -10,7 +10,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_2fr] lg:gap-20">
           <div>
-            <Link href="/" prefetch={false} className="marketing-focus inline-flex rounded-lg" aria-label="Rive home"><RiveLogo height={38} className="text-white" /></Link>
+            <Link href="/" prefetch={false} className="marketing-focus inline-flex rounded-lg" aria-label="Rive home"><RiveLogo height={38} className="text-white" animated /></Link>
             <p className="mt-5 max-w-sm text-sm leading-7 text-slate-400">{footerCopy.description}</p>
             <p className="mt-6 inline-flex rounded-full border border-emerald-300/15 bg-emerald-300/[0.05] px-3 py-1.5 font-mono text-[0.64rem] font-semibold uppercase tracking-[0.14em] text-emerald-300">{footerCopy.status}</p>
           </div>

@@ -469,6 +469,28 @@ p {
   to { --angle: 360deg; }
 }
 
+/* The wordmark stays anchored; only its signature period emits an occasional
+   quiet signal. Most of the long cycle is deliberately motionless. */
+@keyframes riveLogoSignal {
+  0%, 72%, 88%, 100% {
+    filter: drop-shadow(0 0 0 rgb(34 211 238 / 0));
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  79% {
+    filter: drop-shadow(0 0 3px rgb(34 211 238 / 0.32));
+    opacity: 0.9;
+    transform: translateY(-0.035em) scale(1.08);
+  }
+}
+
+.rive-logo-dot {
+  display: inline-block;
+  transform-origin: 50% 75%;
+  animation: riveLogoSignal 14s var(--ease-out) infinite;
+  will-change: filter, opacity, transform;
+}
+
 /* Animated bento borders use a static lit ring when registered custom
    properties or conic gradients are unavailable (notably older Safari). */
 .marketing-bento {
@@ -491,6 +513,23 @@ p {
     background: conic-gradient(from var(--angle), transparent 0deg, rgb(59 130 246 / 0.08) 85deg, rgb(96 165 250 / 0.72) 145deg, rgb(34 211 238 / 0.48) 188deg, transparent 255deg);
     animation: marketingBorderSpin 8s linear infinite;
   }
+}
+
+/* A restrained highlight makes the navbar CTA feel active without turning
+   the whole button into a moving glow. The static border remains the fallback. */
+.marketing-cta-border::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle), transparent 0deg 265deg, rgb(96 165 250 / 0.08) 286deg, rgb(103 232 249 / 0.42) 318deg, rgb(147 197 253 / 0.14) 340deg, transparent 360deg);
+  content: "";
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: marketingBorderSpin 16s linear infinite;
 }
 
 .marketing-bento::after {
@@ -525,7 +564,9 @@ p {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marketing-bento::before {
+  .marketing-bento::before,
+  .marketing-cta-border::before,
+  .rive-logo-dot {
     animation: none;
   }
 }

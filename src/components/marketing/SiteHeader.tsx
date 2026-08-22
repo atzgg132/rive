@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { accountNav, marketingNav } from "@/content/marketing/nav";
 import { RiveLogo } from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+const signupCtaClassName = "marketing-cta-border marketing-focus group relative isolate inline-flex items-center justify-center overflow-hidden rounded-xl border border-blue-300/25 bg-blue-400/[0.09] font-black text-blue-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.11),0_10px_30px_rgba(37,99,235,0.12)] backdrop-blur-xl transition duration-200 ease-rive-out hover:-translate-y-px hover:border-cyan-300/45 hover:bg-blue-400/[0.15] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_14px_36px_rgba(37,99,235,0.2)]";
+
+function SignupCtaLabel() {
+  return (
+    <span className="relative z-10 inline-flex items-center gap-2">
+      <span>{accountNav.signup.label}</span>
+      <ArrowRight className="h-3.5 w-3.5 text-blue-300 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-cyan-200" aria-hidden="true" />
+    </span>
+  );
+}
 
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
@@ -42,12 +53,12 @@ export function SiteHeader() {
       className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,padding,backdrop-filter] duration-300 ease-rive-out ${scrolled || mobileOpen || openGroup ? "border-white/[0.08] bg-[#05070c]/86 py-2.5 backdrop-blur-2xl" : "border-transparent bg-transparent py-4"}`}
       onMouseLeave={() => setOpenGroup(null)}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 sm:px-8">
+      <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 sm:px-8">
         <Link href="/" prefetch={false} className="marketing-focus relative z-10 inline-flex rounded-lg" aria-label="Rive home">
-          <RiveLogo height={30} className="text-white" />
+          <RiveLogo height={30} className="text-white" animated />
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Primary navigation" className="absolute left-[calc(50%-0.25rem)] hidden -translate-x-1/2 items-center gap-1 lg:flex">
           {marketingNav.map((group) => {
             const open = openGroup === group.label;
             return (
@@ -77,13 +88,13 @@ export function SiteHeader() {
           })}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle />
           <Link href={accountNav.login.href} prefetch={false} className="marketing-focus rounded-lg px-3 py-2 text-[0.78rem] font-semibold text-slate-300 hover:bg-white/[0.05] hover:text-white">{accountNav.login.label}</Link>
-          <Link href={accountNav.signup.href} prefetch={false} className="marketing-focus rounded-xl bg-white px-4 py-2.5 text-[0.78rem] font-black text-slate-950 transition hover:bg-blue-50">{accountNav.signup.label}</Link>
+          <Link href={accountNav.signup.href} prefetch={false} className={`${signupCtaClassName} px-4 py-2.5 text-[0.78rem]`}><SignupCtaLabel /></Link>
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
           <ThemeToggle />
           <button type="button" onClick={() => setMobileOpen((open) => !open)} className="marketing-focus grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-200" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -92,7 +103,7 @@ export function SiteHeader() {
       </div>
 
       {mobileOpen ? (
-        <nav aria-label="Mobile navigation" className="mx-auto mt-2 max-h-[calc(100dvh-5rem)] max-w-7xl overflow-y-auto border-t border-white/[0.07] px-5 py-4 sm:px-8 md:hidden">
+        <nav aria-label="Mobile navigation" className="mx-auto mt-2 max-h-[calc(100dvh-5rem)] max-w-7xl overflow-y-auto border-t border-white/[0.07] px-5 py-4 sm:px-8 lg:hidden">
           <div className="grid gap-5">
             {marketingNav.map((group) => (
               <div key={group.label}>
@@ -102,9 +113,9 @@ export function SiteHeader() {
                 </div>
               </div>
             ))}
-            <div className="grid grid-cols-2 gap-2 border-t border-white/[0.07] pt-4">
+            <div className="grid gap-2 border-t border-white/[0.07] pt-4 sm:grid-cols-2">
               <Link href={accountNav.login.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus rounded-xl border border-white/10 px-4 py-3 text-center text-sm font-bold text-white">{accountNav.login.label}</Link>
-              <Link href={accountNav.signup.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus rounded-xl bg-white px-4 py-3 text-center text-sm font-black text-slate-950">{accountNav.signup.label}</Link>
+              <Link href={accountNav.signup.href} prefetch={false} onClick={() => setMobileOpen(false)} className={`${signupCtaClassName} px-4 py-3 text-center text-sm`}><SignupCtaLabel /></Link>
             </div>
           </div>
         </nav>

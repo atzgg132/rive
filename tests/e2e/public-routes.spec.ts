@@ -61,26 +61,89 @@ for (const colorScheme of ["light", "dark"] as const) {
     } else {
       await expect(page.locator("html")).not.toHaveClass(/dark/);
     }
-    await expect(page.getByRole("button", { name: "Theme: system. Switch to light" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Theme: system. Choose theme" })).toBeVisible();
   });
 }
 
-test("theme toggle cycles light, dark, and system and persists the choice", async ({ page }) => {
+test("theme switcher glides between all options, collapses, and persists the choice", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Theme: system. Switch to light" }).click();
-  await expect(page.getByRole("button", { name: "Theme: light. Switch to dark" })).toBeVisible();
+  const switcher = page.locator('[data-testid="theme-switcher"]:visible').first();
+  await expect(switcher).toHaveCSS("width", "28px");
+  await switcher.getByRole("button", { name: "Theme: system. Choose theme" }).click();
+  const options = page.getByRole("radiogroup", { name: "Choose color theme" });
+  await expect(options).toBeVisible();
+  await expect(options).toHaveCSS("width", "92px");
+  await expect(options).toHaveCSS("height", "28px");
+  await expect(options).toHaveCSS("border-radius", "11px");
+  await expect(options).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+  await expect(page.getByTestId("theme-landing-surface")).toHaveCSS("width", "28px");
+  await expect(page.getByTestId("theme-landing-surface")).toHaveCSS("height", "28px");
+  await expect(page.getByTestId("theme-landing-surface")).toHaveCSS("border-radius", "11px");
+  const iconGeometry = await page.evaluate(() => {
+    const pane = document.querySelector<HTMLElement>('[data-testid="theme-options"]')!;
+    const current = document.querySelector<SVGElement>('[data-testid="theme-current-icon"]')!;
+    const light = document.querySelector<SVGElement>('[data-testid="theme-light-icon"]')!;
+    const dark = document.querySelector<SVGElement>('[data-testid="theme-dark-icon"]')!;
+    const selected = document.querySelector<SVGElement>('[data-testid="theme-system-icon"]')!;
+    const paneRect = pane.getBoundingClientRect();
+    const currentRect = current.getBoundingClientRect();
+    const lightRect = light.getBoundingClientRect();
+    const darkRect = dark.getBoundingClientRect();
+    const selectedRect = selected.getBoundingClientRect();
+    const optionCenters = [lightRect, darkRect, selectedRect]
+      .map((rect) => rect.x + rect.width / 2);
+    return {
+      expandedCenterDelta: optionCenters.reduce((sum, center) => sum + center, 0) / optionCenters.length
+        - (paneRect.x + paneRect.width / 2),
+      current: {
+        width: currentRect.width,
+        height: currentRect.height,
+        centerX: currentRect.x + currentRect.width / 2,
+        centerY: currentRect.y + currentRect.height / 2,
+      },
+      selected: {
+        width: selectedRect.width,
+        height: selectedRect.height,
+        centerX: selectedRect.x + selectedRect.width / 2,
+        centerY: selectedRect.y + selectedRect.height / 2,
+      },
+    };
+  });
+  expect(iconGeometry.expandedCenterDelta).toBe(0);
+  expect(iconGeometry.selected).toEqual(iconGeometry.current);
+  await expect(switcher.getByRole("button", { name: "Theme: system. Choose theme" }))
+    .toHaveCSS("outline-style", "none");
+  await page.getByRole("radio", { name: "Light theme" }).click();
+  await expect(page.getByRole("radio", { name: "Light theme" })).toBeChecked();
+  await expect(page.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(0px);");
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
     .toBe("light");
+  await expect(page.getByRole("radiogroup", { name: "Choose color theme" })).toBeHidden();
+  await expect(switcher.getByRole("button", { name: "Theme: light. Choose theme" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Theme: light. Switch to dark" }).click();
+  await switcher.getByRole("button", { name: "Theme: light. Choose theme" }).click();
+  await page.getByRole("radio", { name: "Dark theme" }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await expect(page.getByRole("button", { name: "Theme: dark. Switch to system" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Dark theme" })).toBeChecked();
+  await expect(page.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(32px);");
+  await expect(switcher.getByRole("button", { name: "Theme: dark. Choose theme" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Theme: dark. Switch to system" }).click();
-  await expect(page.getByRole("button", { name: "Theme: system. Switch to light" })).toBeVisible();
+  await switcher.getByRole("button", { name: "Theme: dark. Choose theme" }).click();
+  await page.getByRole("radio", { name: "System theme" }).click();
+  await expect(page.getByRole("radio", { name: "System theme" })).toBeChecked();
+  await expect(page.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(64px);");
+  await expect(switcher.getByRole("button", { name: "Theme: system. Choose theme" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
     .toBe("system");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  const reducedSwitcher = page.locator('[data-testid="theme-switcher"]:visible').first();
+  await reducedSwitcher.getByRole("button", { name: "Theme: system. Choose theme" }).click();
+  const reducedDuration = await page.getByRole("radiogroup", { name: "Choose color theme" })
+    .evaluate((node) => Number.parseFloat(getComputedStyle(node).transitionDuration));
+  expect(reducedDuration).toBeLessThanOrEqual(0.001);
 });
 
 test("marketing page advertises current connections without a demo CTA", async ({ page }) => {

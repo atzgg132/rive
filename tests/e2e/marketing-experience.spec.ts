@@ -181,6 +181,86 @@ test.describe("marketing experience", () => {
     await expect(page.locator("main").getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
   });
 
+  test("the navbar signup action uses the marketing glass surface", async ({ page }) => {
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/", { waitUntil: "load" });
+      const header = page.getByTestId("site-header");
+      if (width < 768) await header.getByRole("button", { name: "Open navigation" }).click();
+
+      const signup = header.getByRole("link", { name: "Build your workspace", exact: true });
+      await expect(signup).toBeVisible();
+      const surface = await signup.evaluate((node) => {
+        const style = getComputedStyle(node);
+        const animatedBorder = getComputedStyle(node, "::before");
+        return {
+          background: style.backgroundColor,
+          border: style.borderColor,
+          color: style.color,
+          animationDuration: animatedBorder.animationDuration,
+          animationName: animatedBorder.animationName,
+        };
+      });
+
+      expect(surface).toEqual({
+        background: "rgba(96, 165, 250, 0.09)",
+        border: "rgba(147, 197, 253, 0.25)",
+        color: "rgb(239, 246, 255)",
+        animationDuration: "16s",
+        animationName: "marketingBorderSpin",
+      });
+    }
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/", { waitUntil: "load" });
+    const reducedMotionCta = page.getByTestId("site-header").getByRole("link", { name: "Build your workspace", exact: true });
+    await expect(reducedMotionCta).toBeVisible();
+    await expect(reducedMotionCta.evaluate((node) => getComputedStyle(node, "::before").animationName)).resolves.toBe("none");
+  });
+
+  test("the navbar stays optically centered without crowding tablet or mobile layouts", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    for (const width of [320, 390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const header = page.getByTestId("site-header");
+      const primaryNav = header.getByRole("navigation", { name: "Primary navigation" });
+      const menuButton = header.getByRole("button", { name: "Open navigation" });
+
+      if (width < 1024) {
+        await expect(primaryNav).toBeHidden();
+        await expect(menuButton).toBeVisible();
+      } else {
+        await expect(primaryNav).toBeVisible();
+        await expect(menuButton).toBeHidden();
+        const centerDelta = await primaryNav.evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          return rect.x + rect.width / 2 - window.innerWidth / 2;
+        });
+        expect(centerDelta).toBe(-4);
+      }
+
+      const hasHorizontalOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      );
+      expect(hasHorizontalOverflow).toBe(false);
+    }
+  });
+
+  test("the header and footer wordmarks use a restrained motion-safe brand signal", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const logoDots = page.locator(".rive-logo-dot");
+    await expect(logoDots).toHaveCount(2);
+    for (const logoDot of await logoDots.all()) {
+      await expect(logoDot).toHaveCSS("animation-name", "riveLogoSignal");
+      await expect(logoDot).toHaveCSS("animation-duration", "14s");
+    }
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const logoDot of await logoDots.all()) {
+      await expect(logoDot).toHaveCSS("animation-name", "none");
+    }
+  });
+
   test("contact form keeps the live API contract", async ({ page }) => {
     let payload: Record<string, string> | null = null;
     await page.route("**/api/contact", async (route) => {
