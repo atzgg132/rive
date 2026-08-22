@@ -54,6 +54,14 @@ test.describe("marketing experience", () => {
     expect(opacities).toEqual(Array(6).fill("1"));
   });
 
+  test("reduced motion presents every command-palette result without a stagger delay", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/", { waitUntil: "load" });
+
+    await expect(page.getByText("Northstar Labs · Product redesign · Paid", { exact: true })).toBeVisible();
+    await expect(page.getByText("Atlas Studio · Research sprint · Sent", { exact: true })).toBeVisible();
+  });
+
   test("marketing headings form a valid outline", async ({ page }) => {
     for (const route of ["/", "/about", "/contact", "/docs", "/guides", "/privacy"]) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
