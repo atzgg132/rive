@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
 /* ─── Brand Color Variables ──────────────────────── */
 :root {
   /* Semantic design tokens consumed by the shared Rive component system. */
@@ -46,10 +52,11 @@
   --color-blue-border: #E2EAF4;   /* Delicate light-blue border */
   
   /* Font families — Outfit loaded via Next.js with Outfit Fallback */
-  --font-sans:    "Outfit Variable";
-  --font-display: "Outfit Variable", var(--font-sans), sans-serif;
-  --font-body:    "Outfit Variable", var(--font-sans), sans-serif;
-  --font-hero:    "Outfit Variable", var(--font-sans), sans-serif;
+  --font-sans:    var(--font-outfit), system-ui, sans-serif;
+  --font-display: var(--font-outfit), var(--font-sans), sans-serif;
+  --font-body:    var(--font-outfit), var(--font-sans), sans-serif;
+  --font-hero:    var(--font-outfit), var(--font-sans), sans-serif;
+  --font-mono:    var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* Shared motion curves — reuse these instead of hand-typing new cubic-beziers. */
   --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);   /* strong ease-out for UI/marketing entrances */
@@ -67,9 +74,12 @@
 }
 
 html {
-  scroll-behavior: smooth;
   color-scheme: light;
   font-size: 16px;
+}
+
+section[id] {
+  scroll-margin-top: 6rem;
 }
 
 /* next-themes adds .dark to the root element. Keep the palette in one place
@@ -117,6 +127,87 @@ html {
   --color-blue-border: #263449;
 }
 
+/* The public site has its own cinematic surface. It reuses the semantic token
+   names inside this subtree so the product's light and dark scopes remain
+   unchanged and dashboard screenshot baselines stay isolated. */
+[data-surface="marketing"] {
+  color-scheme: dark;
+
+  --background: 5 7 12;
+  --foreground: 248 250 252;
+  --card: 10 14 22;
+  --card-foreground: 248 250 252;
+  --popover: 10 14 22;
+  --popover-foreground: 248 250 252;
+  --primary: 96 165 250;
+  --primary-foreground: 5 7 12;
+  --secondary: 16 23 36;
+  --secondary-foreground: 226 232 240;
+  --muted: 17 24 39;
+  --muted-foreground: 166 178 197;
+  --accent: 20 38 70;
+  --accent-foreground: 219 234 254;
+  --border: 39 49 66;
+  --input: 51 65 85;
+  --ring: 96 165 250;
+  --brand-wordmark: 248 250 252;
+  --brand-accent: 96 165 250;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04), 0 24px 70px rgb(0 0 0 / 0.28);
+  --shadow-overlay: 0 36px 110px rgb(0 0 0 / 0.62);
+
+  --surface-void: #05070c;
+  --surface-raised: #0a0e16;
+  --surface-glass: rgb(255 255 255 / 0.03);
+  --stroke-hairline: rgb(255 255 255 / 0.07);
+  --stroke-lit: rgb(96 165 250 / 0.35);
+  --brand-600: #2563eb;
+  --brand-500: #3b82f6;
+  --brand-400: #60a5fa;
+  --brand-cyan: #22d3ee;
+  --glow-primary: radial-gradient(circle at center, rgb(96 165 250 / 0.22) 0%, rgb(59 130 246 / 0.11) 38%, rgb(34 211 238 / 0.035) 58%, transparent 74%);
+  --noise-opacity: 0.05;
+
+  min-height: 100vh;
+  background: var(--surface-void);
+  color: rgb(var(--foreground));
+  isolation: isolate;
+}
+
+[data-surface="marketing"] section[id] {
+  scroll-margin-top: 6rem;
+}
+
+/* Keep the long-form home page from spending its critical rendering window on
+   sections several viewports away. Chromium still exposes auto-contained
+   content to find-in-page and accessibility APIs, then renders it before it
+   approaches the viewport. The remembered intrinsic size prevents jumps once
+   a section has been visited. */
+.marketing-deferred-section {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 64rem;
+}
+
+/* Reveal copy without making the first render download an animation runtime.
+   The default state is visible, so no-JS and older browsers retain every word.
+   The client island opts into a one-time, composited transition only after it
+   can observe the element. */
+.marketing-reveal {
+  transition-delay: var(--marketing-reveal-delay, 0s);
+  transition-duration: 580ms;
+  transition-property: opacity, transform;
+  transition-timing-function: var(--ease-out);
+}
+
+.marketing-reveal[data-reveal-ready="true"] {
+  opacity: 0;
+  transform: translate3d(0, var(--marketing-reveal-y, 22px), 0);
+}
+
+.marketing-reveal[data-reveal-visible="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
 body {
   font-family: var(--font-body);
   /* The design tokens are space-separated RGB channels ("245 248 252"), which
@@ -127,7 +218,7 @@ body {
      consumer of these variables. */
   background-color: rgb(var(--background));
   color: rgb(var(--foreground));
-  overflow-x: hidden;
+  overflow-x: clip;
   line-height: 1.6;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
@@ -197,6 +288,12 @@ textarea {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .marketing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
@@ -344,6 +441,71 @@ p {
   border: 1px solid var(--color-blue-border);
   border-radius: 16px;
   box-shadow: 0 4px 20px -2px color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+
+@keyframes marketingBorderSpin {
+  to { --angle: 360deg; }
+}
+
+/* Animated bento borders use a static lit ring when registered custom
+   properties or conic gradients are unavailable (notably older Safari). */
+.marketing-bento {
+  position: relative;
+  border: 1px solid var(--stroke-hairline);
+  background: var(--surface-raised);
+}
+
+.marketing-bento::before {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgb(96 165 250 / 0.32), rgb(255 255 255 / 0.04) 44%, rgb(34 211 238 / 0.18));
+  content: "";
+}
+
+@supports (background: conic-gradient(from 0deg, red, blue)) {
+  .marketing-bento::before {
+    background: conic-gradient(from var(--angle), transparent 0deg, rgb(59 130 246 / 0.08) 85deg, rgb(96 165 250 / 0.72) 145deg, rgb(34 211 238 / 0.48) 188deg, transparent 255deg);
+    animation: marketingBorderSpin 8s linear infinite;
+  }
+}
+
+.marketing-bento::after {
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--surface-raised);
+  content: "";
+}
+
+.marketing-grid-mask {
+  background-image: linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 72% 64% at 50% 26%, #000 12%, transparent 78%);
+  mask-image: radial-gradient(ellipse 72% 64% at 50% 26%, #000 12%, transparent 78%);
+}
+
+.marketing-edge-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.marketing-noise {
+  opacity: var(--noise-opacity);
+  mix-blend-mode: soft-light;
+}
+
+.marketing-focus:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-bento::before {
+    animation: none;
+  }
 }
 
 /* Marketing primitives */

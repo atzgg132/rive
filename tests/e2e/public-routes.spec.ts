@@ -20,6 +20,7 @@ const publicRoutes = [
   "/reset-password",
   "/roadmap",
   "/terms",
+  "/verify-email",
   "/waitlist",
 ];
 
@@ -42,16 +43,44 @@ for (const route of publicRoutes) {
     expect(response, `${route} did not return a document response`).not.toBeNull();
     expect(response!.status(), `${route} returned ${response!.status()}`).toBeLessThan(500);
     await expect(page.locator("body")).toBeVisible();
+    await page.waitForLoadState("load");
+    await page.waitForTimeout(150);
     expect(errors, `${route} emitted browser errors`).toEqual([]);
   });
 }
 
-test("light theme is the default for a new visitor", async ({ page }) => {
-  await page.goto("/");
-  await page.evaluate(() => window.localStorage.clear());
-  await page.reload();
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`system theme follows a new visitor's ${colorScheme} preference`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme });
+    await page.goto("/");
 
-  await expect(page.locator("html")).not.toHaveClass(/dark/);
+    await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
+      .toBeNull();
+    if (colorScheme === "dark") {
+      await expect(page.locator("html")).toHaveClass(/dark/);
+    } else {
+      await expect(page.locator("html")).not.toHaveClass(/dark/);
+    }
+    await expect(page.getByRole("button", { name: "Theme: system. Switch to light" })).toBeVisible();
+  });
+}
+
+test("theme toggle cycles light, dark, and system and persists the choice", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Theme: system. Switch to light" }).click();
+  await expect(page.getByRole("button", { name: "Theme: light. Switch to dark" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
+    .toBe("light");
+
+  await page.getByRole("button", { name: "Theme: light. Switch to dark" }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.getByRole("button", { name: "Theme: dark. Switch to system" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Theme: dark. Switch to system" }).click();
+  await expect(page.getByRole("button", { name: "Theme: system. Switch to light" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
+    .toBe("system");
 });
 
 test("marketing page advertises current connections without a demo CTA", async ({ page }) => {

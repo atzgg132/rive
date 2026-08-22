@@ -1,5 +1,23 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+const marketingRoutes = [
+  "/",
+  "/about",
+  "/api-reference",
+  "/blog",
+  "/careers",
+  "/changelog",
+  "/community",
+  "/contact",
+  "/cookies",
+  "/docs",
+  "/guides",
+  "/press",
+  "/privacy",
+  "/roadmap",
+  "/terms",
+] as const;
+
 async function installMarketingMocks(page: Page) {
   await page.route("**/api/rates", async (route: Route) => route.fulfill({
     status: 200,
@@ -56,8 +74,32 @@ test.describe("marketing responsive guardrails", () => {
     await page.goto("/#faq", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByTestId("marketing-agreements-section")).toBeVisible();
-    await expect(page.getByText("Contract to cash", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("marketing-agreements-section").getByText("Contract to cash", { exact: true })).toBeVisible();
     await expect(page.getByTestId("faq-grid").locator("h3")).toHaveCount(6);
-    await expect(page.getByRole("heading", { name: "Can I bring my existing data into rive.?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Can I bring my existing data into Rive?" })).toBeVisible();
   });
+
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 768, height: 900 },
+    { width: 1440, height: 900 },
+  ]) {
+    test(`every marketing route avoids horizontal overflow at ${viewport.width}px`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      for (const route of marketingRoutes) {
+        const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+        expect(response?.status(), `${route} returned an error document`).toBeLessThan(400);
+        await expect(page.locator("h1")).toHaveCount(1);
+        const geometry = await page.evaluate(() => ({
+          clientWidth: document.documentElement.clientWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth,
+        }));
+        expect(
+          Math.max(geometry.documentWidth, geometry.bodyWidth),
+          `${route} overflowed at ${viewport.width}px`,
+        ).toBeLessThanOrEqual(geometry.clientWidth + 1);
+      }
+    });
+  }
 });

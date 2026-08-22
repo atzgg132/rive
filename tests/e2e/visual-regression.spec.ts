@@ -11,6 +11,21 @@ const majorPages = [
   { name: "agreements", path: "/workflow/contracts", heading: "Agreements" },
 ] as const;
 
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 768, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  test(`marketing home ${viewport.width}x${viewport.height} visual`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+    await page.setViewportSize(viewport);
+    await page.goto("/", { waitUntil: "load" });
+    await expect(page.getByRole("heading", { name: /Your business should not need you as middleware/i })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page).toHaveScreenshot(`marketing-home-${viewport.width}x${viewport.height}.png`, { fullPage: false });
+  });
+}
+
 const portfolioContent = {
   name: "Rive Visual Tester",
   profileImageUrl: "",

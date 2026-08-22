@@ -1,8 +1,24 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/outfit/wght.css";
+import localFont from "next/font/local";
 import "./globals.css";
 import PageViewTracker from "@/components/PageViewTracker";
 import { ThemeProvider } from "@/components/ThemeProvider";
+
+const outfit = localFont({
+  src: "./fonts/outfit-marketing.woff2",
+  variable: "--font-outfit",
+  display: "optional",
+  weight: "100 900",
+  fallback: ["system-ui", "sans-serif"],
+});
+
+const jetBrainsMono = localFont({
+  src: "./fonts/jetbrains-mono-marketing.woff2",
+  variable: "--font-jetbrains-mono",
+  display: "optional",
+  weight: "600",
+  fallback: ["ui-monospace", "monospace"],
+});
 
 export const metadata: Metadata = {
   title: "Rive — Connected client, project, contract and financial operations",
@@ -37,14 +53,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-scroll-behavior="smooth"
+      className={`${outfit.variable} ${jetBrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem
           storageKey="rive-color-theme"
         >
           <PageViewTracker />
