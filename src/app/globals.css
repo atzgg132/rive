@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* These stable URLs are preloaded in the root layout. Keeping font discovery
+   independent from Next's generated font manifest prevents a fallback-first
+   paint when that manifest omits local font preload tags. */
+@font-face {
+  font-family: "Outfit";
+  src: url("/fonts/outfit-marketing.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: optional;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-marketing.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+}
+
 @property --angle {
   syntax: "<angle>";
   initial-value: 0deg;
@@ -51,11 +70,14 @@
   --color-blue-soft:   #EFF6FF;   /* Softest blue tint for backgrounds/hover */
   --color-blue-border: #E2EAF4;   /* Delicate light-blue border */
   
-  /* Font families — Outfit loaded via Next.js with Outfit Fallback */
+  /* One deterministic family chain; the old variables recursively repeated
+     Outfit and its fallbacks in the final computed font-family value. */
+  --font-outfit: "Outfit";
+  --font-jetbrains-mono: "JetBrains Mono";
   --font-sans:    var(--font-outfit), system-ui, sans-serif;
-  --font-display: var(--font-outfit), var(--font-sans), sans-serif;
-  --font-body:    var(--font-outfit), var(--font-sans), sans-serif;
-  --font-hero:    var(--font-outfit), var(--font-sans), sans-serif;
+  --font-display: var(--font-sans);
+  --font-body:    var(--font-sans);
+  --font-hero:    var(--font-sans);
   --font-mono:    var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* Shared motion curves — reuse these instead of hand-typing new cubic-beziers. */

@@ -1,24 +1,8 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "./globals.css";
+import { FontPreloads } from "@/components/FontPreloads";
 import PageViewTracker from "@/components/PageViewTracker";
 import { ThemeProvider } from "@/components/ThemeProvider";
-
-const outfit = localFont({
-  src: "./fonts/outfit-marketing.woff2",
-  variable: "--font-outfit",
-  display: "optional",
-  weight: "100 900",
-  fallback: ["system-ui", "sans-serif"],
-});
-
-const jetBrainsMono = localFont({
-  src: "./fonts/jetbrains-mono-marketing.woff2",
-  variable: "--font-jetbrains-mono",
-  display: "optional",
-  weight: "600",
-  fallback: ["ui-monospace", "monospace"],
-});
 
 export const metadata: Metadata = {
   title: "Rive — Connected client, project, contract and financial operations",
@@ -51,12 +35,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${outfit.variable} ${jetBrainsMono.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
+        <FontPreloads />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

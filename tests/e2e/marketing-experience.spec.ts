@@ -62,6 +62,54 @@ test.describe("marketing experience", () => {
     await expect(page.getByText("Atlas Studio · Research sprint · Sent", { exact: true })).toBeVisible();
   });
 
+  test("brand fonts are preloaded and stable after first paint", async ({ page }) => {
+    const fontRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.resourceType() === "font") fontRequests.push(new URL(request.url()).pathname);
+    });
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const preloads = await page.locator('head link[rel="preload"][as="font"]').evaluateAll((links) =>
+      links.map((link) => ({
+        href: new URL((link as HTMLLinkElement).href).pathname,
+        type: (link as HTMLLinkElement).type,
+        crossOrigin: (link as HTMLLinkElement).crossOrigin,
+      })),
+    );
+    expect(preloads).toEqual([
+      { href: "/fonts/outfit-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous" },
+      { href: "/fonts/jetbrains-mono-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous" },
+    ]);
+
+    const hero = page.locator("h1").first();
+    await expect(hero).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
+    const firstPaint = await hero.evaluate((node) => ({
+      family: getComputedStyle(node).fontFamily,
+      width: node.getBoundingClientRect().width,
+      height: node.getBoundingClientRect().height,
+    }));
+
+    await page.evaluate(() => document.fonts.ready);
+    const settled = await hero.evaluate((node) => ({
+      family: getComputedStyle(node).fontFamily,
+      width: node.getBoundingClientRect().width,
+      height: node.getBoundingClientRect().height,
+    }));
+
+    expect(firstPaint.family).toBe('Outfit, system-ui, sans-serif');
+    expect(settled.family).toBe(firstPaint.family);
+    expect(Math.abs(settled.width - firstPaint.width)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(settled.height - firstPaint.height)).toBeLessThanOrEqual(0.5);
+    expect(fontRequests).toEqual(expect.arrayContaining([
+      "/fonts/outfit-marketing.woff2",
+      "/fonts/jetbrains-mono-marketing.woff2",
+    ]));
+  });
+
   test("marketing headings form a valid outline", async ({ page }) => {
     for (const route of ["/", "/about", "/contact", "/docs", "/guides", "/privacy"]) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
