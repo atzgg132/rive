@@ -47,7 +47,7 @@ export function HeroPipeline() {
   };
 
   return (
-    <div data-testid="hero-pipeline" className="relative mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden px-1 animate-hero-preview-in sm:px-2">
+    <div data-testid="hero-pipeline" className="hero-pipeline relative mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden px-1 animate-hero-preview-in sm:px-2">
       <div className="relative">
         <div
           aria-hidden="true"
@@ -83,10 +83,10 @@ export function HeroPipeline() {
                 data-testid={`hero-stage-${stage.id}`}
                 aria-pressed={selected}
                 onClick={() => selectStage(index)}
-                className="marketing-focus group relative flex min-h-11 min-w-0 flex-col items-center gap-1.5 rounded-xl px-0.5 py-1 text-center transition duration-300 ease-rive-out"
+                className="hero-stage marketing-focus group relative flex min-h-11 min-w-0 flex-col items-center gap-1.5 rounded-xl px-0.5 py-1 text-center transition duration-300 ease-rive-out"
               >
                 <span
-                  className={`relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-lg ring-1 transition duration-300 ease-rive-out sm:h-8 sm:w-8 ${
+                  className={`hero-stage-icon relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-lg ring-1 transition duration-300 ease-rive-out sm:h-8 sm:w-8 ${
                     selected
                       ? "bg-primary/20 text-primary ring-primary/40 shadow-[0_0_18px_rgba(59,130,246,0.25)]"
                       : "bg-[var(--surface-raised)] text-muted-foreground ring-[var(--stroke-hairline)] group-hover:text-primary"
@@ -118,11 +118,11 @@ export function HeroPipeline() {
         </div>
       </div>
 
-      <div key={active.id} className="mt-3 text-center motion-safe:animate-hero-detail-in sm:mt-4">
+      <div key={active.id} className="hero-stage-detail mt-3 text-center motion-safe:animate-hero-detail-in sm:mt-4">
         <p className="mx-auto max-w-2xl text-balance text-[0.78rem] font-semibold leading-5 text-muted-foreground sm:text-[0.8rem] sm:leading-6">
           {active.detail}
         </p>
-        <p className="mt-1.5 flex items-center justify-center gap-1.5 font-mono text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-primary">
+        <p className="hero-stage-carry mt-1.5 flex items-center justify-center gap-1.5 font-mono text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-primary">
           <ArrowRight className="h-3 w-3" aria-hidden="true" />
           {active.carries}
         </p>
