@@ -21,10 +21,10 @@ export function MarketingHome() {
       <SpotlightCursor>
         <section
           data-testid="marketing-hero"
-          className="relative flex min-h-[100svh] items-center overflow-x-clip pb-10 pt-20 sm:pb-16 sm:pt-28 lg:pb-20"
+          className="marketing-hero relative flex min-h-[100svh] items-center overflow-x-clip pb-10 pt-20 sm:pb-16 sm:pt-28 lg:pb-20"
         >
           <ConnectedSignalField className="opacity-55" />
-          <div className="relative z-10 mx-auto flex max-w-[76rem] flex-col items-center px-5 text-center sm:px-8">
+          <div className="marketing-hero-inner relative z-10 mx-auto flex max-w-[76rem] flex-col items-center px-5 text-center sm:px-8">
             <GlowingBadge pulse>{homeContent.hero.eyebrow}</GlowingBadge>
             <h1 className="mt-5 text-[clamp(3.25rem,7.5vw,6.5rem)] font-black leading-[0.94] tracking-[-0.05em] text-foreground sm:mt-6">
               <span className="block animate-hero-line-in" style={{ animationDelay: "0ms" }}>Your business</span>
@@ -34,8 +34,8 @@ export function MarketingHome() {
                 <span className="hero-word-gradient">middleware.</span>
               </span>
             </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:mt-6 sm:text-xl sm:leading-9">{homeContent.hero.body}</p>
-            <div className="mt-6 flex flex-col justify-center gap-3 sm:mt-8 sm:flex-row sm:items-center">
+            <p className="marketing-hero-body mx-auto mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:mt-6 sm:text-xl sm:leading-9">{homeContent.hero.body}</p>
+            <div className="marketing-hero-ctas mt-6 flex flex-col justify-center gap-3 sm:mt-8 sm:flex-row sm:items-center">
               <MagneticButton href={homeContent.hero.primaryCta.href}>{homeContent.hero.primaryCta.label} <ArrowRight className="ml-2 inline h-4 w-4" aria-hidden="true" /></MagneticButton>
               <SmoothAnchor
                 href={homeContent.hero.secondaryCta.href}
@@ -44,7 +44,7 @@ export function MarketingHome() {
                 {homeContent.hero.secondaryCta.label} <ArrowDown className="ml-2 h-4 w-4" aria-hidden="true" />
               </SmoothAnchor>
             </div>
-            <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 sm:mt-8 sm:gap-x-6 sm:gap-y-3">
+            <div aria-label="Proof points" className="marketing-hero-proof mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 sm:mt-8 sm:gap-x-6 sm:gap-y-3">
               {homeContent.hero.proof.map((item) => (
                 <span key={item} className="inline-flex items-center gap-2 font-mono text-[0.64rem] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5 text-success" aria-hidden="true" />
@@ -52,14 +52,14 @@ export function MarketingHome() {
                 </span>
               ))}
             </div>
-            <div className="mt-10 w-full sm:mt-14">
+            <div className="marketing-hero-rail mt-10 w-full sm:mt-14">
               <HeroPipeline />
             </div>
           </div>
         </section>
       </SpotlightCursor>
 
-      <section id="product" className="relative overflow-x-clip pb-20 lg:pb-8">
+      <section id="product" className="relative pb-20 lg:pb-8">
         <div className="mx-auto max-w-[90rem] px-5 sm:px-8">
           <ScrollytellingSection problem={homeContent.tax} chapters={homeContent.scrolly.chapters} />
         </div>

@@ -139,7 +139,7 @@ export function RemitPreview() {
             value={amount}
             onChange={(event) => setAmount(Math.max(0, Number(event.target.value) || 0))}
             aria-label="Amount in source currency"
-            className="marketing-focus w-0 flex-1 border-none bg-transparent p-0 text-left text-[1.75rem] font-black leading-none tabular-nums tracking-[-0.03em] text-foreground outline-none [appearance:textfield] placeholder:text-muted-foreground sm:text-[2.1rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="marketing-focus w-0 flex-1 border-none bg-transparent p-0 text-left text-[1.75rem] font-black leading-none tabular-nums tracking-[-0.03em] text-foreground [appearance:textfield] placeholder:text-muted-foreground sm:text-[2.1rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <select value={fromCode} onChange={(event) => setFromCode(event.target.value)} aria-label="Source currency" className={selectClass}>
             {CURRENCIES.map((code) => <option key={code} value={code} className="bg-[var(--surface-raised)] text-foreground">{code}</option>)}
