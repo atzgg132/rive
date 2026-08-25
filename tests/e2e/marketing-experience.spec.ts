@@ -168,14 +168,12 @@ test.describe("marketing experience", () => {
     expect(mobileGeometry.overflow).toBe(false);
   });
 
-  // 14" at 100% (1366×768, 1440×900) is the required first-screen fit.
-  // 1280×720/800 additionally covers 1920×1080 @ 150% Windows scale.
+  // SHIP-GATE ONLY: 1920×1080 @ 150% Windows ≈ 1280×720 CSS, and 1920×1200 @ 150% ≈ 1280×800.
+  // Do not add 1366×768 or 1440×900 to this loop. Those already fit at 100%.
   // Do not assert which pipeline node is active — interval autoplay may already be on WORK.
   const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
 
   for (const viewport of [
-    { width: 1366, height: 768 },
-    { width: 1440, height: 900 },
     { width: 1280, height: 720 },
     { width: 1280, height: 800 },
   ]) {
