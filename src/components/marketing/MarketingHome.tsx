@@ -23,10 +23,10 @@ export function MarketingHome() {
       <SpotlightCursor>
         <section
           data-testid="marketing-hero"
-          className="relative flex min-h-[100svh] flex-col justify-start overflow-x-clip pb-[clamp(0.25rem,0.8svh,0.85rem)] pt-[clamp(4.5rem,7.5svh,5.5rem)]"
+          className="relative flex min-h-[100svh] flex-col justify-start overflow-x-clip pb-[clamp(0.25rem,0.8svh,0.85rem)] pt-[clamp(4.75rem,7.5svh,5.5rem)]"
         >
           <ConnectedSignalField className="opacity-55" />
-          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-col justify-start px-5 text-center sm:px-8">
+          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-col items-center justify-start px-5 text-center sm:px-8">
             <GlowingBadge pulse>{homeContent.hero.eyebrow}</GlowingBadge>
             <h1 className="mt-[clamp(0.25rem,0.7svh,1rem)] text-[clamp(1.8rem,5svh+0.25vw,4.35rem)] font-black leading-[0.94] tracking-[-0.05em] text-foreground">
               <span className="block animate-hero-line-in" style={{ animationDelay: "0ms" }}>Your business</span>
