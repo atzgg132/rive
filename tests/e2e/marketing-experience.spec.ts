@@ -48,29 +48,29 @@ async function openHomeWithColorTheme(page: Page, theme: "light" | "dark") {
 }
 
 test.describe("marketing experience", () => {
-  test("scrollytelling activates the chapter at scroll depth and the visual rail sticks", async ({ page }) => {
+  test("scrollytelling keeps stacked in-flow chapters readable without a sticky rail", async ({ page }) => {
     const errors = collectRuntimeErrors(page);
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/#product", { waitUntil: "load" });
 
     const scrolly = page.getByTestId("scrollytelling-section");
-    const rail = page.getByTestId("scrollytelling-rail");
+    const chapters = page.locator("[data-chapter-index]");
     await expect(scrolly).toBeVisible();
-    await expect(rail).toBeVisible();
-    await expect(rail.getByTestId("problem-disconnection")).toBeVisible();
-    await page.waitForFunction(() => getComputedStyle(document.querySelector<HTMLElement>('[data-chapter-index="1"]')!).opacity === "0.3");
+    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+    await expect(chapters).toHaveCount(7);
+    await expect(chapters.nth(0).getByTestId("problem-disconnection")).toHaveCount(1);
 
-    const target = page.locator('[data-chapter-index="3"]');
-    await target.evaluate((node) => node.scrollIntoView({ block: "start" }));
-    await expect(target).toHaveAttribute("data-active", "true");
+    for (let index = 1; index < 7; index += 1) {
+      const chapter = chapters.nth(index);
+      await chapter.scrollIntoViewIfNeeded();
+      await expect(chapter.locator("[data-product-frame]"), `chapter ${index} keeps its product visual in flow`).toHaveCount(1);
+    }
 
-    const sticky = await rail.evaluate((node) => {
-      const rect = node.getBoundingClientRect();
-      return { position: getComputedStyle(node).position, top: rect.top };
-    });
-    expect(sticky.position).toBe("sticky");
-    expect(Math.abs(sticky.top)).toBeLessThanOrEqual(1);
+    const opacities = await chapters.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).opacity));
+    expect(opacities).toEqual(Array(7).fill("1"));
+    const sticky = await scrolly.evaluate((node) => [node, ...node.querySelectorAll("*")].some((el) => getComputedStyle(el).position === "sticky"));
+    expect(sticky).toBe(false);
     expect(errors).toEqual([]);
   });
 
@@ -194,36 +194,25 @@ test.describe("marketing experience", () => {
     await page.getByRole("link", { name: "See the unpaid role", exact: true }).click();
     await expect.poll(async () => problem.evaluate((node) => Math.abs(node.getBoundingClientRect().top))).toBeLessThan(8);
     await expect(problem.getByRole("heading", { name: "There is an unpaid role inside every independent business." })).toBeVisible();
-    await expect(page.getByTestId("scrollytelling-rail")).toBeVisible();
-    await expect(page.getByTestId("scrollytelling-rail").getByTestId("problem-disconnection")).toBeVisible();
-    const solutionTop = await page.locator('[data-chapter-index="1"]').evaluate((node) => node.getBoundingClientRect().top);
-    expect(solutionTop).toBeGreaterThan(500);
+    await expect(problem.getByTestId("problem-disconnection")).toBeVisible();
   });
 
-  test("the problem beat fills the first viewport and hands off into the connected loop", async ({ page }) => {
+  test("the problem beat stacks into the connected loop without a sticky cut", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/", { waitUntil: "load" });
     const stage = page.getByTestId("marketing-problem");
-    const geometry = await stage.evaluate((node) => {
-      const rect = node.getBoundingClientRect();
-      return { height: rect.height, top: rect.top, viewport: window.innerHeight, overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth };
-    });
-    expect(geometry.height).toBeGreaterThanOrEqual(geometry.viewport - 2);
-    expect(geometry.overflow).toBe(false);
+    await expect(stage).toBeVisible();
+    const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(desktopOverflow).toBe(false);
 
-    const rail = page.getByTestId("scrollytelling-rail");
     await page.locator("#problem").evaluate((node) => node.scrollIntoView({ block: "start" }));
-    await expect(rail.getByTestId("problem-disconnection")).toBeVisible();
-    await expect(rail.locator("[data-product-frame]")).toHaveCount(0);
+    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+    await expect(stage.getByTestId("problem-disconnection")).toBeVisible();
 
     const solution = page.locator('[data-chapter-index="1"]');
     await solution.evaluate((node) => node.scrollIntoView({ block: "start" }));
-    await expect(solution).toHaveAttribute("data-active", "true");
     await expect(solution.getByRole("heading", { name: "Change one thing. Everything downstream already knows." })).toBeVisible();
-    await expect.poll(async () => ({
-      product: await rail.locator("[data-product-frame]").count(),
-      problem: await rail.getByTestId("problem-disconnection").count(),
-    })).toEqual({ product: 1, problem: 0 });
+    await expect(solution.locator("[data-product-frame]")).toHaveCount(1);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/", { waitUntil: "load" });

@@ -19,9 +19,9 @@ const selectClass =
   "marketing-focus h-10 w-[4.75rem] shrink-0 cursor-pointer rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] px-2 text-center text-sm font-bold tracking-wide text-foreground transition-colors duration-200 ease-rive-out hover:border-primary/30";
 
 /**
- * Live payout preview for Remit (in development). Fetches real ECB mid-market
- * rates and shows send amount, illustrative fee, and the received amount.
- * Preview only: it never claims to move money.
+ * Live FX conversion preview for Remit (in development). Fetches real ECB
+ * mid-market rates and shows a source amount, an illustrative fee, and the
+ * converted amount. Preview only: it never claims to move money.
  */
 export function RemitPreview() {
   const [fromCode, setFromCode] = useState("USD");
@@ -69,7 +69,7 @@ export function RemitPreview() {
 
   const rate = rates[fromCode] && rates[toCode] ? rates[toCode] / rates[fromCode] : null;
   const fee = amount * FEE_RATE;
-  const received = rate === null ? null : (amount - fee) * rate;
+  const converted = rate === null ? null : (amount - fee) * rate;
 
   const ageLabel = !lastFetched
     ? ""
@@ -126,22 +126,22 @@ export function RemitPreview() {
       </div>
 
       <div className="rounded-2xl bg-[var(--surface-glass)] px-4 py-4">
-        <label htmlFor="remit-send-amount" className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          You send
+        <label htmlFor="remit-source-amount" className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Source amount
         </label>
         <div className="mt-2 flex min-w-0 items-center gap-3">
           <input
-            id="remit-send-amount"
+            id="remit-source-amount"
             type="number"
             min="0"
             step="any"
             inputMode="decimal"
             value={amount}
             onChange={(event) => setAmount(Math.max(0, Number(event.target.value) || 0))}
-            aria-label="Amount to send"
+            aria-label="Amount in source currency"
             className="marketing-focus w-0 flex-1 border-none bg-transparent p-0 text-left text-[1.75rem] font-black leading-none tabular-nums tracking-[-0.03em] text-foreground outline-none [appearance:textfield] placeholder:text-muted-foreground sm:text-[2.1rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
-          <select value={fromCode} onChange={(event) => setFromCode(event.target.value)} aria-label="Send currency" className={selectClass}>
+          <select value={fromCode} onChange={(event) => setFromCode(event.target.value)} aria-label="Source currency" className={selectClass}>
             {CURRENCIES.map((code) => <option key={code} value={code} className="bg-[var(--surface-raised)] text-foreground">{code}</option>)}
           </select>
         </div>
@@ -166,7 +166,7 @@ export function RemitPreview() {
       </div>
 
       <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-4 text-white shadow-[0_12px_35px_rgba(37,99,235,0.24)]">
-        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-blue-100">They receive</p>
+        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-blue-100">Converted amount</p>
         <div className="mt-2 flex min-w-0 items-center gap-3">
           <span
             className={cn(
@@ -174,12 +174,12 @@ export function RemitPreview() {
               ratesState === "loading" ? "opacity-50" : "opacity-100",
             )}
           >
-            {received === null ? "-" : formatAmount(received, toCode)}
+            {converted === null ? "-" : formatAmount(converted, toCode)}
           </span>
           <select
             value={toCode}
             onChange={(event) => setToCode(event.target.value)}
-            aria-label="Receive currency"
+            aria-label="Converted currency"
             className="marketing-focus h-10 w-[4.75rem] shrink-0 cursor-pointer rounded-xl border border-white/25 bg-white/10 px-2 text-center text-sm font-bold tracking-wide text-white transition-colors duration-200 ease-rive-out hover:border-white/40"
           >
             {CURRENCIES.map((code) => <option key={code} value={code} className="bg-[var(--surface-raised)] text-foreground">{code}</option>)}
