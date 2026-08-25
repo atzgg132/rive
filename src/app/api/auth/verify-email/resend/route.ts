@@ -27,18 +27,19 @@ export async function POST(req: NextRequest) {
 
     const prepared = prepareAuthToken({ email: user.email, type: "email_verification", userId: user.id });
     const emailPayload = buildEmailVerificationEmail(user.email, user.name || "there", prepared.token);
-    await prisma.$transaction(async (tx) => {
+    const outboxId = await prisma.$transaction(async (tx) => {
       await tx.authToken.updateMany({ where: { userId: user.id, type: "email_verification", usedAt: null }, data: { usedAt: new Date() } });
       await tx.authToken.create({ data: prepared.data });
-      await enqueueEmail(emailPayload, tx);
+      const jobId = await enqueueEmail(emailPayload, tx);
       await recordProductEvent({
         userId: user.id,
         eventName: PRODUCT_EVENTS.emailVerificationSent,
         module: "auth",
         properties: { delivery: "outbox", reason: "resend" },
       }, tx);
+      return jobId;
     });
-    if (getEmailProvider() !== "disabled") await processEmailOutbox(1);
+    if (getEmailProvider() !== "disabled") await processEmailOutbox({ jobId: outboxId });
     return genericResponse();
   } catch (error) {
     console.error("Verification resend error:", error);

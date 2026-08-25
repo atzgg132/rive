@@ -65,6 +65,34 @@ function pick(record, select) {
   return out;
 }
 
+function applyUpdate(record, data) {
+  for (const [key, value] of Object.entries(data)) {
+    if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && "increment" in value) {
+      record[key] = (Number(record[key]) || 0) + value.increment;
+    } else {
+      record[key] = value;
+    }
+  }
+  record.updatedAt = new Date();
+}
+
+function matchFilter(actual, expected) {
+  if (expected && typeof expected === "object" && !Array.isArray(expected) && !(expected instanceof Date)) {
+    if (Object.hasOwn(expected, "lte")) return actual <= expected.lte;
+    if (Object.hasOwn(expected, "lt")) return actual < expected.lt;
+    if (Object.hasOwn(expected, "gt")) return actual > expected.gt;
+    if (Object.hasOwn(expected, "in")) return expected.in.includes(actual);
+  }
+  return actual === expected;
+}
+
+function matchEmailOutbox(job, where = {}) {
+  for (const [key, expected] of Object.entries(where)) {
+    if (!matchFilter(job[key], expected)) return false;
+  }
+  return true;
+}
+
 export function createPrismaMock() {
   const db = {
     importJob: [],
@@ -78,6 +106,7 @@ export function createPrismaMock() {
     migrationEvent: [],
     user: [],
     portfolioInquiry: [],
+    emailOutbox: [],
   };
 
   let failOnCall = -1; // -1 = never; 0 = first $transaction call; 1 = second
@@ -249,6 +278,40 @@ export function createPrismaMock() {
       async findUnique({ where }) {
         const user = db.user.find((u) => u.id === where.id);
         return user ? { ...user } : null;
+      },
+    },
+
+    emailOutbox: {
+      async create({ data, select }) {
+        const created = row("emailOutbox", {
+          status: "queued",
+          attempts: 0,
+          availableAt: new Date(),
+          lastError: null,
+          processedAt: null,
+          ...data,
+        });
+        db.emailOutbox.push(created);
+        return pick(created, select);
+      },
+      async findMany({ where = {}, orderBy, take } = {}) {
+        let list = db.emailOutbox.filter((job) => matchEmailOutbox(job, where));
+        if (orderBy?.createdAt === "asc") {
+          list = [...list].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        }
+        if (typeof take === "number") list = list.slice(0, take);
+        return list.map((job) => ({ ...job }));
+      },
+      async update({ where, data }) {
+        const job = db.emailOutbox.find((row) => row.id === where.id);
+        if (!job) throw new Error(`emailOutbox ${where.id} not found`);
+        applyUpdate(job, data);
+        return { ...job };
+      },
+      async updateMany({ where, data }) {
+        const list = db.emailOutbox.filter((job) => matchEmailOutbox(job, where));
+        for (const job of list) applyUpdate(job, data);
+        return { count: list.length };
       },
     },
 

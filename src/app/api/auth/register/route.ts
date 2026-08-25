@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       await tx.authToken.create({
         data: { ...preparedVerification.data, userId: created.id },
       });
-      await enqueueEmail(verificationEmail, tx);
+      const outboxId = await enqueueEmail(verificationEmail, tx);
       await saveUserAttribution(created.id, { ...attribution, referralSource }, tx);
       await recordProductEvent({
         userId: created.id,
@@ -149,23 +149,23 @@ export async function POST(req: NextRequest) {
           data: { usedAt: requiredAt },
         });
       }
-      return created;
+      return { created, outboxId };
     });
 
-    await recordActivationEvent(user.id, ACTIVATION_EVENTS.registered);
+    await recordActivationEvent(user.created.id, ACTIVATION_EVENTS.registered);
 
-    // Verification is launch-critical. Process one queued message immediately
-    // so signup does not depend on an optional cron schedule. The outbox still
-    // retries transient delivery failures asynchronously.
+    // Process this signup's verification job, not the oldest queued row.
+    // A backlog of portfolio inquiries used to steal this slot, so the
+    // verification mail sat queued while older jobs retried.
     if (getEmailProvider() !== "disabled") {
-      await processEmailOutbox(1);
+      await processEmailOutbox({ jobId: user.outboxId });
     }
 
     return NextResponse.json({
       success: true,
       requiresEmailVerification: true,
       message: "Account created. Check your email to verify your address before entering Rive.",
-      user,
+      user: user.created,
     }, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

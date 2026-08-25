@@ -98,6 +98,17 @@ locals {
         { environment = "dev", path = "/api/cron/portfolio-assets" },
       ]
     }
+    # Verification, password-reset, and portfolio-inquiry mail sit in EmailOutbox.
+    # Signup/resend/forgot-password also process their own job inline, but retries
+    # and inquiry mail only move if this worker runs. The launch gate required it;
+    # it was never added to the schedule, so jobs sat queued.
+    email_outbox = {
+      expression = "rate(1 minute)"
+      targets = [
+        { environment = "prod", path = "/api/cron/email-outbox" },
+        { environment = "dev", path = "/api/cron/email-outbox" },
+      ]
+    }
   }
 }
 
