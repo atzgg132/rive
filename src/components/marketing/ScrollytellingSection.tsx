@@ -6,7 +6,7 @@ import { homeContent } from "@/content/marketing/home";
 import { DeferredProductScene } from "@/components/marketing/product/DeferredProductScene";
 import { ProblemDisconnection, type ProblemDisconnectionProps } from "@/components/marketing/product/ProblemDisconnection";
 import { cn } from "@/lib/utils";
-import { useMarketingHydrated, useMarketingMediaQuery, useMarketingReducedMotion } from "@/components/marketing/useMarketingReducedMotion";
+import { useMarketingReducedMotion } from "@/components/marketing/useMarketingReducedMotion";
 
 type ProblemBeat = typeof homeContent.tax;
 
@@ -31,8 +31,6 @@ export function ScrollytellingSection({
   const activeRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const reduceMotion = useMarketingReducedMotion();
-  const hydrated = useMarketingHydrated();
-  const desktop = useMarketingMediaQuery("(min-width: 1024px)");
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -112,7 +110,7 @@ export function ScrollytellingSection({
   const railKey = railChapter ? railChapter.id : "problem";
 
   return (
-    <div ref={rootRef} data-testid="scrollytelling-section" className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:gap-12 xl:gap-20">
+    <div ref={rootRef} data-testid="scrollytelling-section" className="scrollytelling-section grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:gap-12 xl:gap-20">
       <div>
         <article
           id="problem"
@@ -144,7 +142,7 @@ export function ScrollytellingSection({
               ))}
             </ol>
             <p className="mt-6 max-w-lg text-lg font-black tracking-[-0.035em] text-foreground sm:text-xl">{problem.close}</p>
-            <div className="mt-9 lg:hidden">
+            <div className="scrollytelling-inline-visual mt-9">
               <ProblemDisconnection {...(problem.visual.props as unknown as ProblemDisconnectionProps)} />
             </div>
           </div>
@@ -162,18 +160,16 @@ export function ScrollytellingSection({
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{index === 0 ? homeContent.scrolly.eyebrow : chapter.eyebrow}</p>
             <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.045em] text-foreground sm:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
             <p className="mt-6 max-w-lg text-base leading-8 text-muted-foreground">{chapter.body}</p>
-            {hydrated && (reduceMotion || !desktop) ? <DeferredProductScene className="mt-9" sceneKey={chapter.id} visual={chapter.visual} /> : null}
+            <DeferredProductScene className="scrollytelling-inline-visual mt-9" sceneKey={chapter.id} visual={chapter.visual} />
           </article>
         ))}
       </div>
 
-      {hydrated && desktop && !reduceMotion ? (
-        <div data-testid="scrollytelling-rail" className="sticky top-0 hidden h-screen min-w-0 place-items-center lg:grid">
-          <div className="w-full">
-            <DeferredProductScene sceneKey={railKey} visual={railVisual} />
-          </div>
+      <div data-testid="scrollytelling-rail" className="scrollytelling-rail sticky top-0 h-screen min-w-0 place-items-center">
+        <div className="w-full">
+          <DeferredProductScene eager sceneKey={railKey} visual={railVisual} />
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
