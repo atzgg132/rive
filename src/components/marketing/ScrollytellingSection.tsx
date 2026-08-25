@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { MarketingChapter } from "@/content/marketing/home";
 import { homeContent } from "@/content/marketing/home";
 import { DeferredProductScene } from "@/components/marketing/product/DeferredProductScene";
+import { MarketingProductScene } from "@/components/marketing/product/SceneRegistry";
 import { ProblemDisconnection, type ProblemDisconnectionProps } from "@/components/marketing/product/ProblemDisconnection";
 import { cn } from "@/lib/utils";
 import { useMarketingReducedMotion } from "@/components/marketing/useMarketingReducedMotion";
@@ -86,7 +87,9 @@ export function ScrollytellingSection({
           start: "top top",
           end: "bottom bottom",
           onUpdate: () => applyActive(activeFromScroll(blocks)),
+          onRefresh: () => applyActive(activeFromScroll(blocks)),
         });
+        applyActive(activeFromScroll(blocks));
       }, root);
 
       const onResize = () => {
@@ -163,11 +166,20 @@ export function ScrollytellingSection({
             <DeferredProductScene className="scrollytelling-inline-visual mt-9" sceneKey={chapter.id} visual={chapter.visual} />
           </article>
         ))}
+        {/* Sticky rail unsticks when this column's bottom hits the fold.
+            Chapters are 70vh, not 100vh (no shutter). Without a tail the last
+            beat never crosses the 18% activation line, so 06 / PROOF copy
+            shows while the rail stays on 05 / MOMENTUM. */}
+        <div
+          aria-hidden="true"
+          data-testid="scrollytelling-tail"
+          className="pointer-events-none hidden h-[60vh] lg:block motion-reduce:hidden"
+        />
       </div>
 
       <div data-testid="scrollytelling-rail" className="scrollytelling-rail sticky top-0 h-screen min-w-0 place-items-center">
-        <div className="w-full">
-          <DeferredProductScene eager sceneKey={railKey} visual={railVisual} />
+        <div className="w-full" key={railKey}>
+          <MarketingProductScene visual={railVisual} />
         </div>
       </div>
     </div>
