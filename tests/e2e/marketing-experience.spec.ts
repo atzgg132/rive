@@ -506,4 +506,29 @@ test.describe("marketing experience", () => {
       startedAt: expect.any(Number),
     });
   });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("scrolly headings are in the HTML and visible without JavaScript", async ({ page }) => {
+      const problemHeading = "There is an unpaid role inside every independent business.";
+      const chapterHeading = "Change one thing. Everything downstream already knows.";
+
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+
+      const problem = page.getByRole("heading", { name: problemHeading });
+      const chapter = page.locator('[data-chapter-index="1"]').getByRole("heading", { name: chapterHeading });
+      await expect(problem).toBeVisible();
+      await expect(chapter).toBeVisible();
+      expect((await problem.innerText()).trim()).toBe(problemHeading);
+      expect((await chapter.innerText()).trim()).toBe(chapterHeading);
+
+      const html = await page.content();
+      expect(html).toContain(problemHeading);
+      expect(html).toContain(chapterHeading);
+
+      await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+      await expect(page.getByText("Know the payout before you send it.")).toHaveCount(0);
+    });
+  });
 });
