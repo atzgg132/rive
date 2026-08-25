@@ -129,21 +129,21 @@ export function ScrollytellingSection({
             data-testid="marketing-problem"
             className="flex min-h-[100svh] flex-col justify-center py-16 pb-20 lg:min-h-screen lg:justify-center lg:py-0 lg:pb-16 lg:pt-24"
           >
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-amber-200/90">{problem.eyebrow}</p>
-            <h2 className="mt-4 max-w-xl text-[1.85rem] font-black leading-[1.08] tracking-[-0.045em] text-white sm:text-4xl">{problem.title}</h2>
-            <p className="mt-4 max-w-lg text-[0.95rem] leading-7 text-slate-400">{problem.body}</p>
-            <ol className="mt-6 max-w-lg divide-y divide-white/[0.07] border-y border-white/[0.07]">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-warning">{problem.eyebrow}</p>
+            <h2 className="mt-4 max-w-xl text-[1.85rem] font-black leading-[1.08] tracking-[-0.045em] text-foreground sm:text-4xl">{problem.title}</h2>
+            <p className="mt-4 max-w-lg text-[0.95rem] leading-7 text-muted-foreground">{problem.body}</p>
+            <ol className="mt-6 max-w-lg divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
               {problem.duties.map((duty) => (
                 <li key={duty.label} className="grid grid-cols-[2rem_1fr] gap-3 py-2.5">
-                  <span className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-slate-500">{duty.label}</span>
+                  <span className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{duty.label}</span>
                   <span>
-                    <span className="block text-sm font-bold tracking-[-0.02em] text-slate-100">{duty.job}</span>
-                    <span className="mt-0.5 block text-[0.78rem] leading-5 text-slate-500">{duty.gap}</span>
+                    <span className="block text-sm font-bold tracking-[-0.02em] text-foreground">{duty.job}</span>
+                    <span className="mt-0.5 block text-[0.78rem] leading-5 text-muted-foreground">{duty.gap}</span>
                   </span>
                 </li>
               ))}
             </ol>
-            <p className="mt-6 max-w-lg text-lg font-black tracking-[-0.035em] text-white sm:text-xl">{problem.close}</p>
+            <p className="mt-6 max-w-lg text-lg font-black tracking-[-0.035em] text-foreground sm:text-xl">{problem.close}</p>
             <div className="mt-9 lg:hidden">
               <ProblemDisconnection {...(problem.visual.props as unknown as ProblemDisconnectionProps)} />
             </div>
@@ -159,9 +159,9 @@ export function ScrollytellingSection({
             data-active={activeIndex === index + 1 ? "true" : "false"}
             className={cn("flex min-h-[70vh] scroll-mt-0 flex-col justify-center py-14 transition-opacity duration-200 lg:min-h-screen", reduceMotion || activeIndex === index + 1 ? "opacity-100" : "lg:opacity-30")}
           >
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-blue-300">{index === 0 ? homeContent.scrolly.eyebrow : chapter.eyebrow}</p>
-            <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.045em] text-white sm:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
-            <p className="mt-6 max-w-lg text-base leading-8 text-slate-400">{chapter.body}</p>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{index === 0 ? homeContent.scrolly.eyebrow : chapter.eyebrow}</p>
+            <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.045em] text-foreground sm:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
+            <p className="mt-6 max-w-lg text-base leading-8 text-muted-foreground">{chapter.body}</p>
             {hydrated && (reduceMotion || !desktop) ? <DeferredProductScene className="mt-9" sceneKey={chapter.id} visual={chapter.visual} /> : null}
           </article>
         ))}

@@ -1,10 +1,50 @@
 import { expect, test, type Page } from "@playwright/test";
 
+type CssColor = { r: number; g: number; b: number; a: number };
+
 function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   return errors;
+}
+
+function parseCssColor(input: string): CssColor {
+  if (!input || input === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
+  const values = (input.match(/[\d.]+/g) || []).map(Number);
+  return {
+    r: values[0] ?? 0,
+    g: values[1] ?? 0,
+    b: values[2] ?? 0,
+    a: values.length >= 4 ? values[3]! : 1,
+  };
+}
+
+function relativeLuminance({ r, g, b }: CssColor) {
+  const toLinear = (channel: number) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  return toLinear(r) * 0.2126 + toLinear(g) * 0.7152 + toLinear(b) * 0.0722;
+}
+
+function contrastRatio(foreground: CssColor, background: CssColor) {
+  const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
+  const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+async function openHomeWithColorTheme(page: Page, theme: "light" | "dark") {
+  await page.emulateMedia({ colorScheme: theme });
+  await page.addInitScript((selectedTheme) => {
+    window.localStorage.setItem("rive-color-theme", selectedTheme);
+  }, theme);
+  await page.goto("/", { waitUntil: "load" });
+  if (theme === "dark") {
+    await expect(page.locator("html")).toHaveClass(/dark/);
+  } else {
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
+  }
 }
 
 test.describe("marketing experience", () => {
@@ -289,24 +329,29 @@ test.describe("marketing experience", () => {
     }
   });
 
-  test("dark-surface body copy meets WCAG AA contrast", async ({ page }) => {
-    await page.goto("/", { waitUntil: "load" });
-    const contrast = await page.locator("h1 + p").evaluate((node) => {
-      function rgb(input: string) {
-        return (input.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
-      }
-      function luminance([r, g, b]: number[]) {
-        const values = [r, g, b].map((channel) => {
-          const value = channel / 255;
-          return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
-        });
-        return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
-      }
-      const foreground = luminance(rgb(getComputedStyle(node).color));
-      const background = luminance([5, 7, 12]);
-      return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
-    });
-    expect(contrast).toBeGreaterThanOrEqual(4.5);
+  test("marketing body copy meets WCAG AA contrast", async ({ page }) => {
+    for (const theme of ["light", "dark"] as const) {
+      await openHomeWithColorTheme(page, theme);
+      const samples = await page.locator("h1 + p").evaluate((node) => {
+        const style = getComputedStyle(node);
+        const surface = document.querySelector('[data-surface="marketing"]');
+        return {
+          color: style.color,
+          background: style.backgroundColor,
+          surfaceBackground: surface ? getComputedStyle(surface).backgroundColor : "",
+        };
+      });
+      const color = parseCssColor(samples.color);
+      const ownBackground = parseCssColor(samples.background);
+      const background = ownBackground.a === 0
+        ? parseCssColor(samples.surfaceBackground)
+        : ownBackground;
+      const paintedBackground = ownBackground.a === 0 ? samples.surfaceBackground : samples.background;
+      expect(
+        contrastRatio(color, background),
+        `${theme} hero body contrast using color ${samples.color} on ${paintedBackground}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   test("the primary hero action has an accessible name", async ({ page }) => {
@@ -315,33 +360,54 @@ test.describe("marketing experience", () => {
   });
 
   test("the navbar signup action uses the marketing glass surface", async ({ page }) => {
-    for (const width of [390, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto("/", { waitUntil: "load" });
-      const header = page.getByTestId("site-header");
-      if (width < 768) await header.getByRole("button", { name: "Open navigation" }).click();
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.addInitScript((selectedTheme) => {
+        window.localStorage.setItem("rive-color-theme", selectedTheme);
+      }, theme);
 
-      const signup = header.getByRole("link", { name: "Build your workspace", exact: true });
-      await expect(signup).toBeVisible();
-      const surface = await signup.evaluate((node) => {
-        const style = getComputedStyle(node);
-        const animatedBorder = getComputedStyle(node, "::before");
-        return {
-          background: style.backgroundColor,
-          border: style.borderColor,
-          color: style.color,
-          animationDuration: animatedBorder.animationDuration,
-          animationName: animatedBorder.animationName,
-        };
-      });
+      for (const width of [390, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto("/", { waitUntil: "load" });
+        if (theme === "dark") {
+          await expect(page.locator("html")).toHaveClass(/dark/);
+        } else {
+          await expect(page.locator("html")).not.toHaveClass(/dark/);
+        }
 
-      expect(surface).toEqual({
-        background: "rgba(96, 165, 250, 0.09)",
-        border: "rgba(147, 197, 253, 0.25)",
-        color: "rgb(239, 246, 255)",
-        animationDuration: "16s",
-        animationName: "marketingBorderSpin",
-      });
+        const header = page.getByTestId("site-header");
+        if (width < 768) await header.getByRole("button", { name: "Open navigation" }).click();
+
+        const signup = header.getByRole("link", { name: "Build your workspace", exact: true });
+        await expect(signup).toBeVisible();
+        const surface = await signup.evaluate((node) => {
+          const style = getComputedStyle(node);
+          const animatedBorder = getComputedStyle(node, "::before");
+          return {
+            background: style.backgroundColor,
+            color: style.color,
+            animationDuration: animatedBorder.animationDuration,
+            animationName: animatedBorder.animationName,
+          };
+        });
+
+        expect(surface.animationName).toBe("marketingBorderSpin");
+        expect(surface.animationDuration).toBe("16s");
+
+        const background = parseCssColor(surface.background);
+        const color = parseCssColor(surface.color);
+        const glassOrLargeText = background.a < 1 || contrastRatio(color, background) >= 3;
+        expect(
+          glassOrLargeText,
+          `${theme} header CTA should stay translucent or meet 3:1 large-text contrast (background ${surface.background}, color ${surface.color})`,
+        ).toBe(true);
+
+        if (theme === "dark") {
+          expect(relativeLuminance(color), "dark header CTA text should stay light").toBeGreaterThan(0.5);
+        } else {
+          expect(relativeLuminance(color), "light header CTA text should stay dark").toBeLessThan(0.4);
+        }
+      }
     }
 
     await page.emulateMedia({ reducedMotion: "reduce" });

@@ -34,7 +34,7 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["gsap", "gsap/*", "motion", "motion/*"],
+              group: ["gsap", "gsap/*", "motion", "motion/*", "ogl", "ogl/*"],
               message: "Animation libraries are isolated to src/components/marketing so they never enter the product bundle.",
             },
           ],

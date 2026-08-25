@@ -41,10 +41,10 @@ export function ForgotPasswordForm({
 
   return (
     <>
-      <BaseDialog.Title className="pr-10 text-[1.65rem] font-black tracking-[-0.04em] text-white">
+      <BaseDialog.Title className="pr-10 text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
         Reset your password
       </BaseDialog.Title>
-      <BaseDialog.Description className="mt-2 text-sm leading-6 text-slate-400">
+      <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
         Enter the email on your account. We will send a secure, one-time link that expires in 60 minutes.
       </BaseDialog.Description>
       {message ? (

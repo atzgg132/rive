@@ -16,7 +16,7 @@ function formatAmount(value: number, currency: string) {
 }
 
 const selectClass =
-  "marketing-focus h-10 w-[4.75rem] shrink-0 cursor-pointer rounded-xl border border-white/10 bg-[#101722] px-2 text-center text-sm font-bold tracking-wide text-slate-100 transition-colors duration-200 ease-rive-out hover:border-blue-300/30";
+  "marketing-focus h-10 w-[4.75rem] shrink-0 cursor-pointer rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] px-2 text-center text-sm font-bold tracking-wide text-foreground transition-colors duration-200 ease-rive-out hover:border-primary/30";
 
 /**
  * Live payout preview for Remit (in development). Fetches real ECB mid-market
@@ -101,11 +101,11 @@ export function RemitPreview() {
   };
 
   return (
-    <div data-testid="remit-preview" className="min-w-0 rounded-2xl border border-white/[0.08] bg-[#0a0e16] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.35)] sm:p-6">
+    <div data-testid="remit-preview" className="min-w-0 rounded-2xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-5 shadow-card sm:p-6">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[15px] font-bold tracking-[-0.02em] text-white">{fromCode} to {toCode}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="text-[15px] font-bold tracking-[-0.02em] text-foreground">{fromCode} to {toCode}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {ratesState === "error"
               ? "Rates are temporarily unavailable. Try refresh."
               : lastFetched
@@ -118,15 +118,15 @@ export function RemitPreview() {
           onClick={refresh}
           disabled={cooldown > 0 || ratesState === "loading"}
           title={cooldown > 0 ? `Refresh available in ${cooldown}s` : "Refresh rates"}
-          className="marketing-focus inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-xs font-bold text-slate-400 transition-colors duration-200 ease-rive-out hover:bg-white/[0.06] hover:text-slate-200 disabled:opacity-50"
+          className="marketing-focus inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-xs font-bold text-muted-foreground transition-colors duration-200 ease-rive-out hover:bg-[var(--surface-glass)] hover:text-foreground disabled:opacity-50"
         >
           <RefreshCw className={cn("h-3.5 w-3.5", ratesState === "loading" && "motion-safe:animate-spin")} aria-hidden="true" />
           {cooldown > 0 ? `${cooldown}s` : "Refresh"}
         </button>
       </div>
 
-      <div className="rounded-2xl bg-white/[0.04] px-4 py-4">
-        <label htmlFor="remit-send-amount" className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
+      <div className="rounded-2xl bg-[var(--surface-glass)] px-4 py-4">
+        <label htmlFor="remit-send-amount" className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           You send
         </label>
         <div className="mt-2 flex min-w-0 items-center gap-3">
@@ -139,23 +139,23 @@ export function RemitPreview() {
             value={amount}
             onChange={(event) => setAmount(Math.max(0, Number(event.target.value) || 0))}
             aria-label="Amount to send"
-            className="marketing-focus w-0 flex-1 border-none bg-transparent p-0 text-left text-[1.75rem] font-black leading-none tabular-nums tracking-[-0.03em] text-white outline-none [appearance:textfield] placeholder:text-slate-600 sm:text-[2.1rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="marketing-focus w-0 flex-1 border-none bg-transparent p-0 text-left text-[1.75rem] font-black leading-none tabular-nums tracking-[-0.03em] text-foreground outline-none [appearance:textfield] placeholder:text-muted-foreground sm:text-[2.1rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <select value={fromCode} onChange={(event) => setFromCode(event.target.value)} aria-label="Send currency" className={selectClass}>
-            {CURRENCIES.map((code) => <option key={code} value={code} className="bg-[#101722] text-slate-100">{code}</option>)}
+            {CURRENCIES.map((code) => <option key={code} value={code} className="bg-[var(--surface-raised)] text-foreground">{code}</option>)}
           </select>
         </div>
       </div>
 
       <div className="relative z-10 flex items-center gap-3 px-1 py-3">
-        <p className="min-w-0 flex-1 text-xs text-slate-500">
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground">
           0.5% illustrative fee: {formatAmount(fee, fromCode)} {fromCode}
         </p>
         <button
           type="button"
           onClick={swapCurrencies}
           aria-label={`Swap ${fromCode} and ${toCode}`}
-          className="marketing-focus grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#101722] text-slate-300 transition-[transform,border-color,background-color] duration-200 ease-rive-out hover:border-blue-300/30 hover:bg-[#101a2c] hover:text-blue-200 active:scale-[0.97]"
+          className="marketing-focus grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] text-muted-foreground transition-[transform,border-color,background-color] duration-200 ease-rive-out hover:border-primary/30 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
         >
           <ArrowDownUp
             className="h-4 w-4 motion-reduce:transition-none"
@@ -182,14 +182,14 @@ export function RemitPreview() {
             aria-label="Receive currency"
             className="marketing-focus h-10 w-[4.75rem] shrink-0 cursor-pointer rounded-xl border border-white/25 bg-white/10 px-2 text-center text-sm font-bold tracking-wide text-white transition-colors duration-200 ease-rive-out hover:border-white/40"
           >
-            {CURRENCIES.map((code) => <option key={code} value={code} className="bg-[#101722] text-slate-100">{code}</option>)}
+            {CURRENCIES.map((code) => <option key={code} value={code} className="bg-[var(--surface-raised)] text-foreground">{code}</option>)}
           </select>
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <p className="text-xs text-slate-500">{rate === null ? "Rate unavailable" : `1 ${fromCode} = ${formatAmount(rate, toCode)} ${toCode}`}</p>
-        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-slate-600">Preview only. Not a transfer.</p>
+        <p className="text-xs text-muted-foreground">{rate === null ? "Rate unavailable" : `1 ${fromCode} = ${formatAmount(rate, toCode)} ${toCode}`}</p>
+        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Preview only. Not a transfer.</p>
       </div>
     </div>
   );

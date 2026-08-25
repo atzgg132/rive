@@ -88,8 +88,8 @@ export function HeroPipeline() {
                 <span
                   className={`relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-lg ring-1 transition duration-300 ease-rive-out sm:h-8 sm:w-8 ${
                     selected
-                      ? "bg-blue-500/20 text-blue-200 ring-blue-300/40 shadow-[0_0_18px_rgba(59,130,246,0.25)]"
-                      : "bg-[#0a0e16] text-slate-400 ring-white/[0.09] group-hover:text-blue-300"
+                      ? "bg-primary/20 text-primary ring-primary/40 shadow-[0_0_18px_rgba(59,130,246,0.25)]"
+                      : "bg-[var(--surface-raised)] text-muted-foreground ring-[var(--stroke-hairline)] group-hover:text-primary"
                   }`}
                 >
                   <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
@@ -97,14 +97,14 @@ export function HeroPipeline() {
                 <span className="min-w-0 w-full">
                   <span
                     className={`block truncate font-mono text-[0.56rem] font-bold uppercase tracking-[0.1em] sm:tracking-[0.16em] ${
-                      selected ? "text-blue-300" : "text-slate-500"
+                      selected ? "text-primary" : "text-muted-foreground"
                     }`}
                   >
                     {stage.label}
                   </span>
                   <span
                     className={`mt-0.5 hidden truncate text-[0.78rem] font-bold tracking-[-0.01em] sm:block ${
-                      selected ? "text-white" : "text-slate-400"
+                      selected ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
                     {stage.short}
@@ -117,10 +117,10 @@ export function HeroPipeline() {
       </div>
 
       <div key={active.id} className="mt-3 text-center motion-safe:animate-hero-detail-in sm:mt-4">
-        <p className="mx-auto max-w-2xl text-balance text-[0.78rem] font-semibold leading-5 text-slate-400 sm:text-[0.8rem] sm:leading-6 sm:text-slate-300">
+        <p className="mx-auto max-w-2xl text-balance text-[0.78rem] font-semibold leading-5 text-muted-foreground sm:text-[0.8rem] sm:leading-6">
           {active.detail}
         </p>
-        <p className="mt-1.5 flex items-center justify-center gap-1.5 font-mono text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-cyan-300/90">
+        <p className="mt-1.5 flex items-center justify-center gap-1.5 font-mono text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-primary">
           <ArrowRight className="h-3 w-3" aria-hidden="true" />
           {active.carries}
         </p>

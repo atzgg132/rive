@@ -150,10 +150,58 @@ section[id] {
   --color-blue-border: #263449;
 }
 
-/* The public site has its own cinematic surface. It reuses the semantic token
-   names inside this subtree so the product's light and dark scopes remain
-   unchanged and dashboard screenshot baselines stay isolated. */
+/* The public site has its own cinematic surface. Light tokens apply when html
+   has no .dark; the previous void palette lives under .dark. Semantic token
+   names stay local to this subtree so dashboard screenshot baselines stay
+   isolated. */
 [data-surface="marketing"] {
+  color-scheme: light;
+
+  --background: 243 245 250;
+  --foreground: 12 22 40;
+  --card: 255 255 255;
+  --card-foreground: 12 22 40;
+  --popover: 255 255 255;
+  --popover-foreground: 12 22 40;
+  --primary: 29 78 216;
+  --primary-foreground: 255 255 255;
+  --secondary: 226 234 247;
+  --secondary-foreground: 30 64 175;
+  --muted: 232 238 247;
+  --muted-foreground: 71 88 112;
+  --accent: 226 234 247;
+  --accent-foreground: 29 78 216;
+  --border: 210 221 236;
+  --input: 180 196 216;
+  --ring: 37 99 235;
+  --brand-wordmark: 12 30 54;
+  --brand-accent: 37 99 235;
+  --shadow-card: 0 1px 0 rgb(12 30 54 / 0.04), 0 18px 50px rgb(12 30 54 / 0.08);
+  --shadow-overlay: 0 28px 80px rgb(12 30 54 / 0.16);
+
+  --surface-void: #f3f5fa;
+  --surface-raised: #ffffff;
+  --surface-glass: rgb(12 22 40 / 0.045);
+  --stroke-hairline: rgb(15 23 42 / 0.09);
+  --stroke-lit: rgb(37 99 235 / 0.32);
+  --stroke-highlight: rgb(255 255 255 / 0.7);
+  --brand-600: #2563eb;
+  --brand-500: #3b82f6;
+  --brand-400: #2563eb;
+  --brand-cyan: #0e7490;
+  --glow-primary: radial-gradient(circle at center, rgb(37 99 235 / 0.14) 0%, rgb(59 130 246 / 0.07) 38%, rgb(14 116 144 / 0.03) 58%, transparent 74%);
+  --noise-opacity: 0.035;
+  --grid-line: rgb(15 23 42 / 0.055);
+  --hero-word-from: #1d4ed8;
+  --hero-word-via: #2563eb;
+  --hero-word-to: #0e7490;
+  --bg-primary: #f3f5fa;
+  --bg-secondary: #ffffff;
+  --text-primary: #0c1e36;
+  --text-secondary: #475870;
+}
+
+.dark [data-surface="marketing"] {
   color-scheme: dark;
 
   --background: 5 7 12;
@@ -183,13 +231,24 @@ section[id] {
   --surface-glass: rgb(255 255 255 / 0.03);
   --stroke-hairline: rgb(255 255 255 / 0.07);
   --stroke-lit: rgb(96 165 250 / 0.35);
+  --stroke-highlight: rgb(255 255 255 / 0.06);
   --brand-600: #2563eb;
   --brand-500: #3b82f6;
   --brand-400: #60a5fa;
   --brand-cyan: #22d3ee;
   --glow-primary: radial-gradient(circle at center, rgb(96 165 250 / 0.22) 0%, rgb(59 130 246 / 0.11) 38%, rgb(34 211 238 / 0.035) 58%, transparent 74%);
   --noise-opacity: 0.05;
+  --grid-line: rgb(255 255 255 / 0.045);
+  --hero-word-from: #60a5fa;
+  --hero-word-via: #7dd3fc;
+  --hero-word-to: #22d3ee;
+  --bg-primary: #05070c;
+  --bg-secondary: #0a0e16;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+}
 
+.marketing-root {
   min-height: 100vh;
   background: var(--surface-void);
   color: rgb(var(--foreground));
@@ -469,7 +528,7 @@ p {
 }
 
 .hero-word-gradient {
-  background: linear-gradient(120deg, #60a5fa 0%, #7dd3fc 55%, #22d3ee 100%);
+  background: linear-gradient(120deg, var(--hero-word-from) 0%, var(--hero-word-via) 55%, var(--hero-word-to) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -553,9 +612,9 @@ p {
 
 .connected-signal-vignette {
   background:
-    radial-gradient(ellipse 52% 58% at 20% 46%, rgb(5 7 12 / 0.78), transparent 72%),
-    radial-gradient(ellipse 36% 42% at 88% 32%, rgb(5 7 12 / 0.22), transparent 74%),
-    linear-gradient(180deg, rgb(5 7 12 / 0.12), transparent 52%, rgb(5 7 12 / 0.78));
+    radial-gradient(ellipse 52% 58% at 20% 46%, color-mix(in srgb, var(--surface-void) 78%, transparent), transparent 72%),
+    radial-gradient(ellipse 36% 42% at 88% 32%, color-mix(in srgb, var(--surface-void) 22%, transparent), transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-void) 12%, transparent), transparent 52%, color-mix(in srgb, var(--surface-void) 78%, transparent));
 }
 
 @media (max-width: 767px) {
@@ -622,7 +681,7 @@ p {
 }
 
 .marketing-grid-mask {
-  background-image: linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 64px 64px;
   -webkit-mask-image: radial-gradient(ellipse 72% 64% at 50% 26%, #000 12%, transparent 78%);
   mask-image: radial-gradient(ellipse 72% 64% at 50% 26%, #000 12%, transparent 78%);
@@ -635,7 +694,22 @@ p {
 
 .marketing-noise {
   opacity: var(--noise-opacity);
+  mix-blend-mode: multiply;
+}
+
+.dark [data-surface="marketing"] .marketing-noise {
   mix-blend-mode: soft-light;
+}
+
+.marketing-alt-band {
+  background: rgb(var(--foreground) / 0.012);
+}
+
+.marketing-gradient-text {
+  background: linear-gradient(120deg, rgb(var(--foreground)) 0%, rgb(var(--primary)) 50%, var(--brand-cyan) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .marketing-focus:focus-visible {
@@ -711,12 +785,14 @@ p {
   opacity: 1;
 }
 
-[data-surface="auth-overlay"] label {
-  color: rgb(203 213 225);
+[data-surface="auth-overlay"] label,
+.auth-overlay-panel label {
+  color: rgb(var(--foreground));
 }
 
-[data-surface="auth-overlay"] [id$="-description"] {
-  color: rgb(148 163 184);
+[data-surface="auth-overlay"] [id$="-description"],
+.auth-overlay-panel [id$="-description"] {
+  color: rgb(var(--muted-foreground));
 }
 
 ::view-transition-old(root) {

@@ -1,4 +1,4 @@
-import { ProseShell } from "@/components/marketing/shells";
+import { LegalToc, ProseShell } from "@/components/marketing/shells";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Rive terms of service", "The terms that apply when you use Rive.", "/terms");
@@ -12,7 +12,7 @@ const toc = [
   { id: "access",      label: "3. Open beta access" },
   { id: "conduct",     label: "4. User conduct" },
   { id: "ip",          label: "5. Intellectual property" },
-  { id: "disclaimer",  label: "6. Disclaimers & liability" },
+  { id: "disclaimer",  label: "6. Disclaimers and limitation of liability" },
   { id: "termination", label: "7. Termination" },
   { id: "law",         label: "8. Governing law" },
   { id: "changes",     label: "9. Changes to terms" },
@@ -21,9 +21,9 @@ const toc = [
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <div id={id} className="scroll-mt-24 mb-10">
-      <h2 className="mb-3 border-b border-white/[0.08] pb-2 text-xl font-bold text-white" style={fontD}>{title}</h2>
-      <div className="space-y-3 text-sm leading-relaxed text-slate-300" style={font}>{children}</div>
+    <div id={id} className="mb-10 scroll-mt-28">
+      <h2 className="mb-3 border-b border-[var(--stroke-hairline)] pb-2 text-xl font-bold text-foreground" style={fontD}>{title}</h2>
+      <div className="space-y-3 text-sm leading-relaxed text-muted-foreground" style={font}>{children}</div>
     </div>
   );
 }
@@ -32,22 +32,8 @@ export default function TermsPage() {
   return (
     <ProseShell eyebrow="LEGAL" title="Terms of Service" updated="Last updated · July 13, 2026">
         <div className="flex flex-col gap-8 md:flex-row md:gap-12">
-          {/* Sticky TOC */}
-          <aside className="hidden md:block w-56 shrink-0">
-            <div className="sticky top-24 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
-              <p className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400" style={font}>On this page</p>
-              <nav className="flex flex-col gap-2">
-                {toc.map(item => (
-                  <a key={item.id} href={`#${item.id}`}
-                    className="py-0.5 text-sm font-medium text-slate-400 transition-colors hover:text-blue-300"
-                    style={font}>{item.label}</a>
-                ))}
-              </nav>
-            </div>
-          </aside>
-
-          {/* Content */}
-          <div className="min-w-0 max-w-2xl flex-1">
+          <LegalToc items={toc} />
+          <div className="min-w-0 max-w-2xl flex-1 overflow-x-clip">
             <div>
 
               <Section id="acceptance" title="1. Acceptance of terms">
@@ -100,8 +86,8 @@ export default function TermsPage() {
 
               <Section id="contact" title="10. Contact">
                 <p>For questions about these Terms:</p>
-                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 mt-2 transition-colors">
-                  <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a></p>
+                <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-foreground">
+                  <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a></p>
                   <p className="mt-1"><strong>Response time:</strong> Within 72 hours</p>
                 </div>
               </Section>

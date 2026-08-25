@@ -79,11 +79,11 @@ export function RegisterForm({
   if (pendingEmail) {
     return (
       <>
-        <BaseDialog.Title className="pr-10 text-[1.65rem] font-black tracking-[-0.04em] text-white">
+        <BaseDialog.Title className="pr-10 text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
           Check your email
         </BaseDialog.Title>
-        <BaseDialog.Description className="mt-2 text-sm leading-6 text-slate-400">
-          We sent a verification link to <span className="font-medium text-slate-200">{pendingEmail}</span>. Verify it to open your workspace.
+        <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
+          We sent a verification link to <span className="font-medium text-foreground">{pendingEmail}</span>. Verify it to open your workspace.
         </BaseDialog.Description>
         {notice ? <Alert variant="success" className="mb-5 mt-6 text-sm">{notice}</Alert> : null}
         {error ? <Alert variant="destructive" className="mb-5 mt-6 text-sm">{error}</Alert> : null}
@@ -114,10 +114,10 @@ export function RegisterForm({
 
   return (
     <>
-      <BaseDialog.Title className="text-[1.65rem] font-black tracking-[-0.04em] text-white">
+      <BaseDialog.Title className="text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
         Create your Rive workspace
       </BaseDialog.Title>
-      <BaseDialog.Description className="mt-2 text-sm leading-6 text-slate-400">
+      <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
         Free access during open beta. Start with the work that feels messiest today.
       </BaseDialog.Description>
       <form method="post" onSubmit={handleRegister} className="mt-8 flex flex-col gap-5" data-testid="register-form" data-hydrated={hydrated ? "true" : "false"} data-invite={inviteToken || undefined}>
@@ -165,14 +165,14 @@ export function RegisterForm({
             autoComplete="new-password"
             minLength={8}
             className={authFieldClassName}
-            toggleClassName="text-slate-400 hover:text-white focus-visible:ring-blue-400/40"
+            toggleClassName="text-muted-foreground hover:text-foreground focus-visible:ring-primary/40"
           />
         </FormField>
-        <p className="text-xs leading-5 text-slate-400">
+        <p className="text-xs leading-5 text-muted-foreground">
           By creating an account you agree to the{" "}
-          <Link href="/terms" className="font-medium text-slate-200 hover:text-white hover:underline">Terms</Link>
+          <Link href="/terms" className="font-medium text-foreground hover:text-primary hover:underline">Terms</Link>
           {" "}and{" "}
-          <Link href="/privacy" className="font-medium text-slate-200 hover:text-white hover:underline">Privacy Policy</Link>.
+          <Link href="/privacy" className="font-medium text-foreground hover:text-primary hover:underline">Privacy Policy</Link>.
         </p>
         <button type="submit" className={authSubmitClassName} disabled={loading}>
           {loading ? (
@@ -185,7 +185,7 @@ export function RegisterForm({
           )}
         </button>
       </form>
-      <p className="mt-8 text-sm text-slate-400">
+      <p className="mt-8 text-sm text-muted-foreground">
         Already have an account?{" "}
         <button type="button" className={authQuietButtonClassName} onClick={() => onLogin(email)}>
           Log in

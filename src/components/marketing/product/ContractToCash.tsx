@@ -36,15 +36,15 @@ export function ContractToCash({ kicker, summary, title, note, footer, stages }:
     <div
       ref={rootRef}
       data-testid="contract-to-cash"
-      className="overflow-hidden rounded-[1.45rem] border border-white/10 bg-[#0a0e16] shadow-[0_35px_100px_rgba(0,0,0,0.42)]"
+      className="overflow-hidden rounded-[1.45rem] border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] shadow-overlay"
     >
-      <div className="flex items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-3.5">
-        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-blue-300">{kicker}</p>
-        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-slate-500">{summary}</p>
+      <div className="flex items-center justify-between gap-4 border-b border-[var(--stroke-hairline)] px-5 py-3.5">
+        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-primary">{kicker}</p>
+        <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{summary}</p>
       </div>
       <div className="px-5 py-5 sm:px-6">
-        <p className="text-xl font-black tracking-[-0.035em] text-white">{title}</p>
-        <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">{note}</p>
+        <p className="text-xl font-black tracking-[-0.035em] text-foreground">{title}</p>
+        <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{note}</p>
         <ol className="mt-6 grid gap-0">
           {stages.map((stage, index) => {
             const Icon = stageIcons[index % stageIcons.length];
@@ -52,22 +52,22 @@ export function ContractToCash({ kicker, summary, title, note, footer, stages }:
               <li key={stage.label}>
                 <div
                   className={cn(
-                    "rounded-xl border border-white/[0.07] bg-[#0d1220] p-4 transition-[opacity,transform] duration-500 ease-rive-out",
+                    "rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-4 transition-[opacity,transform] duration-500 ease-rive-out",
                     hidden ? "translate-y-3 opacity-0" : "translate-y-0 opacity-100",
                   )}
                   style={{ transitionDelay: hidden ? "0s" : `${0.1 + index * 0.16}s` } as CSSProperties}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                     <span className="inline-flex items-center gap-2.5">
-                      <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-400/10 ring-1 ring-blue-300/25">
-                        <Icon className="h-3.5 w-3.5 text-blue-300" aria-hidden="true" />
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/10 ring-1 ring-primary/25">
+                        <Icon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                       </span>
-                      <span className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-slate-500">{stage.label}</span>
+                      <span className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{stage.label}</span>
                     </span>
-                    <span className="font-mono text-[0.62rem] leading-5 text-emerald-300/90">{stage.status}</span>
+                    <span className="font-mono text-[0.62rem] leading-5 text-success">{stage.status}</span>
                   </div>
-                  <p className="mt-2.5 text-sm font-bold tracking-[-0.02em] text-slate-100">{stage.name}</p>
-                  <p className="mt-1 text-[0.78rem] leading-5 text-slate-500">{stage.detail}</p>
+                  <p className="mt-2.5 text-sm font-bold tracking-[-0.02em] text-foreground">{stage.name}</p>
+                  <p className="mt-1 text-[0.78rem] leading-5 text-muted-foreground">{stage.detail}</p>
                 </div>
                 {stage.carries ? (
                   <div
@@ -77,15 +77,15 @@ export function ContractToCash({ kicker, summary, title, note, footer, stages }:
                     )}
                     style={{ transitionDelay: hidden ? "0s" : `${0.22 + index * 0.16}s` } as CSSProperties}
                   >
-                    <ArrowDown className="h-3 w-3 shrink-0 text-blue-300/70" aria-hidden="true" />
-                    <p className="font-mono text-[0.56rem] font-semibold uppercase tracking-[0.13em] text-slate-500">{stage.carries}</p>
+                    <ArrowDown className="h-3 w-3 shrink-0 text-primary/70" aria-hidden="true" />
+                    <p className="font-mono text-[0.56rem] font-semibold uppercase tracking-[0.13em] text-muted-foreground">{stage.carries}</p>
                   </div>
                 ) : null}
               </li>
             );
           })}
         </ol>
-        <p className="mt-5 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-slate-500">{footer}</p>
+        <p className="mt-5 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-muted-foreground">{footer}</p>
       </div>
     </div>
   );

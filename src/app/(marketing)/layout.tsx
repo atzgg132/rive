@@ -6,7 +6,13 @@ import { GridField, NoiseOverlay } from "@/components/marketing/primitives";
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <div data-surface="marketing" className="relative overflow-x-clip bg-[#05070c] text-slate-100">
+    <div data-surface="marketing" className="marketing-root relative bg-[var(--surface-void)] text-foreground">
+      <a
+        href="#main-content"
+        className="marketing-focus absolute left-4 top-4 z-[70] inline-flex -translate-y-[200%] rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground focus:translate-y-0 focus-visible:translate-y-0"
+      >
+        Skip to content
+      </a>
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
         <GridField />
         <AuroraGlow className="-left-48 -top-40 h-[42rem] w-[42rem]" strength={0.035} />
@@ -14,7 +20,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
         <NoiseOverlay />
       </div>
       <SiteHeader />
-      <main id="main-content" className="relative min-h-screen">{children}</main>
+      <main id="main-content" className="relative min-h-screen min-w-0">{children}</main>
       <SiteFooter />
     </div>
   );

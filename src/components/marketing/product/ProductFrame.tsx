@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function ProductFrame({ title, eyebrow, children, className, toolbar }: { title: string; eyebrow: string; children: ReactNode; className?: string; toolbar?: ReactNode }) {
   return (
-    <div data-product-frame className={cn("overflow-hidden rounded-[1.45rem] border border-white/10 bg-[#f5f8fc] text-[#0c1e36] shadow-[0_35px_100px_rgba(0,0,0,0.48)]", className)}>
+    <div data-product-frame className={cn("overflow-hidden rounded-[1.45rem] border border-[var(--stroke-hairline)] bg-[#f5f8fc] text-[#0c1e36] shadow-[0_24px_60px_rgb(12_30_54_/_0.12)] dark:shadow-[0_35px_100px_rgba(0,0,0,0.48)]", className)}>
       <div className="flex h-11 items-center gap-2 border-b border-slate-200/80 bg-white px-3">
         <span className="h-2.5 w-2.5 rounded-full bg-rose-300" /><span className="h-2.5 w-2.5 rounded-full bg-amber-300" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
         <span className="ml-2 font-mono text-[0.55rem] font-bold uppercase tracking-[0.14em] text-slate-600">rive.work</span>

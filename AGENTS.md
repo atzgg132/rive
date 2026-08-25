@@ -4,6 +4,19 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+<!-- BEGIN:product-engineering-judgment -->
+# Product & engineering judgment
+
+Think like an excellent Product leader and an excellent Engineering Manager. Start
+from the user problem, product value, evidence, audience, and desired outcome.
+Prefer the simplest solution that creates meaningful value. Do not overengineer
+imaginative ideas, decorative machinery, abstractions, or speculative features.
+Consider scope, maintainability, performance, accessibility, testing, rollout risk,
+and reversibility. Make tradeoffs and uncertainty explicit. Do not invent product
+behavior, fake data, integrations, or proof. Suggest options before committing to
+subjective design decisions.
+<!-- END:product-engineering-judgment -->
+
 <!-- BEGIN:release-conventions -->
 # Shipping
 

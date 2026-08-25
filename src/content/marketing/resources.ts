@@ -29,7 +29,8 @@ export const docsContent = {
   snippet: {
     label: "Create an account",
     language: "HTTP",
-    code: `POST /api/auth/register
+    code: `// Session/account route — not a public API
+POST /api/auth/register
 Content-Type: application/json
 
 {
@@ -48,8 +49,8 @@ Content-Type: application/json
     { id: "getting-started", title: "Getting started", body: "Create a free account, verify your email, then open the workspace overview. Every client, project, Agreement, invoice, expense, and portfolio record is scoped to your account." },
     { id: "core-concepts", title: "Core concepts", body: "Clients own the relationship. Projects track delivery. Agreements capture scope, review, and recorded acceptance. Invoices track money owed. Expenses track costs. Calendar and dashboard views reuse those same records." },
     { id: "workflow", title: "A connected workflow", body: "Start with a client, create a project, add milestones, optionally send an Agreement for review, issue invoices, and record expenses. Paid invoices and expenses roll into net earnings. Completed work can become public portfolio proof." },
-    { id: "imports", title: "Imports and calendars", body: "Bring clients, projects, invoices, and expenses in from CSV or XLSX. The Migration Engine previews matches and can roll a commit back. Subscribe to a private Apple Calendar feed of Rive deadlines. Zoho Books import is available when connected." },
-    { id: "api", title: "Application API", body: "There is no public API or webhook product in open beta. Routes under /api power the workspace itself and use the Rive session cookie. Public invoice links, public portfolio pages, and the rates preview are the deliberate unauthenticated surfaces." },
+    { id: "imports", title: "Imports and calendars", body: "Bring clients, projects, invoices, and expenses in from CSV or XLSX. The Migration Engine profiles files, deduplicates matches, and lets you review relationships before an idempotent commit. Preview before commit; imported records are retained. Subscribe to a private Apple Calendar feed of Rive deadlines. Zoho Books import is available when connected." },
+    { id: "api", title: "Application API", body: "There is no public API or webhook product in open beta. Routes under /api power the workspace itself and use the Rive session cookie. The honest map of those routes is /api-reference. Public invoice links, public portfolio pages, and the rates preview are the deliberate unauthenticated surfaces." },
   ],
   cta: { label: "Create your workspace", href: "/register" },
 } as const;
@@ -75,7 +76,7 @@ export const apiReferenceContent = {
 export const guidesContent = {
   eyebrow: "LEARN BY DOING",
   title: "Learn Rive through the outcome you need next.",
-  intro: "Each guide begins with real work and ends with a verifiable result. No tour of every button. No invented sample business.",
+  intro: "Each guide begins with real work and ends with a verifiable result. The connected-record map lives at /docs. No tour of every button. No invented sample business.",
   agreement: {
     id: "agreements",
     label: "Reviewing and recording an Agreement",
@@ -86,6 +87,6 @@ export const guidesContent = {
     flow: ["Client", "Agreement", "Invoice"],
   },
   accountTitle: "Already have an account?",
-  accountBody: "Open Help & Guides inside the workspace. Progress follows the records you actually create.",
+  accountBody: "The public workspace map is /docs. Inside the product, open Help & Guides. Progress follows the records you actually create.",
   accountCta: { label: "Open the workspace", href: "/login" },
 } as const;

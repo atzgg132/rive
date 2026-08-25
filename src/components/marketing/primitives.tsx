@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 
 export function GlowingBadge({ children, pulse = false, className }: { children: ReactNode; pulse?: boolean; className?: string }) {
   return (
-    <span className={cn("relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-blue-400/25 bg-blue-400/[0.06] px-3 py-1.5 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-blue-200", className)}>
+    <span className={cn("relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary", className)}>
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-cyan-300/[0.08] to-transparent" />
-      {pulse ? <span className="relative h-1.5 w-1.5 rounded-full bg-blue-300 shadow-[0_0_12px_rgba(96,165,250,0.9)] motion-safe:animate-pulse" /> : null}
+      {pulse ? <span className="relative h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(96,165,250,0.9)] motion-safe:animate-pulse" /> : null}
       <span className="relative">{children}</span>
     </span>
   );
@@ -29,18 +29,18 @@ export function GridField({ className }: { className?: string }) {
 }
 
 export function GradientText({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn("bg-gradient-to-r from-white via-blue-100 to-cyan-300 bg-clip-text text-transparent", className)}>{children}</span>;
+  return <span className={cn("marketing-gradient-text", className)}>{children}</span>;
 }
 
 export function HairlineDivider({ className }: { className?: string }) {
-  return <div className={cn("h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent", className)} aria-hidden="true" />;
+  return <div className={cn("h-px w-full bg-gradient-to-r from-transparent via-[var(--stroke-hairline)] to-transparent", className)} aria-hidden="true" />;
 }
 
 export function GlassPanel({ children, tier = 2, className }: { children: ReactNode; tier?: 1 | 2 | 3; className?: string }) {
   const tiers = {
-    1: "border-white/[0.055] bg-[#080b12] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]",
-    2: "border-white/[0.08] bg-[#090d15] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_24px_70px_rgba(0,0,0,0.24)]",
-    3: "border-blue-300/[0.14] bg-[#0a0e16] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_90px_rgba(0,0,0,0.42),0_0_50px_rgba(59,130,246,0.08)]",
+    1: "border-[var(--stroke-hairline)] bg-[var(--surface-raised)] shadow-[inset_0_1px_0_var(--stroke-highlight)]",
+    2: "border-[var(--stroke-hairline)] bg-[var(--surface-raised)] shadow-[inset_0_1px_0_var(--stroke-highlight)]",
+    3: "border-primary/25 bg-[var(--surface-raised)] shadow-[inset_0_1px_0_var(--stroke-highlight)]",
   };
   return <div className={cn("rounded-[1.6rem] border", tiers[tier], className)}>{children}</div>;
 }
@@ -51,7 +51,7 @@ export function LogoMarquee({ items, label }: { items: readonly string[]; label:
     <div className="marketing-edge-mask overflow-hidden" aria-label={label}>
       <div className="flex w-max motion-safe:animate-marquee motion-reduce:flex-wrap motion-reduce:justify-center">
         {doubled.map((item, index) => (
-          <span key={`${item}-${index}`} aria-hidden={index >= items.length} className="mx-7 whitespace-nowrap font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:mx-10">
+          <span key={`${item}-${index}`} aria-hidden={index >= items.length} className="mx-7 whitespace-nowrap font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:mx-10">
             {item}
           </span>
         ))}
@@ -64,8 +64,8 @@ export function FeatureList({ items, className }: { items: readonly string[]; cl
   return (
     <ul className={cn("grid gap-3", className)}>
       {items.map((item) => (
-        <li key={item} className="flex items-start gap-3 text-sm leading-6 text-slate-300">
-          <span className="mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-blue-400/10 text-blue-300 ring-1 ring-blue-300/25"><Check className="h-2.5 w-2.5" aria-hidden="true" /></span>
+        <li key={item} className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
+          <span className="mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/25"><Check className="h-2.5 w-2.5" aria-hidden="true" /></span>
           <span>{item}</span>
         </li>
       ))}
@@ -82,7 +82,7 @@ export function MarketingButton({ href, children, variant = "primary", className
         "marketing-focus inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-bold transition duration-200 ease-rive-out hover:-translate-y-0.5",
         variant === "primary"
           ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_12px_35px_rgba(37,99,235,0.24)] hover:shadow-[0_16px_44px_rgba(37,99,235,0.34)]"
-          : "border border-white/10 bg-white/[0.04] text-slate-200 hover:border-blue-300/25 hover:bg-white/[0.07]",
+          : "border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] text-foreground hover:border-primary/25 hover:bg-foreground/[0.07]",
         className,
       )}
     >

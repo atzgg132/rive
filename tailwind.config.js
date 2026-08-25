@@ -72,7 +72,7 @@ module.exports = {
       backgroundImage: {
         "glow-radial": "var(--glow-primary)",
         "conic-border": "conic-gradient(from var(--angle), transparent 0deg, rgb(59 130 246 / 0.12) 95deg, rgb(96 165 250 / 0.75) 150deg, rgb(34 211 238 / 0.55) 190deg, transparent 250deg)",
-        "grid-fade": "linear-gradient(rgb(255 255 255 / 0.055) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.055) 1px, transparent 1px)",
+        "grid-fade": "linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px)",
       },
       keyframes: {
         "border-spin": {

@@ -1,4 +1,4 @@
-import { ProseShell } from "@/components/marketing/shells";
+import { LegalToc, ProseShell } from "@/components/marketing/shells";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Rive cookie policy", "How Rive uses cookies and local storage.", "/cookies");
@@ -17,9 +17,9 @@ const toc = [
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <div id={id} className="scroll-mt-24 mb-10">
-      <h2 className="mb-3 border-b border-white/[0.08] pb-2 text-xl font-bold text-white" style={fontD}>{title}</h2>
-      <div className="space-y-3 text-sm leading-relaxed text-slate-300" style={font}>{children}</div>
+    <div id={id} className="mb-10 scroll-mt-28">
+      <h2 className="mb-3 border-b border-[var(--stroke-hairline)] pb-2 text-xl font-bold text-foreground" style={fontD}>{title}</h2>
+      <div className="space-y-3 text-sm leading-relaxed text-muted-foreground" style={font}>{children}</div>
     </div>
   );
 }
@@ -34,22 +34,8 @@ export default function CookiesPage() {
   return (
     <ProseShell eyebrow="LEGAL" title="Cookie Policy" updated="Last updated · July 13, 2026">
         <div className="flex flex-col gap-8 md:flex-row md:gap-12">
-          {/* Sticky TOC */}
-          <aside className="hidden md:block w-56 shrink-0">
-            <div className="sticky top-24 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
-              <p className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400" style={font}>On this page</p>
-              <nav className="flex flex-col gap-2">
-                {toc.map(item => (
-                  <a key={item.id} href={`#${item.id}`}
-                    className="py-0.5 text-sm font-medium text-slate-400 transition-colors hover:text-blue-300"
-                    style={font}>{item.label}</a>
-                ))}
-              </nav>
-            </div>
-          </aside>
-
-          {/* Content */}
-          <div className="min-w-0 max-w-2xl flex-1">
+          <LegalToc items={toc} />
+          <div className="min-w-0 max-w-2xl flex-1 overflow-x-clip">
             <div>
 
               <Section id="what" title="1. What are cookies">
@@ -60,12 +46,12 @@ export default function CookiesPage() {
               <Section id="types" title="2. Cookies we use">
                 <div className="flex flex-col gap-4">
                   {cookieTypes.map(ct => (
-                    <div key={ct.name} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-bold text-foreground dark:text-white text-sm capitalize" style={fontD}>{ct.name}</span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400 font-bold" style={font}>{ct.label}</span>
+                    <div key={ct.name} className="rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] p-4">
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span className="text-sm font-bold capitalize text-foreground" style={fontD}>{ct.name}</span>
+                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary" style={font}>{ct.label}</span>
                       </div>
-                      <p className="text-sm text-slate-400" style={font}>{ct.desc}</p>
+                      <p className="text-sm text-muted-foreground" style={font}>{ct.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -80,7 +66,7 @@ export default function CookiesPage() {
                   <li>Block all cookies from being set</li>
                 </ul>
                 <p>Please note that disabling essential cookies may affect the functionality of the rive. website. Analytics and preference cookies can be blocked without any loss of core functionality.</p>
-                <p>Browser-specific instructions: <a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Chrome</a>, <a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Firefox</a>, <a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Safari</a>.</p>
+                <p>Browser-specific instructions: <a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Chrome</a>, <a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Firefox</a>, <a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Safari</a>.</p>
               </Section>
 
               <Section id="third" title="4. Third-party cookies">
@@ -94,8 +80,8 @@ export default function CookiesPage() {
 
               <Section id="contact" title="6. Contact us">
                 <p>If you have questions about our use of cookies:</p>
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 mt-2">
-                  <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-blue-600 dark:text-blue-400 hover:underline">hello@rive.work</a></p>
+                <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-foreground">
+                  <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a></p>
                   <p className="mt-1"><strong>Response time:</strong> Within 72 hours</p>
                 </div>
               </Section>

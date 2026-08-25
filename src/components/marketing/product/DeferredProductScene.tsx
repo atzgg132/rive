@@ -8,15 +8,15 @@ const MotionProductScene = lazy(() => import("@/components/marketing/product/Mot
 
 function ProductSceneFallback() {
   return (
-    <div aria-hidden="true" className="grid min-h-[31rem] place-items-center overflow-hidden rounded-[1.75rem] border border-white/[0.07] bg-[#0a0e16] p-6">
-      <div className="w-full max-w-md rounded-2xl border border-white/[0.07] bg-[#101722] p-5">
-        <div className="h-2 w-24 rounded-full bg-blue-300/20" />
+    <div aria-hidden="true" className="grid min-h-[31rem] place-items-center overflow-hidden rounded-[1.75rem] border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-6">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-5">
+        <div className="h-2 w-24 rounded-full bg-primary/20" />
         <div className="mt-6 grid grid-cols-3 gap-3">
-          <div className="h-16 rounded-xl bg-white/[0.04]" />
-          <div className="h-16 rounded-xl bg-white/[0.04]" />
-          <div className="h-16 rounded-xl bg-white/[0.04]" />
+          <div className="h-16 rounded-xl bg-[var(--surface-glass)]" />
+          <div className="h-16 rounded-xl bg-[var(--surface-glass)]" />
+          <div className="h-16 rounded-xl bg-[var(--surface-glass)]" />
         </div>
-        <div className="mt-5 h-36 rounded-xl bg-[linear-gradient(135deg,rgba(59,130,246,.09),rgba(255,255,255,.025))]" />
+        <div className="mt-5 h-36 rounded-xl bg-[linear-gradient(135deg,rgb(var(--brand-accent)_/_0.09),var(--surface-glass))]" />
       </div>
     </div>
   );

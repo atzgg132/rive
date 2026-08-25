@@ -58,7 +58,7 @@ export const aboutContent: MarketingPageContent = {
       cards: [
         { title: "Real workflows", body: "Features begin with an actual operating moment: a promise changes, a deadline moves, a payment lands, or a project becomes proof." },
         { title: "Deliberate actions", body: "Sending, accepting, publishing, and importing stay explicit. Connected does not mean automatic without consent." },
-        { title: "Data that can leave", body: "Your records are not our leverage. Portability, clear ownership, and honest limits are part of the product." },
+        { title: "Your data is yours", body: "Your records are not our leverage. Ownership stays with you. Export and portability are next on the roadmap—not a product we can hand you today." },
       ],
     },
     {
@@ -95,18 +95,18 @@ export const careersContent: MarketingPageContent = {
 export const communityContent: MarketingPageContent = {
   eyebrow: "RIVE COMMUNITY",
   title: "A product for independent work should be built in public with independent people.",
-  intro: "The community is where operating reality reaches the roadmap: how you scope, recover a late payment, price cross-border work, migrate years of records, and turn delivery into the next introduction.",
+  intro: "Operating reality reaches the roadmap when someone sends a broken handoff. Email the moment where context failed — a scope change, a late payment, a migration that almost reconstructed — and it reaches the people shipping Rive.",
   sections: [
     {
       title: "Bring the edge case, not the applause.",
       cards: [
-        { title: "Workflow clinics", body: "Walk us through the moment where context breaks. We will map the records, decision, and recovery path with you." },
-        { title: "Open-beta notes", body: "See what shipped, what changed after feedback, and what remains deliberately unfinished." },
-        { title: "Peer operating patterns", body: "Share the concrete systems that make client work calmer—without turning them into universal advice." },
+        { title: "Email a broken handoff", body: "Send what you expected, what the records did, and where it broke. Write hello@rive.work or use the contact form. There is no forum to join.", href: "/contact" },
+        { title: "Open-beta notes", body: "See what shipped, what changed after feedback, and what remains deliberately unfinished.", href: "/changelog" },
+        { title: "A pattern worth sending", body: "If a concrete system is making client work calmer, email it. We will not turn it into universal advice." },
       ],
     },
   ],
-  cta: { headline: "Bring us the handoff that keeps breaking.", label: "Send us your operating problem", href: "/contact", note: "Specific stories shape better software." },
+  cta: { headline: "Bring us the handoff that keeps breaking.", label: "Send us your operating problem", href: "/contact", note: "hello@rive.work — specific stories shape better software." },
 };
 
 export const pressContent: MarketingPageContent = {
@@ -116,7 +116,7 @@ export const pressContent: MarketingPageContent = {
   sections: [
     {
       title: "Company facts",
-      bullets: ["Founded in 2026", "Open beta with open signup", "Built for independent professionals and digital service businesses", "Apple Calendar subscription feed available; Google Calendar pending approval", "No shipped Remit transfer product and no claimed AI co-pilot"],
+      bullets: ["Founded in 2026 by Arnav Bhattacharya, Agnik Chakravorty, and Druhin Basu", "Open beta with open signup", "Built for independent professionals and digital service businesses", "Apple Calendar subscription feed available; Google Calendar pending approval", "No shipped Remit transfer product and no claimed AI co-pilot"],
     },
     {
       title: "Approved boilerplate",
@@ -153,18 +153,19 @@ export const roadmapContent: MarketingPageContent = {
 export const blogContent: MarketingPageContent = {
   eyebrow: "FIELD NOTES",
   title: "The systems behind independent work are part of the work.",
-  intro: "Notes on client trust, operating context, product decisions, and the invisible coordination tax inside a service business.",
+  intro: "Field notes will live here when we publish them. Nothing is queued as a fake article. Until then, the honest places to look are the guides and the product.",
   sections: [
     {
-      title: "From the build",
-      cards: [
-        { title: "The tax nobody put on the invoice", meta: "OPERATIONS · 6 MIN", body: "The real cost of eight disconnected tools is the context you reconstruct between them." },
-        { title: "Why acceptance and automation are different things", meta: "AGREEMENTS · 7 MIN", body: "Connected workflows should remove re-entry without removing deliberate decisions." },
-        { title: "An import is a trust exercise", meta: "MIGRATION · 5 MIN", body: "The honest migration engine knows when to stop guessing and ask." },
+      title: "Forthcoming",
+      body: "These notes will cover client trust, operating context, and product decisions — when the writing exists. There are no posts, no read times, and no /blog archive today.",
+      bullets: [
+        "No published field notes yet.",
+        "Guides cover outcomes you can complete in the product today.",
+        "The connected loop on the home page is the product, not a teaser for unpublished essays.",
       ],
     },
   ],
-  cta: { headline: "The ideas are only useful when the product proves them.", label: "See the product behind the notes", href: "/#product" },
+  cta: { headline: "The ideas are only useful when the product proves them.", label: "Read the guides", href: "/guides", note: "Or see the connected loop on the product page." },
 };
 
 export const changelogContent: MarketingPageContent = {
@@ -178,10 +179,18 @@ export const changelogContent: MarketingPageContent = {
       cards: [
         { title: "Portfolio Studio", meta: "Latest", body: "A work-first editor, public portfolio pages, practice views, analytics, media, and source-aware enquiries." },
         { title: "Agreements", meta: "Latest", body: "Composer, reusable clauses, review links, recorded acceptance, payment triggers, and linked draft invoices." },
-        { title: "Migration Engine", meta: "Latest", body: "Multi-file CSV and XLSX profiling, deduplication, relationship review, idempotent commit, and rollback paths." },
+        { title: "Migration Engine", meta: "Latest", body: "Multi-file CSV and XLSX profiling, deduplication, relationship review, and idempotent commit. Preview before commit; imported records are retained." },
         { title: "Guided activation", meta: "Latest", body: "Goal-aware guidance that points to real actions without masking or blocking the workspace." },
       ],
     },
   ],
   cta: { headline: "Every release should close another dead end.", label: "See what comes next", href: "/roadmap" },
 };
+
+export const pressBrandAssets = [
+  { title: "Wordmark", href: "/brand/rive-wordmark.svg", body: "Default Rive wordmark, SVG." },
+  { title: "Wordmark · light", href: "/brand/rive-wordmark-light.svg", body: "Wordmark for light surfaces, SVG." },
+  { title: "Wordmark · dark", href: "/brand/rive-wordmark-dark.svg", body: "Wordmark for dark surfaces, SVG." },
+  { title: "Logo", href: "/brand-assets/logo.svg", body: "Standalone mark, SVG." },
+  { title: "Logo · dark", href: "/brand-assets/logo-dark.svg", body: "Standalone mark for dark surfaces, SVG." },
+] as const;

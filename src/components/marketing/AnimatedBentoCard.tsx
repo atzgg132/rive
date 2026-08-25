@@ -25,7 +25,7 @@ export function AnimatedBentoCard({ children, className, spotlightLabel = "Inter
     >
       <span
         className="pointer-events-none absolute inset-0 -z-[1] opacity-[var(--spotlight-opacity,0)] transition-opacity duration-300"
-        style={{ background: "radial-gradient(340px circle at var(--spotlight-x,50%) var(--spotlight-y,50%), rgba(96,165,250,.13), transparent 66%)" }}
+        style={{ background: "radial-gradient(340px circle at var(--spotlight-x,50%) var(--spotlight-y,50%), rgb(var(--brand-accent) / 0.12), transparent 66%)" }}
         aria-label={spotlightLabel}
         aria-hidden="true"
       />
