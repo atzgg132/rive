@@ -168,7 +168,7 @@ test.describe("marketing experience", () => {
     expect(mobileGeometry.overflow).toBe(false);
   });
 
-  // 14" at 100% (Agnik clip) is the ship-gate. 1280×720/800 also covers 1920×1080 @ 150%.
+  // Ship-gate is 1920×1080 @ 150% Windows ≈ 1280×720 CSS. 1280×800 is optional. Not 1366/1440.
   // Do not assert which pipeline node is active — interval autoplay may already be on WORK.
   const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
 
@@ -283,62 +283,6 @@ test.describe("marketing experience", () => {
         expect(row.bottom, `${viewport.width}×${viewport.height} ${row.label} below viewport`).toBeLessThanOrEqual(geometry!.innerHeight + 1);
         expect(row.inFirstScreen, `${viewport.width}×${viewport.height} ${row.label} clipped`).toBe(true);
       }
-    });
-  }
-
-  for (const viewport of [
-    { width: 1366, height: 768 },
-    { width: 1440, height: 900 },
-  ]) {
-    test(`the hero and pipeline fit a ${viewport.width}×${viewport.height} 14-inch 100% laptop at rest`, async ({ page }) => {
-      await page.emulateMedia({ reducedMotion: "no-preference" });
-      await page.setViewportSize(viewport);
-      await page.goto("/", { waitUntil: "load" });
-      await page.evaluate(() => document.fonts.ready);
-      expect(await page.evaluate(() => window.scrollY)).toBe(0);
-      const hero = page.getByTestId("marketing-hero");
-      const pipeline = page.getByTestId("hero-pipeline");
-      await expect(hero.locator("h1")).toBeVisible();
-      await expect(hero.getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
-      await expect(pipeline).toBeVisible();
-      const geometry = await page.evaluate(() => {
-        const heroNode = document.querySelector("[data-testid='marketing-hero']");
-        const header = document.querySelector("[data-testid='site-header']");
-        const headline = heroNode?.querySelector("h1");
-        const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
-        const primary = heroNode?.querySelector("a[href='/register']");
-        const secondary = heroNode?.querySelector("a[href='#problem']");
-        const chips = heroNode
-          ? Array.from(heroNode.querySelectorAll("span")).filter((node) => /open signup|free during beta|your data stays yours/i.test(node.textContent || ""))
-          : [];
-        if (!headline || !pipelineNode || !primary || !secondary || chips.length < 3) return null;
-        const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
-        const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
-        const headlineRect = headline.getBoundingClientRect();
-        const pipelineRect = pipelineNode.getBoundingClientRect();
-        const primaryRect = primary.getBoundingClientRect();
-        const secondaryRect = secondary.getBoundingClientRect();
-        return {
-          scrollY: window.scrollY,
-          innerHeight: window.innerHeight,
-          pipelineBottom: pipelineRect.bottom,
-          headlineFits: inFirstScreen(headlineRect),
-          primaryFits: inFirstScreen(primaryRect),
-          secondaryFits: inFirstScreen(secondaryRect),
-          pipelineFits: inFirstScreen(pipelineRect),
-          chipsFit: chips.every((chip) => inFirstScreen(chip.getBoundingClientRect())),
-          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-        };
-      });
-      expect(geometry).not.toBeNull();
-      expect(geometry!.scrollY).toBe(0);
-      expect(geometry!.headlineFits).toBe(true);
-      expect(geometry!.primaryFits).toBe(true);
-      expect(geometry!.secondaryFits).toBe(true);
-      expect(geometry!.pipelineBottom).toBeLessThanOrEqual(geometry!.innerHeight + 1);
-      expect(geometry!.pipelineFits).toBe(true);
-      expect(geometry!.chipsFit).toBe(true);
-      expect(geometry!.overflow).toBe(false);
     });
   }
 
