@@ -149,7 +149,9 @@ test.describe("authenticated workspace", () => {
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await portfolioResponse;
 
-    const choiceSizes = await page.locator('input[type="checkbox"], input[type="radio"]').evaluateAll(
+    const choiceControls = page.locator('input[type="checkbox"], input[type="radio"]');
+    await expect(choiceControls.first()).toBeAttached();
+    const choiceSizes = await choiceControls.evaluateAll(
       (controls) =>
         controls.map((control) => {
           const bounds = control.getBoundingClientRect();
