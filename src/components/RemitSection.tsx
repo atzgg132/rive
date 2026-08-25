@@ -166,6 +166,9 @@ export default function RemitSection() {
           <div className="relative min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_50px_rgb(12_30_54/0.10)] dark:border-white/10 dark:bg-slate-950 dark:shadow-none sm:p-7">
             <div className="mb-6 flex items-start justify-between gap-3">
               <div className="min-w-0">
+                <p className="text-[12px] text-slate-400 dark:text-slate-500" style={{ fontFamily: "var(--font-body)" }}>
+                  Preview only. Not a transfer.
+                </p>
                 <p className="text-[15px] font-bold tracking-tight text-slate-950 dark:text-white" style={{ fontFamily: "var(--font-display)" }}>
                   {fromCode} to {toCode}
                 </p>
@@ -193,7 +196,7 @@ export default function RemitSection() {
 
             <div className="rounded-2xl bg-slate-50 px-4 py-4 dark:bg-white/[0.04]">
               <label htmlFor="remit-send-amount" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400" style={{ fontFamily: "var(--font-body)" }}>
-                You send
+                From
               </label>
               <div className="mt-2 flex min-w-0 items-center gap-3">
                 <Input
@@ -204,14 +207,14 @@ export default function RemitSection() {
                   inputMode="decimal"
                   value={amount}
                   onChange={(event) => setAmount(Math.max(0, Number(event.target.value) || 0))}
-                  aria-label="Amount to send"
+                  aria-label="Amount to convert"
                   className={amountInputClass}
                   style={{ fontFamily: "var(--font-display)" }}
                 />
                 <Select
                   value={fromCode}
                   onChange={(event) => setFromCode(event.target.value)}
-                  aria-label="Send currency"
+                  aria-label="From currency"
                   className={currencySelectClass}
                   style={{ fontFamily: "var(--font-display)" }}
                 >
@@ -246,7 +249,7 @@ export default function RemitSection() {
 
             <div className="rounded-2xl bg-blue-600 px-4 py-4 text-white dark:bg-blue-500">
               <p className="text-[11px] font-semibold text-blue-100" style={{ fontFamily: "var(--font-body)" }}>
-                They receive
+                To
               </p>
               <div className="mt-2 flex min-w-0 items-center gap-3">
                 <span
@@ -258,7 +261,7 @@ export default function RemitSection() {
                 <Select
                   value={toCode}
                   onChange={(event) => setToCode(event.target.value)}
-                  aria-label="Receive currency"
+                  aria-label="To currency"
                   className={currencySelectClass}
                   style={{ fontFamily: "var(--font-display)" }}
                 >
