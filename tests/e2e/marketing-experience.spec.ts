@@ -176,7 +176,7 @@ test.describe("marketing experience", () => {
     { width: 1280, height: 720 },
     { width: 1280, height: 800 },
   ]) {
-    test(`the hero pipeline and headline fit a ${viewport.width}×${viewport.height} laptop viewport at rest`, async ({ page }) => {
+    test(`the hero and pipeline fit a ${viewport.width}×${viewport.height} 150% Windows-scale viewport at rest`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: "no-preference" });
       await page.setViewportSize(viewport);
       await page.goto("/", { waitUntil: "load" });
