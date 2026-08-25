@@ -23,7 +23,7 @@ export function MarketingHome() {
       <SpotlightCursor>
         <section
           data-testid="marketing-hero"
-          className="relative flex min-h-[100svh] flex-col justify-start overflow-x-clip pb-[clamp(0.25rem,0.8svh,0.85rem)] pt-[clamp(4.75rem,7.5svh,5.5rem)]"
+          className="relative flex min-h-[100svh] flex-col justify-start overflow-x-clip pb-[clamp(0.25rem,0.8svh,0.85rem)] pt-[clamp(4.5rem,7.5svh,5.5rem)]"
         >
           <ConnectedSignalField className="opacity-55" />
           <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-col justify-start px-5 text-center sm:px-8">

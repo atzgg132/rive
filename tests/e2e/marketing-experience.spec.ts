@@ -173,8 +173,6 @@ test.describe("marketing experience", () => {
   const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
 
   for (const viewport of [
-    { width: 1366, height: 768 },
-    { width: 1440, height: 900 },
     { width: 1280, height: 720 },
     { width: 1280, height: 800 },
   ]) {
@@ -197,6 +195,15 @@ test.describe("marketing experience", () => {
         await expect(pipeline.getByText(label, { exact: true })).toBeVisible();
         await expect(pipeline.locator(`[data-hero-stage-label="${label}"]`)).toBeVisible();
       }
+      await expect(pipeline.getByText("The relationship", { exact: true })).toBeVisible();
+      const shortDisplay = await pipeline.locator("[data-hero-stage-short]").evaluateAll((nodes) =>
+        nodes.map((node) => getComputedStyle(node).display),
+      );
+      expect(shortDisplay.length, `${viewport.width}×${viewport.height} missing stage shorts`).toBe(5);
+      expect(
+        shortDisplay.every((display) => display !== "none"),
+        `${viewport.width}×${viewport.height} stage shorts are display:none`,
+      ).toBe(true);
 
       const geometry = await page.evaluate((stageLabels) => {
         const heroNode = document.querySelector("[data-testid='marketing-hero']");

@@ -104,7 +104,8 @@ export function HeroPipeline() {
                     {stage.label}
                   </span>
                   <span
-                    className={`mt-0.5 hidden truncate text-[0.78rem] font-bold tracking-[-0.01em] [@media(min-height:52rem)]:sm:block ${
+                    data-hero-stage-short={stage.short}
+                    className={`mt-0.5 hidden truncate text-[0.78rem] font-bold tracking-[-0.01em] sm:block ${
                       selected ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
