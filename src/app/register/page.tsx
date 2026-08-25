@@ -1,12 +1,13 @@
 "use client";
 
 import { Button, Input } from "@/components/ui";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2, User, Mail, Lock, ShieldCheck, CheckCircle2 } from "lucide-react";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import PasswordInput from "@/components/PasswordInput";
+import HoneypotField from "@/components/HoneypotField";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -17,6 +18,8 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [pendingEmail, setPendingEmail] = useState("");
   const [notice, setNotice] = useState("");
+  const startedAtRef = useRef(Date.now());
+  const websiteRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -37,7 +40,14 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, inviteToken }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          inviteToken,
+          website: websiteRef.current?.value ?? "",
+          startedAt: startedAtRef.current,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
@@ -117,6 +127,7 @@ export default function RegisterPage() {
                 <div className="relative"><Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><PasswordInput id="register-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required disabled={loading} className="w-full rounded-xl border border-border bg-white/50 py-3 pl-10 pr-4 text-sm dark:border-slate-700 dark:bg-slate-800/50" /></div>
                 <p className="mt-1 text-[10px] text-muted-foreground">Use at least 8 characters.</p>
               </div>
+              <HoneypotField inputRef={websiteRef} />
               <p className="text-[11px] leading-5 text-muted-foreground">By creating an account, you agree to our <Link href="/terms" className="font-semibold text-primary hover:underline">Terms</Link> and <Link href="/privacy" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</p>
               <Button type="submit" disabled={loading} className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(29,78,216,0.25)] hover:bg-blue-700 disabled:opacity-70">{loading ? <><Loader2 className="h-5 w-5 animate-spin" />Creating workspace...</> : "Create Account"}</Button>
               <div className="mt-2 border-t border-border pt-5 text-center dark:border-slate-800"><p className="text-xs font-medium text-muted-foreground">Already have an account? <Link href="/login" className="font-bold text-primary hover:underline dark:text-blue-400">Log in</Link></p></div>

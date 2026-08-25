@@ -2,7 +2,8 @@
 
 import { Button, Input, Textarea, Select } from "@/components/ui";
 import PageShell from "@/components/PageShell";
-import { useState } from "react";
+import HoneypotField from "@/components/HoneypotField";
+import { useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 const font = { fontFamily: "var(--font-body)" };
@@ -12,6 +13,8 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "General Inquiry", message: "" });
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  const startedAtRef = useRef(Date.now());
+  const websiteRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +24,11 @@ export default function ContactPage() {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          website: websiteRef.current?.value ?? "",
+          startedAt: startedAtRef.current,
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Your message could not be sent.");
@@ -92,6 +99,7 @@ export default function ContactPage() {
                     <Textarea required rows={5} value={form.message} onChange={e => setForm({...form, message: e.target.value})}
                       className="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition-all resize-none placeholder-slate-400" style={font} placeholder="Tell us what's on your mind..." />
                   </div>
+                  <HoneypotField inputRef={websiteRef} />
                   <Button type="submit" disabled={state === "loading"}
                     className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-sm hover:from-blue-700 hover:to-sky-600 transition-all duration-200 shadow-lg shadow-blue-600/15 disabled:opacity-75" style={fontD}>
                     {state === "loading" ? <><Loader2 className="w-4 h-4 animate-spin" />Sending...</> : "Send message →"}

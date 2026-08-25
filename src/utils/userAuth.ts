@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
+import { isEmailVerificationSatisfied } from "@/utils/emailVerification";
 
 // Keep the existing DATABASE_URL fallback so currently issued sessions remain valid,
 // but never allow a predictable development key in production.
@@ -113,7 +114,7 @@ export async function getSessionUser(req: NextRequest): Promise<UserSession | nu
       select: { email: true, plan: true, sessionVersion: true, emailVerifiedAt: true, emailVerificationRequiredAt: true },
     });
     if (!user || user.sessionVersion !== session.sessionVersion) return null;
-    if (user.emailVerificationRequiredAt && !user.emailVerifiedAt) return null;
+    if (!isEmailVerificationSatisfied(user)) return null;
     return { ...session, email: user.email, plan: user.plan };
   } catch {
     return null;
