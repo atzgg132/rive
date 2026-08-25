@@ -104,6 +104,23 @@ test.describe("marketing experience", () => {
     });
   }
 
+  test("desktop scrollytelling rail stays in the HTML and survives two hard reloads at 1920×1080", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1920, height: 1080 });
+
+    for (let pass = 0; pass < 2; pass += 1) {
+      await page.goto("/#product", { waitUntil: "domcontentloaded" });
+      const html = await page.content();
+      expect(html, `reload ${pass + 1} missing rail in HTML`).toContain('data-testid="scrollytelling-rail"');
+      await page.waitForLoadState("load");
+      const rail = page.getByTestId("scrollytelling-rail");
+      await expect(rail, `reload ${pass + 1} rail missing`).toBeVisible();
+      await expect(rail).toHaveCSS("position", "sticky");
+      await expect(rail).toHaveCSS("display", "grid");
+      await expect(page.locator("#product")).not.toHaveClass(/overflow-x-clip/);
+    }
+  });
+
   test("reduced motion keeps every chapter and product visual reachable without the sticky rail", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -111,7 +128,7 @@ test.describe("marketing experience", () => {
 
     const chapters = page.locator("[data-chapter-index]");
     await expect(chapters).toHaveCount(7);
-    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+    await expect(page.getByTestId("scrollytelling-rail")).not.toBeVisible();
     await expect(chapters.nth(0).getByTestId("problem-disconnection")).toHaveCount(1);
     for (let index = 1; index < 7; index += 1) {
       const chapter = chapters.nth(index);
@@ -734,6 +751,7 @@ test.describe("marketing experience", () => {
       const problemHeading = "There is an unpaid role inside every independent business.";
       const chapterHeading = "Change one thing. Everything downstream already knows.";
 
+      await page.setViewportSize({ width: 1920, height: 1080 });
       await page.goto("/", { waitUntil: "domcontentloaded" });
 
       const problem = page.getByRole("heading", { name: problemHeading });
@@ -746,8 +764,9 @@ test.describe("marketing experience", () => {
       const html = await page.content();
       expect(html).toContain(problemHeading);
       expect(html).toContain(chapterHeading);
+      expect(html).toContain('data-testid="scrollytelling-rail"');
 
-      await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+      await expect(page.getByTestId("scrollytelling-rail")).toBeVisible();
       await expect(page.getByText("Know the payout before you send it.")).toHaveCount(0);
     });
   });

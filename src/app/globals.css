@@ -718,42 +718,82 @@ p {
   outline-offset: 4px !important;
 }
 
+/* Desktop scrollytelling rail is in the HTML. CSS shows it at lg and hides it
+   for mobile / reduced motion. JS must not mount or unmount it — that is how
+   the chapter rail vanished across reloads. */
+.scrollytelling-rail {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .scrollytelling-rail {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollytelling-rail {
+    display: none;
+  }
+
+  [data-testid="scrollytelling-section"].scrollytelling-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.scrollytelling-inline-visual {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .scrollytelling-inline-visual {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollytelling-inline-visual {
+    display: block;
+  }
+}
+
 /* 150% Windows-scale laptops (1280×720 / 1280×800): pin the hero to the top and
    tighten spacing so headline, CTAs, and the CLIENT→PROOF rail fit the first
    screen. Labels stay visible. Taller visual-baseline viewports keep the
-   original centered hero. */
+   original centered hero. `section.marketing-hero` beats Tailwind padding /
+   margin utilities that otherwise win at lg and undo this block. */
 @media (max-height: 800px) {
-  .marketing-hero {
+  section.marketing-hero {
     align-items: flex-start;
     padding-top: clamp(4.75rem, 7.5svh, 5.5rem);
     padding-bottom: clamp(0.25rem, 0.8svh, 0.85rem);
   }
 
-  .marketing-hero-inner {
+  section.marketing-hero .marketing-hero-inner {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .marketing-hero h1 {
+  section.marketing-hero h1 {
     margin-top: clamp(0.25rem, 0.7svh, 1rem);
     font-size: clamp(1.8rem, 5svh + 0.25vw, 4.35rem);
   }
 
-  .marketing-hero-body {
+  section.marketing-hero .marketing-hero-body {
     margin-top: clamp(0.25rem, 0.65svh, 0.9rem);
     font-size: clamp(0.8125rem, 1svh + 0.15vw, 1.125rem);
     line-height: 1.375;
   }
 
-  .marketing-hero-ctas {
+  section.marketing-hero .marketing-hero-ctas {
     margin-top: clamp(0.35rem, 0.95svh, 1.15rem);
   }
 
-  .marketing-hero-proof {
+  section.marketing-hero .marketing-hero-proof {
     margin-top: clamp(0.2rem, 0.55svh, 0.7rem);
   }
 
-  .marketing-hero-rail {
+  section.marketing-hero .marketing-hero-rail {
     margin-top: clamp(0.3rem, 1.1svh, 1rem);
   }
 

@@ -22,25 +22,29 @@ function ProductSceneFallback() {
   );
 }
 
-export function DeferredProductScene({ className, sceneKey, visual }: { className?: string; sceneKey?: string; visual: MarketingChapter["visual"] }) {
+export function DeferredProductScene({ className, eager = false, sceneKey, visual }: { className?: string; eager?: boolean; sceneKey?: string; visual: MarketingChapter["visual"] }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [shouldLoad, setShouldLoad] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(eager);
 
   useEffect(() => {
+    if (eager || shouldLoad) return;
     const root = rootRef.current;
     if (!root || !("IntersectionObserver" in window)) {
       const frame = window.requestAnimationFrame(() => setShouldLoad(true));
       return () => window.cancelAnimationFrame(frame);
     }
 
+    const load = () => setShouldLoad(true);
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
-      setShouldLoad(true);
+      load();
       observer.disconnect();
     }, { rootMargin: "600px 0px" });
     observer.observe(root);
+    const rect = root.getBoundingClientRect();
+    if (rect.bottom > -600 && rect.top < window.innerHeight + 600) load();
     return () => observer.disconnect();
-  }, []);
+  }, [eager, shouldLoad]);
 
   return (
     <div ref={rootRef} data-deferred-motion className={cn("min-h-[31rem]", className)}>
