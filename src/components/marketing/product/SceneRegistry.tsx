@@ -1,4 +1,5 @@
 import type { MarketingChapter } from "@/content/marketing/home";
+import { ProblemDisconnection, type ProblemDisconnectionProps } from "@/components/marketing/product/ProblemDisconnection";
 import { ProductDashboard, type ProductDashboardProps } from "@/components/marketing/product/ProductDashboard";
 import { ProductInvoiceFlow, type ProductInvoiceFlowProps } from "@/components/marketing/product/ProductInvoiceFlow";
 import { ProductContractFlow, type ProductContractFlowProps } from "@/components/marketing/product/ProductContractFlow";
@@ -8,6 +9,7 @@ import { ProductImport, type ProductImportProps } from "@/components/marketing/p
 
 export function MarketingProductScene({ visual }: { visual: MarketingChapter["visual"] }) {
   switch (visual.kind) {
+    case "disconnection": return <ProblemDisconnection {...(visual.props as unknown as ProblemDisconnectionProps)} />;
     case "dashboard": return <ProductDashboard {...(visual.props as unknown as ProductDashboardProps)} />;
     case "invoice": return <ProductInvoiceFlow {...(visual.props as unknown as ProductInvoiceFlowProps)} />;
     case "contract": return <ProductContractFlow {...(visual.props as unknown as ProductContractFlowProps)} />;

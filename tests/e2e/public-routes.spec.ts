@@ -150,7 +150,7 @@ test("marketing page advertises current connections without a demo CTA", async (
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("Start with the data you already have.", { exact: true })).toBeVisible();
+  await expect(page.getByText("An empty state is not a fresh start. It is another migration project.", { exact: true })).toBeVisible();
   await expect(page.getByText("CSV and XLSX imports", { exact: true })).toBeVisible();
   await expect(page.getByText("Contracts & acceptance", { exact: true })).toBeVisible();
 });
@@ -160,6 +160,7 @@ test("login password visibility control works", async ({ page }) => {
   // The control is server-rendered, so wait for the client bundle to hydrate
   // before asserting an interaction rather than racing React's event binding.
   await page.waitForLoadState("load");
+  await expect(page.locator('form[data-testid="login-form"][data-hydrated="true"]')).toBeVisible();
   const password = page.locator("#login-password");
   const showPassword = page.getByRole("button", { name: "show password" });
 
@@ -180,6 +181,7 @@ test("login password visibility control works", async ({ page }) => {
 
 test("registration password visibility control works for invited users", async ({ page }) => {
   await page.goto("/register?invite=e2e-invalid-invite");
+  await expect(page.locator('form[data-testid="register-form"][data-hydrated="true"]')).toBeVisible();
   const password = page.locator('input[type="password"]');
   const showPassword = page.getByRole("button", { name: "show password" });
 
@@ -220,6 +222,7 @@ test("guides do not advertise unshipped Remit transfers or an AI co-pilot", asyn
 test("legacy waitlist URL gracefully redirects to open signup", async ({ page }) => {
   await page.goto("/waitlist", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/register$/);
+  await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Create your Rive workspace" })).toBeVisible();
 });
 

@@ -21,7 +21,7 @@ export function MotionProductScene({ sceneKey, visual }: { sceneKey?: string; vi
           initial={reduceMotion ? false : { opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           exit={reduceMotion ? undefined : { opacity: 0, y: -14 }}
-          transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
           onAnimationStart={() => { if (sceneRef.current) sceneRef.current.style.willChange = "transform, opacity"; }}
           onAnimationComplete={() => { if (sceneRef.current) sceneRef.current.style.willChange = "auto"; }}
         >

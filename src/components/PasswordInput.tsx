@@ -4,10 +4,13 @@ import { Input } from "@/components/ui";
 
 import { useState, type InputHTMLAttributes } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type Props = InputHTMLAttributes<HTMLInputElement>;
+type Props = InputHTMLAttributes<HTMLInputElement> & {
+  toggleClassName?: string;
+};
 
-export default function PasswordInput({ className = "", disabled, ...props }: Props) {
+export default function PasswordInput({ className = "", toggleClassName, disabled, ...props }: Props) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -16,7 +19,7 @@ export default function PasswordInput({ className = "", disabled, ...props }: Pr
         {...props}
         disabled={disabled}
         type={visible ? "text" : "password"}
-        className={`${className} pr-11`}
+        className={cn("pr-12", className)}
       />
       <button
         type="button"
@@ -24,7 +27,10 @@ export default function PasswordInput({ className = "", disabled, ...props }: Pr
         onClick={() => setVisible((current) => !current)}
         aria-label={visible ? "hide password" : "show password"}
         aria-pressed={visible}
-        className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+        className={cn(
+          "absolute right-1 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+          toggleClassName,
+        )}
       >
         {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>

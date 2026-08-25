@@ -18,14 +18,11 @@ test.describe("marketing experience", () => {
     const rail = page.getByTestId("scrollytelling-rail");
     await expect(scrolly).toBeVisible();
     await expect(rail).toBeVisible();
-    await expect(scrolly.locator("[data-product-frame]")).toHaveCount(1);
+    await expect(rail.getByTestId("problem-disconnection")).toBeVisible();
     await page.waitForFunction(() => getComputedStyle(document.querySelector<HTMLElement>('[data-chapter-index="1"]')!).opacity === "0.3");
 
     const target = page.locator('[data-chapter-index="3"]');
-    await target.evaluate((node) => {
-      const top = window.scrollY + node.getBoundingClientRect().top - window.innerHeight * 0.38;
-      window.scrollTo(0, top);
-    });
+    await target.evaluate((node) => node.scrollIntoView({ block: "start" }));
     await expect(target).toHaveAttribute("data-active", "true");
 
     const sticky = await rail.evaluate((node) => {
@@ -43,23 +40,157 @@ test.describe("marketing experience", () => {
     await page.goto("/#product", { waitUntil: "load" });
 
     const chapters = page.locator("[data-chapter-index]");
-    await expect(chapters).toHaveCount(6);
+    await expect(chapters).toHaveCount(7);
     await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
-    for (let index = 0; index < 6; index += 1) {
+    await expect(chapters.nth(0).getByTestId("problem-disconnection")).toHaveCount(1);
+    for (let index = 1; index < 7; index += 1) {
       const chapter = chapters.nth(index);
       await chapter.scrollIntoViewIfNeeded();
-      await expect(chapter.locator("[data-product-frame]"), `chapter ${index + 1} keeps its product visual reachable`).toHaveCount(1);
+      await expect(chapter.locator("[data-product-frame]"), `chapter ${index} keeps its product visual reachable`).toHaveCount(1);
     }
     const opacities = await chapters.evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).opacity));
-    expect(opacities).toEqual(Array(6).fill("1"));
+    expect(opacities).toEqual(Array(7).fill("1"));
   });
 
-  test("reduced motion presents every command-palette result without a stagger delay", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
+  test("the hero leads with type and a data-neutral pipeline", async ({ page }) => {
+    const errors = collectRuntimeErrors(page);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/", { waitUntil: "load" });
 
-    await expect(page.getByText("Northstar Labs · Product redesign · Paid", { exact: true })).toBeVisible();
-    await expect(page.getByText("Atlas Studio · Research sprint · Sent", { exact: true })).toBeVisible();
+    const hero = page.getByTestId("marketing-hero");
+    await expect(hero).toBeVisible();
+    await expect(page.getByTestId("continuity-object")).toHaveCount(0);
+    await expect(page.getByTestId("context-stack")).toHaveCount(0);
+    await expect(page.getByTestId("connected-context-relay")).toHaveCount(0);
+    await expect(page.locator(".continuity-loop-anchor")).toHaveCount(0);
+    await expect(page.getByPlaceholder("Search clients, projects, or invoices…")).toHaveCount(0);
+    await expect(hero.locator("h1")).toBeVisible();
+
+    const primary = hero.getByRole("link", { name: "Build your workspace", exact: true });
+    await expect(primary).toBeVisible();
+    const ctaInView = await primary.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= window.innerHeight;
+    });
+    expect(ctaInView).toBe(true);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const geometry = await hero.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        viewport: document.documentElement.clientWidth,
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      };
+    });
+    expect(geometry.left).toBeGreaterThanOrEqual(0);
+    expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
+    expect(geometry.overflow).toBe(false);
+    await expect(hero.getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.getByTestId("continuity-object")).toHaveCount(0);
+    expect(errors).toEqual([]);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+  });
+
+  test("the hero pipeline is interactive, truthful, and visible on mobile", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+
+    const pipeline = page.getByTestId("hero-pipeline");
+    await expect(pipeline).toBeVisible();
+    await expect(pipeline.getByTestId(/hero-stage-/)).toHaveCount(5);
+    await expect(pipeline).not.toContainText(/Northstar|Product redesign|INV-|₹|USD|INR/);
+
+    await pipeline.getByTestId("hero-stage-proof").click();
+    await expect(pipeline).toContainText("Selected projects can become public portfolio proof");
+    await expect(pipeline.getByTestId("hero-stage-proof")).toHaveAttribute("aria-pressed", "true");
+    await expect(pipeline.getByTestId("hero-stage-client")).toHaveAttribute("aria-pressed", "false");
+
+    await pipeline.getByTestId("hero-stage-client").click();
+    await expect(pipeline.getByTestId("hero-stage-client")).toHaveAttribute("aria-pressed", "true");
+    await expect(pipeline.getByTestId("hero-stage-proof")).toHaveAttribute("aria-pressed", "false");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileGeometry = await pipeline.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        top: rect.top,
+        visibleInFirstViewport: rect.top < window.innerHeight,
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      };
+    });
+    expect(mobileGeometry.visibleInFirstViewport).toBe(true);
+    expect(mobileGeometry.overflow).toBe(false);
+  });
+
+  test("the hero secondary CTA scrolls to the problem before the connected loop", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+
+    const problem = page.getByTestId("marketing-problem");
+    await expect(page.getByRole("link", { name: "See the unpaid role", exact: true })).toBeVisible();
+    await expect(problem).toBeVisible();
+    await expect(page.locator("#product")).toBeVisible();
+
+    const order = await page.evaluate(() => {
+      const hero = document.querySelector("[data-testid='marketing-hero']");
+      const problemNode = document.querySelector("[data-testid='marketing-problem']");
+      const loopNode = document.querySelector('[data-chapter-index="1"]');
+      if (!hero || !problemNode || !loopNode) return null;
+      return {
+        problemFollowsHero: Boolean(hero.compareDocumentPosition(problemNode) & Node.DOCUMENT_POSITION_FOLLOWING),
+        loopFollowsProblem: Boolean(problemNode.compareDocumentPosition(loopNode) & Node.DOCUMENT_POSITION_FOLLOWING),
+      };
+    });
+    expect(order?.problemFollowsHero).toBe(true);
+    expect(order?.loopFollowsProblem).toBe(true);
+
+    await page.getByRole("link", { name: "See the unpaid role", exact: true }).click();
+    await expect.poll(async () => problem.evaluate((node) => Math.abs(node.getBoundingClientRect().top))).toBeLessThan(8);
+    await expect(problem.getByRole("heading", { name: "There is an unpaid role inside every independent business." })).toBeVisible();
+    await expect(page.getByTestId("scrollytelling-rail")).toBeVisible();
+    await expect(page.getByTestId("scrollytelling-rail").getByTestId("problem-disconnection")).toBeVisible();
+    const solutionTop = await page.locator('[data-chapter-index="1"]').evaluate((node) => node.getBoundingClientRect().top);
+    expect(solutionTop).toBeGreaterThan(500);
+  });
+
+  test("the problem beat fills the first viewport and hands off into the connected loop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+    const stage = page.getByTestId("marketing-problem");
+    const geometry = await stage.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { height: rect.height, top: rect.top, viewport: window.innerHeight, overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+    });
+    expect(geometry.height).toBeGreaterThanOrEqual(geometry.viewport - 2);
+    expect(geometry.overflow).toBe(false);
+
+    const rail = page.getByTestId("scrollytelling-rail");
+    await page.locator("#problem").evaluate((node) => node.scrollIntoView({ block: "start" }));
+    await expect(rail.getByTestId("problem-disconnection")).toBeVisible();
+    await expect(rail.locator("[data-product-frame]")).toHaveCount(0);
+
+    const solution = page.locator('[data-chapter-index="1"]');
+    await solution.evaluate((node) => node.scrollIntoView({ block: "start" }));
+    await expect(solution).toHaveAttribute("data-active", "true");
+    await expect(solution.getByRole("heading", { name: "Change one thing. Everything downstream already knows." })).toBeVisible();
+    await expect.poll(async () => ({
+      product: await rail.locator("[data-product-frame]").count(),
+      problem: await rail.getByTestId("problem-disconnection").count(),
+    })).toEqual({ product: 1, problem: 0 });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "load" });
+    await expect(page.getByTestId("marketing-problem")).toBeVisible();
+    await expect(page.getByTestId("marketing-problem").getByTestId("problem-disconnection")).toBeVisible();
+    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(mobileOverflow).toBe(false);
   });
 
   test("brand fonts are preloaded and stable after first paint", async ({ page }) => {
@@ -69,8 +200,10 @@ test.describe("marketing experience", () => {
     });
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    const preloadLinks = page.locator('head link[rel="preload"][as="font"]');
+    await expect(preloadLinks).toHaveCount(2);
 
-    const preloads = await page.locator('head link[rel="preload"][as="font"]').evaluateAll((links) =>
+    const preloads = await preloadLinks.evaluateAll((links) =>
       links.map((link) => ({
         href: new URL((link as HTMLLinkElement).href).pathname,
         type: (link as HTMLLinkElement).type,
@@ -259,6 +392,41 @@ test.describe("marketing experience", () => {
     for (const logoDot of await logoDots.all()) {
       await expect(logoDot).toHaveCSS("animation-name", "none");
     }
+  });
+
+  test("the hero signal field connects, responds to scroll, and simplifies accessibly", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const field = page.getByTestId("connected-signal-field");
+    const network = field.locator(".connected-signal-network");
+    const rail = field.locator(".connected-signal-rail");
+    const pulse = field.locator(".connected-signal-pulse").first();
+
+    await expect(field).toBeVisible();
+    await expect(field.locator(".connected-signal-node")).toHaveCount(19);
+    await expect(field.locator(".connected-signal-pulse")).toHaveCount(3);
+    await expect(pulse).toHaveCSS("animation-name", "connectedSignalTravel");
+    await expect.poll(() => rail.evaluate((node) => node.style.opacity)).not.toBe("");
+    const initialTransform = await network.getAttribute("style");
+    const initialRailOpacity = Number.parseFloat(await rail.evaluate((node) => node.style.opacity));
+
+    await page.evaluate(() => window.scrollTo(0, Math.round(window.innerHeight * 0.62)));
+    await expect.poll(() => network.getAttribute("style")).not.toBe(initialTransform);
+    const scrolledRailOpacity = Number.parseFloat(await rail.evaluate((node) => node.style.opacity));
+    expect(scrolledRailOpacity).toBeGreaterThan(initialRailOpacity);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(field.locator(".signal-detail").first()).toHaveCSS("display", "none");
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(pulse).toHaveCSS("animation-name", "none");
+  });
+
+  test("the hero presents beta status without duplicating the lifecycle narrative", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const hero = page.locator("main section").first();
+    await expect(hero.getByText("OPEN BETA", { exact: true })).toBeVisible();
+    await expect(hero.getByText("OPEN BETA · CLIENT → WORK → MONEY → PROOF", { exact: true })).toHaveCount(0);
   });
 
   test("contact form keeps the live API contract", async ({ page }) => {

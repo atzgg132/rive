@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { FontPreloads } from "@/components/FontPreloads";
 import PageViewTracker from "@/components/PageViewTracker";
+import { AuthOverlayProvider } from "@/components/auth/AuthOverlayProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
@@ -45,7 +46,9 @@ export default function RootLayout({
           storageKey="rive-color-theme"
         >
           <PageViewTracker />
-          {children}
+          <AuthOverlayProvider>
+            {children}
+          </AuthOverlayProvider>
         </ThemeProvider>
       </body>
     </html>
