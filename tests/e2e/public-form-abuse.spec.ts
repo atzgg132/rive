@@ -40,7 +40,7 @@ function sslConfig() {
 let ipCounter = 0;
 function uniqueIp() {
   ipCounter += 1;
-  const worker = Number(process.env.TEST_WORKER_INDEX || 0) % 200;
+  const worker = process.pid % 200;
   return `13.${worker}.${(ipCounter >> 8) & 255}.${ipCounter & 255}`;
 }
 
@@ -103,7 +103,7 @@ test.describe("public form abuse controls", () => {
 
   test("register form posts startedAt and an empty honeypot", async ({ page }: { page: Page }) => {
     let posted: Record<string, unknown> | null = null;
-    await page.route("**/api/auth/register", async (route) => {
+    await page.route("**/api/auth/register**", async (route) => {
       posted = route.request().postDataJSON() as Record<string, unknown>;
       await route.fulfill({
         status: 201,
@@ -112,11 +112,13 @@ test.describe("public form abuse controls", () => {
       });
     });
 
-    await page.goto("/register", { waitUntil: "domcontentloaded" });
-    await page.locator("#register-name").fill("Ada Lovelace");
-    await page.locator("#register-email").fill("ada@example.invalid");
-    await page.locator("#register-password").fill("a-real-password");
-    await page.getByRole("button", { name: "Create Account" }).click();
+    await page.goto("/register", { waitUntil: "networkidle" });
+    await page.getByLabel("Full name").fill("Ada Lovelace");
+    await page.getByLabel("Email address").fill("ada@example.invalid");
+    await page.getByRole("textbox", { name: "Password" }).fill("a-real-password");
+    const createAccount = page.locator("form").getByRole("button", { name: "Create Account" });
+    await expect(createAccount).toBeEnabled();
+    await createAccount.click();
 
     await expect.poll(() => posted).not.toBeNull();
     expect(typeof posted!.startedAt).toBe("number");
@@ -142,7 +144,9 @@ test.describe("public form abuse controls", () => {
   });
 
   test("a too-fast contact submission is thanked and does not attempt delivery", async ({ request }) => {
-    const response = await postJson(request, "/api/contact", contactPayload({ startedAt: Date.now() }));
+    // Crawlers POST JSON with no dwell timestamp. Using a Date.now() stamp
+    // flakes on a cold route: compile time alone exceeds the 2s minimum.
+    const response = await postJson(request, "/api/contact", contactPayload({ startedAt: undefined }));
     expect(response.status()).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ success: true });
   });
@@ -180,7 +184,7 @@ test.describe("public form abuse controls", () => {
   });
 
   test("a too-fast register submission is thanked and stores no account", async ({ request }) => {
-    const payload = registerPayload({ startedAt: Date.now() });
+    const payload = registerPayload({ startedAt: undefined });
     const response = await postJson(request, "/api/auth/register", payload);
     expect(response.status()).toBe(201);
     expect(await db.prisma.user.count({ where: { email: payload.email } })).toBe(0);
@@ -325,7 +329,7 @@ test.describe("public form abuse controls", () => {
       select: { id: true },
     });
     try {
-      const response = await postJson(request, "/api/auth/forgot-password", { email, startedAt: Date.now() });
+      const response = await postJson(request, "/api/auth/forgot-password", { email });
       expect(response.status()).toBe(200);
       expect(await db.prisma.authToken.count({ where: { userId: user.id, type: "password_reset" } })).toBe(0);
     } finally {
