@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { createAuthToken } from "@/utils/authTokens";
-import { sendPasswordResetEmail } from "@/utils/email";
+import { buildPasswordResetEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { hashRequestValue } from "@/utils/contracts";
@@ -58,7 +59,8 @@ export async function POST(req: NextRequest) {
       });
       if (recentTokens < limits.email.limit) {
         const { token } = await createAuthToken({ email, type: "password_reset", userId: user.id });
-        await sendPasswordResetEmail(email, token);
+        const outboxId = await enqueueEmail(buildPasswordResetEmail(email, token));
+        if (getEmailProvider() !== "disabled") await processEmailOutbox({ jobId: outboxId });
       }
     }
 

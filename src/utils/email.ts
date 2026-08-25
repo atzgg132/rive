@@ -369,9 +369,9 @@ export function sendRegistrationCompleteEmail(to: string, name: string): Promise
   });
 }
 
-export function sendPasswordResetEmail(to: string, token: string): Promise<EmailResult> {
+export function buildPasswordResetEmail(to: string, token: string): PreparedEmail {
   const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
-  return deliver({
+  return {
     to,
     type: "password_reset",
     subject: "Reset your rive. password",
@@ -386,7 +386,11 @@ export function sendPasswordResetEmail(to: string, token: string): Promise<Email
       recipient: to,
     }),
     text: `Reset your rive. password.\n\nThis secure link expires in 60 minutes:\n${resetUrl}\n\nIf you did not request this, ignore this email.`,
-  });
+  };
+}
+
+export function sendPasswordResetEmail(to: string, token: string): Promise<EmailResult> {
+  return deliver(buildPasswordResetEmail(to, token));
 }
 
 export function sendPasswordChangedEmail(to: string): Promise<EmailResult> {
