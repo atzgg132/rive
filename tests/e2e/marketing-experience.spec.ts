@@ -326,6 +326,70 @@ test.describe("marketing experience", () => {
     });
   }
 
+  test.describe("150% Windows scale (devicePixelRatio 1.5)", () => {
+    test.use({ deviceScaleFactor: 1.5 });
+
+    test("the hero and pipeline fit a 1707×960 QHD 150% laptop at rest", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.setViewportSize({ width: 1707, height: 960 });
+      await page.goto("/", { waitUntil: "load" });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.evaluate(() => document.fonts.ready);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+      const pipeline = page.getByTestId("hero-pipeline");
+      await expect(page.getByTestId("marketing-hero").locator("h1")).toBeVisible();
+      await expect(pipeline).toBeVisible();
+      for (const label of heroStageLabels) {
+        await expect(pipeline.locator(`[data-hero-stage-label="${label}"]`)).toBeVisible();
+      }
+
+      const geometry = await page.evaluate((stageLabels) => {
+        const heroNode = document.querySelector("[data-testid='marketing-hero']");
+        const header = document.querySelector("[data-testid='site-header']");
+        const headline = heroNode?.querySelector("h1");
+        const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
+        const primary = heroNode?.querySelector("a[href='/register']");
+        const secondary = heroNode?.querySelector("a[href='#problem']");
+        if (!headline || !pipelineNode || !primary || !secondary) return null;
+        const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+        const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
+        const labels = stageLabels.map((label) => {
+          const node = pipelineNode.querySelector(`[data-hero-stage-label="${label}"]`);
+          if (!node) return { label, found: false as const, inFirstScreen: false };
+          return { label, found: true as const, inFirstScreen: inFirstScreen(node.getBoundingClientRect()) };
+        });
+        const shortNode = pipelineNode.querySelector("[data-hero-stage-short]");
+        return {
+          dpr: window.devicePixelRatio,
+          innerHeight: window.innerHeight,
+          headlineFits: inFirstScreen(headline.getBoundingClientRect()),
+          primaryFits: inFirstScreen(primary.getBoundingClientRect()),
+          secondaryFits: inFirstScreen(secondary.getBoundingClientRect()),
+          pipelineFits: inFirstScreen(pipelineNode.getBoundingClientRect()),
+          pipelineBottom: pipelineNode.getBoundingClientRect().bottom,
+          h1Size: Number.parseFloat(getComputedStyle(headline).fontSize),
+          shortsDisplay: shortNode ? getComputedStyle(shortNode).display : "missing",
+          labels,
+        };
+      }, [...heroStageLabels]);
+
+      expect(geometry).not.toBeNull();
+      expect(geometry!.dpr).toBeGreaterThanOrEqual(1.25);
+      expect(geometry!.headlineFits, "1707×960 headline clipped").toBe(true);
+      expect(geometry!.primaryFits, "1707×960 primary CTA clipped").toBe(true);
+      expect(geometry!.secondaryFits, "1707×960 secondary CTA clipped").toBe(true);
+      expect(geometry!.pipelineFits, "1707×960 pipeline clipped").toBe(true);
+      expect(geometry!.pipelineBottom).toBeLessThanOrEqual(geometry!.innerHeight - 24);
+      expect(geometry!.h1Size, "150% scale left the 104px desktop headline").toBeLessThan(72);
+      expect(geometry!.shortsDisplay, "150% QHD dropped the stage shorts").not.toBe("none");
+      for (const row of geometry!.labels) {
+        expect(row.found, `1707×960 missing ${row.label}`).toBe(true);
+        expect(row.inFirstScreen, `1707×960 ${row.label} clipped`).toBe(true);
+      }
+    });
+  });
+
   test("the hero secondary CTA scrolls to the problem before the connected loop", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1440, height: 900 });
