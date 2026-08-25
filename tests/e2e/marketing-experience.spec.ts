@@ -496,9 +496,9 @@ test.describe("marketing experience", () => {
   });
 
   test("contact form keeps the live API contract", async ({ page }) => {
-    let payload: Record<string, string> | null = null;
+    let payload: Record<string, string | number> | null = null;
     await page.route("**/api/contact", async (route) => {
-      payload = route.request().postDataJSON() as Record<string, string>;
+      payload = route.request().postDataJSON() as Record<string, string | number>;
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
     });
     await page.goto("/contact", { waitUntil: "load" });
@@ -513,6 +513,8 @@ test.describe("marketing experience", () => {
       email: "maya@example.com",
       subject: "Bug Report",
       message: "The client handoff lost its project context.",
+      website: "",
+      startedAt: expect.any(Number),
     });
   });
 });
