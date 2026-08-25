@@ -2,20 +2,19 @@
 
 import { Button, Input } from "@/components/ui";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import HoneypotField from "@/components/HoneypotField";
+import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const startedAtRef = useRef(Date.now());
-  const websiteRef = useRef<HTMLInputElement>(null);
+  const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

@@ -2,8 +2,8 @@
 
 import { Button, Input, Textarea, Select } from "@/components/ui";
 import PageShell from "@/components/PageShell";
-import HoneypotField from "@/components/HoneypotField";
-import { useRef, useState } from "react";
+import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 const font = { fontFamily: "var(--font-body)" };
@@ -13,8 +13,7 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "General Inquiry", message: "" });
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
-  const startedAtRef = useRef(Date.now());
-  const websiteRef = useRef<HTMLInputElement>(null);
+  const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

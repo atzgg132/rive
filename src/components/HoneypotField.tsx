@@ -1,6 +1,23 @@
 "use client";
 
-import type { Ref } from "react";
+import { useEffect, useRef, type Ref } from "react";
+
+/**
+ * Opened-at stamp for the public-form dwell check. Recorded after mount so
+ * render stays pure (`Date.now` during render fails `react-hooks/purity`).
+ * A person filling the form always outlasts the two-second minimum; a JSON
+ * crawler that never loads this component never sends a stamp at all.
+ */
+export function usePublicFormOpenedAt() {
+  const startedAtRef = useRef(0);
+  const websiteRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    startedAtRef.current = Date.now();
+  }, []);
+
+  return { startedAtRef, websiteRef };
+}
 
 /**
  * Hidden field named `website`. Autofill bots populate it; people using the

@@ -1,13 +1,13 @@
 "use client";
 
 import { Button, Input } from "@/components/ui";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, User, Mail, Lock, ShieldCheck, CheckCircle2 } from "lucide-react";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import PasswordInput from "@/components/PasswordInput";
-import HoneypotField from "@/components/HoneypotField";
+import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -18,8 +18,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [pendingEmail, setPendingEmail] = useState("");
   const [notice, setNotice] = useState("");
-  const startedAtRef = useRef(Date.now());
-  const websiteRef = useRef<HTMLInputElement>(null);
+  const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
