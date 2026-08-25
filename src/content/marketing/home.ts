@@ -315,13 +315,13 @@ export const homeContent = {
   },
   remitNext: {
     eyebrow: "NEXT: REMIT",
-    title: "Know the payout before you send it.",
-    body: "Remit is next: international payouts that live next to the invoice, so getting paid across a border stops meaning a third app that has never heard of the work. The preview uses live ECB rates. No money moves yet.",
+    title: "Preview the FX rate. Remit is not a transfer.",
+    body: "Remit is in development. This homepage preview uses live ECB mid-market rates to convert an amount from one currency into another. Preview only. Not a transfer.",
     status: "In development",
     promises: [
-      { label: "Tied to the invoice", sub: "Payouts should follow the Agreement, not a separate app." },
+      { label: "Preview only", sub: "Converts an amount at the mid-market rate. It does not move money." },
       { label: "The rate is the rate", sub: "No hidden FX markup. This preview uses ECB mid-market." },
-      { label: "Built for client work", sub: "Designed around invoices and clients, not consumer cash pickup." },
+      { label: "Not shipped", sub: "Remit transfers are not shipped. Follow the roadmap for what is next." },
     ],
     cta: { label: "Follow the roadmap", href: "/roadmap" },
   },

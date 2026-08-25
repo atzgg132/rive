@@ -163,6 +163,17 @@ test("marketing page advertises current connections without a demo CTA", async (
   await expect(page.getByText("Contracts & acceptance", { exact: true })).toBeVisible();
 });
 
+test("marketing homepage does not sell Remit as a transfer or payout product", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByText("Know the payout before you send it.")).toHaveCount(0);
+  await expect(page.getByText("Payouts should follow the Agreement.")).toHaveCount(0);
+  await expect(page.getByText("international payouts")).toHaveCount(0);
+  await expect(page.getByText("You send", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("They receive", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);
+});
+
 test("login password visibility control works", async ({ page }) => {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   // The control is server-rendered, so wait for the client bundle to hydrate
