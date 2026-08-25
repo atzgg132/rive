@@ -59,7 +59,7 @@ export function MarketingHome() {
         </section>
       </SpotlightCursor>
 
-      <section id="product" className="relative overflow-x-clip pb-20 lg:pb-8">
+      <section id="product" className="relative pb-20 lg:pb-8">
         <div className="mx-auto max-w-[90rem] px-5 sm:px-8">
           <ScrollytellingSection problem={homeContent.tax} chapters={homeContent.scrolly.chapters} />
         </div>

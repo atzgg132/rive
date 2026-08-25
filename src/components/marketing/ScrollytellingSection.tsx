@@ -120,14 +120,14 @@ export function ScrollytellingSection({
           data-chapter-index="0"
           data-active={activeIndex === 0 ? "true" : "false"}
           className={cn(
-            "relative min-h-[100svh] scroll-mt-0 lg:min-h-screen",
+            "relative scroll-mt-0",
             reduceMotion || activeIndex === 0 ? "opacity-100" : "lg:opacity-30",
           )}
         >
           <span id="features" className="absolute top-0" aria-hidden="true" />
           <div
             data-testid="marketing-problem"
-            className="flex min-h-[100svh] flex-col justify-center py-16 pb-20 lg:min-h-screen lg:justify-center lg:py-0 lg:pb-16 lg:pt-24"
+            className="py-16 sm:py-20"
           >
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-warning">{problem.eyebrow}</p>
             <h2 className="mt-4 max-w-xl text-[1.85rem] font-black leading-[1.08] tracking-[-0.045em] text-foreground sm:text-4xl">{problem.title}</h2>
@@ -157,7 +157,7 @@ export function ScrollytellingSection({
             ref={(node) => { chapterRefs.current[index + 1] = node; }}
             data-chapter-index={index + 1}
             data-active={activeIndex === index + 1 ? "true" : "false"}
-            className={cn("flex min-h-[70vh] scroll-mt-0 flex-col justify-center py-14 transition-opacity duration-200 lg:min-h-screen", reduceMotion || activeIndex === index + 1 ? "opacity-100" : "lg:opacity-30")}
+            className={cn("flex min-h-[70vh] scroll-mt-0 flex-col justify-center py-14 transition-opacity duration-200", reduceMotion || activeIndex === index + 1 ? "opacity-100" : "lg:opacity-30")}
           >
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{index === 0 ? homeContent.scrolly.eyebrow : chapter.eyebrow}</p>
             <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.045em] text-foreground sm:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>

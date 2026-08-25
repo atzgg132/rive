@@ -34,6 +34,31 @@ function contrastRatio(foreground: CssColor, background: CssColor) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+/** Full-viewport sticky/fixed overlay covering the page. The chapter rail may
+ *  be sticky and viewport-tall, but it is a column — not a page shutter. */
+async function coveringStickyShutter(page: Page) {
+  return page.evaluate(() => {
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    return Array.from(document.querySelectorAll<HTMLElement>("body *")).flatMap((el) => {
+      const testid = el.getAttribute("data-testid");
+      if (testid === "site-header" || testid === "scrollytelling-rail") return [];
+      const style = getComputedStyle(el);
+      if (style.position !== "sticky" && style.position !== "fixed") return [];
+      if (style.pointerEvents === "none" || style.visibility === "hidden" || style.display === "none") return [];
+      const rect = el.getBoundingClientRect();
+      const coversWidth = rect.width >= viewportW * 0.92;
+      const coversHeight = rect.height >= viewportH * 0.92;
+      if (!coversWidth || !coversHeight) return [];
+      return [{ testid, width: rect.width, height: rect.height, position: style.position }];
+    });
+  });
+}
+
+function viewportMinHeight(value: string) {
+  return /^(100vh|100svh|100dvh|100lvh)$/.test(value.trim());
+}
+
 async function openHomeWithColorTheme(page: Page, theme: "light" | "dark") {
   await page.emulateMedia({ colorScheme: theme });
   await page.addInitScript((selectedTheme) => {
@@ -312,20 +337,32 @@ test.describe("marketing experience", () => {
     await expect(problem.getByRole("heading", { name: "There is an unpaid role inside every independent business." })).toBeVisible();
     await expect(page.getByTestId("scrollytelling-rail")).toBeVisible();
     await expect(page.getByTestId("scrollytelling-rail").getByTestId("problem-disconnection")).toBeVisible();
-    const solutionTop = await page.locator('[data-chapter-index="1"]').evaluate((node) => node.getBoundingClientRect().top);
-    expect(solutionTop).toBeGreaterThan(500);
+    const stacked = await page.evaluate(() => {
+      const problemRect = document.querySelector("[data-testid='marketing-problem']")!.getBoundingClientRect();
+      const solutionRect = document.querySelector('[data-chapter-index="1"]')!.getBoundingClientRect();
+      return { problemBottom: problemRect.bottom, solutionTop: solutionRect.top };
+    });
+    expect(stacked.solutionTop).toBeGreaterThan(stacked.problemBottom - 1);
   });
 
-  test("the problem beat fills the first viewport and hands off into the connected loop", async ({ page }) => {
+  test("the problem beat hands off into the connected loop without a viewport shutter", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/", { waitUntil: "load" });
     const stage = page.getByTestId("marketing-problem");
     const geometry = await stage.evaluate((node) => {
       const rect = node.getBoundingClientRect();
-      return { height: rect.height, top: rect.top, viewport: window.innerHeight, overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+      const style = getComputedStyle(node);
+      const article = node.closest("[data-chapter-index='0']");
+      const articleStyle = article ? getComputedStyle(article) : style;
+      return {
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        minHeight: style.minHeight,
+        articleMinHeight: articleStyle.minHeight,
+      };
     });
-    expect(geometry.height).toBeGreaterThanOrEqual(geometry.viewport - 2);
     expect(geometry.overflow).toBe(false);
+    expect(viewportMinHeight(geometry.minHeight), "problem beat min-height is a viewport shutter").toBe(false);
+    expect(viewportMinHeight(geometry.articleMinHeight), "problem article min-height is a viewport shutter").toBe(false);
 
     const rail = page.getByTestId("scrollytelling-rail");
     await page.locator("#problem").evaluate((node) => node.scrollIntoView({ block: "start" }));
@@ -348,6 +385,62 @@ test.describe("marketing experience", () => {
     const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     expect(mobileOverflow).toBe(false);
   });
+
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 1280, height: 720 },
+  ]) {
+    test(`no sticky shutter covers the page at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.setViewportSize(viewport);
+      await page.goto("/", { waitUntil: "load" });
+      expect(await coveringStickyShutter(page), `${viewport.width}×${viewport.height} shutter on first screen`).toEqual([]);
+
+      await page.locator("#problem").evaluate((node) => node.scrollIntoView({ block: "start" }));
+      expect(await coveringStickyShutter(page), `${viewport.width}×${viewport.height} shutter at problem`).toEqual([]);
+
+      const chapterCuts = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll<HTMLElement>("[data-chapter-index]")).map((node) => {
+          const style = getComputedStyle(node);
+          return { index: node.dataset.chapterIndex, minHeight: style.minHeight };
+        });
+      });
+      for (const cut of chapterCuts) {
+        expect(viewportMinHeight(cut.minHeight), `chapter ${cut.index} min-height is a viewport shutter`).toBe(false);
+      }
+
+      if (viewport.width >= 1024) {
+        const rail = page.getByTestId("scrollytelling-rail");
+        await expect(rail).toBeVisible();
+        const railBox = await rail.evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          const style = getComputedStyle(node);
+          return {
+            position: style.position,
+            width: rect.width,
+            height: rect.height,
+            left: rect.left,
+            vw: window.innerWidth,
+            vh: window.innerHeight,
+          };
+        });
+        expect(railBox.position).toBe("sticky");
+        expect(railBox.width, `${viewport.width}×${viewport.height} rail became a full-width shutter`).toBeLessThan(railBox.vw * 0.8);
+
+        const overlap = await page.evaluate(() => {
+          const heading = document.querySelector("[data-testid='marketing-problem'] h2");
+          const railNode = document.querySelector("[data-testid='scrollytelling-rail']");
+          if (!heading || !railNode) return null;
+          const copy = heading.getBoundingClientRect();
+          const railRect = railNode.getBoundingClientRect();
+          const coversCopy = copy.right > railRect.left + 8 && copy.left < railRect.right - 8 && copy.bottom > railRect.top + 8 && copy.top < railRect.bottom - 8;
+          return { coversCopy, copyRight: copy.right, railLeft: railRect.left };
+        });
+        expect(overlap, `${viewport.width}×${viewport.height} missing problem copy or rail`).not.toBeNull();
+        expect(overlap!.coversCopy, `${viewport.width}×${viewport.height} rail overlays problem copy`).toBe(false);
+      }
+    });
+  }
 
   test("brand fonts are preloaded and stable after first paint", async ({ page }) => {
     const fontRequests: string[] = [];
