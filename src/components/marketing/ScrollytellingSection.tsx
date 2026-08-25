@@ -16,9 +16,9 @@ export function ScrollytellingSection({
     <div data-testid="scrollytelling-section" className="mx-auto max-w-4xl">
       <article id="problem" data-chapter-index="0" className="relative scroll-mt-0">
         <span id="features" className="absolute top-0" aria-hidden="true" />
-        <div data-testid="marketing-problem" className="py-16 sm:py-20">
+        <div data-testid="marketing-problem" className="py-[clamp(2.5rem,5svh,5rem)]">
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-warning">{problem.eyebrow}</p>
-          <h2 className="mt-4 max-w-xl text-[1.85rem] font-black leading-[1.08] tracking-[-0.045em] text-foreground sm:text-4xl">{problem.title}</h2>
+          <h2 className="mt-4 max-w-xl text-[clamp(1.5rem,1.8svh+0.9vw,2.25rem)] font-black leading-[1.08] tracking-[-0.045em] text-foreground">{problem.title}</h2>
           <p className="mt-4 max-w-lg text-[0.95rem] leading-7 text-muted-foreground">{problem.body}</p>
           <ol className="mt-6 max-w-lg divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
             {problem.duties.map((duty) => (
@@ -43,10 +43,10 @@ export function ScrollytellingSection({
           key={chapter.id}
           id={chapter.id}
           data-chapter-index={index + 1}
-          className="scroll-mt-0 py-14"
+          className="scroll-mt-0 py-[clamp(2rem,4svh,3.5rem)]"
         >
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{index === 0 ? homeContent.scrolly.eyebrow : chapter.eyebrow}</p>
-          <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.045em] text-foreground sm:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
+          <h3 className="mt-5 max-w-xl text-[clamp(1.65rem,2svh+1vw,3rem)] font-black leading-[1.02] tracking-[-0.045em] text-foreground">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
           <p className="mt-6 max-w-lg text-base leading-8 text-muted-foreground">{chapter.body}</p>
           <DeferredProductScene className="mt-9" sceneKey={chapter.id} visual={chapter.visual} />
         </article>

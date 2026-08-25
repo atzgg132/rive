@@ -712,9 +712,10 @@ p {
   -webkit-text-fill-color: transparent;
 }
 
+.marketing-focus:focus,
 .marketing-focus:focus-visible {
-  outline: 2px solid var(--brand-400);
-  outline-offset: 4px;
+  outline: 2px solid var(--brand-400) !important;
+  outline-offset: 4px !important;
 }
 
 /* Auth overlay — lives on the marketing surface. Enter is a short settle;

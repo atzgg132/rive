@@ -168,6 +168,118 @@ test.describe("marketing experience", () => {
     expect(mobileGeometry.overflow).toBe(false);
   });
 
+  // 14" at 100% (Agnik clip) is the ship-gate. 1280×720/800 also covers 1920×1080 @ 150%.
+  // Do not assert which pipeline node is active — interval autoplay may already be on WORK.
+  const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
+
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+    { width: 1280, height: 720 },
+    { width: 1280, height: 800 },
+  ]) {
+    test(`the hero pipeline and headline fit a ${viewport.width}×${viewport.height} laptop viewport at rest`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.setViewportSize(viewport);
+      await page.goto("/", { waitUntil: "load" });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.evaluate(() => document.fonts.ready);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+      const hero = page.getByTestId("marketing-hero");
+      const pipeline = page.getByTestId("hero-pipeline");
+      await expect(hero.locator("h1")).toBeVisible();
+      await expect(hero.getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
+      await expect(hero.getByRole("link", { name: "See the unpaid role", exact: true })).toBeVisible();
+      await expect(pipeline).toBeVisible();
+
+      for (const label of heroStageLabels) {
+        await expect(pipeline.getByText(label, { exact: true })).toBeVisible();
+        await expect(pipeline.locator(`[data-hero-stage-label="${label}"]`)).toBeVisible();
+      }
+
+      const geometry = await page.evaluate((stageLabels) => {
+        const heroNode = document.querySelector("[data-testid='marketing-hero']");
+        const header = document.querySelector("[data-testid='site-header']");
+        const headline = heroNode?.querySelector("h1");
+        const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
+        const primary = heroNode?.querySelector("a[href='/register']");
+        const secondary = heroNode?.querySelector("a[href='#problem']");
+        const chips = heroNode
+          ? Array.from(heroNode.querySelectorAll("span")).filter((node) => /open signup|free during beta|your data stays yours/i.test(node.textContent || ""))
+          : [];
+        if (!headline || !pipelineNode || !primary || !secondary || chips.length < 3) return null;
+        const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+        const headlineRect = headline.getBoundingClientRect();
+        const pipelineRect = pipelineNode.getBoundingClientRect();
+        const primaryRect = primary.getBoundingClientRect();
+        const secondaryRect = secondary.getBoundingClientRect();
+        const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
+        const labels = stageLabels.map((label) => {
+          const node = pipelineNode.querySelector(`[data-hero-stage-label="${label}"]`)
+            || Array.from(pipelineNode.querySelectorAll("span")).find((el) => el.textContent?.trim() === label && el.children.length === 0)
+            || null;
+          if (!node) return { label, found: false as const, display: "missing", visibility: "missing", top: 0, bottom: 0, inFirstScreen: false };
+          const style = getComputedStyle(node);
+          const rect = node.getBoundingClientRect();
+          return {
+            label,
+            found: true as const,
+            display: style.display,
+            visibility: style.visibility,
+            top: rect.top,
+            bottom: rect.bottom,
+            inFirstScreen: inFirstScreen(rect),
+          };
+        });
+        return {
+          scrollY: window.scrollY,
+          headerBottom,
+          innerHeight: window.innerHeight,
+          headlineTop: headlineRect.top,
+          headlineBottom: headlineRect.bottom,
+          primaryTop: primaryRect.top,
+          primaryBottom: primaryRect.bottom,
+          secondaryBottom: secondaryRect.bottom,
+          pipelineTop: pipelineRect.top,
+          pipelineBottom: pipelineRect.bottom,
+          headlineFits: inFirstScreen(headlineRect),
+          primaryFits: inFirstScreen(primaryRect),
+          secondaryFits: inFirstScreen(secondaryRect),
+          pipelineFits: inFirstScreen(pipelineRect),
+          chipsFit: chips.every((chip) => inFirstScreen(chip.getBoundingClientRect())),
+          labels,
+          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        };
+      }, [...heroStageLabels]);
+
+      expect(geometry, `${viewport.width}×${viewport.height} missing hero geometry`).not.toBeNull();
+      expect(geometry!.scrollY).toBe(0);
+      expect(geometry!.headlineTop).toBeGreaterThanOrEqual(geometry!.headerBottom - 1);
+      expect(geometry!.headlineBottom).toBeLessThanOrEqual(geometry!.innerHeight + 1);
+      expect(geometry!.headlineFits, `${viewport.width}×${viewport.height} headline clipped`).toBe(true);
+      expect(geometry!.primaryTop).toBeGreaterThanOrEqual(0);
+      expect(geometry!.primaryBottom).toBeLessThanOrEqual(geometry!.innerHeight + 1);
+      expect(geometry!.primaryFits, `${viewport.width}×${viewport.height} primary CTA clipped`).toBe(true);
+      expect(geometry!.secondaryFits, `${viewport.width}×${viewport.height} secondary CTA clipped`).toBe(true);
+      expect(geometry!.pipelineTop).toBeGreaterThanOrEqual(0);
+      expect(geometry!.pipelineBottom, `${viewport.width}×${viewport.height} pipeline overflows viewport`).toBeLessThanOrEqual(geometry!.innerHeight + 1);
+      expect(geometry!.pipelineFits, `${viewport.width}×${viewport.height} pipeline clipped`).toBe(true);
+      expect(geometry!.chipsFit, `${viewport.width}×${viewport.height} proof chips clipped`).toBe(true);
+      expect(geometry!.overflow).toBe(false);
+      expect(geometry!.labels).toHaveLength(heroStageLabels.length);
+      for (const row of geometry!.labels) {
+        expect(row.found, `${viewport.width}×${viewport.height} missing ${row.label}`).toBe(true);
+        expect(row.display, `${viewport.width}×${viewport.height} ${row.label} display`).not.toBe("none");
+        expect(row.visibility, `${viewport.width}×${viewport.height} ${row.label} visibility`).not.toBe("hidden");
+        expect(row.top, `${viewport.width}×${viewport.height} ${row.label} above header`).toBeGreaterThanOrEqual(geometry!.headerBottom - 1);
+        expect(row.bottom, `${viewport.width}×${viewport.height} ${row.label} below viewport`).toBeLessThanOrEqual(geometry!.innerHeight + 1);
+        expect(row.inFirstScreen, `${viewport.width}×${viewport.height} ${row.label} clipped`).toBe(true);
+      }
+    });
+  }
+
+
   test("the hero secondary CTA scrolls to the problem before the connected loop", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1440, height: 900 });
