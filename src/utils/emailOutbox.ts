@@ -3,7 +3,7 @@ import "server-only";
 import crypto from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
-import { deliverPreparedEmail, type PreparedEmail } from "@/utils/email";
+import { deliverPreparedEmail, type EmailResult, type PreparedEmail } from "@/utils/email";
 import { markInquiryNotificationSettled } from "@/utils/portfolioInquiryNotifications";
 
 const OUTBOX_ALGORITHM = "aes-256-gcm";
@@ -12,7 +12,22 @@ const OUTBOX_KEY = crypto
   .update(process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-local-email-outbox-key")
   .digest();
 
+/** A claimed job that never finishes (killed request, SMTP hang) is stuck until this elapses. */
+export const STALE_PROCESSING_MS = 2 * 60 * 1000;
+const MAX_ATTEMPTS = 8;
+/** EventBridge job runner HTTP timeout is 25s; stop before that so jobs are not left processing. */
+export const CRON_PROCESSING_DEADLINE_MS = 15_000;
+
 type EmailDbClient = typeof prisma | Prisma.TransactionClient;
+
+export type ProcessEmailOutboxOptions = {
+  limit?: number;
+  /** Process this job first (and only this job when set), instead of the oldest queued row. */
+  jobId?: string;
+  deadlineMs?: number;
+  now?: Date;
+  deliver?: (email: PreparedEmail) => Promise<EmailResult>;
+};
 
 function encryptPayload(payload: PreparedEmail): string {
   const iv = crypto.randomBytes(12);
@@ -53,29 +68,66 @@ export async function enqueueEmail(email: PreparedEmail, client: EmailDbClient =
   return job.id;
 }
 
-export async function processEmailOutbox(limit = 10): Promise<{ claimed: number; sent: number; retried: number; failed: number }> {
+function retryDelayMs(attemptsAfterClaim: number): number {
+  return Math.min(6 * 60 * 60 * 1000, 2 ** attemptsAfterClaim * 30_000);
+}
+
+/**
+ * Drain queued transactional mail.
+ *
+ * Signup and password-reset call this with `jobId` so a backlog of older
+ * inquiry jobs cannot starve the message the user is waiting on. The cron
+ * worker calls it without `jobId` to walk the queue FIFO, with a deadline so
+ * the EventBridge runner's 25s HTTP timeout cannot leave rows stuck in
+ * `processing`.
+ */
+export async function processEmailOutbox(
+  limitOrOptions: number | ProcessEmailOutboxOptions = 10,
+): Promise<{ claimed: number; sent: number; retried: number; failed: number; reclaimed: number }> {
+  const options: ProcessEmailOutboxOptions = typeof limitOrOptions === "number"
+    ? { limit: limitOrOptions }
+    : limitOrOptions;
+  const limit = Math.max(1, Math.min(options.limit ?? 10, 50));
+  const now = options.now ?? new Date();
+  const deliver = options.deliver ?? deliverPreparedEmail;
+  const staleBefore = new Date(now.getTime() - STALE_PROCESSING_MS);
+  const startedAt = Date.now();
+
+  const reclaimed = await prisma.emailOutbox.updateMany({
+    where: { status: "processing", updatedAt: { lte: staleBefore } },
+    data: { status: "queued" },
+  });
+
   const jobs = await prisma.emailOutbox.findMany({
     where: {
+      ...(options.jobId ? { id: options.jobId } : {}),
       status: "queued",
-      availableAt: { lte: new Date() },
-      attempts: { lt: 8 },
+      availableAt: { lte: now },
+      attempts: { lt: MAX_ATTEMPTS },
     },
     orderBy: { createdAt: "asc" },
-    take: Math.max(1, Math.min(limit, 50)),
+    take: options.jobId ? 1 : limit,
   });
   let sent = 0;
   let retried = 0;
   let failed = 0;
+  let claimed = 0;
 
   for (const job of jobs) {
-    const claimed = await prisma.emailOutbox.updateMany({
+    if (options.deadlineMs !== undefined && claimed > 0 && Date.now() - startedAt >= options.deadlineMs) {
+      break;
+    }
+
+    const claimedRow = await prisma.emailOutbox.updateMany({
       where: { id: job.id, status: "queued" },
       data: { status: "processing", attempts: { increment: 1 } },
     });
-    if (claimed.count !== 1) continue;
+    if (claimedRow.count !== 1) continue;
+    claimed += 1;
+    const attemptsAfterClaim = job.attempts + 1;
 
     try {
-      const result = await deliverPreparedEmail(decryptPayload(job.encryptedPayload));
+      const result = await deliver(decryptPayload(job.encryptedPayload));
       if (result.sent) {
         await prisma.emailOutbox.update({
           where: { id: job.id },
@@ -86,12 +138,12 @@ export async function processEmailOutbox(limit = 10): Promise<{ claimed: number;
         continue;
       }
 
-      const retryable = job.attempts + 1 < 8;
+      const retryable = attemptsAfterClaim < MAX_ATTEMPTS;
       await prisma.emailOutbox.update({
         where: { id: job.id },
         data: {
           status: retryable ? "queued" : "failed",
-          availableAt: new Date(Date.now() + Math.min(6 * 60 * 60 * 1000, 2 ** (job.attempts + 1) * 30_000)),
+          availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
           lastError: result.reason || "Email delivery failed.",
         },
       });
@@ -101,13 +153,13 @@ export async function processEmailOutbox(limit = 10): Promise<{ claimed: number;
         failed += 1;
       }
     } catch (error) {
-      const retryable = job.attempts + 1 < 8;
+      const retryable = attemptsAfterClaim < MAX_ATTEMPTS;
       const reason = error instanceof Error ? error.message.slice(0, 500) : "Email outbox processing failed.";
       await prisma.emailOutbox.update({
         where: { id: job.id },
         data: {
           status: retryable ? "queued" : "failed",
-          availableAt: new Date(Date.now() + Math.min(6 * 60 * 60 * 1000, 2 ** (job.attempts + 1) * 30_000)),
+          availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
           lastError: reason,
         },
       });
@@ -119,7 +171,7 @@ export async function processEmailOutbox(limit = 10): Promise<{ claimed: number;
     }
   }
 
-  return { claimed: jobs.length, sent, retried, failed };
+  return { claimed, sent, retried, failed, reclaimed: reclaimed.count };
 }
 
 /**
@@ -137,4 +189,3 @@ async function settleNotificationState(
 ): Promise<void> {
   if (type === "portfolio_inquiry") await markInquiryNotificationSettled(jobId, outcome, reason);
 }
-
