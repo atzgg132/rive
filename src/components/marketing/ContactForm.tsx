@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Check, Loader2, Send } from "lucide-react";
+import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 type ContactFormCopy = {
   readonly nameLabel: string;
@@ -22,6 +23,7 @@ type ContactFormCopy = {
 const fieldClassName = "marketing-focus min-h-12 w-full rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground hover:border-primary/25 focus:border-primary/50 focus:bg-[var(--surface-glass)]";
 
 export function ContactForm({ copy }: { copy: ContactFormCopy }) {
+  const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
   const [form, setForm] = useState({ name: "", email: "", subject: copy.subjects[0], message: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState("");
@@ -34,7 +36,11 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          website: websiteRef.current?.value ?? "",
+          startedAt: startedAtRef.current,
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || copy.fallbackError);
@@ -59,6 +65,7 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-5" noValidate={false}>
+      <HoneypotField inputRef={websiteRef} />
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="grid gap-2 font-mono text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           {copy.nameLabel}

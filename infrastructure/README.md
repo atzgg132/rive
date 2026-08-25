@@ -8,7 +8,7 @@ Rive runs in `ap-south-1` on a deliberately small AWS footprint:
 - one encrypted migration queue and dead-letter queue per environment;
 - ECR for immutable application and migration images;
 - Google Workspace SMTP for production transactional email, with SES resources retained as a fallback;
-- EventBridge and Lambda for calendar outbox and webhook maintenance;
+- EventBridge and Lambda for calendar outbox, email outbox, and webhook maintenance;
 - SSM Parameter Store and Session Manager instead of SSH or access keys;
 - CloudWatch and AWS Budgets for operational and cost controls.
 

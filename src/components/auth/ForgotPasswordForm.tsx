@@ -5,6 +5,7 @@ import { Dialog as BaseDialog } from "@base-ui/react/dialog";
 import { FormEvent, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { authFieldClassName, authQuietButtonClassName, authSubmitClassName } from "@/components/auth/authClasses";
+import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 export function ForgotPasswordForm({
   initialEmail = "",
@@ -17,6 +18,7 @@ export function ForgotPasswordForm({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -27,7 +29,11 @@ export function ForgotPasswordForm({
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          website: websiteRef.current?.value ?? "",
+          startedAt: startedAtRef.current,
+        }),
       });
       const data = await response.json();
       if (!response.ok) setError(data.message || "Please check the email address and try again.");
@@ -54,6 +60,7 @@ export function ForgotPasswordForm({
         </Alert>
       ) : (
         <form method="post" onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+          <HoneypotField inputRef={websiteRef} />
           {error ? <Alert variant="destructive" className="text-sm">{error}</Alert> : null}
           <FormField label="Email address" htmlFor="forgot-email">
             <Input

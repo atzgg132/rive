@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import PasswordInput from "@/components/PasswordInput";
 import { authFieldClassName, authQuietButtonClassName, authSubmitClassName } from "@/components/auth/authClasses";
+import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 export function RegisterForm({
   initialEmail = "",
@@ -28,6 +29,7 @@ export function RegisterForm({
   const [pendingEmail, setPendingEmail] = useState(startPending ? initialEmail : "");
   const [notice, setNotice] = useState("");
   const hydrated = useSyncExternalStore(() => () => undefined, () => true, () => false);
+  const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
 
   const handleRegister = async (event: FormEvent) => {
     event.preventDefault();
@@ -39,7 +41,14 @@ export function RegisterForm({
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, inviteToken: inviteToken || undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          inviteToken: inviteToken || undefined,
+          website: websiteRef.current?.value ?? "",
+          startedAt: startedAtRef.current,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
@@ -121,6 +130,7 @@ export function RegisterForm({
         Free access during open beta. Start with the work that feels messiest today.
       </BaseDialog.Description>
       <form method="post" onSubmit={handleRegister} className="mt-8 flex flex-col gap-5" data-testid="register-form" data-hydrated={hydrated ? "true" : "false"} data-invite={inviteToken || undefined}>
+        <HoneypotField inputRef={websiteRef} />
         {error ? <Alert variant="destructive" className="text-sm">{error}</Alert> : null}
         <FormField label="Full name" htmlFor="register-name">
           <Input

@@ -5,6 +5,7 @@ import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { sendLoginSuccessEmail } from "@/utils/email";
 import { hashRequestValue } from "@/utils/contracts";
+import { isEmailVerificationSatisfied } from "@/utils/emailVerification";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid email or password." }, { status: 401 });
     }
 
-    if (user.emailVerificationRequiredAt && !user.emailVerifiedAt) {
+    if (!isEmailVerificationSatisfied(user)) {
       return NextResponse.json({
         success: false,
         code: "EMAIL_NOT_VERIFIED",
