@@ -736,6 +736,10 @@ p {
     display: none;
   }
 
+  [data-testid="scrollytelling-tail"] {
+    display: none;
+  }
+
   [data-testid="scrollytelling-section"].scrollytelling-section {
     grid-template-columns: minmax(0, 1fr);
   }

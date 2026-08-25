@@ -100,6 +100,13 @@ test.describe("marketing experience", () => {
       });
       expect(sticky.position).toBe("sticky");
       expect(Math.abs(sticky.top)).toBeLessThanOrEqual(1);
+
+      const last = page.locator('[data-chapter-index="6"]');
+      await last.evaluate((node) => node.scrollIntoView({ block: "start" }));
+      await expect(last).toHaveAttribute("data-active", "true");
+      await expect(rail.locator("[data-product-frame]").getByText("Portfolio Studio")).toBeVisible();
+      await expect(rail.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
+
       expect(errors).toEqual([]);
     });
   }
