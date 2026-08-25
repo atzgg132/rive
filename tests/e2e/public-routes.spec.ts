@@ -71,7 +71,7 @@ test("theme switcher glides between all options, collapses, and persists the cho
   const switcher = page.locator('[data-testid="theme-switcher"]:visible').first();
   await expect(switcher).toHaveCSS("width", "28px");
   await switcher.getByRole("button", { name: "Theme: system. Choose theme" }).click();
-  const options = page.getByRole("radiogroup", { name: "Choose color theme" });
+  const options = switcher.getByRole("radiogroup", { name: "Choose color theme" });
   await expect(options).toBeVisible();
   await expect(options).toHaveCSS("width", "92px");
   await expect(options).toHaveCSS("height", "28px");
@@ -114,32 +114,33 @@ test("theme switcher glides between all options, collapses, and persists the cho
   expect(iconGeometry.selected).toEqual(iconGeometry.current);
   await expect(switcher.getByRole("button", { name: "Theme: system. Choose theme" }))
     .toHaveCSS("outline-style", "none");
-  await page.getByRole("radio", { name: "Light theme" }).click();
-  await expect(page.getByRole("radio", { name: "Light theme" })).toBeChecked();
+  await switcher.getByRole("radio", { name: "Light theme" }).click();
+  await expect(switcher.getByRole("radio", { name: "Light theme" })).toBeChecked();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
-  await expect.poll(() => page.locator('[data-surface="marketing"]').evaluate((node) => getComputedStyle(node).backgroundColor))
+  await expect(switcher.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(0px);");
+  const marketingSurface = page.locator('[data-surface="marketing"]').first();
+  await expect.poll(() => marketingSurface.evaluate((node) => getComputedStyle(node).backgroundColor))
     .not.toBe("rgb(5, 7, 12)");
-  await expect.poll(() => page.locator('[data-surface="marketing"]').evaluate((node) => getComputedStyle(node).backgroundColor))
+  await expect.poll(() => marketingSurface.evaluate((node) => getComputedStyle(node).backgroundColor))
     .toBe("rgb(243, 245, 250)");
-  await expect(page.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(0px);");
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
     .toBe("light");
-  await expect(page.getByRole("radiogroup", { name: "Choose color theme" })).toBeHidden();
+  await expect(switcher.getByRole("radiogroup", { name: "Choose color theme" })).toBeHidden();
   await expect(switcher.getByRole("button", { name: "Theme: light. Choose theme" })).toBeVisible();
 
   await switcher.getByRole("button", { name: "Theme: light. Choose theme" }).click();
-  await page.getByRole("radio", { name: "Dark theme" }).click();
+  await switcher.getByRole("radio", { name: "Dark theme" }).click();
+  await expect(switcher.getByRole("radio", { name: "Dark theme" })).toBeChecked();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await expect.poll(() => page.locator('[data-surface="marketing"]').evaluate((node) => getComputedStyle(node).backgroundColor))
+  await expect(switcher.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(32px);");
+  await expect.poll(() => marketingSurface.evaluate((node) => getComputedStyle(node).backgroundColor))
     .toBe("rgb(5, 7, 12)");
-  await expect(page.getByRole("radio", { name: "Dark theme" })).toBeChecked();
-  await expect(page.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(32px);");
   await expect(switcher.getByRole("button", { name: "Theme: dark. Choose theme" })).toBeVisible();
 
   await switcher.getByRole("button", { name: "Theme: dark. Choose theme" }).click();
-  await page.getByRole("radio", { name: "System theme" }).click();
-  await expect(page.getByRole("radio", { name: "System theme" })).toBeChecked();
-  await expect(page.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(64px);");
+  await switcher.getByRole("radio", { name: "System theme" }).click();
+  await expect(switcher.getByRole("radio", { name: "System theme" })).toBeChecked();
+  await expect(switcher.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(64px);");
   await expect(switcher.getByRole("button", { name: "Theme: system. Choose theme" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
     .toBe("system");
@@ -148,7 +149,7 @@ test("theme switcher glides between all options, collapses, and persists the cho
   await page.reload();
   const reducedSwitcher = page.locator('[data-testid="theme-switcher"]:visible').first();
   await reducedSwitcher.getByRole("button", { name: "Theme: system. Choose theme" }).click();
-  const reducedDuration = await page.getByRole("radiogroup", { name: "Choose color theme" })
+  const reducedDuration = await reducedSwitcher.getByRole("radiogroup", { name: "Choose color theme" })
     .evaluate((node) => Number.parseFloat(getComputedStyle(node).transitionDuration));
   expect(reducedDuration).toBeLessThanOrEqual(0.001);
 });
