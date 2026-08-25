@@ -19,7 +19,7 @@ export function SectionShell({
   clipX?: boolean;
 }) {
   return (
-    <section id={id} className={cn("marketing-deferred-section relative py-[clamp(3.5rem,7.5svh,8rem)]", className)}>
+    <section id={id} className={cn("marketing-deferred-section relative py-20 sm:py-28 lg:py-32", className)}>
       <div className={cn("relative mx-auto w-full min-w-0 max-w-7xl px-5 sm:px-8", clipX && "overflow-x-clip", innerClassName)}>{children}</div>
     </section>
   );

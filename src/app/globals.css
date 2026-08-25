@@ -718,6 +718,16 @@ p {
   outline-offset: 4px !important;
 }
 
+/* 150% Windows-scale laptops (1280×720 / 1280×800): pin the hero to the top so
+   the headline and CTAs stay on the first screen. Do not shrink type or hide
+   the pipeline — the rail may sit below the fold at 720. Taller visual-baseline
+   viewports keep the original vertically centered hero. */
+@media (max-height: 800px) {
+  .marketing-hero {
+    align-items: flex-start;
+  }
+}
+
 /* Auth overlay — lives on the marketing surface. Enter is a short settle;
    exit is quieter. Only transform/opacity/filter. */
 .auth-overlay-backdrop {

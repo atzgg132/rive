@@ -169,7 +169,11 @@ test.describe("marketing experience", () => {
   });
 
   // SHIP-GATE ONLY: 1920×1080 @ 150% Windows ≈ 1280×720 CSS, and 1920×1200 @ 150% ≈ 1280×800.
-  // Do not add 1366×768 or 1440×900 to this loop. Those already fit at 100%.
+  // First screen: header, badge, h1, sub, both CTAs. Proof chips may wrap or sit below.
+  // HeroPipeline may sit below the fold at 720 — do not require pipelineFits.
+  // When the rail is scrolled into view, CLIENT→PROOF labels stay readable.
+  // Extra short lines under the labels may drop at 720.
+  // Do not add 1366×768 or 1440×900 to this loop.
   // Do not assert which pipeline node is active — interval autoplay may already be on WORK.
   const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
 
@@ -177,7 +181,7 @@ test.describe("marketing experience", () => {
     { width: 1280, height: 720 },
     { width: 1280, height: 800 },
   ]) {
-    test(`the hero and pipeline fit a ${viewport.width}×${viewport.height} 150% scale laptop at rest`, async ({ page }) => {
+    test(`the hero headline and CTAs fit a ${viewport.width}×${viewport.height} 150% scale laptop at rest`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: "no-preference" });
       await page.setViewportSize(viewport);
       await page.goto("/", { waitUntil: "load" });
@@ -186,103 +190,91 @@ test.describe("marketing experience", () => {
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
       const hero = page.getByTestId("marketing-hero");
+      const header = page.getByTestId("site-header");
       const pipeline = page.getByTestId("hero-pipeline");
+      await expect(header).toBeVisible();
+      await expect(header.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
+      await expect(hero.getByText("OPEN BETA", { exact: true })).toBeVisible();
       await expect(hero.locator("h1")).toBeVisible();
+      await expect(hero.locator("h1 + p")).toBeVisible();
       await expect(hero.getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
       await expect(hero.getByRole("link", { name: "See the unpaid role", exact: true })).toBeVisible();
       await expect(pipeline).toBeVisible();
+      await expect(pipeline.getByTestId(/hero-stage-/)).toHaveCount(5);
 
-      for (const label of heroStageLabels) {
-        await expect(pipeline.getByText(label, { exact: true })).toBeVisible();
-        await expect(pipeline.locator(`[data-hero-stage-label="${label}"]`)).toBeVisible();
-      }
-      await expect(pipeline.getByText("The relationship", { exact: true })).toBeVisible();
-      const shortDisplay = await pipeline.locator("[data-hero-stage-short]").evaluateAll((nodes) =>
-        nodes.map((node) => getComputedStyle(node).display),
-      );
-      expect(shortDisplay.length, `${viewport.width}×${viewport.height} missing stage shorts`).toBe(5);
-      expect(
-        shortDisplay.every((display) => display !== "none"),
-        `${viewport.width}×${viewport.height} stage shorts are display:none`,
-      ).toBe(true);
-
-      const geometry = await page.evaluate((stageLabels) => {
+      const geometry = await page.evaluate(() => {
         const heroNode = document.querySelector("[data-testid='marketing-hero']");
-        const header = document.querySelector("[data-testid='site-header']");
+        const headerNode = document.querySelector("[data-testid='site-header']");
+        const nav = headerNode?.querySelector("nav[aria-label='Primary navigation']");
+        const badge = heroNode
+          ? Array.from(heroNode.querySelectorAll("span")).find((node) => node.textContent?.trim() === "OPEN BETA")
+          : null;
         const headline = heroNode?.querySelector("h1");
-        const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
+        const sub = heroNode?.querySelector("h1 + p");
         const primary = heroNode?.querySelector("a[href='/register']");
         const secondary = heroNode?.querySelector("a[href='#problem']");
-        const chips = heroNode
-          ? Array.from(heroNode.querySelectorAll("span")).filter((node) => /open signup|free during beta|your data stays yours/i.test(node.textContent || ""))
-          : [];
-        if (!headline || !pipelineNode || !primary || !secondary || chips.length < 3) return null;
-        const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
-        const headlineRect = headline.getBoundingClientRect();
-        const pipelineRect = pipelineNode.getBoundingClientRect();
-        const primaryRect = primary.getBoundingClientRect();
-        const secondaryRect = secondary.getBoundingClientRect();
+        if (!headerNode || !nav || !badge || !headline || !sub || !primary || !secondary) return null;
+        const headerBottom = headerNode.getBoundingClientRect().bottom;
         const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
-        const labels = stageLabels.map((label) => {
-          const node = pipelineNode.querySelector(`[data-hero-stage-label="${label}"]`)
-            || Array.from(pipelineNode.querySelectorAll("span")).find((el) => el.textContent?.trim() === label && el.children.length === 0)
+        const navRect = nav.getBoundingClientRect();
+        return {
+          scrollY: window.scrollY,
+          headerBottom,
+          innerHeight: window.innerHeight,
+          headerFits: headerNode.getBoundingClientRect().top >= -1 && headerNode.getBoundingClientRect().bottom <= window.innerHeight + 1,
+          navFits: navRect.top >= -1 && navRect.bottom <= window.innerHeight + 1,
+          badgeFits: inFirstScreen(badge.getBoundingClientRect()),
+          headlineFits: inFirstScreen(headline.getBoundingClientRect()),
+          subFits: inFirstScreen(sub.getBoundingClientRect()),
+          primaryFits: inFirstScreen(primary.getBoundingClientRect()),
+          secondaryFits: inFirstScreen(secondary.getBoundingClientRect()),
+          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        };
+      });
+
+      expect(geometry, `${viewport.width}×${viewport.height} missing hero geometry`).not.toBeNull();
+      expect(geometry!.scrollY).toBe(0);
+      expect(geometry!.headerFits, `${viewport.width}×${viewport.height} header clipped`).toBe(true);
+      expect(geometry!.navFits, `${viewport.width}×${viewport.height} nav clipped`).toBe(true);
+      expect(geometry!.badgeFits, `${viewport.width}×${viewport.height} badge clipped`).toBe(true);
+      expect(geometry!.headlineFits, `${viewport.width}×${viewport.height} headline clipped`).toBe(true);
+      expect(geometry!.subFits, `${viewport.width}×${viewport.height} sub clipped`).toBe(true);
+      expect(geometry!.primaryFits, `${viewport.width}×${viewport.height} primary CTA clipped`).toBe(true);
+      expect(geometry!.secondaryFits, `${viewport.width}×${viewport.height} secondary CTA clipped`).toBe(true);
+      expect(geometry!.overflow).toBe(false);
+
+      await pipeline.evaluate((node) => node.scrollIntoView({ block: "center" }));
+      const labels = await pipeline.evaluate((node, stageLabels) => {
+        return stageLabels.map((label) => {
+          const el = node.querySelector(`[data-hero-stage-label="${label}"]`)
+            || Array.from(node.querySelectorAll("span")).find((span) => span.textContent?.trim() === label && span.children.length === 0)
             || null;
-          if (!node) return { label, found: false as const, display: "missing", visibility: "missing", top: 0, bottom: 0, inFirstScreen: false };
-          const style = getComputedStyle(node);
-          const rect = node.getBoundingClientRect();
+          if (!el) return { label, found: false as const, display: "missing", visibility: "missing", readable: false };
+          const style = getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
           return {
             label,
             found: true as const,
             display: style.display,
             visibility: style.visibility,
-            top: rect.top,
-            bottom: rect.bottom,
-            inFirstScreen: inFirstScreen(rect),
+            readable:
+              style.display !== "none"
+              && style.visibility !== "hidden"
+              && Number.parseFloat(style.opacity || "1") > 0
+              && rect.width > 0
+              && rect.height > 0
+              && rect.bottom > 0
+              && rect.top < window.innerHeight,
           };
         });
-        return {
-          scrollY: window.scrollY,
-          headerBottom,
-          innerHeight: window.innerHeight,
-          headlineTop: headlineRect.top,
-          headlineBottom: headlineRect.bottom,
-          primaryTop: primaryRect.top,
-          primaryBottom: primaryRect.bottom,
-          secondaryBottom: secondaryRect.bottom,
-          pipelineTop: pipelineRect.top,
-          pipelineBottom: pipelineRect.bottom,
-          headlineFits: inFirstScreen(headlineRect),
-          primaryFits: inFirstScreen(primaryRect),
-          secondaryFits: inFirstScreen(secondaryRect),
-          pipelineFits: inFirstScreen(pipelineRect),
-          chipsFit: chips.every((chip) => inFirstScreen(chip.getBoundingClientRect())),
-          labels,
-          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-        };
       }, [...heroStageLabels]);
 
-      expect(geometry, `${viewport.width}×${viewport.height} missing hero geometry`).not.toBeNull();
-      expect(geometry!.scrollY).toBe(0);
-      expect(geometry!.headlineTop).toBeGreaterThanOrEqual(geometry!.headerBottom - 1);
-      expect(geometry!.headlineBottom).toBeLessThanOrEqual(geometry!.innerHeight + 1);
-      expect(geometry!.headlineFits, `${viewport.width}×${viewport.height} headline clipped`).toBe(true);
-      expect(geometry!.primaryTop).toBeGreaterThanOrEqual(0);
-      expect(geometry!.primaryBottom).toBeLessThanOrEqual(geometry!.innerHeight + 1);
-      expect(geometry!.primaryFits, `${viewport.width}×${viewport.height} primary CTA clipped`).toBe(true);
-      expect(geometry!.secondaryFits, `${viewport.width}×${viewport.height} secondary CTA clipped`).toBe(true);
-      expect(geometry!.pipelineTop).toBeGreaterThanOrEqual(0);
-      expect(geometry!.pipelineBottom, `${viewport.width}×${viewport.height} pipeline overflows viewport`).toBeLessThanOrEqual(geometry!.innerHeight + 1);
-      expect(geometry!.pipelineFits, `${viewport.width}×${viewport.height} pipeline clipped`).toBe(true);
-      expect(geometry!.chipsFit, `${viewport.width}×${viewport.height} proof chips clipped`).toBe(true);
-      expect(geometry!.overflow).toBe(false);
-      expect(geometry!.labels).toHaveLength(heroStageLabels.length);
-      for (const row of geometry!.labels) {
+      expect(labels).toHaveLength(heroStageLabels.length);
+      for (const row of labels) {
         expect(row.found, `${viewport.width}×${viewport.height} missing ${row.label}`).toBe(true);
         expect(row.display, `${viewport.width}×${viewport.height} ${row.label} display`).not.toBe("none");
         expect(row.visibility, `${viewport.width}×${viewport.height} ${row.label} visibility`).not.toBe("hidden");
-        expect(row.top, `${viewport.width}×${viewport.height} ${row.label} above header`).toBeGreaterThanOrEqual(geometry!.headerBottom - 1);
-        expect(row.bottom, `${viewport.width}×${viewport.height} ${row.label} below viewport`).toBeLessThanOrEqual(geometry!.innerHeight + 1);
-        expect(row.inFirstScreen, `${viewport.width}×${viewport.height} ${row.label} clipped`).toBe(true);
+        expect(row.readable, `${viewport.width}×${viewport.height} ${row.label} not readable when the pipeline is in view`).toBe(true);
       }
     });
   }

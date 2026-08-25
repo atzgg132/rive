@@ -15,20 +15,18 @@ import { SpotlightCursor } from "@/components/marketing/SpotlightCursor";
 import { FeatureList, GlassPanel, GlowingBadge, HairlineDivider, MarketingButton } from "@/components/marketing/primitives";
 import { SectionShell } from "@/components/marketing/shells";
 
-const homeSectionTitleClass = "mt-6 text-[clamp(1.85rem,5svh+0.8vw,3.75rem)] font-black leading-[1.02] tracking-[-0.05em] text-foreground";
-
 export function MarketingHome() {
   return (
     <>
       <SpotlightCursor>
         <section
           data-testid="marketing-hero"
-          className="relative flex min-h-[100svh] flex-col justify-start overflow-x-clip pb-[clamp(0.25rem,0.8svh,0.85rem)] pt-[clamp(4.75rem,7.5svh,5.5rem)]"
+          className="marketing-hero relative flex min-h-[100svh] items-center overflow-x-clip pb-10 pt-20 sm:pb-16 sm:pt-28 lg:pb-20"
         >
           <ConnectedSignalField className="opacity-55" />
-          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-col items-center justify-start px-5 text-center sm:px-8">
+          <div className="relative z-10 mx-auto flex max-w-[76rem] flex-col items-center px-5 text-center sm:px-8">
             <GlowingBadge pulse>{homeContent.hero.eyebrow}</GlowingBadge>
-            <h1 className="mt-[clamp(0.25rem,0.7svh,1rem)] text-[clamp(1.8rem,5svh+0.25vw,4.35rem)] font-black leading-[0.94] tracking-[-0.05em] text-foreground">
+            <h1 className="mt-5 text-[clamp(3.25rem,7.5vw,6.5rem)] font-black leading-[0.94] tracking-[-0.05em] text-foreground sm:mt-6">
               <span className="block animate-hero-line-in" style={{ animationDelay: "0ms" }}>Your business</span>
               <span className="block animate-hero-line-in" style={{ animationDelay: "80ms" }}>should not need</span>
               <span className="block animate-hero-line-in" style={{ animationDelay: "160ms" }}>
@@ -36,8 +34,8 @@ export function MarketingHome() {
                 <span className="hero-word-gradient">middleware.</span>
               </span>
             </h1>
-            <p className="mx-auto mt-[clamp(0.25rem,0.65svh,0.9rem)] max-w-2xl text-[clamp(0.8125rem,1svh+0.15vw,1.125rem)] leading-snug text-muted-foreground">{homeContent.hero.body}</p>
-            <div className="mt-[clamp(0.35rem,0.95svh,1.15rem)] flex flex-col justify-center gap-3 sm:flex-row sm:items-center">
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:mt-6 sm:text-xl sm:leading-9">{homeContent.hero.body}</p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:mt-8 sm:flex-row sm:items-center">
               <MagneticButton href={homeContent.hero.primaryCta.href}>{homeContent.hero.primaryCta.label} <ArrowRight className="ml-2 inline h-4 w-4" aria-hidden="true" /></MagneticButton>
               <SmoothAnchor
                 href={homeContent.hero.secondaryCta.href}
@@ -46,7 +44,7 @@ export function MarketingHome() {
                 {homeContent.hero.secondaryCta.label} <ArrowDown className="ml-2 h-4 w-4" aria-hidden="true" />
               </SmoothAnchor>
             </div>
-            <div aria-label="Proof points" className="mt-[clamp(0.2rem,0.55svh,0.7rem)] flex flex-wrap justify-center gap-x-5 gap-y-2 sm:gap-x-6">
+            <div aria-label="Proof points" className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 sm:mt-8 sm:gap-x-6 sm:gap-y-3">
               {homeContent.hero.proof.map((item) => (
                 <span key={item} className="inline-flex items-center gap-2 font-mono text-[0.64rem] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5 text-success" aria-hidden="true" />
@@ -54,7 +52,7 @@ export function MarketingHome() {
                 </span>
               ))}
             </div>
-            <div className="mt-[clamp(0.3rem,1.1svh,1rem)] w-full">
+            <div className="mt-10 w-full sm:mt-14">
               <HeroPipeline />
             </div>
           </div>
@@ -73,7 +71,7 @@ export function MarketingHome() {
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
           <RevealOnScroll>
             <GlowingBadge>{homeContent.import.eyebrow}</GlowingBadge>
-            <h2 className={homeSectionTitleClass}>{homeContent.import.title}</h2>
+            <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.import.title}</h2>
             <p className="mt-6 text-base leading-8 text-muted-foreground">{homeContent.import.body}</p>
             <FeatureList items={homeContent.import.facts} className="mt-8" />
           </RevealOnScroll>
@@ -85,7 +83,7 @@ export function MarketingHome() {
         <div data-testid="marketing-agreements-section" className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
           <RevealOnScroll>
             <GlowingBadge>{homeContent.agreement.eyebrow}</GlowingBadge>
-            <h2 className={homeSectionTitleClass}>{homeContent.agreement.title}</h2>
+            <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.agreement.title}</h2>
             <p className="mt-6 text-base leading-8 text-muted-foreground">{homeContent.agreement.body}</p>
             <p className="mt-8 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary"><span>{homeContent.agreement.tags[0]}</span><span aria-hidden="true"> · </span><span>{homeContent.agreement.tags[1]}</span></p>
           </RevealOnScroll>
@@ -97,7 +95,7 @@ export function MarketingHome() {
         <div data-testid="remit-section" className="grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-start lg:gap-16">
           <div data-testid="remit-story">
             <GlowingBadge>{homeContent.remit.eyebrow}</GlowingBadge>
-            <h2 className={homeSectionTitleClass}>{homeContent.remit.title}</h2>
+            <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.remit.title}</h2>
             <p className="mt-6 text-base leading-8 text-muted-foreground">{homeContent.remit.body}</p>
             <div className="mt-8 grid gap-3">
               {homeContent.remit.promises.map((promise) => <div key={promise} data-testid="remit-promise" className="flex items-center gap-3 rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-3 text-sm font-semibold text-muted-foreground"><CircleDollarSign className="h-4 w-4 text-primary" />{promise}</div>)}
@@ -140,14 +138,14 @@ export function MarketingHome() {
 
       <SectionShell id="portfolio" className="marketing-alt-band">
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
-          <RevealOnScroll><GlowingBadge>{homeContent.portfolio.eyebrow}</GlowingBadge><h2 className={homeSectionTitleClass}>{homeContent.portfolio.title}</h2><p className="mt-6 text-base leading-8 text-muted-foreground">{homeContent.portfolio.body}</p></RevealOnScroll>
+          <RevealOnScroll><GlowingBadge>{homeContent.portfolio.eyebrow}</GlowingBadge><h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.portfolio.title}</h2><p className="mt-6 text-base leading-8 text-muted-foreground">{homeContent.portfolio.body}</p></RevealOnScroll>
           <PortfolioLoop {...homeContent.portfolio.visual} />
         </div>
       </SectionShell>
 
       <SectionShell id="pricing">
         <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-start lg:gap-20">
-          <div><GlowingBadge>{pricingContent.eyebrow}</GlowingBadge><h2 className={homeSectionTitleClass}>{pricingContent.title}</h2><p className="mt-6 text-base leading-8 text-muted-foreground">{pricingContent.body}</p></div>
+          <div><GlowingBadge>{pricingContent.eyebrow}</GlowingBadge><h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{pricingContent.title}</h2><p className="mt-6 text-base leading-8 text-muted-foreground">{pricingContent.body}</p></div>
           <GlassPanel tier={3} className="p-7 sm:p-10">
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{pricingContent.plan}</p>
             <div className="mt-5 flex items-end gap-3"><span className="text-6xl font-black tracking-[-0.06em] text-foreground">{pricingContent.price}</span><span className="pb-2 text-sm text-muted-foreground">{pricingContent.cadence}</span></div>
@@ -161,7 +159,7 @@ export function MarketingHome() {
       <HairlineDivider />
 
       <SectionShell id="faq">
-        <div className="max-w-3xl"><GlowingBadge>{homeContent.faq.eyebrow}</GlowingBadge><h2 className={homeSectionTitleClass}>{homeContent.faq.title}</h2></div>
+        <div className="max-w-3xl"><GlowingBadge>{homeContent.faq.eyebrow}</GlowingBadge><h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.faq.title}</h2></div>
         <div data-testid="faq-grid" className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-[var(--stroke-hairline)] bg-[var(--stroke-hairline)] md:grid-cols-2">
           {homeContent.faq.items.map((item) => <article key={item.question} className="bg-[var(--surface-void)] p-6 sm:p-8"><h3 className="text-lg font-black tracking-[-0.025em] text-foreground">{item.question}</h3><p className="mt-4 text-sm leading-7 text-muted-foreground">{item.answer}</p></article>)}
         </div>
@@ -175,7 +173,7 @@ export function MarketingHome() {
                 <GlowingBadge>{homeContent.remitNext.eyebrow}</GlowingBadge>
                 <span className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-warning">{homeContent.remitNext.status}</span>
               </div>
-              <h2 className="mt-6 text-[clamp(1.65rem,2svh+1vw,3rem)] font-black leading-[1.04] tracking-[-0.045em] text-foreground">{homeContent.remitNext.title}</h2>
+              <h2 className="mt-6 text-3xl font-black leading-[1.04] tracking-[-0.045em] text-foreground sm:text-5xl">{homeContent.remitNext.title}</h2>
               <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground">{homeContent.remitNext.body}</p>
               <dl className="mt-8 divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
                 {homeContent.remitNext.promises.map((promise) => (
@@ -195,7 +193,7 @@ export function MarketingHome() {
       <SectionShell>
         <GlassPanel tier={3} className="relative overflow-hidden p-8 text-center sm:p-14 lg:p-20">
           <div className="pointer-events-none absolute inset-0 bg-glow-radial opacity-60" />
-          <div className="relative"><GlowingBadge pulse>{homeContent.finalCta.eyebrow}</GlowingBadge><h2 className="mx-auto mt-7 max-w-4xl text-[clamp(1.85rem,2.4svh+1.3vw,4.5rem)] font-black leading-[1] tracking-[-0.05em] text-foreground">{homeContent.finalCta.title}</h2><p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-muted-foreground">{homeContent.finalCta.body}</p><div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><MagneticButton href={homeContent.finalCta.primary.href}>{homeContent.finalCta.primary.label}</MagneticButton><MarketingButton href={homeContent.finalCta.secondary.href} variant="secondary">{homeContent.finalCta.secondary.label}</MarketingButton></div></div>
+          <div className="relative"><GlowingBadge pulse>{homeContent.finalCta.eyebrow}</GlowingBadge><h2 className="mx-auto mt-7 max-w-4xl text-4xl font-black leading-[1] tracking-[-0.05em] text-foreground sm:text-7xl">{homeContent.finalCta.title}</h2><p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-muted-foreground">{homeContent.finalCta.body}</p><div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><MagneticButton href={homeContent.finalCta.primary.href}>{homeContent.finalCta.primary.label}</MagneticButton><MarketingButton href={homeContent.finalCta.secondary.href} variant="secondary">{homeContent.finalCta.secondary.label}</MarketingButton></div></div>
         </GlassPanel>
       </SectionShell>
     </>
