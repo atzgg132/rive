@@ -54,6 +54,7 @@ test("registration validates malformed input on the server", async ({ request })
       name: "",
       password: "short",
       inviteToken: "",
+      startedAt: Date.now() - 8_000,
     },
   });
 

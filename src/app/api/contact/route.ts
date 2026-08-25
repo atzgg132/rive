@@ -3,6 +3,7 @@ import { sendContactMessageEmail } from "@/utils/email";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { hashRequestValue } from "@/utils/contracts";
+import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const allowedSubjects = new Set([
@@ -12,6 +13,12 @@ const allowedSubjects = new Set([
   "Feedback",
   "Bug Report",
 ]);
+
+const limits = PUBLIC_FORM_RATE_LIMITS.contact;
+
+function accepted() {
+  return NextResponse.json({ success: true });
+}
 
 export async function POST(request: NextRequest) {
   const ip = getRequestIp(request);
@@ -24,10 +31,14 @@ export async function POST(request: NextRequest) {
      belongs on the durable limiter. Every message lands in the same inbox, so
      the global ceiling is what bounds the flood; the per-IP one only stops a
      single source from consuming it. */
-  if (!await durableRateLimit("contact:global", 60, 60 * 60 * 1000)) return throttled;
-  if (!await durableRateLimit(`contact:${hashRequestValue(ip)}`, 5, 60 * 60 * 1000)) return throttled;
+  if (!await durableRateLimit("contact:global", limits.global.limit, limits.global.windowMs)) return throttled;
+  if (!await durableRateLimit(`contact:${hashRequestValue(ip)}`, limits.ip.limit, limits.ip.windowMs)) return throttled;
 
   const body = await request.json().catch(() => null);
+  const gate = evaluatePublicFormGate(body);
+  // Same 200 a real send would return. No mail, no hint which check fired.
+  if (!gate.ok) return accepted();
+
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const subject = typeof body?.subject === "string" ? body.subject : "";
@@ -48,6 +59,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (!await durableRateLimit(`contact:email:${hashRequestValue(email)}`, limits.email.limit, limits.email.windowMs)) {
+    return throttled;
+  }
+
   const result = await sendContactMessageEmail({ name, email, subject, message });
   if (!result.sent) {
     return NextResponse.json(
@@ -56,5 +71,5 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ success: true });
+  return accepted();
 }

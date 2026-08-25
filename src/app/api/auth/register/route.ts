@@ -11,6 +11,7 @@ import { hashRequestValue } from "@/utils/contracts";
 import { attributionFromRequest, saveUserAttribution } from "@/utils/attribution";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
+import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
 
 function validEmail(value: unknown): value is string {
   return typeof value === "string" && /^\S+@\S+\.\S+$/.test(value.trim());
@@ -23,12 +24,11 @@ export async function POST(req: NextRequest) {
     const name = typeof body?.name === "string" ? body.name.trim().slice(0, 160) : "";
     const password = typeof body?.password === "string" ? body.password : "";
     const inviteToken = typeof body?.inviteToken === "string" ? body.inviteToken.trim() : "";
-    const honeypot = typeof body?.website === "string" ? body.website.trim() : "";
 
-    // Keep automated form posts from consuming database work. The field is
-    // intentionally absent from the visible form and is not surfaced in the
-    // response, so legitimate clients remain unaffected.
-    if (honeypot) {
+    // Keep automated form posts from consuming database work. Honeypot hits
+    // and instant POSTs get the same 201 a real signup would, so the filler
+    // is not told which check caught it.
+    if (!evaluatePublicFormGate(body).ok) {
       return NextResponse.json({ success: true, requiresEmailVerification: true, message: "Account created. Check your email to verify your address before entering Rive." }, { status: 201 });
     }
 
@@ -37,14 +37,15 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getRequestIp(req);
-    const allowed = await durableRateLimit(`auth:register:${ip}`, 12, 60 * 60 * 1000);
+    const limits = PUBLIC_FORM_RATE_LIMITS.register;
+    const allowed = await durableRateLimit(`auth:register:${hashRequestValue(ip)}`, limits.ip.limit, limits.ip.windowMs);
     if (!allowed) {
       return NextResponse.json(
         { success: false, message: "Too many attempts. Please try again later." },
         { status: 429 },
       );
     }
-    if (!await durableRateLimit(`auth:register:email:${hashRequestValue(email)}`, 4, 24 * 60 * 60 * 1000)) {
+    if (!await durableRateLimit(`auth:register:email:${hashRequestValue(email)}`, limits.email.limit, limits.email.windowMs)) {
       return NextResponse.json({ success: false, message: "Too many signup attempts for this address. Please try again later." }, { status: 429 });
     }
 

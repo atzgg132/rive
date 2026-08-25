@@ -7,12 +7,14 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -23,7 +25,11 @@ export default function ForgotPasswordPage() {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          website: websiteRef.current?.value ?? "",
+          startedAt: startedAtRef.current,
+        }),
       });
       const data = await response.json();
       if (!response.ok) setError(data.message || "Please check the email address and try again.");
@@ -60,6 +66,7 @@ export default function ForgotPasswordPage() {
                   <Input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@company.com" className="w-full rounded-xl border border-border bg-white/50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:focus:ring-blue-900" />
                 </span>
               </label>
+              <HoneypotField inputRef={websiteRef} />
               <Button type="submit" disabled={loading} className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-[0_4px_12px_rgba(29,78,216,0.18)] disabled:opacity-70">
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Send secure reset link"}
               </Button>
