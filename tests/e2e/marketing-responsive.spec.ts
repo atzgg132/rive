@@ -14,6 +14,11 @@ test.describe("marketing responsive guardrails", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/#remit", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("remit-section")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Know the payout before you send it." })).toHaveCount(0);
+    await expect(page.getByText("international payouts", { exact: false })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Preview the conversion. Nothing moves yet." })).toBeVisible();
+    await expect(page.getByText("Preview only. Not a transfer.")).toBeVisible();
+    await expect(page.getByText("No money moves yet.")).toBeVisible();
 
     const geometry = await page.evaluate(() => {
       const story = document.querySelector<HTMLElement>('[data-testid="remit-story"]')?.getBoundingClientRect();

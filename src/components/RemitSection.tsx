@@ -32,7 +32,7 @@ const FEE_RATE = 0.005;
 const COOLDOWN_S = 15;
 
 const promises = [
-  { label: "Tied to the invoice", sub: "Payouts should follow the Agreement, not a separate app." },
+  { label: "Tied to the invoice", sub: "The conversion should follow the Agreement, not a separate app." },
   { label: "The rate is the rate", sub: "No hidden FX markup. This preview uses ECB mid-market." },
   { label: "Built for client work", sub: "Designed around invoices and clients, not consumer cash pickup." },
 ] as const;
@@ -134,13 +134,13 @@ export default function RemitSection() {
             className="text-4xl font-bold leading-[1.08] tracking-tight text-slate-950 dark:text-white sm:text-5xl lg:text-[3.25rem]"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Know the payout before you send it.
+            Preview the conversion. Nothing moves yet.
           </h2>
           <p
             className="mt-5 max-w-[36ch] text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg"
             style={{ fontFamily: "var(--font-body)" }}
           >
-            Remit is next: international payouts next to the invoice. Live ECB rates here. No money moves yet.
+            Remit is a preview next to the invoice. Live ECB rates here. No money moves yet.
           </p>
 
           <dl className="mt-8 divide-y divide-slate-200/80 dark:divide-white/10">
