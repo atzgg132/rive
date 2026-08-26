@@ -8,6 +8,8 @@
 
 **Method:** `git fetch origin main dev`; `gh` / GitHub API for PR 42 (closed, unmerged); `curl` of `https://rive.work/`, `https://www.rive.work/`, `https://dev.rive.work/` and `/api/health`, `/cookies`, `/roadmap`, `/changelog`; headless Chromium stills at **1280×720**. HTML string counts are against the SSR/prerendered homepage, not a logged-in workspace.
 
+**Product review of draft PR 47:** §1 SHA map and §2 Remit leftover vs staging preview stand. Two writeup misses corrected below — §3 shutter definition, and §4.3 / §7.1 first-screen 1280×720 (capture miss, not a fold fail).
+
 ---
 
 ## 1. SHA map
@@ -132,6 +134,8 @@ Live `https://dev.rive.work/`: `Preview the FX rate`=2, `Remit is not a transfer
 
 ## 3. Shutter vs scrolly
 
+**The shutter is the sticky `data-testid="scrollytelling-rail"`.** It is live on staging / `origin/dev` (`b48985d`). Count **1**. Prod / `origin/main` count **0**. Do not treat the test’s “column, not shutter” carve-out as the definition. `coveringStickyShutter()` ignoring that testid is the cheat, not evidence the shutter is dead. Chapters being `min-h-[70vh]` does not clear it.
+
 ### 3.1 Count `data-testid=scrollytelling-rail`
 
 | Surface | Count of `data-testid="scrollytelling-rail"` |
@@ -146,47 +150,55 @@ Live `https://dev.rive.work/`: `Preview the FX rate`=2, `Remit is not a transfer
 
 Files named in the brief:
 
-- `src/components/marketing/ScrollytellingSection.tsx` — **dev only**
+- `src/components/marketing/ScrollytellingSection.tsx` — **dev only** (this is the shutter)
 - `src/components/marketing/MarketingHome.tsx` — **dev only** (mounts `<ScrollytellingSection … />` under `#product`)
-- `src/components/marketing/HeroPipeline.tsx` — **dev only** (hero rail, not the scrolly rail)
+- `src/components/marketing/HeroPipeline.tsx` — **dev only** (hero CLIENT→PROOF pipeline, not the shutter)
 
-On main the home is `src/app/page.tsx` composing `Hero`, `Features`, `RemitSection`, etc. **No scrolly file.**
+On main the home is `src/app/page.tsx` composing `Hero`, `Features`, `RemitSection`, etc. **No scrolly file. Shutter count 0.**
 
-### 3.2 Sticky `top-0 h-screen` vs full-viewport chapter cuts
+### 3.2 The shutter: sticky `scrollytelling-rail` on staging
 
-**Staging / `origin/dev` rail (live HTML matches source):**
+**Staging / `origin/dev` / live `https://dev.rive.work/` (HTML matches source), count = 1:**
 
 ```180:180:src/components/marketing/ScrollytellingSection.tsx
       <div data-testid="scrollytelling-rail" className="scrollytelling-rail sticky top-0 h-screen min-w-0 place-items-center">
 ```
 
-Live `https://dev.rive.work/`: `sticky top-0 h-screen` count = **1** (on that rail).
+Live `https://dev.rive.work/`: `sticky top-0 h-screen` count = **1**, on that rail. That pinned `h-screen` node **is** the shutter. It is back on `b48985d`.
 
-**Chapters are not `min-h-screen` cuts.** They are `min-h-[70vh]`:
+PR **41** (`c550606`, “Stop selling Remit payouts and kill the marketing shutter”) removed that rail. It returned on the current `dev` SHA (PRs 43/44/46 restored and then SSR’d it so it cannot vanish). **None of the rail is on prod.**
+
+Chapters on the left are `min-h-[70vh]`, not `min-h-screen`:
 
 ```161:161:src/components/marketing/ScrollytellingSection.tsx
             className={cn("flex min-h-[70vh] scroll-mt-0 flex-col justify-center py-14 …
 ```
 
-Comment in the same file (PR 46 tail):
+The file comment (PR 46 tail) claims that clears the shutter:
 
 > Chapters are 70vh, not 100vh (no shutter). Without a tail the last beat never crosses the 18% activation line…
 
-Tail: `data-testid="scrollytelling-tail"` `h-[60vh]`, live on staging.
+**It does not.** Shortening the chapter articles does not remove the sticky `h-screen` rail. Tail: `data-testid="scrollytelling-tail"` `h-[60vh]`, live on staging — that only gives the last beat scroll room.
 
-CSS (`src/app/globals.css`): rail `display: none` by default; `display: grid` at `min-width: 1024px`; hidden again for `prefers-reduced-motion: reduce`. **JS must not mount/unmount it** (comment at line 721).
+CSS (`src/app/globals.css`): rail `display: none` by default; `display: grid` at `min-width: 1024px`; hidden again for `prefers-reduced-motion: reduce`. Comment at line 721: JS must not mount/unmount it (that is how it vanished across reloads). So on desktop with motion, the shutter is **in the HTML and shown**.
 
-**Prod / `origin/main`:** no rail, no `sticky top-0 h-screen` scrolly. Homepage `<main className="min-h-screen overflow-hidden bg-background">` only. Live www `min-h-screen` = 2 (main + RSC payload). That is a normal page min-height, not a chapter shutter.
+**Prod / `origin/main`:** shutter count **0**. No `data-testid="scrollytelling-rail"`. Homepage `<main className="min-h-screen overflow-hidden bg-background">` only. Live www `min-h-screen` = 2 (main + RSC payload). That is a normal page min-height, not this shutter.
 
-**Shutter vs column (as the tests define it):** `tests/e2e/marketing-experience.spec.ts`
+### 3.3 The test carve-out is the cheat
+
+`tests/e2e/marketing-experience.spec.ts`:
 
 > Full-viewport sticky/fixed overlay covering the page. The chapter rail may be sticky and viewport-tall, but it is a column — not a page shutter.
 
-`coveringStickyShutter()` **explicitly ignores** `data-testid === "scrollytelling-rail"`. Chapter `min-height` must not be `100vh|100svh|100dvh|100lvh`.
+`coveringStickyShutter()` then skips the shutter by testid:
 
-History (dev only, already merged): PR **41** killed payout copy *and* the shutter; PR **43** restored GSAP scrolly **without** the sticky shutter; PR **44** SSR’d the rail so it cannot vanish; PR **46** added the last-chapter tail. **None of that is on prod.**
+```45:45:tests/e2e/marketing-experience.spec.ts
+      if (testid === "site-header" || testid === "scrollytelling-rail") return [];
+```
 
-### 3.3 GSAP / ScrollTrigger
+That ignore list is **how the gate stays green while the shutter is live**, not proof the shutter is dead. Chapter `min-height` must not be `100vh|100svh|100dvh|100lvh` — a second check that also does not look at the rail.
+
+### 3.4 GSAP / ScrollTrigger
 
 | Surface | Present? |
 |---|---|
@@ -267,12 +279,14 @@ Taller high-dpr laptops (`min-height: 801px` and `max-height: 1100px` and `min-r
 
 **`origin/main` / prod** uses `src/components/Hero.tsx`: `pt-32`, `fontSize: clamp(3rem, 7vw, 6.4rem)`, **no** `max-height: 800px` compress, **no** `hero-pipeline`. Headline: `Run your services without the chaos.`
 
-### 4.3 Live 1280×720 stills (headless Chromium, exact 1280×720 PNG)
+### 4.3 Live 1280×720 (QA pass; headless still is a capture miss)
 
-- Prod (`https://www.rive.work/`): first screen is the **old** hero — badge `Open beta is live`, h1 `Run your services without the chaos.`, CTA `Create a free account`, microcopy `Open signup · no invitation required · verify your email to start`. Bottom of the viewport clips the floating stat cards (`Deliver on time` / …). **No CLIENT→PROOF pipeline.** Matches `origin/main`. Nav includes **Remit**.
-- Staging (`https://dev.rive.work/`): first screen is the **new** hero — `OPEN BETA`, animated first line `Your business`, body about client/work/Agreement/invoice/proof, CTAs `Build your workspace` / `See the unpaid role`, chips `OPEN SIGNUP` / `FREE DURING BETA` / `YOUR DATA STAYS YOURS`. **The CLIENT→PROOF pipeline is not in this 1280×720 capture.** Possible causes: webfonts not ready (tests wait `fonts.ready`; `--screenshot` does not), `hero-line-in` still running, or a real fold miss that Linux CI fonts did not show. **Treat as a live fold risk against the ship-gate**, not as a passed visual.
+**1280×720 is not a fold fail.** QA passed first screen on `https://dev.rive.work` at SHA `b48985d`: **nav, badge, headline, sub, CTAs, labeled CLIENT→PROOF**. Viewport for that ship-gate stays **1280×720 / 1280×800 only** (`tests/e2e/marketing-experience.spec.ts`; do not add 1366×768). Cycle-on-load stays intended (`HeroPipeline.tsx` `STAGE_ADVANCE_MS = 2500`; tests: “Do not assert which pipeline node is active — interval autoplay may already be on WORK.”).
 
-Cycle-on-load cannot be confirmed from a still when the pipeline is off-screen. Source still autoplays every 2.5s.
+- Prod (`https://www.rive.work/`): first screen is the **old** hero — badge `Open beta is live`, h1 `Run your services without the chaos.`, CTA `Create a free account`, microcopy `Open signup · no invitation required · verify your email to start`. No CLIENT→PROOF pipeline on this SHA (that rail is staging-only). Matches `origin/main`. Nav includes **Remit**.
+- Staging (`https://dev.rive.work/`): first screen is the **new** hero. QA: nav, `OPEN BETA` badge, headline, sub, both CTAs, labeled **CLIENT→PROOF**. A headless Chromium `--screenshot` at document load showed only the first hero line (`Your business`) and omitted the pipeline. That still is a **capture miss** (webfonts / `hero-line-in`; tests wait `document.fonts.ready`; `--screenshot` does not). **Not a ship-gate fail. Not a live fold fail.**
+
+Cycle-on-load cannot be read from a still taken before paint finishes. Source still autoplays every 2.5s.
 
 ---
 
@@ -348,7 +362,7 @@ On **`origin/dev` only:**
 - `tests/e2e/public-routes.spec.ts` — `marketing homepage does not sell Remit as a transfer or payout product`  
   asserts count 0 for `Know the payout before you send it.`, `Payouts should follow the Agreement.`, `international payouts`, `You send`, `They receive`
 - `tests/e2e/marketing-experience.spec.ts` (no-JS describe) — `getByText("Know the payout before you send it.")` count 0 **and** rail present in HTML
-- Scrolly/shutter geometry tests (rail sticky column, chapters not `100vh`, last chapter shows Portfolio Studio)
+- Scrolly/shutter tests (they **carve out** `data-testid="scrollytelling-rail"` in `coveringStickyShutter()`, so they can pass while the shutter is live; see §3.3)
 - 1280×720 / 1280×800 hero ship-gate (pipeline labels in the first screen)
 - Google Calendar heading + `once Google approves the integration` on `/roadmap`
 - Open-beta changelog/roadmap headings; guides must not say `ai co-pilot` or `sending your first payment with remit`
@@ -369,6 +383,7 @@ Other pass-while-lying patterns:
 | Guides “no ai co-pilot” | Does not inspect cookies “Vercel Analytics” or Remit payout heading. |
 | `marketing-responsive.spec.ts` on **main** | Layout of `#remit` only. Closed PR 42 would have added leftover-copy asserts **here**; they never landed. |
 | Visual regression (`tests/e2e/visual-regression.spec.ts`) | Sizes **1440×900, 768×900, 390×844**. `reducedMotion: "reduce"` — **no cycle-on-load**, **no 1280 fold**, **no 1366**. Baselines are the *new* marketing on `dev` only. |
+| `coveringStickyShutter()` / “no sticky shutter” | Ignores `data-testid="scrollytelling-rail"`. Green while the shutter is live on staging. See §3.3. |
 | Playwright default 1280×720 | Many tests immediately `setViewportSize({ 1440, 900 })`, so they never see the 150% Windows fold. |
 
 ### 6.3 Which sizes are in the loop (1280 vs 1366)
@@ -377,7 +392,7 @@ Other pass-while-lying patterns:
 |---|---|---|
 | **Hero 150% ship-gate** | **1280×720, 1280×800** | `marketing-experience.spec.ts` — comment: *Do not add 1366×768 or 1440×900 to this loop.* |
 | QHD 150% | **1707×960 @ dpr 1.5** | same file |
-| No sticky shutter | **1920×1080, 1280×720** | same file |
+| “No sticky shutter” loop | **1920×1080, 1280×720** | same file — carves out the rail testid; see §3.3 |
 | Scrolly activation / stick | **1440×900, 1920×1080** | same file — **not 1280** |
 | Marketing visual baselines | **1440×900, 768×900, 390×844** | `visual-regression.spec.ts` |
 | Marketing overflow | 390, 768, **1440** | `marketing-responsive.spec.ts` |
@@ -398,13 +413,13 @@ They would replace prod SHA `cfe7b317` with `b48985d7` (or a later `dev` SHA). T
 **What users on www would gain**
 
 - Honest Remit preview (`remitNext` + `RemitPreview`). Leftover payout strings go away.
-- New homepage IA, kinetic hero, CLIENT→PROOF pipeline, GSAP ScrollTrigger scrolly column, last-chapter tail (PR 46).
+- New homepage IA, kinetic hero, CLIENT→PROOF pipeline, last-chapter tail (PR 46).
 - The **dev** test suite would start running on **main** deploys, so leftover payout copy could no longer ship unnoticed.
 
 **What would break or change**
 
-- **First screen:** live 1280×720 still of staging did **not** show the CLIENT→PROOF rail. Promoting ships that fold to every 1920×1080 @ 150% Windows laptop. CI on `dev` already asserted it fits; live fonts/cache may not match the runner (`s-maxage=31536000` + `x-nextjs-cache: HIT` on staging home; prod home is `no-store`).
-- **Sticky `h-screen` rail** appears on desktop. Tests call it a column, not a shutter; humans can still feel a pinned right pane. Reduced motion hides it.
+- **First screen:** not a 1280×720 fold fail. QA already passed nav, badge, headline, sub, CTAs, labeled CLIENT→PROOF on `https://dev.rive.work` at `b48985d`. The headless still that omitted the pipeline was a capture miss (fonts / `hero-line-in`), not a ship-gate fail. Viewport stays **1280×720 / 1280×800 only**. Cycle-on-load stays intended. Staging home is prerender-cached (`s-maxage=31536000`, `x-nextjs-cache: HIT`); prod home is `no-store`.
+- **Sticky `scrollytelling-rail` shutter** ships to www. That node is `sticky top-0 h-screen` (`ScrollytellingSection.tsx:180`), count **1** on staging / `origin/dev`, count **0** on prod / `origin/main`. PR 41 killed it; it is back on `b48985d`. Tests calling it a “column, not a page shutter” and skipping it in `coveringStickyShutter()` do not make it not a shutter. Chapters `min-h-[70vh]` do not clear it. Reduced motion hides it; desktop with motion shows it.
 - **GSAP** (~`^3.15.0`) loads on the public homepage (ScrollTrigger + ScrollToPlugin). Not on prod today. Failure mode is a stuck/opacity-wrong chapter, not a payout.
 - **Visual identity** and nav (`Product / Company / Learn` vs today’s `Features … Remit`) change overnight. Old `#remit` payout block is replaced; a new `#remit-transfers` preview is added. Inbound links to `#remit` still exist but the story is a ledger, not “You send”.
 - **Git:** merge is a fat `dev`→`main` PR. Histories diverged at `8126c4e`; SMTP/bot-gate *content* is on both, but main’s promote-merge commits are not in `dev`. Do not cherry-pick onto `main` (release convention). Do not terraform; this overhaul is app image only.
@@ -433,7 +448,7 @@ If it were merged to `main` it would **only** relabel `RemitSection.tsx` (`Previ
 | Staging Remit preview | `src/components/marketing/RemitPreview.tsx` |
 | `remitNext` copy | `src/content/marketing/home.ts` |
 | Home composition | `src/components/marketing/MarketingHome.tsx` |
-| Scrolly rail | `src/components/marketing/ScrollytellingSection.tsx` |
+| Shutter (`scrollytelling-rail`) | `src/components/marketing/ScrollytellingSection.tsx` |
 | Hero pipeline / cycle | `src/components/marketing/HeroPipeline.tsx` |
 | Hero CSS 1280 | `src/app/globals.css` (`max-height: 800px` / `720px`) |
 | 1280 ship-gate | `tests/e2e/marketing-experience.spec.ts` |
@@ -442,4 +457,4 @@ If it were merged to `main` it would **only** relabel `RemitSection.tsx` (`Previ
 | Deploy IDs | `src/app/api/health/route.ts`, `.github/workflows/deploy.yml`, `next.config.ts` |
 | Closed copy PR | https://github.com/atzgg132/rive/pull/42 |
 
-**Bottom line for Product:** git `main` = prod = `cfe7b317`. git `dev` = staging = working tree = `b48985d7`. Production still sells Remit as a payout. Staging does not. Staging has a sticky `h-screen` scrolly *column* (not the old full-viewport shutter) and a 1280×720 hero ship-gate that **does not run on prod CI**. Promoting staging would fix the Remit lie and ship the overhaul; it is still a ship, not a copy patch. PR 42 stays closed.
+**Bottom line for Product:** git `main` = prod = `cfe7b317`. git `dev` = staging = working tree = `b48985d7`. Production still sells Remit as a payout. Staging does not. Sticky `data-testid="scrollytelling-rail"` **is the shutter** and is still live on staging (count 1 on `b48985d` / `https://dev.rive.work`; count 0 on prod/main). PR 41 killed that rail; it came back. The test carve-out is the cheat. 1280×720 first screen **passed QA** on staging (nav, badge, headline, sub, CTAs, labeled CLIENT→PROOF); the headless still was a capture miss, not a fold fail. Promoting staging would fix the Remit lie and **ship the shutter**. It is still a ship, not a copy patch. PR 42 stays closed.
