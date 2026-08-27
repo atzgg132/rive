@@ -430,13 +430,21 @@ export async function PUT(req: NextRequest) {
         }
       }
 
+      const updated = await tx.invoice.updateMany({
+        where: {
+          id,
+          userId: session.userId,
+          status: existingInvoice.status,
+          updatedAt: existingInvoice.updatedAt,
+        },
+        data: dataToUpdate,
+      });
+      if (updated.count !== 1) {
+        throw new Error("Invoice changed while it was being edited. Reload it and try again.");
+      }
+
       if (computedItems) {
         await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
-        await tx.invoice.update({
-          where: { id },
-          data: dataToUpdate
-        });
-        
         await tx.invoiceItem.createMany({ data: calculation!.items.map((item) => ({
           invoiceId: id,
           description: item.description,
@@ -445,11 +453,6 @@ export async function PUT(req: NextRequest) {
           amount: item.amount,
           sortOrder: item.sortOrder,
         })) });
-      } else {
-        await tx.invoice.update({
-          where: { id },
-          data: dataToUpdate
-        });
       }
     });
 
@@ -462,8 +465,10 @@ export async function PUT(req: NextRequest) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ success: false, message: "That invoice number is already in use." }, { status: 409 });
     }
-    const message = error instanceof Error && error.message.includes("already in use") ? error.message : "Unable to update invoice.";
-    return NextResponse.json({ success: false, message }, { status: message.includes("already in use") ? 409 : 500 });
+    const expectedConflict = error instanceof Error
+      && (error.message.includes("already in use") || error.message.includes("changed while it was being edited"));
+    const message = expectedConflict ? error.message : "Unable to update invoice.";
+    return NextResponse.json({ success: false, message }, { status: expectedConflict ? 409 : 500 });
   }
 }
 
@@ -497,10 +502,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Issued invoices cannot be deleted; retain them for the audit trail." }, { status: 409 });
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
-      await tx.invoice.delete({ where: { id } });
+    const deleted = await prisma.invoice.deleteMany({
+      where: {
+        id,
+        userId: session.userId,
+        status: existingInvoice.status,
+        updatedAt: existingInvoice.updatedAt,
+      },
     });
+    if (deleted.count !== 1) {
+      return NextResponse.json({ success: false, message: "Invoice changed while it was being deleted. Reload it and try again." }, { status: 409 });
+    }
 
     return NextResponse.json({
       success: true,

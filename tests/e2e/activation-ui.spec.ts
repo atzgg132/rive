@@ -415,16 +415,16 @@ test.describe("goal-aware activation", () => {
     await expect(page.getByRole("button", { name: /Mostly starting fresh/ })).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("skip setup is a durable choice and does not reopen guidance", async ({ page }) => {
+  test("skip setup still shows the activation checklist", async ({ page }) => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 1 };
     await installWorkspaceMocks(page, state);
     await installOnboardingMocks(page, state);
     await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Skip setup" }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-    await expect(page.getByTestId("activation-card")).toBeHidden();
+    await expect(page.getByTestId("activation-card")).toBeVisible();
     expect(state.startingPath).toBe("skipped");
-    expect(state.guidanceDismissed).toBe(true);
+    expect(state.guidanceDismissed).not.toBe(true);
   });
 
   test("guidance dismissal persists and More tools keeps direct routes available", async ({ page }) => {

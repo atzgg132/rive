@@ -54,6 +54,7 @@ export type InvoiceDetail = {
   contract_title: string | null;
   items: Array<{ id: string; description: string; quantity: string; unit_price: string; amount: string }>;
   payments: Array<{ id: string; amount: string; method: string; reference: string | null; notes: string | null; paid_at: string }>;
+  latest_delivery: { status: string; recipient: string; error: string | null; created_at: string } | null;
   events: Array<{ id: string; event_type: string; created_at: string }>;
 };
 
@@ -164,11 +165,33 @@ export default function InvoiceDetailPanel({
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.message || "Invoice was not sent.");
-      toast.success("Invoice sent and delivery recorded.");
+      if (!data.delivered && data.publicUrl) {
+        await navigator.clipboard.writeText(data.publicUrl).catch(() => undefined);
+        toast.success(data.message, { description: `Public link: ${data.publicUrl}` });
+      } else {
+        toast.success(data.message || "Invoice sent and delivery recorded.");
+      }
       await load();
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invoice was not sent.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const retryDelivery = async () => {
+    if (!invoice || busy) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/workflow/invoices/${invoice.id}/retry-delivery`, { method: "POST" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.message || "Invoice delivery could not be retried.");
+      toast.success(data.message);
+      await load();
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Invoice delivery could not be retried.");
     } finally {
       setBusy(false);
     }
@@ -272,6 +295,14 @@ export default function InvoiceDetailPanel({
                     <div className="flex justify-between gap-3 sm:block">
                       <dt className="text-xs text-muted-foreground">Sent</dt>
                       <dd className="font-medium sm:mt-0.5">{dateLabel(invoice.sent_at)}</dd>
+                    </div>
+                  ) : null}
+                  {invoice.latest_delivery ? (
+                    <div className="flex justify-between gap-3 sm:block">
+                      <dt className="text-xs text-muted-foreground">Email delivery</dt>
+                      <dd className={`font-medium sm:mt-0.5 ${invoice.latest_delivery.status === "failed" ? "text-destructive" : ""}`}>
+                        {invoice.latest_delivery.status === "sent" ? "Delivered" : invoice.latest_delivery.status === "failed" ? "Failed" : "Pending"}
+                      </dd>
                     </div>
                   ) : null}
                   {invoice.paid_date ? (
@@ -418,6 +449,11 @@ export default function InvoiceDetailPanel({
                   {canSendInvoice(invoice.status) ? (
                     <Button size="sm" disabled={busy} onClick={() => void sendInvoice()} className="gap-1.5">
                       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Send
+                    </Button>
+                  ) : null}
+                  {invoice.latest_delivery?.status === "failed" ? (
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => void retryDelivery()} className="gap-1.5">
+                      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Retry email
                     </Button>
                   ) : null}
                   {canRecordPayment(invoice.status) ? (

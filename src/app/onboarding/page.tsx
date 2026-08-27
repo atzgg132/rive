@@ -500,7 +500,7 @@ export default function OnboardingPage() {
       const response = await fetch("/api/onboarding", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "complete", startingPath: "skipped", guidanceDismissed: true, step: 5 }),
+        body: JSON.stringify({ status: "complete", startingPath: "skipped", step: 5 }),
       });
       if (!response.ok) throw new Error("Setup could not be skipped.");
       router.replace("/dashboard");

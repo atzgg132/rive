@@ -16,7 +16,7 @@ changing the rest of the pipeline.
 ```
 UPLOAD → INGEST → PROFILE → CLASSIFY → MAP → NORMALIZE
        → RESOLVE RELATIONSHIPS → DEDUPE → VALIDATE → BUILD PLAN
-       → USER REVIEW → COMMIT → VERIFY → OPTIONAL ROLLBACK
+       → USER REVIEW → COMMIT → VERIFY
 ```
 
 Uploaded rows are never translated straight into production records. They become
@@ -36,7 +36,7 @@ import plan.
 | Validate | `src/lib/migration/validate.ts` | The product's own business rules |
 | Plan | `src/lib/migration/plan.ts` | Immutable operation list plus hash |
 | Commit | `src/utils/migration/commit.ts` | Batched, idempotent execution against a ledger |
-| Rollback | `src/utils/migration/rollback.ts` | Undo, narrowly and safely |
+| Rollback | `src/utils/migration/rollback.ts` | Disabled. Routes return 410; imported rows are never removed |
 
 `src/lib/migration/**` is **pure**: no database, no `server-only`, no
 environment access. That is what lets the whole engine run under `node --test`
@@ -220,31 +220,19 @@ it creates.
 
 ## Rollback
 
-Scope is narrow and stated plainly: **records this migration created, which
-nobody has touched since.**
+Rollback is **disabled by policy**. Imported Client, Project, Invoice, and
+Expense rows are never removed. `src/utils/migration/rollback.ts` has no Prisma
+calls; `previewRollback` / `executeRollback` return a disabled outcome.
 
-`imported_records.target_stamp` records the created row's `updatedAt` at import
-time. Rollback compares it against the current value; anything edited since is
-reported as a conflict and kept. A record with no stamp is also kept — without
-evidence either way, refusing is the safe answer.
+`GET` and `POST /api/migrations/:id/rollback` return `410`. The legacy
+`DELETE /api/onboarding/import/jobs/:id` route also returns `410`. An
+unfinished job is abandoned with `POST /api/migrations/:id` (terminal
+`abandoned` status; no workspace rows are touched).
 
-Rollback never deletes records that existed before the migration (a `link`
-created nothing), records created by anything else, or a parent that surviving
-records still depend on. Deletion runs children-first so a client is never
-removed while an invoice still points at it.
-
-`GET /api/migrations/:id/rollback` previews exactly what would happen, so the
-confirmation the user sees is the truth rather than an estimate.
-
-**Operating rule: there is exactly one rollback implementation.**
-`src/utils/migration/rollback.ts` (`previewRollback`/`executeRollback`) is the
-only code in this codebase permitted to delete a record a migration created,
-and only under the eligibility rule above. Both entry points — the v2 engine's
-`POST /api/migrations/:id/rollback` and the legacy onboarding screen's
-`DELETE /api/onboarding/import/jobs/:id` — call into it; neither runs its own
-`deleteMany`. `tests/domain/migration-rollback-safety.test.mjs` fails the build
-if either route stops delegating to it. If you're adding a new way to undo an
-import, extend this module — do not write a second deletion path next to it.
+`tests/domain/migration-rollback-safety.test.mjs` fails the build if those
+routes or `rollback.ts` contain a live `.delete(` / `.deleteMany(`. Do not
+reintroduce a delete path. If a future requirement seems to need one, stop
+and ask rather than building it.
 
 ---
 
@@ -289,7 +277,8 @@ generic adapter flowing through it.
 4. Add validation in `validate.ts`, sourcing vocabularies from
    `src/lib/domain-vocabulary.ts` — never restate a rule the product already
    enforces.
-5. Add a creator branch in `commit.ts` and a delete branch in `rollback.ts`.
+5. Add a creator branch in `commit.ts`. Do not add a delete branch in
+   `rollback.ts`.
 6. Add fixtures and tests.
 
 ### Adding the future LLM resolver

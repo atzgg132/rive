@@ -53,6 +53,38 @@ test("signup-style jobId processing skips older queued inquiry mail", async () =
   assert.equal(verification.status, "sent");
 });
 
+test("invoice_sent jobId processing skips older queued inquiry mail", async () => {
+  const inquiryId = await enqueueEmail(sampleEmail("owner@example.com", "portfolio_inquiry"));
+  const invoiceId = await enqueueEmail(sampleEmail("client@example.com", "invoice_sent"));
+  prisma.__db.invoiceDelivery.push({
+    id: invoiceId,
+    invoiceId: "invoice-1",
+    status: "queued",
+    providerMessageId: null,
+    error: "queued_for_retry",
+    sentAt: null,
+  });
+
+  const delivered = [];
+  const result = await processEmailOutbox({
+    jobId: invoiceId,
+    deliver: async (email) => {
+      delivered.push(email.type);
+      return { sent: true, messageId: "invoice" };
+    },
+  });
+
+  assert.equal(result.sent, 1);
+  assert.deepEqual(delivered, ["invoice_sent"]);
+  assert.equal(prisma.__db.emailOutbox.find((job) => job.id === inquiryId).status, "queued");
+  assert.equal(prisma.__db.emailOutbox.find((job) => job.id === invoiceId).status, "sent");
+  const invoiceDelivery = prisma.__db.invoiceDelivery.find((delivery) => delivery.id === invoiceId);
+  assert.equal(invoiceDelivery.status, "sent");
+  assert.equal(invoiceDelivery.providerMessageId, "invoice");
+  assert.equal(invoiceDelivery.error, null);
+  assert.ok(invoiceDelivery.sentAt);
+});
+
 test("the worker still drains the oldest job when no jobId is given", async () => {
   await enqueueEmail(sampleEmail("owner@example.com", "portfolio_inquiry"));
   await enqueueEmail(sampleEmail("new@example.com", "email_verification"));
@@ -82,6 +114,84 @@ test("jobs left in processing after a killed request are reclaimed", async () =>
   assert.equal(result.reclaimed, 1);
   assert.equal(result.sent, 1);
   assert.equal(prisma.__db.emailOutbox[0].status, "sent");
+});
+
+test("a killed final attempt is reclaimed for one final retry", async () => {
+  const jobId = await enqueueEmail(sampleEmail("final-attempt@example.com"));
+  const job = prisma.__db.emailOutbox.find((row) => row.id === jobId);
+  job.status = "processing";
+  job.attempts = 8;
+  job.updatedAt = new Date(Date.now() - STALE_PROCESSING_MS - 1_000);
+
+  const result = await processEmailOutbox({
+    deliver: async () => ({ sent: true, messageId: "final-retry" }),
+  });
+
+  assert.equal(result.reclaimed, 1);
+  assert.equal(result.sent, 1);
+  assert.equal(job.status, "sent");
+  assert.equal(job.attempts, 8);
+});
+
+test("revoked Agreement signing links are not delivered from the queue", async () => {
+  prisma.__db.contractReviewLink.push({
+    id: "active-link",
+    signerId: "signer-1",
+    tokenHash: "active-hash",
+    type: "sign",
+    revokedAt: null,
+    expiresAt: new Date(Date.now() + 60_000),
+  });
+  const obsoleteId = await enqueueEmail({
+    ...sampleEmail("client@example.com", "contract_signing"),
+    deliveryGuard: { kind: "contract_signing", signerId: "signer-1", tokenHash: "revoked-hash" },
+  });
+  const activeId = await enqueueEmail({
+    ...sampleEmail("client@example.com", "contract_signing"),
+    deliveryGuard: { kind: "contract_signing", signerId: "signer-1", tokenHash: "active-hash" },
+  });
+  const delivered = [];
+
+  const result = await processEmailOutbox({
+    limit: 2,
+    deliver: async (email) => {
+      delivered.push(email.deliveryGuard.tokenHash);
+      return { sent: true, messageId: "active" };
+    },
+  });
+
+  assert.deepEqual(delivered, ["active-hash"]);
+  assert.equal(prisma.__db.emailOutbox.find((job) => job.id === obsoleteId).status, "failed");
+  assert.equal(prisma.__db.emailOutbox.find((job) => job.id === activeId).status, "sent");
+  assert.equal(result.failed, 1);
+  assert.equal(result.sent, 1);
+});
+
+test("voided invoice links are not delivered from the queue", async () => {
+  prisma.__db.invoice.push({
+    id: "invoice-voided",
+    userId: "user-1",
+    status: "void",
+    publicTokenHash: "invoice-token-hash",
+    sentSnapshot: { total: "100" },
+    sentAt: new Date(),
+  });
+  const jobId = await enqueueEmail({
+    ...sampleEmail("voided@example.com", "invoice_sent"),
+    deliveryGuard: {
+      kind: "invoice_sent",
+      invoiceId: "invoice-voided",
+      tokenHash: "invoice-token-hash",
+    },
+  });
+
+  const result = await processEmailOutbox({ provider: "console", jobId });
+
+  assert.equal(result.sent, 0);
+  assert.equal(result.failed, 1);
+  const job = prisma.__db.emailOutbox.find((row) => row.id === jobId);
+  assert.equal(job.status, "failed");
+  assert.match(job.lastError, /replaced or expired/i);
 });
 
 test("a processing job that is still young is not stolen by another worker", async () => {
@@ -140,6 +250,29 @@ test("the eighth failed attempt is terminal", async () => {
 
   assert.equal(result.failed, 1);
   assert.equal(prisma.__db.emailOutbox[0].status, "failed");
+});
+
+test("terminal invoice delivery failure is reflected on the correlated delivery", async () => {
+  const jobId = await enqueueEmail(sampleEmail("client@example.com", "invoice_sent"));
+  prisma.__db.emailOutbox[0].attempts = 7;
+  prisma.__db.invoiceDelivery.push({
+    id: jobId,
+    invoiceId: "invoice-1",
+    status: "queued",
+    providerMessageId: null,
+    error: "queued_for_retry",
+    sentAt: null,
+  });
+
+  await processEmailOutbox({
+    jobId,
+    deliver: async () => ({ sent: false, reason: "delivery_failed" }),
+  });
+
+  assert.equal(prisma.__db.invoiceDelivery[0].status, "failed");
+  assert.equal(prisma.__db.invoiceDelivery[0].providerMessageId, null);
+  assert.equal(prisma.__db.invoiceDelivery[0].error, "delivery_failed");
+  assert.equal(prisma.__db.invoiceDelivery[0].sentAt, null);
 });
 
 test("a successful drain of mixed jobs still records every recipient", async () => {

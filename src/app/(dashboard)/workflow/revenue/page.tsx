@@ -181,7 +181,12 @@ function RevenueWorkspace() {
       const response = await fetch(`/api/workflow/invoices/${invoice.id}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.message || "Invoice was not sent.");
-      toast.success("Invoice sent and delivery recorded.");
+      if (!data.delivered && data.publicUrl) {
+        await navigator.clipboard.writeText(data.publicUrl).catch(() => undefined);
+        toast.success(data.message, { description: `Public link: ${data.publicUrl}` });
+      } else {
+        toast.success(data.message || "Invoice sent and delivery recorded.");
+      }
       refresh();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Invoice was not sent."); }
   };

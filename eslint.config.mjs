@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
     // Generated/user-owned artifacts are not application source.
     ".claude/**",
     ".commandcode/**",
+    ".cursor/**",
     "docs/audit/**",
     "graphify-out/**",
     "launch-film/**",

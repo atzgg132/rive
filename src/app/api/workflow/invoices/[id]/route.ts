@@ -53,6 +53,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           orderBy: { paidAt: "desc" },
           select: { id: true, amount: true, method: true, reference: true, notes: true, paidAt: true },
         },
+        deliveries: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { status: true, recipient: true, error: true, createdAt: true },
+        },
         events: {
           orderBy: { createdAt: "desc" },
           take: 50,
@@ -115,6 +120,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           notes: payment.notes,
           paid_at: payment.paidAt,
         })),
+        latest_delivery: invoice.deliveries[0] ? {
+          status: invoice.deliveries[0].status,
+          recipient: invoice.deliveries[0].recipient,
+          error: invoice.deliveries[0].error,
+          created_at: invoice.deliveries[0].createdAt,
+        } : null,
         events: invoice.events.map((event) => ({
           id: event.id,
           event_type: event.eventType,

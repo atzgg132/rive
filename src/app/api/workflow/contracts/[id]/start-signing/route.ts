@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { sendContractSigningEmail } from "@/utils/email";
+import { buildContractSigningEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, isLocalEsignDemo, transitionContractStatus } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
 
@@ -70,18 +71,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const expiresAt = new Date(Date.now() + CONTRACT_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
     const clientToken = createAccessToken();
     const ownerToken = createAccessToken();
+    const clientTokenHash = hashAccessToken(clientToken);
+    const ownerTokenHash = hashAccessToken(ownerToken);
+    const clientSignUrl = `${appUrl()}/sign/${encodeURIComponent(clientToken)}`;
+    const ownerSignUrl = `${appUrl()}/sign/${encodeURIComponent(ownerToken)}`;
+    const signingEmail = {
+      ...buildContractSigningEmail({ to: clientSigner.email, signerName: clientSigner.name, contractTitle: contract.title, signUrl: clientSignUrl, expiresAt }),
+      deliveryGuard: { kind: "contract_signing" as const, signerId: clientSigner.id, tokenHash: clientTokenHash },
+    };
+    let outboxId = "";
     try {
       await prisma.$transaction(async (tx) => {
         const started = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: "starting", to: "signing", data: { provider: envelope.provider, providerEnvelopeId: envelope.providerEnvelopeId, reviewExpiresAt: expiresAt } });
         if (started !== 1) throw new Error("Recorded acceptance was cancelled or changed while the provider was preparing the request.");
         await tx.contractReviewLink.createMany({
           data: [
-            { contractId: id, versionId: version.id, signerId: clientSigner.id, tokenHash: hashAccessToken(clientToken), type: "sign", expiresAt },
-            { contractId: id, versionId: version.id, signerId: ownerSigner.id, tokenHash: hashAccessToken(ownerToken), type: "sign", expiresAt },
+            { contractId: id, versionId: version.id, signerId: clientSigner.id, tokenHash: clientTokenHash, type: "sign", expiresAt },
+            { contractId: id, versionId: version.id, signerId: ownerSigner.id, tokenHash: ownerTokenHash, type: "sign", expiresAt },
           ],
         });
         await tx.contractSigner.updateMany({ where: { contractId: id }, data: { invitedAt: new Date(), status: "pending" } });
         await tx.contractEvent.create({ data: { contractId: id, versionId: version.id, actorUserId: session.userId, eventType: "signing_started", metadata: { provider: envelope.provider, providerEnvelopeId: envelope.providerEnvelopeId } } });
+        outboxId = await enqueueEmail(signingEmail, tx);
       });
     } catch (error) {
       await provider.voidEnvelope(envelope.providerEnvelopeId).catch((voidError) => console.error("Contract provider cleanup error:", voidError));
@@ -89,11 +100,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       throw error;
     }
 
-    const clientSignUrl = `${appUrl()}/sign/${encodeURIComponent(clientToken)}`;
-    const ownerSignUrl = `${appUrl()}/sign/${encodeURIComponent(ownerToken)}`;
-    const email = await sendContractSigningEmail({ to: clientSigner.email, signerName: clientSigner.name, contractTitle: contract.title, signUrl: clientSignUrl, expiresAt });
+    let delivered = false;
+    if (getEmailProvider() !== "disabled" && outboxId) {
+      const outbox = await processEmailOutbox({ jobId: outboxId }).catch((deliveryError) => {
+        console.error("Immediate Agreement signing email attempt failed:", deliveryError);
+        return null;
+      });
+      delivered = Boolean(outbox && outbox.sent > 0);
+    }
 
-    return NextResponse.json({ success: true, status: "signing", demo: isLocalEsignDemo(), clientSignUrl, ownerSignUrl, email: { sent: email.sent, reason: email.reason }, message: isLocalEsignDemo() ? "Local recorded-acceptance request started. Use the client acceptance link first, then the owner link." : "Recorded acceptance request started." });
+    return NextResponse.json({
+      success: true,
+      status: "signing",
+      demo: isLocalEsignDemo(),
+      clientSignUrl,
+      ownerSignUrl,
+      email: { queued: true, sent: delivered },
+      message: isLocalEsignDemo()
+        ? "Local recorded-acceptance request started. Use the client acceptance link first, then the owner link."
+        : delivered
+          ? "Recorded acceptance request started."
+          : "Recorded acceptance request started. Share the client acceptance link if email delivery is still pending.",
+    });
   } catch (error) {
     console.error("Contract start signing error:", error);
     const message = error instanceof Error ? error.message : "Unable to start recorded acceptance.";

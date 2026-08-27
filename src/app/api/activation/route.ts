@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     prisma.invoice.count({ where: { userId: session.userId } }),
     prisma.expense.count({ where: { userId: session.userId } }),
     prisma.project.count({ where: { userId: session.userId, dueDate: { not: null } } }),
-    prisma.invoice.count({ where: { userId: session.userId, status: { in: ["sent", "viewed", "overdue", "paid"] } } }),
+    prisma.invoice.count({ where: { userId: session.userId, status: { in: ["sent", "viewed", "overdue", "partially_paid", "paid"] } } }),
     prisma.calendarConnection.count({ where: { userId: session.userId, status: "connected" } }),
     // Only v2 sessions participate in the new guide. Legacy onboarding jobs
     // have no safe way to resume inside the dashboard migration workspace.

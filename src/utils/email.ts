@@ -546,15 +546,15 @@ export function sendContractReviewEmail(input: {
   });
 }
 
-export function sendContractSigningEmail(input: {
+export function buildContractSigningEmail(input: {
   to: string;
   signerName: string;
   contractTitle: string;
   signUrl: string;
   expiresAt: Date;
-}): Promise<EmailResult> {
+}): PreparedEmail {
   const expiry = input.expiresAt.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
-  return deliver({
+  return {
     to: input.to,
     type: "contract_signing",
     subject: `Recorded acceptance requested: ${input.contractTitle}`,
@@ -569,17 +569,27 @@ export function sendContractSigningEmail(input: {
       recipient: input.to,
     }),
     text: `Recorded acceptance requested for “${input.contractTitle}”.\n\nOpen the acceptance page: ${input.signUrl}\n\nThis link expires on ${expiry} IST. Do not forward it.`,
-  });
+  };
 }
 
-export function sendContractExecutedEmail(input: {
+export function sendContractSigningEmail(input: {
+  to: string;
+  signerName: string;
+  contractTitle: string;
+  signUrl: string;
+  expiresAt: Date;
+}): Promise<EmailResult> {
+  return deliver(buildContractSigningEmail(input));
+}
+
+export function buildContractExecutedEmail(input: {
   to: string;
   recipientName: string;
   contractTitle: string;
   artifactUrl: string;
-}): Promise<EmailResult> {
+}): PreparedEmail {
   const safeRecipientName = escapeHtml(input.recipientName);
-  return deliver({
+  return {
     to: input.to,
     type: "contract_executed",
     subject: `Agreement accepted: ${input.contractTitle}`,
@@ -594,21 +604,30 @@ export function sendContractExecutedEmail(input: {
       recipient: input.to,
     }),
     text: `Both parties recorded acceptance for “${input.contractTitle}”.\n\nView the accepted Agreement: ${input.artifactUrl}`,
-  });
+  };
 }
 
-export function sendInvoiceReadyEmail(input: {
+export function sendContractExecutedEmail(input: {
+  to: string;
+  recipientName: string;
+  contractTitle: string;
+  artifactUrl: string;
+}): Promise<EmailResult> {
+  return deliver(buildContractExecutedEmail(input));
+}
+
+export function buildInvoiceReadyEmail(input: {
   to: string;
   clientName: string;
   invoiceNumber: string;
   total: string;
   currency: string;
   dueDate: Date | null;
-}): Promise<EmailResult> {
+}): PreparedEmail {
   const due = input.dueDate
     ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
     : "not specified";
-  return deliver({
+  return {
     to: input.to,
     type: "invoice_ready",
     subject: `Invoice ${input.invoiceNumber} is ready to review`,
@@ -623,10 +642,21 @@ export function sendInvoiceReadyEmail(input: {
       recipient: input.to,
     }),
     text: `Invoice ${input.invoiceNumber} is ready to review.\n\nAmount: ${input.currency} ${input.total}\nDue: ${due}\n\nOpen revenue workspace: ${appUrl}/workflow/revenue`,
-  });
+  };
 }
 
-export function sendInvoiceSentEmail(input: {
+export function sendInvoiceReadyEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  dueDate: Date | null;
+}): Promise<EmailResult> {
+  return deliver(buildInvoiceReadyEmail(input));
+}
+
+export function buildInvoiceSentEmail(input: {
   to: string;
   clientName: string;
   invoiceNumber: string;
@@ -635,13 +665,13 @@ export function sendInvoiceSentEmail(input: {
   dueDate: Date | null;
   senderName: string;
   publicUrl?: string;
-}): Promise<EmailResult> {
+}): PreparedEmail {
   const due = input.dueDate
     ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
     : "not specified";
   const safeClientName = escapeHtml(input.clientName);
   const safeSenderName = escapeHtml(input.senderName);
-  return deliver({
+  return {
     to: input.to,
     type: "invoice_sent",
     subject: `Invoice ${input.invoiceNumber} from ${input.senderName}`,
@@ -656,7 +686,20 @@ export function sendInvoiceSentEmail(input: {
       recipient: input.to,
     }),
     text: `Invoice ${input.invoiceNumber} from ${input.senderName}.\n\nAmount due: ${input.currency} ${input.total}\nDue: ${due}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}\n\nVerify payment details through a trusted channel before paying.`,
-  });
+  };
+}
+
+export function sendInvoiceSentEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  dueDate: Date | null;
+  senderName: string;
+  publicUrl?: string;
+}): Promise<EmailResult> {
+  return deliver(buildInvoiceSentEmail(input));
 }
 
 export function sendContractVoidRequestedEmail(input: {
@@ -695,6 +738,9 @@ export type PreparedEmail = {
   html: string;
   text: string;
   replyToAddress?: string;
+  deliveryGuard?:
+    | { kind: "contract_signing"; signerId: string; tokenHash: string }
+    | { kind: "invoice_sent"; invoiceId: string; tokenHash: string };
 };
 
 export async function deliverPreparedEmail(email: PreparedEmail): Promise<EmailResult> {

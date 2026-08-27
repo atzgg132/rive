@@ -18,10 +18,9 @@
 export const ISSUED_STATUSES = ["sent", "viewed", "overdue", "partially_paid", "paid"] as const;
 
 /**
- * Issued invoices that can still be collected on. `partially_paid` belongs
- * here: the lifecycle refresh only rewrites it to `overdue` when someone loads
- * a screen that calls it, so a rule that omits it silently drops real invoices
- * depending on which page was opened last.
+ * Issued invoices that can still be collected on. `partially_paid` stays a
+ * payment state; lateness is `isPastDue`. Lifecycle only flips `sent` /
+ * `viewed` to `overdue`, so omitting partials here would drop real balances.
  */
 export const OPEN_STATUSES = ["sent", "viewed", "overdue", "partially_paid"] as const;
 

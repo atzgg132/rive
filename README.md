@@ -31,7 +31,7 @@ npm run dev:aws
 
 ## Production deployment
 
-Production runs on AWS in `ap-south-1`. The `dev`, `test`, and `main` branches deploy to isolated AWS environments through GitHub Actions after the quality gate passes. Infrastructure, secrets, migrations, and deployment details live in [`infrastructure/README.md`](infrastructure/README.md).
+Production runs on AWS in `ap-south-1`. The `dev` and `main` branches deploy to isolated AWS environments through GitHub Actions after the quality gate passes. Infrastructure, secrets, migrations, and deployment details live in [`infrastructure/README.md`](infrastructure/README.md).
 
 The production build validates TypeScript, and database migrations run as part of the AWS deployment process. Email configuration is documented in `.env.example`.
 

@@ -24,6 +24,7 @@ import {
   portfolioDraftStorageKey,
   seoFromRecord,
   shouldApplyServerSnapshot,
+  shouldReplayQueuedPersist,
   snapshotFromDraft,
   themeFromRecord,
   type PortfolioDraftOverrides,
@@ -236,7 +237,6 @@ export function usePortfolioDraft() {
     }
 
     inFlightRef.current = true;
-    let succeeded = false;
     const submittedEditVersion = editVersionRef.current;
     const submittedContent = options.contentOverride ?? contentRef.current;
     const explicitStatus = options.status;
@@ -306,7 +306,6 @@ export function usePortfolioDraft() {
         flushDraftSnapshot();
         if (!pendingPersistRef.current) pendingPersistRef.current = { silent: true };
       }
-      succeeded = true;
       if (!options.silent) {
         toast.success(options.successMessage || (explicitStatus === "published" ? "portfolio published" : "portfolio saved"));
       }
@@ -323,8 +322,8 @@ export function usePortfolioDraft() {
       setSaving(false);
       const queued = pendingPersistRef.current;
       pendingPersistRef.current = null;
-      if (succeeded && queued && !conflictRef.current) {
-        void persistRef.current(queued);
+      if (shouldReplayQueuedPersist(queued, conflictRef.current)) {
+        void persistRef.current(queued as PersistOptions);
       }
     }
   }, [flushDraftSnapshot]);
