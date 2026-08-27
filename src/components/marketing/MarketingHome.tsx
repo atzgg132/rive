@@ -92,7 +92,7 @@ export function MarketingHome() {
       </SectionShell>
 
       <SectionShell id="remit" className="marketing-inflow-section flex min-h-[100dvh] items-center">
-        <div data-testid="remit-section" className="marketing-inflow-grid grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-16">
+        <div data-testid="remit-section" className="marketing-inflow-grid grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-start lg:gap-16">
           <div data-testid="remit-story">
             <GlowingBadge>{homeContent.remit.eyebrow}</GlowingBadge>
             <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.remit.title}</h2>
