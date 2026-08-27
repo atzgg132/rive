@@ -34,15 +34,15 @@ function contrastRatio(foreground: CssColor, background: CssColor) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/** Full-viewport sticky/fixed overlay covering the page. The chapter rail may
- *  be sticky and viewport-tall, but it is a column — not a page shutter. */
+/** Full-viewport sticky/fixed overlay covering the page. The chapter scene is a
+ *  sticky column, not a page shutter — do not skip it here. */
 async function coveringStickyShutter(page: Page) {
   return page.evaluate(() => {
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
     return Array.from(document.querySelectorAll<HTMLElement>("body *")).flatMap((el) => {
       const testid = el.getAttribute("data-testid");
-      if (testid === "site-header" || testid === "scrollytelling-rail") return [];
+      if (testid === "site-header") return [];
       const style = getComputedStyle(el);
       if (style.position !== "sticky" && style.position !== "fixed") return [];
       if (style.pointerEvents === "none" || style.visibility === "hidden" || style.display === "none") return [];
@@ -77,65 +77,70 @@ test.describe("marketing experience", () => {
     { width: 1440, height: 900 },
     { width: 1920, height: 1080 },
   ]) {
-    test(`scrollytelling activates the chapter at scroll depth and the visual rail sticks at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+    test(`scrollytelling activates the chapter at scroll depth and the visual scene sticks at ${viewport.width}×${viewport.height}`, async ({ page }) => {
       const errors = collectRuntimeErrors(page);
       await page.emulateMedia({ reducedMotion: "no-preference" });
       await page.setViewportSize(viewport);
       await page.goto("/#product", { waitUntil: "load" });
 
       const scrolly = page.getByTestId("scrollytelling-section");
-      const rail = page.getByTestId("scrollytelling-rail");
+      const scene = page.getByTestId("scrollytelling-scene");
+      await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
       await expect(scrolly).toBeVisible();
-      await expect(rail).toBeVisible();
-      await expect(rail.getByTestId("problem-disconnection")).toBeVisible();
+      await expect(scene).toBeVisible();
+      await expect(scene.getByTestId("problem-disconnection")).toBeVisible();
       await page.waitForFunction(() => getComputedStyle(document.querySelector<HTMLElement>('[data-chapter-index="1"]')!).opacity === "0.3");
 
       const target = page.locator('[data-chapter-index="3"]');
       await target.evaluate((node) => node.scrollIntoView({ block: "start" }));
       await expect(target).toHaveAttribute("data-active", "true");
 
-      const sticky = await rail.evaluate((node) => {
+      const sticky = await scene.evaluate((node) => {
         const rect = node.getBoundingClientRect();
         return { position: getComputedStyle(node).position, top: rect.top };
       });
       expect(sticky.position).toBe("sticky");
-      expect(Math.abs(sticky.top)).toBeLessThanOrEqual(1);
+      expect(sticky.top).toBeGreaterThanOrEqual(64);
+      expect(sticky.top).toBeLessThanOrEqual(120);
 
       const last = page.locator('[data-chapter-index="6"]');
       await last.evaluate((node) => node.scrollIntoView({ block: "start" }));
       await expect(last).toHaveAttribute("data-active", "true");
-      await expect(rail.locator("[data-product-frame]").getByText("Portfolio Studio")).toBeVisible();
-      await expect(rail.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
+      await expect(scene.locator("[data-product-frame]").getByText("Portfolio Studio")).toBeVisible();
+      await expect(scene.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
 
       expect(errors).toEqual([]);
     });
   }
 
-  test("desktop scrollytelling rail stays in the HTML and survives two hard reloads at 1920×1080", async ({ page }) => {
+  test("desktop scrollytelling scene stays in the HTML and survives two hard reloads at 1920×1080", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1920, height: 1080 });
 
     for (let pass = 0; pass < 2; pass += 1) {
       await page.goto("/#product", { waitUntil: "domcontentloaded" });
       const html = await page.content();
-      expect(html, `reload ${pass + 1} missing rail in HTML`).toContain('data-testid="scrollytelling-rail"');
+      expect(html, `reload ${pass + 1} missing scene in HTML`).toContain('data-testid="scrollytelling-scene"');
+      expect(html, `reload ${pass + 1} still ships the shutter rail`).not.toContain('data-testid="scrollytelling-rail"');
       await page.waitForLoadState("load");
-      const rail = page.getByTestId("scrollytelling-rail");
-      await expect(rail, `reload ${pass + 1} rail missing`).toBeVisible();
-      await expect(rail).toHaveCSS("position", "sticky");
-      await expect(rail).toHaveCSS("display", "grid");
+      const scene = page.getByTestId("scrollytelling-scene");
+      await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+      await expect(scene, `reload ${pass + 1} scene missing`).toBeVisible();
+      await expect(scene).toHaveCSS("position", "sticky");
+      await expect(scene).toHaveCSS("display", "block");
       await expect(page.locator("#product")).not.toHaveClass(/overflow-x-clip/);
     }
   });
 
-  test("reduced motion keeps every chapter and product visual reachable without the sticky rail", async ({ page }) => {
+  test("reduced motion keeps every chapter and product visual reachable without the sticky scene", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/#product", { waitUntil: "load" });
 
     const chapters = page.locator("[data-chapter-index]");
     await expect(chapters).toHaveCount(7);
-    await expect(page.getByTestId("scrollytelling-rail")).not.toBeVisible();
+    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+    await expect(page.getByTestId("scrollytelling-scene")).not.toBeVisible();
     await expect(chapters.nth(0).getByTestId("problem-disconnection")).toHaveCount(1);
     for (let index = 1; index < 7; index += 1) {
       const chapter = chapters.nth(index);
@@ -423,8 +428,9 @@ test.describe("marketing experience", () => {
     await page.getByRole("link", { name: "See the unpaid role", exact: true }).click();
     await expect.poll(async () => problem.evaluate((node) => Math.abs(node.getBoundingClientRect().top))).toBeLessThan(8);
     await expect(problem.getByRole("heading", { name: "There is an unpaid role inside every independent business." })).toBeVisible();
-    await expect(page.getByTestId("scrollytelling-rail")).toBeVisible();
-    await expect(page.getByTestId("scrollytelling-rail").getByTestId("problem-disconnection")).toBeVisible();
+    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+    await expect(page.getByTestId("scrollytelling-scene")).toBeVisible();
+    await expect(page.getByTestId("scrollytelling-scene").getByTestId("problem-disconnection")).toBeVisible();
     const stacked = await page.evaluate(() => {
       const problemRect = document.querySelector("[data-testid='marketing-problem']")!.getBoundingClientRect();
       const solutionRect = document.querySelector('[data-chapter-index="1"]')!.getBoundingClientRect();
@@ -452,18 +458,19 @@ test.describe("marketing experience", () => {
     expect(viewportMinHeight(geometry.minHeight), "problem beat min-height is a viewport shutter").toBe(false);
     expect(viewportMinHeight(geometry.articleMinHeight), "problem article min-height is a viewport shutter").toBe(false);
 
-    const rail = page.getByTestId("scrollytelling-rail");
+    const scene = page.getByTestId("scrollytelling-scene");
+    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
     await page.locator("#problem").evaluate((node) => node.scrollIntoView({ block: "start" }));
-    await expect(rail.getByTestId("problem-disconnection")).toBeVisible();
-    await expect(rail.locator("[data-product-frame]")).toHaveCount(0);
+    await expect(scene.getByTestId("problem-disconnection")).toBeVisible();
+    await expect(scene.locator("[data-product-frame]")).toHaveCount(0);
 
     const solution = page.locator('[data-chapter-index="1"]');
     await solution.evaluate((node) => node.scrollIntoView({ block: "start" }));
     await expect(solution).toHaveAttribute("data-active", "true");
     await expect(solution.getByRole("heading", { name: "Change one thing. Everything downstream already knows." })).toBeVisible();
     await expect.poll(async () => ({
-      product: await rail.locator("[data-product-frame]").count(),
-      problem: await rail.getByTestId("problem-disconnection").count(),
+      product: await scene.locator("[data-product-frame]").count(),
+      problem: await scene.getByTestId("problem-disconnection").count(),
     })).toEqual({ product: 1, problem: 0 });
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -498,9 +505,10 @@ test.describe("marketing experience", () => {
       }
 
       if (viewport.width >= 1024) {
-        const rail = page.getByTestId("scrollytelling-rail");
-        await expect(rail).toBeVisible();
-        const railBox = await rail.evaluate((node) => {
+        await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+        const scene = page.getByTestId("scrollytelling-scene");
+        await expect(scene).toBeVisible();
+        const sceneBox = await scene.evaluate((node) => {
           const rect = node.getBoundingClientRect();
           const style = getComputedStyle(node);
           return {
@@ -512,20 +520,21 @@ test.describe("marketing experience", () => {
             vh: window.innerHeight,
           };
         });
-        expect(railBox.position).toBe("sticky");
-        expect(railBox.width, `${viewport.width}×${viewport.height} rail became a full-width shutter`).toBeLessThan(railBox.vw * 0.8);
+        expect(sceneBox.position).toBe("sticky");
+        expect(sceneBox.width, `${viewport.width}×${viewport.height} scene became a full-width shutter`).toBeLessThan(sceneBox.vw * 0.8);
+        expect(sceneBox.height, `${viewport.width}×${viewport.height} scene became a viewport-tall shutter`).toBeLessThan(sceneBox.vh * 0.92);
 
         const overlap = await page.evaluate(() => {
           const heading = document.querySelector("[data-testid='marketing-problem'] h2");
-          const railNode = document.querySelector("[data-testid='scrollytelling-rail']");
-          if (!heading || !railNode) return null;
+          const sceneNode = document.querySelector("[data-testid='scrollytelling-scene']");
+          if (!heading || !sceneNode) return null;
           const copy = heading.getBoundingClientRect();
-          const railRect = railNode.getBoundingClientRect();
-          const coversCopy = copy.right > railRect.left + 8 && copy.left < railRect.right - 8 && copy.bottom > railRect.top + 8 && copy.top < railRect.bottom - 8;
-          return { coversCopy, copyRight: copy.right, railLeft: railRect.left };
+          const sceneRect = sceneNode.getBoundingClientRect();
+          const coversCopy = copy.right > sceneRect.left + 8 && copy.left < sceneRect.right - 8 && copy.bottom > sceneRect.top + 8 && copy.top < sceneRect.bottom - 8;
+          return { coversCopy, copyRight: copy.right, sceneLeft: sceneRect.left };
         });
-        expect(overlap, `${viewport.width}×${viewport.height} missing problem copy or rail`).not.toBeNull();
-        expect(overlap!.coversCopy, `${viewport.width}×${viewport.height} rail overlays problem copy`).toBe(false);
+        expect(overlap, `${viewport.width}×${viewport.height} missing problem copy or scene`).not.toBeNull();
+        expect(overlap!.coversCopy, `${viewport.width}×${viewport.height} scene overlays problem copy`).toBe(false);
       }
     });
   }
@@ -835,9 +844,11 @@ test.describe("marketing experience", () => {
       const html = await page.content();
       expect(html).toContain(problemHeading);
       expect(html).toContain(chapterHeading);
-      expect(html).toContain('data-testid="scrollytelling-rail"');
+      expect(html).toContain('data-testid="scrollytelling-scene"');
+      expect(html).not.toContain('data-testid="scrollytelling-rail"');
 
-      await expect(page.getByTestId("scrollytelling-rail")).toBeVisible();
+      await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+      await expect(page.getByTestId("scrollytelling-scene")).toBeVisible();
       await expect(page.getByText("Know the payout before you send it.")).toHaveCount(0);
     });
   });

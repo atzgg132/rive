@@ -10,18 +10,18 @@ export function ProductFrame({ title, eyebrow, children, className, toolbar }: {
         <span className="ml-2 font-mono text-[0.55rem] font-bold uppercase tracking-[0.14em] text-slate-600">rive.work</span>
         <div className="ml-auto flex items-center gap-1.5 text-slate-600"><Search className="h-3.5 w-3.5" /><Bell className="h-3.5 w-3.5" /></div>
       </div>
-      <div className="flex min-h-[27rem]">
+      <div className="product-frame-body flex min-h-0">
         <aside className="hidden w-[4.25rem] shrink-0 border-r border-slate-200 bg-white py-4 sm:block" aria-hidden="true">
           <div className="mx-auto grid h-7 w-7 place-items-center rounded-lg bg-[#0c1e36] text-[0.6rem] font-black text-white">r.</div>
           <div className="mx-auto mt-6 grid w-8 gap-2">
             {[0, 1, 2, 3, 4].map((item) => <span key={item} className={`h-7 rounded-lg ${item === 0 ? "bg-blue-50 ring-1 ring-blue-100" : "bg-slate-100/80"}`} />)}
           </div>
         </aside>
-        <div className="min-w-0 flex-1 p-4 sm:p-5">
-          <div className="mb-4 flex items-end justify-between gap-3">
+        <div className="min-w-0 flex-1 p-3 sm:p-4">
+          <div className="mb-3 flex items-end justify-between gap-3">
             <div>
               <p className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.14em] text-blue-600">{eyebrow}</p>
-              <p className="mt-1 text-lg font-black leading-tight tracking-[-0.03em] text-slate-900">{title}</p>
+              <p className="mt-1 text-base font-black leading-tight tracking-[-0.03em] text-slate-900">{title}</p>
             </div>
             {toolbar || <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[0.58rem] font-bold text-slate-600">View details <ChevronRight className="h-3 w-3" /></span>}
           </div>
