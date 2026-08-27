@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { useRef } from "react";
 import type { MarketingChapter } from "@/content/marketing/home";
@@ -14,28 +13,24 @@ export function MotionProductScene({ sceneKey, visual }: { sceneKey?: string; vi
 
   return (
     <MarketingMotionProvider>
-      {/* Sync swap, not mode="wait". Wait kept the previous mock in the rail until
-          the 200ms exit finished, so 06 / PROOF at 1920 still showed Migration
-          Engine and blocked AWS verify. Absolute exit pops the old mock out of
-          flow so Portfolio Studio mounts immediately and the column does not
-          stack two frames. */}
-      <div data-testid="product-scene-motion" className="relative w-full">
-        <AnimatePresence initial={false}>
-          <m.div
-            ref={sceneRef}
-            key={sceneKey ?? visual.kind}
-            className="w-full"
-            initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: -14, position: "absolute", top: 0, left: 0, right: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-            onAnimationStart={() => { if (sceneRef.current) sceneRef.current.style.willChange = "transform, opacity"; }}
-            onAnimationComplete={() => { if (sceneRef.current) sceneRef.current.style.willChange = "auto"; }}
-          >
-            <MarketingProductScene visual={visual} />
-          </m.div>
-        </AnimatePresence>
-      </div>
+      {/* Keyed enter, not AnimatePresence wait/sync. Wait left the previous mock
+          in the rail at 1920. Sync+absolute exit never finished leaving, so 06 /
+          PROOF stacked THIS MORNING'S REBUILD on Portfolio Studio. Unmount the
+          old mock immediately and animate the new one in so the last beat is
+          only Portfolio Studio and inner rows still run their stagger. */}
+      <m.div
+        ref={sceneRef}
+        data-testid="product-scene-motion"
+        key={sceneKey ?? visual.kind}
+        className="w-full"
+        initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+        onAnimationStart={() => { if (sceneRef.current) sceneRef.current.style.willChange = "transform, opacity"; }}
+        onAnimationComplete={() => { if (sceneRef.current) sceneRef.current.style.willChange = "auto"; }}
+      >
+        <MarketingProductScene visual={visual} />
+      </m.div>
     </MarketingMotionProvider>
   );
 }
