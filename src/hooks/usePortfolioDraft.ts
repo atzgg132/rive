@@ -8,6 +8,7 @@ import {
   DEFAULT_PORTFOLIO_THEME,
   MAX_PROFILE_IMAGE_UPLOAD_BYTES,
   mergePortfolioContent,
+  normalizeHexColor,
   normalizeSlug,
   type PortfolioContent,
   type PortfolioMediaSettings,
@@ -390,6 +391,7 @@ export function usePortfolioDraft() {
 
   const updateTheme = (update: Partial<PortfolioTheme>) => {
     const nextTheme = { ...themeRef.current, ...update };
+    if (update.accent !== undefined) nextTheme.accent = normalizeHexColor(update.accent, themeRef.current.accent);
     themeRef.current = nextTheme;
     setTheme(nextTheme);
     markDirty({ theme: nextTheme });
@@ -414,7 +416,7 @@ export function usePortfolioDraft() {
   };
 
   const chooseTemplate = (nextTemplateKey: string, accent: string) => {
-    const nextTheme = { ...themeRef.current, accent };
+    const nextTheme = { ...themeRef.current, accent: normalizeHexColor(accent, themeRef.current.accent) };
     templateKeyRef.current = nextTemplateKey;
     themeRef.current = nextTheme;
     setTemplateKey(nextTemplateKey);

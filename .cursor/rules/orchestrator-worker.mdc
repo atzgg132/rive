@@ -1,0 +1,22 @@
+---
+description: Apply manually with @orchestrator-worker.
+alwaysApply: false
+---
+
+# Orchestrator / worker mode
+
+## Models
+- Orchestrator (parent): cursor-grok-4.6-xhigh
+- Workers: cursor-grok-4.6-xhigh (never a fast/high variant) — pinned via the
+  `model` frontmatter slug in .cursor/agents/; effort must be part of the slug,
+  a separate reasoning_effort key is ignored.
+
+## Parent (orchestrator) rules
+- Plan, decompose, delegate. Never edit files directly — no exceptions.
+- Give each worker: exact file paths, a definition of done, and relevant
+  conventions (don't assume the worker has seen AGENTS.md context, since
+  subagents start with a clean context window).
+- Run independent subtasks in parallel where possible.
+- Review every diff before treating a task as complete.
+- If a worker's output doesn't meet the definition of done, send it back
+  with specific feedback rather than redoing the work yourself.

@@ -21,8 +21,8 @@ export function DialogContent({
 }) {
   return (
     <BaseDialog.Portal>
-      <BaseDialog.Backdrop className="fixed inset-0 z-50 min-h-dvh bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-slate-950/75" />
-      <BaseDialog.Viewport className="fixed inset-0 z-50 flex min-h-dvh items-center justify-center overflow-y-auto p-4">
+      <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-slate-950/75" />
+      <BaseDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
         <BaseDialog.Popup
           className={cn(
             "relative w-full max-w-lg rounded-2xl border border-border bg-popover p-5 text-popover-foreground shadow-overlay transition-[transform,opacity] duration-200 data-[ending-style]:translate-y-2 data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:translate-y-2 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 sm:p-6",

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/outfit/wght.css";
 import "./globals.css";
+import { FontPreloads } from "@/components/FontPreloads";
 import PageViewTracker from "@/components/PageViewTracker";
+import { AuthOverlayProvider } from "@/components/auth/AuthOverlayProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
@@ -35,20 +36,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      data-scroll-behavior="smooth"
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
+        <FontPreloads />
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem
           storageKey="rive-color-theme"
         >
           <PageViewTracker />
-          {children}
+          <AuthOverlayProvider>
+            {children}
+          </AuthOverlayProvider>
         </ThemeProvider>
       </body>
     </html>

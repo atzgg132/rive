@@ -3,6 +3,7 @@
 import { Input, Select, Textarea } from "@/components/ui";
 import { type PortfolioContent, type PortfolioMediaSettings, type PortfolioTheme } from "@/utils/portfolio";
 import PortfolioTemplateGallery from "@/components/portfolio/PortfolioTemplateGallery";
+import AccentColorField from "@/components/portfolio/studio/AccentColorField";
 import type { PortfolioSeo } from "@/utils/portfolioDraft";
 import { inputClass, labelClass, sectionClass } from "@/components/portfolio/studio/studioStyles";
 
@@ -49,7 +50,7 @@ export default function StudioDesignSection({
       <section className={sectionClass}>
         <h2 className="mb-5 font-bold text-foreground dark:text-white">Appearance & visibility</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <label className="flex flex-col gap-2"><span className={labelClass}>Accent</span><Input type="color" className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent dark:border-slate-700" value={theme.accent} onChange={(event) => onUpdateTheme({ accent: event.target.value })} /></label>
+          <AccentColorField value={theme.accent} onChange={(accent) => onUpdateTheme({ accent })} />
           <label className="flex flex-col gap-2">
             <span className={labelClass}>Site mode</span>
             <Select className={inputClass} value={theme.mode} onChange={(event) => onUpdateTheme({ mode: event.target.value as PortfolioTheme["mode"] })}>

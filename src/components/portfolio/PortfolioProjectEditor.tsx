@@ -98,7 +98,7 @@ export default function PortfolioProjectEditor({ project, index, total, practice
         </div>
         {project.imageUrl && (
           <div data-project-cover-preview className="mt-3 flex max-w-sm items-center gap-3 rounded-xl border border-border bg-background p-2 dark:border-slate-700">
-            <div className="grid h-12 w-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
+            <div className="grid h-12 w-16 min-h-0 min-w-0 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
               <img src={project.imageUrl} alt="" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">

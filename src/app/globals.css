@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* These stable URLs are preloaded in the root layout. Keeping font discovery
+   independent from Next's generated font manifest prevents a fallback-first
+   paint when that manifest omits local font preload tags. */
+@font-face {
+  font-family: "Outfit";
+  src: url("/fonts/outfit-marketing.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: optional;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-marketing.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+}
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
 /* ─── Brand Color Variables ──────────────────────── */
 :root {
   /* Semantic design tokens consumed by the shared Rive component system. */
@@ -45,14 +70,19 @@
   --color-blue-soft:   #EFF6FF;   /* Softest blue tint for backgrounds/hover */
   --color-blue-border: #E2EAF4;   /* Delicate light-blue border */
   
-  /* Font families — Outfit loaded via Next.js with Outfit Fallback */
-  --font-sans:    "Outfit Variable";
-  --font-display: "Outfit Variable", var(--font-sans), sans-serif;
-  --font-body:    "Outfit Variable", var(--font-sans), sans-serif;
-  --font-hero:    "Outfit Variable", var(--font-sans), sans-serif;
+  /* One deterministic family chain; the old variables recursively repeated
+     Outfit and its fallbacks in the final computed font-family value. */
+  --font-outfit: "Outfit";
+  --font-jetbrains-mono: "JetBrains Mono";
+  --font-sans:    var(--font-outfit), system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  --font-body:    var(--font-sans);
+  --font-hero:    var(--font-sans);
+  --font-mono:    var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* Shared motion curves — reuse these instead of hand-typing new cubic-beziers. */
   --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);   /* strong ease-out for UI/marketing entrances */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);  /* on-screen movement */
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);   /* iOS-like drawer/sheet curve */
 }
 
@@ -67,9 +97,12 @@
 }
 
 html {
-  scroll-behavior: smooth;
   color-scheme: light;
   font-size: 16px;
+}
+
+section[id] {
+  scroll-margin-top: 6rem;
 }
 
 /* next-themes adds .dark to the root element. Keep the palette in one place
@@ -117,6 +150,151 @@ html {
   --color-blue-border: #263449;
 }
 
+/* The public site has its own cinematic surface. Light tokens apply when html
+   has no .dark; the previous void palette lives under .dark. Semantic token
+   names stay local to this subtree so dashboard screenshot baselines stay
+   isolated. */
+[data-surface="marketing"] {
+  color-scheme: light;
+
+  --background: 243 245 250;
+  --foreground: 12 22 40;
+  --card: 255 255 255;
+  --card-foreground: 12 22 40;
+  --popover: 255 255 255;
+  --popover-foreground: 12 22 40;
+  --primary: 29 78 216;
+  --primary-foreground: 255 255 255;
+  --secondary: 226 234 247;
+  --secondary-foreground: 30 64 175;
+  --muted: 232 238 247;
+  --muted-foreground: 71 88 112;
+  --accent: 226 234 247;
+  --accent-foreground: 29 78 216;
+  --border: 210 221 236;
+  --input: 180 196 216;
+  --ring: 37 99 235;
+  --brand-wordmark: 12 30 54;
+  --brand-accent: 37 99 235;
+  --shadow-card: 0 1px 0 rgb(12 30 54 / 0.04), 0 18px 50px rgb(12 30 54 / 0.08);
+  --shadow-overlay: 0 28px 80px rgb(12 30 54 / 0.16);
+
+  --surface-void: #f3f5fa;
+  --surface-raised: #ffffff;
+  --surface-glass: rgb(12 22 40 / 0.045);
+  --stroke-hairline: rgb(15 23 42 / 0.09);
+  --stroke-lit: rgb(37 99 235 / 0.32);
+  --stroke-highlight: rgb(255 255 255 / 0.7);
+  --brand-600: #2563eb;
+  --brand-500: #3b82f6;
+  --brand-400: #2563eb;
+  --brand-cyan: #0e7490;
+  --glow-primary: radial-gradient(circle at center, rgb(37 99 235 / 0.14) 0%, rgb(59 130 246 / 0.07) 38%, rgb(14 116 144 / 0.03) 58%, transparent 74%);
+  --noise-opacity: 0.035;
+  --grid-line: rgb(15 23 42 / 0.055);
+  --hero-word-from: #1d4ed8;
+  --hero-word-via: #2563eb;
+  --hero-word-to: #0e7490;
+  --bg-primary: #f3f5fa;
+  --bg-secondary: #ffffff;
+  --text-primary: #0c1e36;
+  --text-secondary: #475870;
+}
+
+.dark [data-surface="marketing"] {
+  color-scheme: dark;
+
+  --background: 5 7 12;
+  --foreground: 248 250 252;
+  --card: 10 14 22;
+  --card-foreground: 248 250 252;
+  --popover: 10 14 22;
+  --popover-foreground: 248 250 252;
+  --primary: 96 165 250;
+  --primary-foreground: 5 7 12;
+  --secondary: 16 23 36;
+  --secondary-foreground: 226 232 240;
+  --muted: 17 24 39;
+  --muted-foreground: 166 178 197;
+  --accent: 20 38 70;
+  --accent-foreground: 219 234 254;
+  --border: 39 49 66;
+  --input: 51 65 85;
+  --ring: 96 165 250;
+  --brand-wordmark: 248 250 252;
+  --brand-accent: 96 165 250;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04), 0 24px 70px rgb(0 0 0 / 0.28);
+  --shadow-overlay: 0 36px 110px rgb(0 0 0 / 0.62);
+
+  --surface-void: #05070c;
+  --surface-raised: #0a0e16;
+  --surface-glass: rgb(255 255 255 / 0.03);
+  --stroke-hairline: rgb(255 255 255 / 0.07);
+  --stroke-lit: rgb(96 165 250 / 0.35);
+  --stroke-highlight: rgb(255 255 255 / 0.06);
+  --brand-600: #2563eb;
+  --brand-500: #3b82f6;
+  --brand-400: #60a5fa;
+  --brand-cyan: #22d3ee;
+  --glow-primary: radial-gradient(circle at center, rgb(96 165 250 / 0.22) 0%, rgb(59 130 246 / 0.11) 38%, rgb(34 211 238 / 0.035) 58%, transparent 74%);
+  --noise-opacity: 0.05;
+  --grid-line: rgb(255 255 255 / 0.045);
+  --hero-word-from: #60a5fa;
+  --hero-word-via: #7dd3fc;
+  --hero-word-to: #22d3ee;
+  --bg-primary: #05070c;
+  --bg-secondary: #0a0e16;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+}
+
+.marketing-root {
+  min-height: 100vh;
+  background: var(--surface-void);
+  color: rgb(var(--foreground));
+  isolation: isolate;
+}
+
+[data-surface="marketing"] section[id] {
+  scroll-margin-top: 6rem;
+}
+
+[data-surface="marketing"] section#product,
+[data-surface="marketing"] #problem {
+  scroll-margin-top: 0;
+}
+
+/* Keep the long-form home page from spending its critical rendering window on
+   sections several viewports away. Chromium still exposes auto-contained
+   content to find-in-page and accessibility APIs, then renders it before it
+   approaches the viewport. The remembered intrinsic size prevents jumps once
+   a section has been visited. */
+.marketing-deferred-section {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 64rem;
+}
+
+/* Reveal copy without making the first render download an animation runtime.
+   The default state is visible, so no-JS and older browsers retain every word.
+   The client island opts into a one-time, composited transition only after it
+   can observe the element. */
+.marketing-reveal {
+  transition-delay: var(--marketing-reveal-delay, 0s);
+  transition-duration: 580ms;
+  transition-property: opacity, transform;
+  transition-timing-function: var(--ease-out);
+}
+
+.marketing-reveal[data-reveal-ready="true"] {
+  opacity: 0;
+  transform: translate3d(0, var(--marketing-reveal-y, 22px), 0);
+}
+
+.marketing-reveal[data-reveal-visible="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
 body {
   font-family: var(--font-body);
   /* The design tokens are space-separated RGB channels ("245 248 252"), which
@@ -127,7 +305,7 @@ body {
      consumer of these variables. */
   background-color: rgb(var(--background));
   color: rgb(var(--foreground));
-  overflow-x: hidden;
+  overflow-x: clip;
   line-height: 1.6;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
@@ -135,10 +313,69 @@ body {
 }
 
 img,
-svg,
 video,
 canvas {
+  /* `max-width` without `height: auto` keeps the intrinsic height when the
+     width is constrained — a 3000px photo then punches a screen of empty
+     space through the page. Flex/grid `min-size: auto` is the same trap: the
+     item's minimum size becomes the image's natural box, so a framed thumbnail
+     still grows the layout. */
   max-width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+svg {
+  max-width: 100%;
+}
+
+/* Native file inputs paint a thumbnail of a chosen image at the file's
+   intrinsic size in Chromium and WebKit. That thumbnail ignores width/height
+   on the control, so an `sr-only` upload still expands the document — and
+   because the dashboard shell is `position: fixed`, scrolling that extra
+   document space hides the app. Keep every file control out of layout. */
+input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  opacity: 0;
+}
+
+input[type="color"] {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: inherit;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: 0;
+  border-radius: inherit;
+}
+
+/* The workspace is a fixed viewport shell. If html/body become a scroll
+   container (overflow-x: clip can promote overflow-y to auto), wheel events
+   move the document behind that shell and the app slides out of view. */
+html:has([data-dashboard-shell]),
+html:has([data-dashboard-shell]) body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 button,
@@ -167,10 +404,6 @@ textarea {
 /* Legacy marketing pages used desktop-only spacing. Keep their authored
    desktop rhythm while providing a safe mobile gutter everywhere. */
 @media (max-width: 639px) {
-  [class*="max-w-"][class*="mx-auto"][class*="px-8"] {
-    padding-inline: 1rem;
-  }
-
   .text-8xl,
   .text-7xl,
   .text-6xl,
@@ -197,6 +430,12 @@ textarea {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .marketing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
@@ -325,6 +564,45 @@ p {
   animation: heroPreviewIn 650ms var(--ease-out) 150ms both;
 }
 
+/* Headline line entrance — rise and fade. Stagger via inline animation-delay. */
+@keyframes heroLineIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-hero-line-in {
+  animation: heroLineIn 600ms var(--ease-out) both;
+}
+
+@keyframes remitReceiptIn {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+.animate-remit-receipt-in {
+  animation: remitReceiptIn 420ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-remit-receipt-in {
+    animation: none;
+  }
+}
+
+.hero-word-gradient {
+  background: linear-gradient(120deg, var(--hero-word-from) 0%, var(--hero-word-via) 55%, var(--hero-word-to) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 /* ─── Utility classes ────────────────────────────── */
 .gradient-text {
   background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
@@ -344,6 +622,483 @@ p {
   border: 1px solid var(--color-blue-border);
   border-radius: 16px;
   box-shadow: 0 4px 20px -2px color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+
+@keyframes marketingBorderSpin {
+  to { --angle: 360deg; }
+}
+
+/* The wordmark stays anchored; only its signature period emits an occasional
+   quiet signal. Most of the long cycle is deliberately motionless. */
+@keyframes riveLogoSignal {
+  0%, 72%, 88%, 100% {
+    filter: drop-shadow(0 0 0 rgb(34 211 238 / 0));
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  79% {
+    filter: drop-shadow(0 0 3px rgb(34 211 238 / 0.32));
+    opacity: 0.9;
+    transform: translateY(-0.035em) scale(1.08);
+  }
+}
+
+@keyframes connectedSignalTravel {
+  from { stroke-dashoffset: 108; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes connectedNodeBreathe {
+  0%, 82%, 100% { opacity: 0.5; }
+  88% { opacity: 0.95; }
+}
+
+.connected-signal-field {
+  z-index: 0;
+  opacity: 0.55;
+}
+
+.connected-signal-network,
+.connected-signal-rail {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 180ms linear;
+  will-change: opacity, transform;
+}
+
+.connected-signal-pulse {
+  stroke-dasharray: 1.4 98.6;
+  animation: connectedSignalTravel 18s linear infinite;
+  filter: drop-shadow(0 0 2px rgb(125 211 252 / 0.45));
+}
+
+.connected-signal-pulse-2 { animation-delay: -6s; }
+.connected-signal-pulse-3 { animation-delay: -12s; }
+
+.connected-signal-node {
+  animation: connectedNodeBreathe 11s ease-in-out infinite;
+}
+
+.connected-signal-vignette {
+  background:
+    radial-gradient(ellipse 52% 58% at 20% 46%, color-mix(in srgb, var(--surface-void) 78%, transparent), transparent 72%),
+    radial-gradient(ellipse 36% 42% at 88% 32%, color-mix(in srgb, var(--surface-void) 22%, transparent), transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-void) 12%, transparent), transparent 52%, color-mix(in srgb, var(--surface-void) 78%, transparent));
+}
+
+@media (max-width: 767px) {
+  .connected-signal-field { opacity: 0.28; }
+  .connected-signal-field .signal-detail { display: none; }
+  .connected-signal-field svg { transform: scale(1.24); }
+}
+
+.rive-logo-dot {
+  display: inline-block;
+  transform-origin: 50% 75%;
+  animation: riveLogoSignal 14s var(--ease-out) infinite;
+  will-change: filter, opacity, transform;
+}
+
+/* Animated bento borders use a static lit ring when registered custom
+   properties or conic gradients are unavailable (notably older Safari). */
+.marketing-bento {
+  position: relative;
+  border: 1px solid var(--stroke-hairline);
+  background: var(--surface-raised);
+}
+
+.marketing-bento::before {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgb(96 165 250 / 0.32), rgb(255 255 255 / 0.04) 44%, rgb(34 211 238 / 0.18));
+  content: "";
+}
+
+@supports (background: conic-gradient(from 0deg, red, blue)) {
+  .marketing-bento::before {
+    background: conic-gradient(from var(--angle), transparent 0deg, rgb(59 130 246 / 0.08) 85deg, rgb(96 165 250 / 0.72) 145deg, rgb(34 211 238 / 0.48) 188deg, transparent 255deg);
+    animation: marketingBorderSpin 8s linear infinite;
+  }
+}
+
+/* A restrained highlight makes the navbar CTA feel active without turning
+   the whole button into a moving glow. The static border remains the fallback. */
+.marketing-cta-border::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle), transparent 0deg 265deg, rgb(96 165 250 / 0.08) 286deg, rgb(103 232 249 / 0.42) 318deg, rgb(147 197 253 / 0.14) 340deg, transparent 360deg);
+  content: "";
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: marketingBorderSpin 16s linear infinite;
+}
+
+.marketing-bento::after {
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--surface-raised);
+  content: "";
+}
+
+.marketing-grid-mask {
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 72% 64% at 50% 26%, #000 12%, transparent 78%);
+  mask-image: radial-gradient(ellipse 72% 64% at 50% 26%, #000 12%, transparent 78%);
+}
+
+.marketing-edge-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.marketing-noise {
+  opacity: var(--noise-opacity);
+  mix-blend-mode: multiply;
+}
+
+.dark [data-surface="marketing"] .marketing-noise {
+  mix-blend-mode: soft-light;
+}
+
+.marketing-alt-band {
+  background: rgb(var(--foreground) / 0.012);
+}
+
+.marketing-gradient-text {
+  background: linear-gradient(120deg, rgb(var(--foreground)) 0%, rgb(var(--primary)) 50%, var(--brand-cyan) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.marketing-focus:focus,
+.marketing-focus:focus-visible {
+  outline: 2px solid var(--brand-400) !important;
+  outline-offset: 4px !important;
+}
+
+/* Desktop scrollytelling scene is in the HTML. CSS shows it at lg and hides it
+   for mobile / reduced motion. JS must not mount or unmount it — that is how
+   the chapter scene vanished across reloads. A right-column flex shell centers
+   the mock with the chapter copy; it is not a full-viewport shutter. */
+.scrollytelling-scene {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .scrollytelling-scene {
+    display: flex;
+    min-height: calc(100svh - 5.5rem);
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollytelling-scene {
+    display: none;
+  }
+
+  [data-testid="scrollytelling-tail"] {
+    display: none;
+  }
+
+  [data-testid="scrollytelling-section"].scrollytelling-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.scrollytelling-inline-visual {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .scrollytelling-inline-visual {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollytelling-inline-visual {
+    display: block;
+  }
+}
+
+/* Short viewports: compress scrolly copy + card and the four in-flow
+   product sections so each idea fits one screen. Do not stretch chapters
+   to 100vh — they stay min-h-[70vh] from markup. */
+@media (max-height: 800px) {
+  .scrollytelling-section [data-testid="marketing-problem"] {
+    padding-top: clamp(1rem, 2.4svh, 1.75rem);
+    padding-bottom: clamp(1rem, 2.4svh, 1.75rem);
+  }
+
+  .scrollytelling-section [data-chapter-index] {
+    padding-top: clamp(1.25rem, 3svh, 2rem);
+    padding-bottom: clamp(1.25rem, 3svh, 2rem);
+  }
+
+  .scrollytelling-section h2,
+  .scrollytelling-section h3 {
+    margin-top: clamp(0.45rem, 1.1svh, 0.85rem);
+    font-size: clamp(1.4rem, 4svh + 0.1vw, 2.15rem);
+    line-height: 1.08;
+  }
+
+  .scrollytelling-section [data-chapter-index] > p:last-of-type {
+    margin-top: clamp(0.45rem, 1.2svh, 0.85rem);
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .scrollytelling-scene [data-product-frame] aside {
+    display: none;
+  }
+
+  .scrollytelling-scene [data-testid="problem-disconnection"] li {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+}
+
+/* Short first screens. Playwright 1280×720 / 1280×800 is `max-height: 800px`
+   at 1x. Real 150% Windows laptops are often taller in CSS (QHD 14" ≈ 1707×960)
+   with dpr 1.5 — without the resolution clause the 104px headline parks the
+   CLIENT→PROOF rail on the fold. 1440×900 @ 1x visual baselines stay out.
+   High-dpr matching is desktop-only so a phone at 3x / 844px height is untouched.
+   `min-width: 1024px` keeps this laptop compression off short phones.
+   `section.marketing-hero` beats Tailwind padding / margin utilities. */
+@media (min-width: 1024px) and (max-height: 800px) {
+  section.marketing-hero {
+    align-items: flex-start;
+    min-height: 100dvh;
+    padding-top: clamp(4.5rem, 7svh, 5.25rem);
+    padding-bottom: clamp(0.35rem, 1.2svh, 1rem);
+  }
+
+  section.marketing-hero .marketing-hero-inner {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  section.marketing-hero h1 {
+    margin-top: clamp(0.2rem, 0.55svh, 0.75rem);
+    font-size: clamp(1.7rem, 4.4svh + 0.15vw, 3.35rem);
+  }
+
+  section.marketing-hero .marketing-hero-body {
+    margin-top: clamp(0.2rem, 0.55svh, 0.7rem);
+    font-size: clamp(0.8125rem, 1svh + 0.12vw, 1.05rem);
+    line-height: 1.35;
+  }
+
+  section.marketing-hero .marketing-hero-ctas {
+    margin-top: clamp(0.3rem, 0.8svh, 0.9rem);
+  }
+
+  section.marketing-hero .marketing-hero-proof {
+    margin-top: clamp(0.15rem, 0.45svh, 0.55rem);
+  }
+
+  section.marketing-hero .marketing-hero-rail {
+    margin-top: clamp(0.25rem, 0.9svh, 0.8rem);
+  }
+
+  section.marketing-hero .hero-pipeline .hero-stage {
+    min-height: 0;
+    gap: 0.2rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+  }
+
+  section.marketing-hero .hero-pipeline .hero-stage-icon {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+}
+
+/* 150% Windows on QHD-class 14" (CSS taller than 800px, dpr ≥ 1.25). Shrink the
+   104px headline so the rail clears the fold, but keep vertical centering so
+   the first screen does not collapse into a tiny top-packed header. */
+@media (min-width: 1024px) and (min-height: 801px) and (max-height: 1100px) and (min-resolution: 1.25dppx) {
+  section.marketing-hero {
+    min-height: 100dvh;
+    padding-bottom: clamp(1.5rem, 4svh, 3rem);
+  }
+
+  section.marketing-hero h1 {
+    margin-top: clamp(0.35rem, 0.8svh, 1rem);
+    font-size: clamp(2.5rem, 6.2svh + 0.15vw, 4.25rem);
+  }
+
+  section.marketing-hero .marketing-hero-body {
+    margin-top: clamp(0.4rem, 1svh, 1.15rem);
+    font-size: clamp(0.95rem, 1.15svh + 0.12vw, 1.2rem);
+    line-height: 1.4;
+  }
+
+  section.marketing-hero .marketing-hero-ctas {
+    margin-top: clamp(0.5rem, 1.15svh, 1.35rem);
+  }
+
+  section.marketing-hero .marketing-hero-proof {
+    margin-top: clamp(0.35rem, 0.85svh, 0.95rem);
+  }
+
+  section.marketing-hero .marketing-hero-rail {
+    margin-top: clamp(0.65rem, 1.5svh, 1.6rem);
+  }
+}
+
+/* Extra short lines under the labels may drop. Do not hide CLIENT→PROOF. */
+@media (max-height: 720px) {
+  .hero-pipeline [data-hero-stage-short] {
+    display: none;
+  }
+}
+
+/* Auth overlay — lives on the marketing surface. Enter is a short settle;
+   exit is quieter. Only transform/opacity/filter. */
+.auth-overlay-backdrop {
+  opacity: 1;
+  transition: opacity 250ms var(--ease-out);
+}
+
+.auth-overlay-backdrop[data-starting-style],
+.auth-overlay-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.auth-overlay-backdrop[data-ending-style] {
+  transition-duration: 180ms;
+}
+
+.auth-overlay-panel {
+  transform-origin: center;
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 250ms var(--ease-out),
+    transform 250ms var(--ease-out),
+    filter 250ms var(--ease-out);
+}
+
+.auth-overlay-panel[data-starting-style] {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(8px) scale(0.96);
+}
+
+.auth-overlay-panel[data-ending-style] {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(4px) scale(0.98);
+  transition-duration: 180ms;
+}
+
+.auth-overlay-view {
+  animation: auth-overlay-view-in 180ms var(--ease-out) both;
+}
+
+@keyframes auth-overlay-view-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+.auth-enter-veil {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms var(--ease-out);
+}
+
+.auth-enter-veil[data-visible="true"] {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+[data-surface="auth-overlay"] label,
+.auth-overlay-panel label {
+  color: rgb(var(--foreground));
+}
+
+[data-surface="auth-overlay"] [id$="-description"],
+.auth-overlay-panel [id$="-description"] {
+  color: rgb(var(--muted-foreground));
+}
+
+::view-transition-old(root) {
+  animation: auth-vt-fade 220ms var(--ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: auth-vt-fade 280ms var(--ease-out) both reverse;
+}
+
+@keyframes auth-vt-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-overlay-backdrop,
+  .auth-overlay-panel,
+  .auth-enter-veil {
+    transition-duration: 160ms;
+  }
+
+  .auth-overlay-panel[data-starting-style],
+  .auth-overlay-panel[data-ending-style] {
+    filter: none;
+    transform: none;
+  }
+
+  .auth-overlay-view {
+    animation: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 160ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-bento::before,
+  .marketing-cta-border::before,
+  .rive-logo-dot,
+  .connected-signal-pulse,
+  .connected-signal-node {
+    animation: none;
+  }
+
+  .animate-hero-line-in {
+    animation: none;
+  }
+
+  .connected-signal-network,
+  .connected-signal-rail {
+    opacity: 0.52 !important;
+    transform: none !important;
+  }
 }
 
 /* Marketing primitives */

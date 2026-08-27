@@ -3,6 +3,7 @@ interface RiveLogoProps {
   color?: string;
   accentColor?: string;
   height?: number;
+  animated?: boolean;
 }
 
 /** The source-owned Rive wordmark. Brand colors are explicit so link and
@@ -12,11 +13,12 @@ export function RiveLogo({
   color,
   accentColor,
   height = 28,
+  animated = false,
 }: RiveLogoProps) {
   return (
     <span
       aria-label="rive."
-      className={`inline-flex shrink-0 select-none items-baseline font-extrabold tracking-[-0.045em] ${className}`}
+      className={`inline-flex shrink-0 select-none items-baseline font-extrabold tracking-[-0.045em] ${animated ? "rive-logo-mark" : ""} ${className}`}
       style={{
         fontSize: `${height * 0.8}px`,
         lineHeight: 1,
@@ -27,6 +29,7 @@ export function RiveLogo({
       <span aria-hidden="true">rive</span>
       <span
         aria-hidden="true"
+        className={animated ? "rive-logo-dot" : undefined}
         style={{ color: accentColor ?? "rgb(var(--brand-accent))", marginLeft: "0.06em" }}
       >
         .
