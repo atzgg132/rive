@@ -252,6 +252,13 @@ test.describe("portfolio studio", () => {
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
 
+    const publish = page.locator("[data-guide-target='portfolio-publish']");
+    await expect(publish).toBeVisible();
+    expect(
+      await publish.evaluate((el) => getComputedStyle(el).backgroundColor),
+      "Publish / Update live site must paint a button surface, not sit as plain text",
+    ).not.toMatch(/^(transparent|rgba\(\s*0,\s*0,\s*0,\s*0\))$/);
+
     /* The fixture's one project has no cover, so that is the outstanding
        essential — and it must name the project rather than say "add a cover
        image", which is useless once there is more than one. */
@@ -887,5 +894,114 @@ test.describe("portfolio studio", () => {
       const theme = portfolio?.theme as { accent?: string } | null;
       return theme?.accent?.toUpperCase();
     }, { timeout: 15_000 }).toBe("#DB2777");
+  });
+
+  test("live preview switches practices when they open on separate pages", async ({ page, context }) => {
+    const { token, user } = await studioUser("separate-preview");
+    const content = studioContent();
+    await db.prisma.portfolio.update({
+      where: { userId: user.id },
+      data: {
+        content: {
+          ...content,
+          headline: "I make things for a living",
+          practiceLayout: "separate",
+          practices: [
+            { id: "prac-bake", slug: "baking", name: "Baking", tagline: "Sourdough, every morning", description: "Bread and pastry.", order: 0, visibility: "public" },
+            { id: "prac-music", slug: "music", name: "Music", tagline: "Songs that hold still", description: "Records and sessions.", order: 1, visibility: "public" },
+          ],
+          projects: [
+            { ...content.projects[0], id: "p-bake", title: "Harbour loaf", practiceId: "prac-bake" },
+            { id: "p-music", title: "Studio album", description: "A record.", role: "Producer", year: "2026", url: "", imageUrl: "", visibility: "public", media: [], practiceId: "prac-music" },
+          ],
+        },
+      },
+    });
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Live preview")).toBeVisible({ timeout: 20_000 });
+
+    const frame = page.frameLocator('iframe[title$="portfolio preview"]');
+    const practices = frame.getByRole("navigation", { name: "Practices" });
+    await expect(practices.getByRole("button", { name: "Baking" })).toBeVisible({ timeout: 20_000 });
+    await expect(frame.getByRole("heading", { level: 1 })).toHaveText("I make things for a living");
+
+    await practices.getByRole("button", { name: "Baking" }).click();
+    await expect(frame.getByRole("heading", { level: 1 })).toHaveText("Sourdough, every morning");
+    await expect(practices.getByRole("button", { name: "Baking" })).toHaveAttribute("aria-pressed", "true");
+    await expect(frame.getByText("Harbour loaf")).toBeVisible();
+    await expect(frame.getByText("Studio album")).toHaveCount(0);
+
+    await practices.getByRole("button", { name: "Music" }).click();
+    await expect(frame.getByRole("heading", { level: 1 })).toHaveText("Songs that hold still");
+    await expect(frame.getByText("Studio album")).toBeVisible();
+    await expect(frame.getByText("Harbour loaf")).toHaveCount(0);
+
+    await practices.getByRole("button", { name: "Everything" }).click();
+    await expect(frame.getByRole("heading", { level: 1 })).toHaveText("I make things for a living");
+    await expect(frame.getByText("Harbour loaf")).toBeVisible();
+    await expect(frame.getByText("Studio album")).toBeVisible();
+  });
+});
+
+test.describe("portfolio live preview practices", () => {
+  test("switching separate-page practices updates the preview in place", async ({ page }) => {
+    await page.goto("/portfolio-preview", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Loading portfolio preview…")).toBeHidden({ timeout: 20_000 });
+
+    await page.evaluate(() => {
+      window.postMessage({
+        type: "rive:portfolio-preview",
+        payload: {
+          templateKey: "minimal-pro",
+          theme: { accent: "#2563EB", mode: "light", radius: "soft" },
+          content: {
+            name: "Maya Rao",
+            headline: "I make things for a living",
+            bio: "Two disciplines, one site.",
+            practiceLayout: "separate",
+            practices: [
+              { id: "prac-bake", slug: "baking", name: "Baking", tagline: "Sourdough, every morning", description: "", order: 0, visibility: "public" },
+              { id: "prac-music", slug: "music", name: "Music", tagline: "Songs that hold still", description: "", order: 1, visibility: "public" },
+            ],
+            projects: [
+              { id: "p-bake", title: "Harbour loaf", visibility: "public", practiceId: "prac-bake" },
+              { id: "p-music", title: "Studio album", visibility: "public", practiceId: "prac-music" },
+            ],
+            services: [],
+            testimonials: [],
+            sections: [
+              { key: "about", visible: true },
+              { key: "projects", visible: true },
+              { key: "services", visible: true },
+              { key: "testimonials", visible: false },
+              { key: "contact", visible: true },
+            ],
+          },
+        },
+      }, window.location.origin);
+    });
+
+    const practices = page.getByRole("navigation", { name: "Practices" });
+    await expect(practices.getByRole("button", { name: "Baking" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("I make things for a living");
+
+    await practices.getByRole("button", { name: "Baking" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sourdough, every morning");
+    await expect(practices.getByRole("button", { name: "Baking" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByText("Harbour loaf")).toBeVisible();
+    await expect(page.getByText("Studio album")).toHaveCount(0);
+
+    await practices.getByRole("button", { name: "Music" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Songs that hold still");
+    await expect(page.getByText("Studio album")).toBeVisible();
+    await expect(page.getByText("Harbour loaf")).toHaveCount(0);
+
+    await practices.getByRole("button", { name: "Everything" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("I make things for a living");
+    await expect(page.getByText("Harbour loaf")).toBeVisible();
+    await expect(page.getByText("Studio album")).toBeVisible();
   });
 });

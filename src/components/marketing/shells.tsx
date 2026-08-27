@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import type { MarketingPageContent } from "@/content/marketing/pages";
 import { cn } from "@/lib/utils";
-import { GlassPanel, GlowingBadge, HairlineDivider, MarketingButton } from "@/components/marketing/primitives";
+import { GlassPanel, GlowingBadge, MarketingButton } from "@/components/marketing/primitives";
 
 export function SectionShell({
   children,
@@ -28,59 +28,58 @@ export function SectionShell({
 export function MarketingPage({ content }: { content: MarketingPageContent }) {
   return (
     <>
-      <SectionShell className="pb-16 pt-36 sm:pb-20 sm:pt-44">
-        <div className="max-w-4xl">
+      <SectionShell className="pb-12 pt-32 sm:pb-16 sm:pt-40 lg:pb-20 lg:pt-40">
+        <div className="mx-auto max-w-4xl">
           <GlowingBadge>{content.eyebrow}</GlowingBadge>
-          <h1 className="mt-7 text-balance text-5xl font-black leading-[0.98] tracking-[-0.055em] text-foreground sm:text-6xl lg:text-7xl">{content.title}</h1>
-          <p className="mt-7 max-w-3xl text-lg leading-8 text-muted-foreground sm:text-xl sm:leading-9">{content.intro}</p>
+          <h1 className="mt-6 text-balance text-4xl font-black leading-[1.04] tracking-[-0.05em] text-foreground sm:text-5xl lg:text-6xl">{content.title}</h1>
+          <p className="mt-6 text-lg leading-8 text-muted-foreground sm:text-xl sm:leading-9">{content.intro}</p>
         </div>
       </SectionShell>
-      <HairlineDivider />
       {content.sections.map((section, sectionIndex) => {
         const cards = section.cards;
         const hasCards = Boolean(cards?.length);
-        const hasBullets = Boolean(section.bullets?.length);
-        const hasRail = hasCards || hasBullets;
+        const cardColumns = cards?.length === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2";
         return (
-          <SectionShell key={section.title} className={sectionIndex % 2 ? "marketing-alt-band" : undefined}>
-            <div className={hasRail ? "grid gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:gap-20" : "max-w-3xl"}>
-              <div>
-                {section.eyebrow ? <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{section.eyebrow}</p> : null}
-                <h2 className="mt-3 max-w-xl text-3xl font-black leading-tight tracking-[-0.04em] text-foreground sm:text-5xl">{section.title}</h2>
-                {section.body ? <p className="mt-5 max-w-xl text-base leading-8 text-muted-foreground">{section.body}</p> : null}
-              </div>
-              {hasRail ? (
-                <div className="min-w-0">
-                  {cards?.length ? (
-                    <div className={cn("grid gap-4", cards.length === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2")}>
-                      {cards.map((card) => (
-                        <GlassPanel key={card.title} tier={2} className="flex min-h-56 flex-col p-6 sm:p-7">
-                          {card.meta ? <p className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-primary">{card.meta}</p> : null}
-                          <h3 className="mt-auto pt-8 text-xl font-bold tracking-[-0.025em] text-foreground">{card.title}</h3>
-                          <p className="mt-3 text-sm leading-7 text-muted-foreground">{card.body}</p>
-                          {card.href ? <Link href={card.href} prefetch={false} className="marketing-focus mt-5 inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary/80">Read more <ArrowRight className="h-4 w-4" /></Link> : null}
-                        </GlassPanel>
-                      ))}
-                    </div>
-                  ) : null}
-                  {section.bullets ? (
-                    <ul className="divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
-                      {section.bullets.map((bullet, index) => <li key={bullet} className="flex gap-5 py-5 text-base leading-7 text-muted-foreground"><span className="font-mono text-xs text-primary">{String(index + 1).padStart(2, "0")}</span><span>{bullet}</span></li>)}
-                    </ul>
-                  ) : null}
+          <SectionShell key={section.title} className={cn("py-14 sm:py-16 lg:py-20", sectionIndex % 2 ? "marketing-alt-band" : undefined)}>
+            <div className="mx-auto max-w-4xl">
+              {section.eyebrow ? <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{section.eyebrow}</p> : null}
+              <h2 className={cn("text-3xl font-black leading-tight tracking-[-0.04em] text-foreground sm:text-4xl", section.eyebrow ? "mt-3" : undefined)}>{section.title}</h2>
+              {section.body ? <p className="mt-4 text-base leading-8 text-muted-foreground">{section.body}</p> : null}
+              {hasCards ? (
+                <div className={cn("mt-8 grid gap-4", cardColumns)}>
+                  {cards!.map((card) => (
+                    <GlassPanel key={card.title} tier={2} className="flex h-full flex-col p-6 sm:p-7">
+                      {card.meta ? <p className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.14em] text-primary">{card.meta}</p> : null}
+                      <h3 className={cn("text-xl font-bold tracking-[-0.025em] text-foreground", card.meta ? "mt-3" : undefined)}>{card.title}</h3>
+                      <p className="mt-3 text-sm leading-7 text-muted-foreground">{card.body}</p>
+                      {card.href ? <Link href={card.href} prefetch={false} className="marketing-focus mt-5 inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary/80">Read more <ArrowRight className="h-4 w-4" /></Link> : null}
+                    </GlassPanel>
+                  ))}
                 </div>
+              ) : null}
+              {section.bullets?.length ? (
+                <ul className="mt-8 divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
+                  {section.bullets.map((bullet, index) => (
+                    <li key={bullet} className="flex gap-4 py-4 text-base leading-7 text-muted-foreground sm:gap-5 sm:py-5">
+                      <span className="w-8 shrink-0 font-mono text-xs text-primary">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="min-w-0">{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </div>
           </SectionShell>
         );
       })}
       {content.cta ? (
-        <SectionShell>
-          <GlassPanel tier={3} className="overflow-hidden p-8 text-center sm:p-12 lg:p-16">
-            <p className="mx-auto max-w-2xl text-3xl font-black tracking-[-0.04em] text-foreground sm:text-5xl">{content.cta.headline}</p>
-            {content.cta.note ? <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-muted-foreground">{content.cta.note}</p> : null}
-            <MarketingButton href={content.cta.href} className="mt-8">{content.cta.label} <ArrowRight className="ml-2 h-4 w-4" /></MarketingButton>
-          </GlassPanel>
+        <SectionShell className="py-14 sm:py-16 lg:py-20">
+          <div className="mx-auto max-w-4xl">
+            <GlassPanel tier={3} className="overflow-hidden p-8 text-center sm:p-12">
+              <p className="text-3xl font-black tracking-[-0.04em] text-foreground sm:text-4xl">{content.cta.headline}</p>
+              {content.cta.note ? <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-muted-foreground">{content.cta.note}</p> : null}
+              <MarketingButton href={content.cta.href} className="mt-8">{content.cta.label} <ArrowRight className="ml-2 h-4 w-4" /></MarketingButton>
+            </GlassPanel>
+          </div>
         </SectionShell>
       ) : null}
     </>

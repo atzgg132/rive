@@ -9,13 +9,13 @@ import {
   templateEyebrow,
   type PortfolioContent,
   type PortfolioMediaSettings,
-  type PortfolioPractice,
   type PortfolioProject,
   type PortfolioService,
   type PortfolioTheme,
 } from "@/utils/portfolio";
 import PortfolioInquiryForm from "@/components/portfolio/PortfolioInquiryForm";
 import PortfolioMediaBlock from "@/components/portfolio/media/PortfolioMediaBlock";
+import PracticeSwitcher from "@/components/portfolio/PracticeSwitcher";
 
 /* Portfolio owners can supply validated data URLs and arbitrary HTTPS image hosts. */
 /* eslint-disable @next/next/no-img-element */
@@ -28,6 +28,8 @@ type Props = {
   preview?: boolean;
   /** Set when viewing a single practice at /p/[slug]/[practiceSlug]. */
   activePracticeSlug?: string;
+  /** Live preview only: swap the in-iframe practice view without leaving `/portfolio-preview`. */
+  onSelectPractice?: (slug: string | undefined) => void;
 };
 
 type TemplateProfile = {
@@ -163,42 +165,6 @@ function ProjectLink({
     <Link href={href} aria-label={label} className={className}>
       {children}
     </Link>
-  );
-}
-
-/** Tabs across a portfolio's disciplines. Only rendered when there is more
- *  than one, so a single-practice portfolio looks exactly as it always has. */
-function PracticeSwitcher({
-  practices,
-  activeSlug,
-  portfolioSlug,
-  separate,
-}: {
-  practices: PortfolioPractice[];
-  activeSlug?: string;
-  portfolioSlug?: string;
-  separate: boolean;
-}) {
-  const linkFor = (slug?: string) => {
-    if (!portfolioSlug || !separate) return slug ? `#practice-${slug}` : "#work";
-    return slug ? `/p/${portfolioSlug}/${slug}` : `/p/${portfolioSlug}`;
-  };
-  const pill = (active: boolean) =>
-    `inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-extrabold transition ${
-      active
-        ? "border-transparent bg-[var(--portfolio-accent)] text-white shadow-sm"
-        : "border-[var(--portfolio-border)] bg-[var(--portfolio-card)] text-[var(--portfolio-ink)] hover:border-[var(--portfolio-accent)]"
-    }`;
-
-  return (
-    <nav aria-label="Practices" className="flex flex-wrap gap-2">
-      <a href={linkFor()} className={pill(!activeSlug)}>Everything</a>
-      {practices.map((practice) => (
-        <a key={practice.id} href={linkFor(practice.slug)} className={pill(activeSlug === practice.slug)}>
-          {practice.name}
-        </a>
-      ))}
-    </nav>
   );
 }
 
@@ -397,7 +363,7 @@ function ServiceCard({ service, index }: { service: PortfolioService; index: num
   );
 }
 
-export default function PortfolioRenderer({ content, theme, templateKey, portfolioSlug, preview = false, activePracticeSlug }: Props) {
+export default function PortfolioRenderer({ content, theme, templateKey, portfolioSlug, preview = false, activePracticeSlug, onSelectPractice }: Props) {
   const profile = TEMPLATE_PROFILES[templateKey] || TEMPLATE_PROFILES["minimal-pro"];
   const dark = theme.mode === "dark";
   const practices = getVisiblePractices(content);
@@ -530,6 +496,8 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                   activeSlug={activePracticeSlug}
                   portfolioSlug={portfolioSlug}
                   separate={separatePages}
+                  preview={preview}
+                  onSelect={onSelectPractice}
                 />
               </div>
             )}

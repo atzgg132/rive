@@ -1,6 +1,3 @@
-"use client";
-
-import * as m from "motion/react-m";
 import { Activity, Briefcase, CircleDollarSign, Receipt, TrendingUp } from "lucide-react";
 import { MetricTicker } from "@/components/marketing/MetricTicker";
 import { ProductFrame } from "@/components/marketing/product/ProductFrame";
@@ -29,22 +26,47 @@ export function ProductDashboard({ title, metrics, activity }: ProductDashboardP
           const Icon = metricIcons[index % metricIcons.length];
           const numeric = Number(metric.value);
           return (
-            <m.div key={metric.label} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08 }}>
-              <div className="flex items-start justify-between gap-2"><p className="text-[0.55rem] font-semibold text-slate-600">{metric.label}</p><span className={`grid h-6 w-6 place-items-center rounded-md ${toneClasses[metric.tone]}`}><Icon className="h-3 w-3" /></span></div>
-              <p className="mt-3 text-base font-black tabular-nums text-slate-900">{Number.isFinite(numeric) ? <MetricTicker value={numeric} /> : metric.value}</p>
-            </m.div>
+            <div
+              key={metric.label}
+              className="marketing-mock-in rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+              style={{ animationDelay: `${index * 0.08}s` }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[0.55rem] font-semibold text-slate-600">{metric.label}</p>
+                <span className={`grid h-6 w-6 place-items-center rounded-md ${toneClasses[metric.tone]}`}>
+                  <Icon className="h-3 w-3" />
+                </span>
+              </div>
+              <p className="mt-3 text-base font-black tabular-nums text-slate-900">
+                {Number.isFinite(numeric) ? <MetricTicker value={numeric} /> : metric.value}
+              </p>
+            </div>
           );
         })}
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-[1.35fr_.65fr]">
         <div className="rounded-xl border border-slate-200 bg-white p-3">
-          <div className="flex items-center justify-between"><p className="text-[0.62rem] font-bold text-slate-800">Paid invoices and expenses</p><span className="font-mono text-[0.48rem] font-semibold uppercase tracking-[0.12em] text-slate-600">Six months</span></div>
+          <div className="flex items-center justify-between">
+            <p className="text-[0.62rem] font-bold text-slate-800">Paid invoices and expenses</p>
+            <span className="font-mono text-[0.48rem] font-semibold uppercase tracking-[0.12em] text-slate-600">Six months</span>
+          </div>
           <SvgChart values={[22, 28, 25, 42, 51, 47, 67, 74, 70, 88]} label="Revenue rising over six months" className="mt-2 w-full" />
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-3">
-          <div className="flex items-center gap-1.5"><Activity className="h-3 w-3 text-blue-600" /><p className="text-[0.62rem] font-bold text-slate-800">Recent activity</p></div>
+          <div className="flex items-center gap-1.5">
+            <Activity className="h-3 w-3 text-blue-600" />
+            <p className="text-[0.62rem] font-bold text-slate-800">Recent activity</p>
+          </div>
           <div className="mt-3 grid gap-2">
-            {activity.map((item, index) => <m.div key={item} className="rounded-lg bg-slate-50 px-2.5 py-2 text-[0.55rem] font-semibold leading-4 text-slate-600" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + index * 0.1 }}>{item}</m.div>)}
+            {activity.map((item, index) => (
+              <div
+                key={item}
+                className="marketing-mock-in-x rounded-lg bg-slate-50 px-2.5 py-2 text-[0.55rem] font-semibold leading-4 text-slate-600"
+                style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+              >
+                {item}
+              </div>
+            ))}
           </div>
         </div>
       </div>

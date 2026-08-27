@@ -5,6 +5,7 @@ import PortfolioRenderer from "@/components/portfolio/PortfolioRenderer";
 import {
   DEFAULT_PORTFOLIO_CONTENT,
   DEFAULT_PORTFOLIO_THEME,
+  getVisiblePractices,
   mergePortfolioContent,
   type PortfolioContent,
   type PortfolioTheme,
@@ -24,6 +25,7 @@ function isPreviewPayload(value: unknown): value is PreviewPayload {
 
 export default function PortfolioPreviewPage() {
   const [preview, setPreview] = useState<PreviewPayload | null>(null);
+  const [selectedPracticeSlug, setSelectedPracticeSlug] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,9 +68,25 @@ export default function PortfolioPreviewPage() {
     return () => window.removeEventListener("message", receivePreview);
   }, []);
 
+  const choosePractice = (slug: string | undefined) => {
+    setSelectedPracticeSlug(slug);
+    window.scrollTo(0, 0);
+  };
+
   if (!preview) {
     return <div className="grid min-h-screen place-items-center bg-slate-50 text-sm font-semibold text-slate-500">Loading portfolio preview…</div>;
   }
 
-  return <PortfolioRenderer {...preview} preview />;
+  const activePracticeSlug = getVisiblePractices(preview.content).some((practice) => practice.slug === selectedPracticeSlug)
+    ? selectedPracticeSlug
+    : undefined;
+
+  return (
+    <PortfolioRenderer
+      {...preview}
+      preview
+      activePracticeSlug={activePracticeSlug}
+      onSelectPractice={choosePractice}
+    />
+  );
 }

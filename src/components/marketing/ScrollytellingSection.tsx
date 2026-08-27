@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { MarketingChapter } from "@/content/marketing/home";
 import { homeContent } from "@/content/marketing/home";
 import { DeferredProductScene } from "@/components/marketing/product/DeferredProductScene";
-import { MarketingProductScene } from "@/components/marketing/product/SceneRegistry";
+import { MotionProductScene } from "@/components/marketing/product/MotionProductScene";
 import { ProblemDisconnection, type ProblemDisconnectionProps } from "@/components/marketing/product/ProblemDisconnection";
 import { cn } from "@/lib/utils";
 import { useMarketingReducedMotion } from "@/components/marketing/useMarketingReducedMotion";
@@ -181,8 +181,8 @@ export function ScrollytellingSection({
         data-testid="scrollytelling-scene"
         className="scrollytelling-scene sticky top-[5.5rem] z-0 min-w-0 self-start"
       >
-        <div className="w-full max-h-[min(38rem,calc(100svh-7.5rem))] overflow-hidden" key={railKey}>
-          <MarketingProductScene visual={railVisual} />
+        <div className="w-full">
+          <MotionProductScene key={railKey} sceneKey={railKey} visual={railVisual} />
         </div>
       </aside>
     </div>

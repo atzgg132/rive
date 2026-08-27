@@ -1,10 +1,4 @@
-"use client";
-
-import * as m from "motion/react-m";
-import { useMarketingReducedMotion } from "@/components/marketing/useMarketingReducedMotion";
-
 export function SvgChart({ values, label, className }: { values: readonly number[]; label: string; className?: string }) {
-  const reduceMotion = useMarketingReducedMotion();
   const width = 360;
   const height = 132;
   const pad = 8;
@@ -18,26 +12,31 @@ export function SvgChart({ values, label, className }: { values: readonly number
   });
   const path = points.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
   const area = `${path} L${width - pad} ${height - pad} L${pad} ${height - pad} Z`;
+  const gradientId = `rive-chart-${label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} className={className}>
       <defs>
-        <linearGradient id="rive-chart-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3b82f6" stopOpacity=".24" /><stop offset="1" stopColor="#3b82f6" stopOpacity="0" /></linearGradient>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3b82f6" stopOpacity=".24" />
+          <stop offset="1" stopColor="#3b82f6" stopOpacity="0" />
+        </linearGradient>
       </defs>
-      {[0.25, 0.5, 0.75].map((line) => <line key={line} x1={pad} x2={width - pad} y1={height * line} y2={height * line} stroke="#dbe5f0" strokeDasharray="4 5" />)}
-      <path d={area} fill="url(#rive-chart-area)" />
-      <m.path
+      {[0.25, 0.5, 0.75].map((line) => (
+        <line key={line} x1={pad} x2={width - pad} y1={height * line} y2={height * line} stroke="#dbe5f0" strokeDasharray="4 5" />
+      ))}
+      <path d={area} fill={`url(#${gradientId})`} />
+      <path
         d={path}
         fill="none"
         stroke="#2563eb"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
-        initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: reduceMotion ? 0 : 1.1, ease: [0.23, 1, 0.32, 1] }}
       />
-      {points.map(([x, y], index) => <circle key={index} cx={x} cy={y} r={index === points.length - 1 ? 4 : 2.3} fill={index === points.length - 1 ? "#2563eb" : "#93c5fd"} />)}
+      {points.map(([x, y], index) => (
+        <circle key={index} cx={x} cy={y} r={index === points.length - 1 ? 4 : 2.3} fill={index === points.length - 1 ? "#2563eb" : "#93c5fd"} />
+      ))}
     </svg>
   );
 }

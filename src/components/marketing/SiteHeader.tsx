@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { accountNav, marketingNav } from "@/content/marketing/nav";
+import { accountNav, marketingHeaderLinks, marketingNav } from "@/content/marketing/nav";
 import { RiveLogo } from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmoothAnchor } from "@/components/marketing/SmoothAnchor";
@@ -102,6 +102,22 @@ export function SiteHeader() {
               </div>
             );
           })}
+          {marketingHeaderLinks.map((item) => {
+            const className = "marketing-focus rounded-lg px-3 py-2 text-[0.78rem] font-semibold text-muted-foreground transition hover:bg-[var(--surface-glass)] hover:text-foreground";
+            return (
+              <span key={item.href} className="contents" onMouseEnter={() => setOpenGroup(null)}>
+                {item.href.includes("#") ? (
+                  <SmoothAnchor href={item.href} onClick={() => setOpenGroup(null)} className={className}>
+                    {item.label}
+                  </SmoothAnchor>
+                ) : (
+                  <Link href={item.href} prefetch={false} onClick={() => setOpenGroup(null)} className={className}>
+                    {item.label}
+                  </Link>
+                )}
+              </span>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -136,6 +152,14 @@ export function SiteHeader() {
                 </div>
               </div>
             ))}
+            {marketingHeaderLinks.map((item) => {
+              const className = "marketing-focus rounded-xl px-3 py-3 text-sm font-semibold text-foreground hover:bg-[var(--surface-glass)]";
+              return item.href.includes("#") ? (
+                <SmoothAnchor key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={className}>{item.label}</SmoothAnchor>
+              ) : (
+                <Link key={item.href} href={item.href} prefetch={false} onClick={() => setMobileOpen(false)} className={className}>{item.label}</Link>
+              );
+            })}
           </div>
           <div className="sticky bottom-0 z-10 -mx-4 grid shrink-0 gap-2 border-t border-[var(--stroke-hairline)] bg-[var(--surface-void)] px-4 py-3 sm:-mx-8 sm:grid-cols-2 sm:px-8">
             <Link href={accountNav.login.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--stroke-hairline)] px-4 text-center text-sm font-bold text-foreground">{accountNav.login.label}</Link>
