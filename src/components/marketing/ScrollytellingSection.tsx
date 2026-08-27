@@ -182,7 +182,7 @@ export function ScrollytellingSection({
         className="scrollytelling-scene sticky top-[5.5rem] z-0 min-w-0 self-start"
       >
         <div className="w-full">
-          <MotionProductScene sceneKey={railKey} visual={railVisual} />
+          <MotionProductScene key={railKey} sceneKey={railKey} visual={railVisual} />
         </div>
       </aside>
     </div>

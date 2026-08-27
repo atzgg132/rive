@@ -565,9 +565,52 @@ p {
 }
 
 /* Headline line entrance — rise and fade. Stagger via inline animation-delay. */
-@keyframes heroLineIn {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes marketing-scene-in {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes marketing-mock-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes marketing-mock-in-x {
+  from { opacity: 0; transform: translate3d(-8px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes marketing-calendar-now {
+  from { top: 24%; }
+  to { top: 46%; }
+}
+
+/* CSS, not motion/react-m: LazyMotion's async features left initial opacity: 0
+   on inner mock rows and never ran animate. These always reach the end frame. */
+.marketing-scene-in {
+  opacity: 1;
+  animation: marketing-scene-in 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.marketing-mock-in,
+.marketing-mock-in-x {
+  opacity: 1;
+  animation-duration: 0.4s;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.marketing-mock-in {
+  animation-name: marketing-mock-in;
+}
+
+.marketing-mock-in-x {
+  animation-name: marketing-mock-in-x;
+}
+
+.marketing-calendar-now {
+  top: 46%;
+  animation: marketing-calendar-now 1.4s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 .animate-hero-line-in {
   animation: heroLineIn 600ms var(--ease-out) both;
@@ -1104,7 +1147,11 @@ p {
     animation: none;
   }
 
-  .animate-hero-line-in {
+  .animate-hero-line-in,
+  .marketing-scene-in,
+  .marketing-mock-in,
+  .marketing-mock-in-x,
+  .marketing-calendar-now {
     animation: none;
   }
 

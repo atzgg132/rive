@@ -59,17 +59,29 @@ function viewportMinHeight(value: string) {
   return /^(100vh|100svh|100dvh|100lvh)$/.test(value.trim());
 }
 
-/** Inner mock rows start at opacity 0. After the chapter swap they must settle visible. */
+/** Inner mock rows must not stay at opacity 0 — chrome alone is not a pass. */
 async function stuckHiddenRows(scene: Locator) {
-  const frame = scene.locator("[data-product-frame]");
-  if (await frame.count() === 0) return [];
-  return frame.evaluate((node) => Array.from(node.querySelectorAll<HTMLElement>("*")).flatMap((el) => {
-    const style = getComputedStyle(el);
-    if (style.opacity !== "0" || style.display === "none" || style.visibility === "hidden") return [];
-    if (el.getClientRects().length === 0) return [];
-    return [el.textContent?.replace(/\s+/g, " ").trim().slice(0, 48) || el.tagName];
-  }));
+  return scene.evaluate((node) => {
+    const root = node.querySelector<HTMLElement>("[data-product-frame], [data-testid='problem-disconnection']");
+    if (!root) return [];
+    return Array.from(root.querySelectorAll<HTMLElement>("*")).flatMap((el) => {
+      const style = getComputedStyle(el);
+      if (style.opacity !== "0" || style.display === "none" || style.visibility === "hidden") return [];
+      if (el.getClientRects().length === 0) return [];
+      return [el.textContent?.replace(/\s+/g, " ").trim().slice(0, 48) || el.tagName];
+    });
+  });
 }
+
+const RAIL_INNER_COPY: { index: number; copy: string[] }[] = [
+  { index: 0, copy: ["Northstar Labs", "Contacts app", "No project attached"] },
+  { index: 1, copy: ["Revenue collected", "Invoice INV-1042 paid"] },
+  { index: 2, copy: ["Scope and deliverables", "Review and acceptance"] },
+  { index: 3, copy: ["Product design milestone", "Research synthesis"] },
+  { index: 4, copy: ["Northstar review", "Atlas milestone"] },
+  { index: 5, copy: ["Clients", "Northstar Labs ↔ Northstar"] },
+  { index: 6, copy: ["Identity", "Northstar product system"] },
+];
 
 async function openHomeWithColorTheme(page: Page, theme: "light" | "dark") {
   await page.emulateMedia({ colorScheme: theme });
@@ -102,12 +114,16 @@ test.describe("marketing experience", () => {
       await expect(scene).toBeVisible();
       await expect(scene.getByTestId("product-scene-motion")).toBeVisible();
       await expect(scene.getByTestId("problem-disconnection")).toBeVisible();
+      await expect(scene.getByTestId("problem-disconnection").getByText("Northstar Labs")).toBeVisible();
+      await expect(scene.getByTestId("problem-disconnection").getByText("No project attached")).toBeVisible();
       await page.waitForFunction(() => getComputedStyle(document.querySelector<HTMLElement>('[data-chapter-index="1"]')!).opacity === "0.3");
 
       const target = page.locator('[data-chapter-index="3"]');
       await target.evaluate((node) => node.scrollIntoView({ block: "start" }));
       await expect(target).toHaveAttribute("data-active", "true");
       await expect(scene.locator("[data-product-frame]").getByText("INV-1042")).toBeVisible();
+      await expect(scene.locator("[data-product-frame]").getByText("Product design milestone")).toBeVisible();
+      await expect(scene.locator("[data-product-frame]").getByText("Research synthesis")).toBeVisible();
       await expect(scene.locator("[data-product-frame]")).toHaveCount(1);
       await expect.poll(() => stuckHiddenRows(scene)).toEqual([]);
 
@@ -123,11 +139,42 @@ test.describe("marketing experience", () => {
       await last.evaluate((node) => node.scrollIntoView({ block: "start" }));
       await expect(last).toHaveAttribute("data-active", "true");
       await expect(scene.locator("[data-product-frame]").getByText("Portfolio Studio")).toBeVisible();
+      await expect(scene.locator("[data-product-frame]").getByText("Identity")).toBeVisible();
+      await expect(scene.locator("[data-product-frame]").getByText("Northstar product system")).toBeVisible();
       await expect(scene.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
       await expect(scene.locator("[data-product-frame]")).toHaveCount(1);
       await expect.poll(() => stuckHiddenRows(scene)).toEqual([]);
 
       expect(errors).toEqual([]);
+    });
+  }
+
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 1280, height: 720 },
+  ]) {
+    test(`every right-rail chapter reveals inner UI at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.setViewportSize(viewport);
+      await page.goto("/#product", { waitUntil: "load" });
+
+      const scene = page.getByTestId("scrollytelling-scene");
+      await expect(scene).toBeVisible();
+      await page.waitForFunction(() => getComputedStyle(document.querySelector<HTMLElement>('[data-chapter-index="1"]')!).opacity === "0.3");
+
+      for (const beat of RAIL_INNER_COPY) {
+        const chapter = page.locator(`[data-chapter-index="${beat.index}"]`);
+        await chapter.evaluate((node) => node.scrollIntoView({ block: "start" }));
+        await expect(chapter).toHaveAttribute("data-active", "true");
+        for (const text of beat.copy) {
+          await expect(scene.getByText(text), `chapter ${beat.index} missing inner copy "${text}"`).toBeVisible();
+        }
+        await expect.poll(() => stuckHiddenRows(scene), { timeout: 4000 }).toEqual([]);
+        await expect(scene.locator("[data-product-frame], [data-testid='problem-disconnection']")).toHaveCount(1);
+      }
+
+      await expect(scene.locator("[data-product-frame]").getByText("Portfolio Studio")).toBeVisible();
+      await expect(scene.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
     });
   }
 
