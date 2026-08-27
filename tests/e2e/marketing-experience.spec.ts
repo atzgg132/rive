@@ -851,6 +851,19 @@ test.describe("marketing experience", () => {
     await expect(footer.getByRole("link", { name: "Press" })).toHaveCount(0);
   });
 
+  test("mobile company nav has no Careers or Press", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: "Open navigation" }).click();
+    const nav = page.getByRole("navigation", { name: "Mobile navigation" });
+    await expect(nav.getByRole("link", { name: "About", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Changelog", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Roadmap", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Careers" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Press" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Pricing", exact: true })).toBeVisible();
+  });
+
   test("retired marketing routes are gone", async ({ page }) => {
     for (const route of ["/docs", "/guides", "/api-reference", "/blog", "/community", "/careers", "/press"]) {
       const response = await page.goto(route, { waitUntil: "domcontentloaded" });
