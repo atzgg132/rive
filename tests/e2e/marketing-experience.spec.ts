@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 type CssColor = { r: number; g: number; b: number; a: number };
 
@@ -59,6 +59,18 @@ function viewportMinHeight(value: string) {
   return /^(100vh|100svh|100dvh|100lvh)$/.test(value.trim());
 }
 
+/** Inner mock rows start at opacity 0. After the chapter swap they must settle visible. */
+async function stuckHiddenRows(scene: Locator) {
+  const frame = scene.locator("[data-product-frame]");
+  if (await frame.count() === 0) return [];
+  return frame.evaluate((node) => Array.from(node.querySelectorAll<HTMLElement>("*")).flatMap((el) => {
+    const style = getComputedStyle(el);
+    if (style.opacity !== "0" || style.display === "none" || style.visibility === "hidden") return [];
+    if (el.getClientRects().length === 0) return [];
+    return [el.textContent?.replace(/\s+/g, " ").trim().slice(0, 48) || el.tagName];
+  }));
+}
+
 async function openHomeWithColorTheme(page: Page, theme: "light" | "dark") {
   await page.emulateMedia({ colorScheme: theme });
   await page.addInitScript((selectedTheme) => {
@@ -88,12 +100,16 @@ test.describe("marketing experience", () => {
       await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
       await expect(scrolly).toBeVisible();
       await expect(scene).toBeVisible();
+      await expect(scene.getByTestId("product-scene-motion")).toBeVisible();
       await expect(scene.getByTestId("problem-disconnection")).toBeVisible();
       await page.waitForFunction(() => getComputedStyle(document.querySelector<HTMLElement>('[data-chapter-index="1"]')!).opacity === "0.3");
 
       const target = page.locator('[data-chapter-index="3"]');
       await target.evaluate((node) => node.scrollIntoView({ block: "start" }));
       await expect(target).toHaveAttribute("data-active", "true");
+      await expect(scene.locator("[data-product-frame]").getByText("INV-1042")).toBeVisible();
+      await expect(scene.locator("[data-product-frame]")).toHaveCount(1);
+      await expect.poll(() => stuckHiddenRows(scene)).toEqual([]);
 
       const sticky = await scene.evaluate((node) => {
         const rect = node.getBoundingClientRect();
@@ -108,6 +124,8 @@ test.describe("marketing experience", () => {
       await expect(last).toHaveAttribute("data-active", "true");
       await expect(scene.locator("[data-product-frame]").getByText("Portfolio Studio")).toBeVisible();
       await expect(scene.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
+      await expect(scene.locator("[data-product-frame]")).toHaveCount(1);
+      await expect.poll(() => stuckHiddenRows(scene)).toEqual([]);
 
       expect(errors).toEqual([]);
     });
