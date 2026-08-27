@@ -25,7 +25,7 @@ function isPreviewPayload(value: unknown): value is PreviewPayload {
 
 export default function PortfolioPreviewPage() {
   const [preview, setPreview] = useState<PreviewPayload | null>(null);
-  const [activePracticeSlug, setActivePracticeSlug] = useState<string | undefined>(undefined);
+  const [selectedPracticeSlug, setSelectedPracticeSlug] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -68,20 +68,18 @@ export default function PortfolioPreviewPage() {
     return () => window.removeEventListener("message", receivePreview);
   }, []);
 
-  useEffect(() => {
-    if (!preview || !activePracticeSlug) return;
-    const stillVisible = getVisiblePractices(preview.content).some((practice) => practice.slug === activePracticeSlug);
-    if (!stillVisible) setActivePracticeSlug(undefined);
-  }, [preview, activePracticeSlug]);
-
   const choosePractice = (slug: string | undefined) => {
-    setActivePracticeSlug(slug);
+    setSelectedPracticeSlug(slug);
     window.scrollTo(0, 0);
   };
 
   if (!preview) {
     return <div className="grid min-h-screen place-items-center bg-slate-50 text-sm font-semibold text-slate-500">Loading portfolio preview…</div>;
   }
+
+  const activePracticeSlug = getVisiblePractices(preview.content).some((practice) => practice.slug === selectedPracticeSlug)
+    ? selectedPracticeSlug
+    : undefined;
 
   return (
     <PortfolioRenderer
