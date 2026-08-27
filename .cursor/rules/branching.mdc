@@ -1,0 +1,26 @@
+---
+description: Only main and dev exist; all work is committed on dev; main is merge-only
+alwaysApply: true
+---
+
+# Branch policy (hard)
+
+This repository has **exactly two branches**: `main` and `dev`. Never create another branch — not with `git checkout -b`, `git switch -c`, GitHub, a worktree, a cloud agent, or a PR workflow.
+
+## Work only on `dev`
+
+1. `git checkout dev` and `git pull --ff-only origin dev`.
+2. Commit and `git push origin dev` on that branch.
+3. A push to `dev` deploys to https://dev.rive.work.
+
+Do not open a feature PR. There is no third branch to PR from.
+
+## `main` is production, merge-only
+
+- Never commit, push, force-push, amend, or cherry-pick onto `main`.
+- The only update path is a **merge commit** PR: `dev` → `main`, after `dev.rive.work` is good.
+- `git push origin main` is forbidden even when the tree looks correct.
+
+## If you are not on `dev`
+
+Check out `dev` and continue there. Do not branch off to "keep main clean" — `dev` is that gate.

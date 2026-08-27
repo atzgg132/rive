@@ -1,0 +1,21 @@
+name: Branch policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  only-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require pull requests to main to come from dev
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REF" != "dev" ]; then
+            echo "::error::main only accepts merge PRs from the dev branch (got '$HEAD_REF')."
+            exit 1
+          fi
