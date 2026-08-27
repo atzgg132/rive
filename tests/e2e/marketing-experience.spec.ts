@@ -457,7 +457,6 @@ test.describe("marketing experience", () => {
     await page.goto("/", { waitUntil: "load" });
     const stage = page.getByTestId("marketing-problem");
     const geometry = await stage.evaluate((node) => {
-      const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
       const article = node.closest("[data-chapter-index='0']");
       const articleStyle = article ? getComputedStyle(article) : style;
