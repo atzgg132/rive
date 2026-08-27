@@ -683,7 +683,7 @@ test.describe("marketing experience", () => {
   });
 
   test("marketing headings form a valid outline", async ({ page }) => {
-    for (const route of ["/", "/about", "/contact", "/docs", "/guides", "/privacy"]) {
+    for (const route of ["/", "/about", "/contact", "/privacy", "/changelog"]) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
       const outline = await page.locator("h1, h2, h3, h4, h5, h6").evaluateAll((nodes) => nodes
         .filter((node) => {
@@ -814,6 +814,38 @@ test.describe("marketing experience", () => {
     const reducedMotionCta = page.getByTestId("site-header").getByRole("link", { name: "Build your workspace", exact: true });
     await expect(reducedMotionCta).toBeVisible();
     await expect(reducedMotionCta.evaluate((node) => getComputedStyle(node, "::before").animationName)).resolves.toBe("none");
+  });
+
+  test("the navbar exposes Pricing as a top-level link and has no Learn section", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const header = page.getByTestId("site-header");
+    const primaryNav = header.getByRole("navigation", { name: "Primary navigation" });
+    await expect(primaryNav.getByRole("link", { name: "Pricing", exact: true })).toBeVisible();
+    await expect(primaryNav.getByRole("button", { name: "Learn" })).toHaveCount(0);
+    await expect(primaryNav.getByRole("link", { name: "Documentation" })).toHaveCount(0);
+
+    await primaryNav.getByRole("button", { name: "Product" }).hover();
+    const productMenu = header.locator("#nav-product");
+    await expect(productMenu.getByRole("link", { name: "The connected loop" })).toBeVisible();
+    await expect(productMenu.getByRole("link", { name: "Pricing" })).toHaveCount(0);
+
+    const footer = page.locator("footer");
+    await expect(footer.getByRole("heading", { name: "Learn" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "Documentation" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "Guides" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "API reference" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "Blog" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "Community" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "Pricing", exact: true })).toBeVisible();
+  });
+
+  test("retired Learn routes are gone", async ({ page }) => {
+    for (const route of ["/docs", "/guides", "/api-reference", "/blog", "/community"]) {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.status(), `${route} should be removed`).toBe(404);
+    }
   });
 
   test("the navbar stays optically centered without crowding tablet or mobile layouts", async ({ page }) => {

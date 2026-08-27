@@ -92,23 +92,6 @@ export const careersContent: MarketingPageContent = {
   cta: { headline: "The next hire should remove a real point of failure.", label: "Introduce yourself", href: "mailto:hello@rive.work", note: "Tell us what you would make true." },
 };
 
-export const communityContent: MarketingPageContent = {
-  eyebrow: "RIVE COMMUNITY",
-  title: "A product for independent work should be built in public with independent people.",
-  intro: "Operating reality reaches the roadmap when someone sends a broken handoff. Email the moment where context failed — a scope change, a late payment, a migration that almost reconstructed — and it reaches the people shipping Rive.",
-  sections: [
-    {
-      title: "Bring the edge case, not the applause.",
-      cards: [
-        { title: "Email a broken handoff", body: "Send what you expected, what the records did, and where it broke. Write hello@rive.work or use the contact form. There is no forum to join.", href: "/contact" },
-        { title: "Open-beta notes", body: "See what shipped, what changed after feedback, and what remains deliberately unfinished.", href: "/changelog" },
-        { title: "A pattern worth sending", body: "If a concrete system is making client work calmer, email it. We will not turn it into universal advice." },
-      ],
-    },
-  ],
-  cta: { headline: "Bring us the handoff that keeps breaking.", label: "Send us your operating problem", href: "/contact", note: "hello@rive.work — specific stories shape better software." },
-};
-
 export const pressContent: MarketingPageContent = {
   eyebrow: "PRESS ROOM",
   title: "The facts, without the launch fog.",
@@ -152,24 +135,6 @@ export const roadmapContent: MarketingPageContent = {
     },
   ],
   cta: { headline: "Judge the direction by what ships.", label: "Read what shipped", href: "/changelog" },
-};
-
-export const blogContent: MarketingPageContent = {
-  eyebrow: "FIELD NOTES",
-  title: "The systems behind independent work are part of the work.",
-  intro: "Field notes will live here when we publish them. Nothing is queued as a fake article. Until then, the honest places to look are the guides and the product.",
-  sections: [
-    {
-      title: "Forthcoming",
-      body: "These notes will cover client trust, operating context, and product decisions — when the writing exists. There are no posts, no read times, and no /blog archive today.",
-      bullets: [
-        "No published field notes yet.",
-        "Guides cover outcomes you can complete in the product today.",
-        "The connected loop on the home page is the product, not a teaser for unpublished essays.",
-      ],
-    },
-  ],
-  cta: { headline: "The ideas are only useful when the product proves them.", label: "Read the guides", href: "/guides", note: "Or see the connected loop on the product page." },
 };
 
 export const changelogContent: MarketingPageContent = {

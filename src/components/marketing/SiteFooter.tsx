@@ -14,7 +14,7 @@ export function SiteFooter() {
             <p className="mt-5 max-w-sm text-sm leading-7 text-muted-foreground">{footerCopy.description}</p>
             <p className="mt-6 inline-flex rounded-full border border-success/20 bg-success/10 px-3 py-1.5 font-mono text-[0.64rem] font-semibold uppercase tracking-[0.14em] text-success">{footerCopy.status}</p>
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3">
             {footerNav.map((group) => (
               <div key={group.label}>
                 <h2 className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.label}</h2>

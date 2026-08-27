@@ -211,6 +211,6 @@ export const homeContent = {
     title: "Put the context back inside the work.",
     body: "Start with one client, or bring the history you already have. The next useful action should begin with context—not another setup ceremony.",
     primary: { label: "Create your Rive workspace", href: "/register" },
-    secondary: { label: "Read the docs", href: "/docs" },
+    secondary: { label: "See the connected loop", href: "/#product" },
   },
 } as const;
