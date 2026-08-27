@@ -21,11 +21,15 @@ does not modify public DNS.
 - EC2 has no inbound SSH rule.
 - GitHub deploys through OIDC and a scoped AWS role.
 - `dev` and `main` deploy automatically after their branch checks pass.
-- Scheduled jobs default off (`scheduled_jobs_enabled`). Confirm the dev
-  EventBridge `email_outbox` rule is ENABLED before debugging missing
-  verification or inquiry mail — see `docs/RELEASE_TRANCHE_HANDOFF.md`.
+- Scheduled jobs default off (`scheduled_jobs_enabled`) for a new stack. The
+  deployed environments explicitly enable them after health verification.
+  Confirm the dev EventBridge `email_outbox` rule is ENABLED before debugging
+  missing verification or inquiry mail — see `docs/RELEASE_TRANCHE_HANDOFF.md`.
 - Production RDS and Terraform state have deletion protection.
-- Development suppresses real email delivery unless a provider is explicitly configured.
+- Development and test instances fall back to the EC2 SES role when
+  `EMAIL_PROVIDER` is missing or set to `disabled`, preserving verification and
+  recovery email on older stacks. Use `console` for an explicitly non-delivering
+  local provider; SES account/sandbox restrictions still apply.
 
 ## Terraform
 
