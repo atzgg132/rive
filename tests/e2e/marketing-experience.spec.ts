@@ -247,17 +247,20 @@ test.describe("marketing experience", () => {
   });
 
   // SHIP-GATE ONLY: 1920×1080 @ 150% Windows ≈ 1280×720 CSS, and 1920×1200 @ 150% ≈ 1280×800.
-  // First screen at scrollY=0: headline, both CTAs, and the full CLIENT→PROOF rail.
-  // Extra short lines under the labels may drop at 720. Do not hide the labels.
-  // Do not add 1366×768 or 1440×900 to this loop.
+  // First screen at scrollY=0: a readable hero — headline, both CTAs, and the
+  // proof chips with a real gap so chips cannot sit on the buttons. The
+  // CLIENT→PROOF rail may continue below the fold; do not crush the hero to
+  // force it into one viewport. Extra short lines under the labels may drop
+  // at 720. Do not hide the labels. Do not add 1366×768 or 1440×900 to this loop.
   // Do not assert which pipeline node is active — interval autoplay may already be on WORK.
   const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
+  const minCtaProofGap = 12;
 
   for (const viewport of [
     { width: 1280, height: 720 },
     { width: 1280, height: 800 },
   ]) {
-    test(`the hero and pipeline fit a ${viewport.width}×${viewport.height} 150% Windows-scale viewport at rest`, async ({ page }) => {
+    test(`the hero stays readable at ${viewport.width}×${viewport.height} 150% Windows-scale`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: "no-preference" });
       await page.setViewportSize(viewport);
       await page.goto("/", { waitUntil: "load" });
@@ -270,6 +273,9 @@ test.describe("marketing experience", () => {
       await expect(hero.locator("h1")).toBeVisible();
       await expect(hero.getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
       await expect(hero.getByRole("link", { name: "See the unpaid role", exact: true })).toBeVisible();
+      await expect(hero.getByText("Open signup")).toBeVisible();
+      await expect(hero.getByText("Free during beta")).toBeVisible();
+      await expect(hero.getByText("Your data stays yours")).toBeVisible();
       await expect(pipeline).toBeVisible();
       await expect(pipeline.getByTestId(/hero-stage-/)).toHaveCount(5);
 
@@ -293,22 +299,22 @@ test.describe("marketing experience", () => {
         const pipelineRect = pipelineNode.getBoundingClientRect();
         const primaryRect = primary.getBoundingClientRect();
         const secondaryRect = secondary.getBoundingClientRect();
+        const chipRects = chips.map((chip) => chip.getBoundingClientRect());
+        const ctaBottom = Math.max(primaryRect.bottom, secondaryRect.bottom);
+        const chipTop = Math.min(...chipRects.map((rect) => rect.top));
+        const overlaps = (a: DOMRect, b: DOMRect) => a.bottom > b.top + 1 && a.top < b.bottom - 1 && a.left < b.right - 1 && a.right > b.left + 1;
         const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
         const labels = stageLabels.map((label) => {
           const node = pipelineNode.querySelector(`[data-hero-stage-label="${label}"]`)
             || Array.from(pipelineNode.querySelectorAll("span")).find((el) => el.textContent?.trim() === label && el.children.length === 0)
             || null;
-          if (!node) return { label, found: false as const, display: "missing", visibility: "missing", top: 0, bottom: 0, inFirstScreen: false };
+          if (!node) return { label, found: false as const, display: "missing", visibility: "missing" };
           const style = getComputedStyle(node);
-          const rect = node.getBoundingClientRect();
           return {
             label,
             found: true as const,
             display: style.display,
             visibility: style.visibility,
-            top: rect.top,
-            bottom: rect.bottom,
-            inFirstScreen: inFirstScreen(rect),
           };
         });
         return {
@@ -320,12 +326,13 @@ test.describe("marketing experience", () => {
           primaryTop: primaryRect.top,
           primaryBottom: primaryRect.bottom,
           pipelineTop: pipelineRect.top,
-          pipelineBottom: pipelineRect.bottom,
           headlineFits: inFirstScreen(headlineRect),
           primaryFits: inFirstScreen(primaryRect),
           secondaryFits: inFirstScreen(secondaryRect),
-          pipelineFits: inFirstScreen(pipelineRect),
-          chipsFit: chips.every((chip) => inFirstScreen(chip.getBoundingClientRect())),
+          chipsFit: chipRects.every((rect) => inFirstScreen(rect)),
+          ctaProofGap: chipTop - ctaBottom,
+          ctaProofOverlap: chipRects.some((rect) => overlaps(primaryRect, rect) || overlaps(secondaryRect, rect)),
+          headlineCtaOverlap: overlaps(headlineRect, primaryRect) || overlaps(headlineRect, secondaryRect),
           labels,
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         };
@@ -334,25 +341,19 @@ test.describe("marketing experience", () => {
       expect(geometry, `${viewport.width}×${viewport.height} missing hero geometry`).not.toBeNull();
       expect(geometry!.scrollY).toBe(0);
       expect(geometry!.headlineTop).toBeGreaterThanOrEqual(geometry!.headerBottom - 1);
-      expect(geometry!.headlineBottom).toBeLessThanOrEqual(geometry!.innerHeight + 1);
       expect(geometry!.headlineFits, `${viewport.width}×${viewport.height} headline clipped`).toBe(true);
-      expect(geometry!.primaryTop).toBeGreaterThanOrEqual(0);
-      expect(geometry!.primaryBottom).toBeLessThanOrEqual(geometry!.innerHeight + 1);
       expect(geometry!.primaryFits, `${viewport.width}×${viewport.height} primary CTA clipped`).toBe(true);
       expect(geometry!.secondaryFits, `${viewport.width}×${viewport.height} secondary CTA clipped`).toBe(true);
-      expect(geometry!.pipelineTop).toBeGreaterThanOrEqual(0);
-      expect(geometry!.pipelineBottom, `${viewport.width}×${viewport.height} pipeline overflows viewport`).toBeLessThanOrEqual(geometry!.innerHeight + 1);
-      expect(geometry!.pipelineFits, `${viewport.width}×${viewport.height} pipeline clipped`).toBe(true);
       expect(geometry!.chipsFit, `${viewport.width}×${viewport.height} proof chips clipped`).toBe(true);
+      expect(geometry!.ctaProofOverlap, `${viewport.width}×${viewport.height} proof chips overlap CTAs`).toBe(false);
+      expect(geometry!.headlineCtaOverlap, `${viewport.width}×${viewport.height} headline overlaps CTAs`).toBe(false);
+      expect(geometry!.ctaProofGap, `${viewport.width}×${viewport.height} CTA/proof gap ${geometry!.ctaProofGap}`).toBeGreaterThanOrEqual(minCtaProofGap);
       expect(geometry!.overflow).toBe(false);
       expect(geometry!.labels).toHaveLength(heroStageLabels.length);
       for (const row of geometry!.labels) {
         expect(row.found, `${viewport.width}×${viewport.height} missing ${row.label}`).toBe(true);
         expect(row.display, `${viewport.width}×${viewport.height} ${row.label} display`).not.toBe("none");
         expect(row.visibility, `${viewport.width}×${viewport.height} ${row.label} visibility`).not.toBe("hidden");
-        expect(row.top, `${viewport.width}×${viewport.height} ${row.label} above header`).toBeGreaterThanOrEqual(geometry!.headerBottom - 1);
-        expect(row.bottom, `${viewport.width}×${viewport.height} ${row.label} below viewport`).toBeLessThanOrEqual(geometry!.innerHeight + 1);
-        expect(row.inFirstScreen, `${viewport.width}×${viewport.height} ${row.label} clipped`).toBe(true);
       }
     });
   }
@@ -382,9 +383,18 @@ test.describe("marketing experience", () => {
         const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
         const primary = heroNode?.querySelector("a[href='/register']");
         const secondary = heroNode?.querySelector("a[href='#problem']");
-        if (!headline || !pipelineNode || !primary || !secondary) return null;
+        const chips = heroNode
+          ? Array.from(heroNode.querySelectorAll("span")).filter((node) => /open signup|free during beta|your data stays yours/i.test(node.textContent || ""))
+          : [];
+        if (!headline || !pipelineNode || !primary || !secondary || chips.length < 3) return null;
         const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+        const overlaps = (a: DOMRect, b: DOMRect) => a.bottom > b.top + 1 && a.top < b.bottom - 1 && a.left < b.right - 1 && a.right > b.left + 1;
         const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
+        const primaryRect = primary.getBoundingClientRect();
+        const secondaryRect = secondary.getBoundingClientRect();
+        const chipRects = chips.map((chip) => chip.getBoundingClientRect());
+        const ctaBottom = Math.max(primaryRect.bottom, secondaryRect.bottom);
+        const chipTop = Math.min(...chipRects.map((rect) => rect.top));
         const labels = stageLabels.map((label) => {
           const node = pipelineNode.querySelector(`[data-hero-stage-label="${label}"]`);
           if (!node) return { label, found: false as const, inFirstScreen: false };
@@ -395,12 +405,14 @@ test.describe("marketing experience", () => {
           dpr: window.devicePixelRatio,
           innerHeight: window.innerHeight,
           headlineFits: inFirstScreen(headline.getBoundingClientRect()),
-          primaryFits: inFirstScreen(primary.getBoundingClientRect()),
-          secondaryFits: inFirstScreen(secondary.getBoundingClientRect()),
+          primaryFits: inFirstScreen(primaryRect),
+          secondaryFits: inFirstScreen(secondaryRect),
           pipelineFits: inFirstScreen(pipelineNode.getBoundingClientRect()),
           pipelineBottom: pipelineNode.getBoundingClientRect().bottom,
           h1Size: Number.parseFloat(getComputedStyle(headline).fontSize),
           shortsDisplay: shortNode ? getComputedStyle(shortNode).display : "missing",
+          ctaProofGap: chipTop - ctaBottom,
+          ctaProofOverlap: chipRects.some((rect) => overlaps(primaryRect, rect) || overlaps(secondaryRect, rect)),
           labels,
         };
       }, [...heroStageLabels]);
@@ -414,6 +426,8 @@ test.describe("marketing experience", () => {
       expect(geometry!.pipelineBottom).toBeLessThanOrEqual(geometry!.innerHeight - 24);
       expect(geometry!.h1Size, "150% scale left the 104px desktop headline").toBeLessThan(72);
       expect(geometry!.shortsDisplay, "150% QHD dropped the stage shorts").not.toBe("none");
+      expect(geometry!.ctaProofOverlap, "1707×960 proof chips overlap CTAs").toBe(false);
+      expect(geometry!.ctaProofGap, `1707×960 CTA/proof gap ${geometry!.ctaProofGap}`).toBeGreaterThanOrEqual(minCtaProofGap);
       for (const row of geometry!.labels) {
         expect(row.found, `1707×960 missing ${row.label}`).toBe(true);
         expect(row.inFirstScreen, `1707×960 ${row.label} clipped`).toBe(true);

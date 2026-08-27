@@ -872,91 +872,105 @@ p {
 }
 
 /* Short first screens. Playwright 1280×720 / 1280×800 is `max-height: 800px`
-   at 1x. Real 150% Windows laptops are often taller in CSS (QHD 14" ≈ 1707×960)
-   with dpr 1.5 — without the resolution clause the 104px headline parks the
-   CLIENT→PROOF rail on the fold. 1440×900 @ 1x visual baselines stay out.
-   High-dpr matching is desktop-only so a phone at 3x / 844px height is untouched.
+   at 1x. Shrink the 104px headline so the hero stays readable — do not collapse
+   CTA / proof spacing to force CLIENT→PROOF onto the first viewport. The unpaid
+   role scrolly continues below. 1440×900 @ 1x visual baselines stay out.
    `min-width: 1024px` keeps this laptop compression off short phones.
    `section.marketing-hero` beats Tailwind padding / margin utilities. */
 @media (min-width: 1024px) and (max-height: 800px) {
   section.marketing-hero {
     align-items: flex-start;
     min-height: 100dvh;
-    padding-top: clamp(4.5rem, 7svh, 5.25rem);
-    padding-bottom: clamp(0.35rem, 1.2svh, 1rem);
+    height: auto;
+    padding-top: clamp(5.5rem, 8svh, 6rem);
+    padding-bottom: clamp(1.25rem, 3.5svh, 2.25rem);
   }
 
   section.marketing-hero .marketing-hero-inner {
     width: 100%;
+    flex: 0 0 auto;
     justify-content: flex-start;
   }
 
+  section.marketing-hero .marketing-hero-inner > * {
+    flex-shrink: 0;
+  }
+
   section.marketing-hero h1 {
-    margin-top: clamp(0.2rem, 0.55svh, 0.75rem);
-    font-size: clamp(1.7rem, 4.4svh + 0.15vw, 3.35rem);
+    margin-top: clamp(1rem, 2svh, 1.5rem);
+    font-size: clamp(2.15rem, 5.2svh + 0.2vw, 3.75rem);
   }
 
   section.marketing-hero .marketing-hero-body {
-    margin-top: clamp(0.2rem, 0.55svh, 0.7rem);
-    font-size: clamp(0.8125rem, 1svh + 0.12vw, 1.05rem);
-    line-height: 1.35;
+    margin-top: clamp(0.85rem, 1.8svh, 1.35rem);
+    font-size: clamp(0.95rem, 1.3svh + 0.15vw, 1.125rem);
+    line-height: 1.5;
   }
 
   section.marketing-hero .marketing-hero-ctas {
-    margin-top: clamp(0.3rem, 0.8svh, 0.9rem);
+    margin-top: clamp(1.25rem, 2.4svh, 2rem);
   }
 
   section.marketing-hero .marketing-hero-proof {
-    margin-top: clamp(0.15rem, 0.45svh, 0.55rem);
+    margin-top: clamp(1.25rem, 2.2svh, 1.75rem);
   }
 
   section.marketing-hero .marketing-hero-rail {
-    margin-top: clamp(0.25rem, 0.9svh, 0.8rem);
+    margin-top: clamp(1.5rem, 3svh, 2.5rem);
   }
 
   section.marketing-hero .hero-pipeline .hero-stage {
     min-height: 0;
-    gap: 0.2rem;
-    padding-top: 0.15rem;
-    padding-bottom: 0.15rem;
+    gap: 0.35rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
   }
 
   section.marketing-hero .hero-pipeline .hero-stage-icon {
-    height: 1.5rem;
-    width: 1.5rem;
+    height: 1.75rem;
+    width: 1.75rem;
   }
 }
 
 /* 150% Windows on QHD-class 14" (CSS taller than 800px, dpr ≥ 1.25). Shrink the
-   104px headline so the rail clears the fold, but keep vertical centering so
-   the first screen does not collapse into a tiny top-packed header. */
+   104px headline so the rail can clear the fold without stacking proof chips
+   onto the CTAs. Keep vertical centering on this taller CSS viewport. */
 @media (min-width: 1024px) and (min-height: 801px) and (max-height: 1100px) and (min-resolution: 1.25dppx) {
   section.marketing-hero {
     min-height: 100dvh;
+    height: auto;
     padding-bottom: clamp(1.5rem, 4svh, 3rem);
   }
 
+  section.marketing-hero .marketing-hero-inner {
+    flex: 0 0 auto;
+  }
+
+  section.marketing-hero .marketing-hero-inner > * {
+    flex-shrink: 0;
+  }
+
   section.marketing-hero h1 {
-    margin-top: clamp(0.35rem, 0.8svh, 1rem);
+    margin-top: clamp(0.85rem, 1.6svh, 1.25rem);
     font-size: clamp(2.5rem, 6.2svh + 0.15vw, 4.25rem);
   }
 
   section.marketing-hero .marketing-hero-body {
-    margin-top: clamp(0.4rem, 1svh, 1.15rem);
+    margin-top: clamp(0.75rem, 1.4svh, 1.15rem);
     font-size: clamp(0.95rem, 1.15svh + 0.12vw, 1.2rem);
-    line-height: 1.4;
+    line-height: 1.45;
   }
 
   section.marketing-hero .marketing-hero-ctas {
-    margin-top: clamp(0.5rem, 1.15svh, 1.35rem);
+    margin-top: clamp(1.25rem, 2svh, 1.75rem);
   }
 
   section.marketing-hero .marketing-hero-proof {
-    margin-top: clamp(0.35rem, 0.85svh, 0.95rem);
+    margin-top: clamp(1.25rem, 1.8svh, 1.75rem);
   }
 
   section.marketing-hero .marketing-hero-rail {
-    margin-top: clamp(0.65rem, 1.5svh, 1.6rem);
+    margin-top: clamp(1.25rem, 2.2svh, 2rem);
   }
 }
 
