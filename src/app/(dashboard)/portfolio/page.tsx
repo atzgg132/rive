@@ -184,7 +184,7 @@ export default function PortfolioDashboardPage() {
         {/* Only where the preview is not already on screen. Beside a visible pane
             that carries its own Inspect control, this would be the same door twice. */}
         {!sidePreviewVisible && <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button>}
-        <Button data-guide-target="portfolio-publish" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
+        <Button data-guide-target="portfolio-publish" variant="default" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
       {portfolio.status !== "published" && readiness.score < 100 && !unstarted && (

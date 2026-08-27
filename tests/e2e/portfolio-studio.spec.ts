@@ -252,6 +252,13 @@ test.describe("portfolio studio", () => {
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
 
+    const publish = page.locator("[data-guide-target='portfolio-publish']");
+    await expect(publish).toBeVisible();
+    expect(
+      await publish.evaluate((el) => getComputedStyle(el).backgroundColor),
+      "Publish / Update live site must paint a button surface, not sit as plain text",
+    ).not.toMatch(/^(transparent|rgba\(\s*0,\s*0,\s*0,\s*0\))$/);
+
     /* The fixture's one project has no cover, so that is the outstanding
        essential — and it must name the project rather than say "add a cover
        image", which is useless once there is more than one. */
