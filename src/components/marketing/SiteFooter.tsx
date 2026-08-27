@@ -7,7 +7,7 @@ import { HairlineDivider } from "@/components/marketing/primitives";
 export function SiteFooter() {
   return (
     <footer className="marketing-deferred-section relative overflow-x-clip border-t border-[var(--stroke-hairline)] bg-[var(--surface-void)] py-14 sm:py-20">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_2fr] lg:gap-20">
           <div>
             <Link href="/" prefetch={false} className="marketing-focus inline-flex rounded-lg" aria-label="Rive home"><RiveLogo height={38} animated /></Link>
@@ -21,7 +21,7 @@ export function SiteFooter() {
                 <ul className="mt-4 grid gap-3">
                   {group.items.map((item) => (
                     <li key={item.href}>
-                      <Link href={item.href} prefetch={false} className="marketing-focus inline-flex items-center gap-1 rounded text-sm font-semibold text-muted-foreground transition hover:text-primary">{item.label}{item.href.startsWith("mailto:") ? <ArrowUpRight className="h-3 w-3" /> : null}</Link>
+                      <Link href={item.href} prefetch={false} className="marketing-focus inline-flex min-h-11 items-center gap-1 rounded text-sm font-semibold text-muted-foreground transition hover:text-primary">{item.label}{item.href.startsWith("mailto:") ? <ArrowUpRight className="h-3 w-3" /> : null}</Link>
                     </li>
                   ))}
                 </ul>

@@ -144,7 +144,11 @@ export const roadmapContent: MarketingPageContent = {
     {
       eyebrow: "LATER",
       title: "Only after the foundation earns it",
-      body: "A public API, broader calendar connections, and new money movement surfaces require operational guarantees we will not fake in a marketing sentence.",
+      bullets: [
+        "Remit: payouts across currencies from the same workspace as the invoice",
+        "A public API",
+        "Broader calendar connections",
+      ],
     },
   ],
   cta: { headline: "Judge the direction by what ships.", label: "Read what shipped", href: "/changelog" },

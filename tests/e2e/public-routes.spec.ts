@@ -160,17 +160,27 @@ test("marketing page advertises current connections without a demo CTA", async (
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("An empty state is not a fresh start. It is another migration project.", { exact: true })).toBeVisible();
-  await expect(page.getByText("CSV and XLSX imports", { exact: true })).toBeVisible();
-  await expect(page.getByText("Contracts & acceptance", { exact: true })).toBeVisible();
+  await expect(page.locator("#import-context")).toBeVisible();
+  await expect(page.locator("#import-context")).toContainText("CSV or XLSX");
+  await expect(page.getByRole("heading", { name: "Scope stops living in the scrollback." })).toBeVisible();
 });
 
-test("marketing homepage does not sell Remit as a transfer or payout product", async ({ page }) => {
+test("marketing homepage presents Remit as in development, not a live send flow", async ({ page }) => {
+  await page.route("**/api/rates", async (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ success: true, data: { base: "USD", date: "2026-08-10", rates: { USD: 1, INR: 83, EUR: 0.9 } } }),
+  }));
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
+  await expect(page.getByRole("heading", { name: "The payout should follow the invoice." })).toBeVisible();
+  await expect(page.getByTestId("remit-next-status")).toHaveText("In development");
+  await expect(page.getByTestId("remit-send")).toBeVisible();
+  await expect(page.getByTestId("remit-send")).toBeEnabled();
+  await page.getByTestId("remit-send").click();
+  await expect(page.getByTestId("remit-receipt")).toBeVisible();
+  await expect(page.getByTestId("remit-receipt").getByRole("heading", { name: "Payout attached" })).toBeVisible();
   await expect(page.getByText("Know the payout before you send it.")).toHaveCount(0);
-  await expect(page.getByText("Payouts should follow the Agreement.")).toHaveCount(0);
-  await expect(page.getByText("international payouts")).toHaveCount(0);
   await expect(page.getByText("You send", { exact: true })).toHaveCount(0);
   await expect(page.getByText("They receive", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);

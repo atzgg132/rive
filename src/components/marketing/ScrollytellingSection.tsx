@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { MarketingChapter } from "@/content/marketing/home";
 import { homeContent } from "@/content/marketing/home";
 import { DeferredProductScene } from "@/components/marketing/product/DeferredProductScene";
-import { MarketingProductScene } from "@/components/marketing/product/SceneRegistry";
+import { MotionProductScene } from "@/components/marketing/product/MotionProductScene";
 import { ProblemDisconnection, type ProblemDisconnectionProps } from "@/components/marketing/product/ProblemDisconnection";
 import { cn } from "@/lib/utils";
 import { useMarketingReducedMotion } from "@/components/marketing/useMarketingReducedMotion";
@@ -121,7 +121,7 @@ export function ScrollytellingSection({
           data-chapter-index="0"
           data-active={activeIndex === 0 ? "true" : "false"}
           className={cn(
-            "relative scroll-mt-0",
+            "relative scroll-mt-[5.5rem]",
             reduceMotion || activeIndex === 0 ? "opacity-100" : "lg:opacity-30",
           )}
         >
@@ -158,7 +158,7 @@ export function ScrollytellingSection({
             ref={(node) => { chapterRefs.current[index + 1] = node; }}
             data-chapter-index={index + 1}
             data-active={activeIndex === index + 1 ? "true" : "false"}
-            className={cn("flex min-h-[70vh] scroll-mt-0 flex-col justify-center py-14 transition-opacity duration-200", reduceMotion || activeIndex === index + 1 ? "opacity-100" : "lg:opacity-30")}
+            className={cn("flex min-h-[70vh] scroll-mt-[5.5rem] flex-col justify-center py-14 transition-opacity duration-200", reduceMotion || activeIndex === index + 1 ? "opacity-100" : "lg:opacity-30")}
           >
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{index === 0 ? homeContent.scrolly.eyebrow : chapter.eyebrow}</p>
             <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.045em] text-foreground sm:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
@@ -181,8 +181,8 @@ export function ScrollytellingSection({
         data-testid="scrollytelling-scene"
         className="scrollytelling-scene sticky top-[5.5rem] z-0 min-w-0 self-start"
       >
-        <div className="w-full max-h-[min(38rem,calc(100svh-7.5rem))] overflow-hidden" key={railKey}>
-          <MarketingProductScene visual={railVisual} />
+        <div className="w-full">
+          <MotionProductScene sceneKey={railKey} visual={railVisual} />
         </div>
       </aside>
     </div>

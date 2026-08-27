@@ -19,7 +19,7 @@ export function ProductCalendar({ month, days, events }: ProductCalendarProps) {
         <div className="grid grid-cols-5 border-b border-slate-200 bg-slate-50">
           {days.map((day, index) => <div key={day} className={`px-2 py-2 text-center font-mono text-[0.48rem] font-bold uppercase tracking-[0.08em] ${index ? "border-l border-slate-200" : ""} ${index === 2 ? "text-blue-700" : "text-slate-600"}`}>{day}</div>)}
         </div>
-        <div className="relative grid h-40 grid-cols-5">
+        <div className="relative grid h-64 grid-cols-5">
           {days.map((day, dayIndex) => (
             <div key={day} className={`relative ${dayIndex ? "border-l border-slate-200" : ""}`}>
               {Array.from({ length: 8 }, (_, index) => (
@@ -32,7 +32,7 @@ export function ProductCalendar({ month, days, events }: ProductCalendarProps) {
             </div>
           ))}
           {events.map((event, index) => (
-            <m.div key={event.label} className={`absolute z-10 overflow-hidden rounded-md border px-2 py-1 text-[0.5rem] font-bold shadow-sm ${tones[event.tone]}`} style={{ left: `calc(${event.day * 20}% + 4px)`, width: "calc(20% - 8px)", top: `${event.start * 12.5 + 1}%`, height: `${event.span * 12.5 - 2}%` }} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18 + index * 0.16 }}>
+            <m.div key={event.label} className={`absolute z-10 overflow-hidden truncate whitespace-nowrap rounded-md border px-2 py-1 text-[0.5rem] font-bold shadow-sm ${tones[event.tone]}`} style={{ left: `calc(${event.day * 20}% + 4px)`, width: "calc(20% - 8px)", top: `${event.start * 12.5 + 1}%`, height: `${event.span * 12.5 - 2}%` }} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18 + index * 0.16 }}>
               <CalendarDays className="mb-1 h-2.5 w-2.5" />{event.label}
             </m.div>
           ))}

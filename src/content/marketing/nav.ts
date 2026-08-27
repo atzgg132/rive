@@ -14,9 +14,9 @@ export const marketingNav: MarketingNavGroup[] = [
     label: "Product",
     items: [
       { label: "The connected loop", href: "/#product", description: "Client → Work → Money → Proof" },
-      { label: "Agreements", href: "/#agreements", description: "Scope, review, acceptance, billing" },
-      { label: "Bring your data", href: "/#import", description: "CSV and XLSX, reconstructed" },
-      { label: "Portfolio", href: "/#portfolio", description: "Turn delivered work into proof" },
+      { label: "Agreements", href: "/#agreement-context", description: "Scope, review, acceptance, billing" },
+      { label: "Bring your data", href: "/#import-context", description: "CSV and XLSX, reconstructed" },
+      { label: "Portfolio", href: "/#portfolio-context", description: "Turn delivered work into proof" },
       { label: "Pricing", href: "/#pricing", description: "Open beta, no card required" },
     ],
   },

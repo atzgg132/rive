@@ -110,7 +110,7 @@ export function ThemeToggle() {
         onClick={showOptions}
         variant="ghost"
         size="unstyled"
-        className="relative z-0 h-7 w-7 rounded-[11px] border border-border/80 bg-card/80 p-0 text-muted-foreground shadow-sm backdrop-blur-md hover:border-primary/25 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-0"
+        className="relative z-0 h-7 w-7 rounded-[11px] border border-border/80 bg-card/80 p-0 text-muted-foreground shadow-sm backdrop-blur-md after:absolute after:-inset-2 after:content-[''] hover:border-primary/25 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-0"
         aria-label={`Theme: ${activeTheme}. Choose theme`}
         aria-haspopup="true"
         aria-expanded={paneExpanded}

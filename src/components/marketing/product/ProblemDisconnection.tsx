@@ -20,13 +20,13 @@ export function ProblemDisconnection({ kicker, title, note, records }: ProblemDi
         <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{note}</p>
         <ol className="mt-6 divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
           {records.map((record, index) => (
-            <li key={record.label} className="grid grid-cols-[4.5rem_1fr_auto] items-baseline gap-3 py-3.5 sm:grid-cols-[5.5rem_1fr_9.5rem]">
+            <li key={record.label} className="grid grid-cols-1 gap-1.5 py-3.5 sm:grid-cols-[5.5rem_1fr_9.5rem] sm:items-baseline sm:gap-3">
               <span className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{String(index + 1).padStart(2, "0")} {record.label}</span>
-              <span>
+              <span className="min-w-0">
                 <span className="block text-sm font-bold tracking-[-0.02em] text-foreground">{record.name}</span>
                 <span className="mt-1 block text-[0.7rem] text-muted-foreground">{record.place}</span>
               </span>
-              <span className="text-right font-mono text-[0.62rem] leading-5 text-warning">{record.status}</span>
+              <span className="font-mono text-[0.62rem] leading-5 text-warning sm:text-right">{record.status}</span>
             </li>
           ))}
         </ol>

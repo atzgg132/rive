@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { accountNav, marketingNav } from "@/content/marketing/nav";
 import { RiveLogo } from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SmoothAnchor } from "@/components/marketing/SmoothAnchor";
 
 const signupCtaClassName = "marketing-cta-border marketing-focus group relative isolate inline-flex items-center justify-center overflow-hidden rounded-xl border border-primary/25 bg-primary/10 font-black text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.11),0_10px_30px_rgba(37,99,235,0.12)] backdrop-blur-xl transition duration-200 ease-rive-out hover:-translate-y-px hover:border-primary/45 hover:bg-primary/15 hover:text-primary dark:border-blue-300/25 dark:bg-blue-400/[0.09] dark:text-blue-50 dark:hover:border-cyan-300/45 dark:hover:bg-blue-400/[0.15] dark:hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_14px_36px_rgba(37,99,235,0.2)]";
 
@@ -59,7 +60,7 @@ export function SiteHeader() {
       className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,padding,backdrop-filter] duration-300 ease-rive-out ${scrolled || mobileOpen || openGroup ? "border-[var(--stroke-hairline)] bg-[color-mix(in_srgb,var(--surface-void)_86%,transparent)] py-2.5 backdrop-blur-2xl" : "border-transparent bg-transparent py-4"}`}
       onMouseLeave={() => setOpenGroup(null)}
     >
-      <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 sm:px-8">
+      <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-5 px-4 sm:px-8">
         <Link href="/" prefetch={false} className="marketing-focus relative z-10 inline-flex rounded-lg" aria-label="Rive home">
           <RiveLogo height={30} animated />
         </Link>
@@ -104,34 +105,41 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          {themeToggleReady ? <ThemeToggle /> : null}
+          <div className="grid min-h-11 min-w-11 place-items-center">{themeToggleReady ? <ThemeToggle /> : null}</div>
           <Link href={accountNav.login.href} prefetch={false} className="marketing-focus rounded-lg px-3 py-2 text-[0.78rem] font-semibold text-muted-foreground hover:bg-[var(--surface-glass)] hover:text-foreground">{accountNav.login.label}</Link>
           <Link href={accountNav.signup.href} prefetch={false} className={`${signupCtaClassName} px-4 py-2.5 text-[0.78rem]`}><SignupCtaLabel /></Link>
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          {themeToggleReady ? <ThemeToggle /> : null}
-          <button type="button" onClick={() => setMobileOpen((open) => !open)} className="marketing-focus grid h-10 w-10 place-items-center rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] text-foreground" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen}>
+          <div className="grid min-h-11 min-w-11 place-items-center">{themeToggleReady ? <ThemeToggle /> : null}</div>
+          <button type="button" onClick={() => setMobileOpen((open) => !open)} className="marketing-focus grid min-h-11 min-w-11 place-items-center rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] text-foreground" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
       {mobileOpen ? (
-        <nav aria-label="Mobile navigation" className="mx-auto mt-2 max-h-[calc(100dvh-5rem)] max-w-7xl overflow-y-auto border-t border-[var(--stroke-hairline)] px-5 py-4 sm:px-8 lg:hidden">
-          <div className="grid gap-5">
+        <nav aria-label="Mobile navigation" className="mx-auto mt-2 flex max-h-[calc(100dvh-5rem)] max-w-7xl flex-col overflow-hidden border-t border-[var(--stroke-hairline)] px-4 lg:hidden sm:px-8">
+          <div className="grid flex-1 gap-5 overflow-y-auto py-4">
             {marketingNav.map((group) => (
               <div key={group.label}>
                 <p className="px-3 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-primary">{group.label}</p>
                 <div className="mt-2 grid gap-1">
-                  {group.items.map((item) => <Link key={item.href} href={item.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus rounded-xl px-3 py-3 text-sm font-semibold text-foreground hover:bg-[var(--surface-glass)]">{item.label}</Link>)}
+                  {group.items.map((item) => {
+                    const className = "marketing-focus rounded-xl px-3 py-3 text-sm font-semibold text-foreground hover:bg-[var(--surface-glass)]";
+                    return item.href.includes("#") ? (
+                      <SmoothAnchor key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={className}>{item.label}</SmoothAnchor>
+                    ) : (
+                      <Link key={item.href} href={item.href} prefetch={false} onClick={() => setMobileOpen(false)} className={className}>{item.label}</Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
-            <div className="grid gap-2 border-t border-[var(--stroke-hairline)] pt-4 sm:grid-cols-2">
-              <Link href={accountNav.login.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus rounded-xl border border-[var(--stroke-hairline)] px-4 py-3 text-center text-sm font-bold text-foreground">{accountNav.login.label}</Link>
-              <Link href={accountNav.signup.href} prefetch={false} onClick={() => setMobileOpen(false)} className={`${signupCtaClassName} px-4 py-3 text-center text-sm`}><SignupCtaLabel /></Link>
-            </div>
+          </div>
+          <div className="sticky bottom-0 z-10 -mx-4 grid shrink-0 gap-2 border-t border-[var(--stroke-hairline)] bg-[var(--surface-void)] px-4 py-3 sm:-mx-8 sm:grid-cols-2 sm:px-8">
+            <Link href={accountNav.login.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--stroke-hairline)] px-4 text-center text-sm font-bold text-foreground">{accountNav.login.label}</Link>
+            <Link href={accountNav.signup.href} prefetch={false} onClick={() => setMobileOpen(false)} className={`${signupCtaClassName} min-h-11 px-4 py-3 text-center text-sm`}><SignupCtaLabel /></Link>
           </div>
         </nav>
       ) : null}

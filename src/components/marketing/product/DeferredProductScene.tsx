@@ -8,7 +8,7 @@ const MotionProductScene = lazy(() => import("@/components/marketing/product/Mot
 
 function ProductSceneFallback() {
   return (
-    <div aria-hidden="true" className="grid min-h-[31rem] place-items-center overflow-hidden rounded-[1.75rem] border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-6">
+    <div aria-hidden="true" className="grid min-h-[18rem] place-items-center overflow-hidden rounded-[1.75rem] border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-4 lg:min-h-[31rem] lg:p-6">
       <div className="w-full max-w-md rounded-2xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-5">
         <div className="h-2 w-24 rounded-full bg-primary/20" />
         <div className="mt-6 grid grid-cols-3 gap-3">
@@ -47,7 +47,7 @@ export function DeferredProductScene({ className, eager = false, sceneKey, visua
   }, [eager, shouldLoad]);
 
   return (
-    <div ref={rootRef} data-deferred-motion className={cn("min-h-[31rem]", className)}>
+    <div ref={rootRef} data-deferred-motion className={cn("min-h-0 lg:min-h-[31rem]", className)}>
       {shouldLoad ? (
         <Suspense fallback={<ProductSceneFallback />}>
           <MotionProductScene sceneKey={sceneKey} visual={visual} />

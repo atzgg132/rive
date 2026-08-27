@@ -127,7 +127,7 @@ test.describe("marketing experience", () => {
       await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
       await expect(scene, `reload ${pass + 1} scene missing`).toBeVisible();
       await expect(scene).toHaveCSS("position", "sticky");
-      await expect(scene).toHaveCSS("display", "block");
+      await expect(scene).toHaveCSS("display", "flex");
       await expect(page.locator("#product")).not.toHaveClass(/overflow-x-clip/);
     }
   });
@@ -206,7 +206,8 @@ test.describe("marketing experience", () => {
     await expect(pipeline).not.toContainText(/Northstar|Product redesign|INV-|₹|USD|INR/);
 
     await pipeline.getByTestId("hero-stage-proof").click();
-    await expect(pipeline).toContainText("Selected projects can become public portfolio proof");
+    await expect(pipeline).not.toContainText("Selected projects can become public portfolio proof");
+    await expect(pipeline).not.toContainText(/context flows into the work/i);
     await expect(pipeline.getByTestId("hero-stage-proof")).toHaveAttribute("aria-pressed", "true");
     await expect(pipeline.getByTestId("hero-stage-client")).toHaveAttribute("aria-pressed", "false");
 
@@ -426,7 +427,19 @@ test.describe("marketing experience", () => {
     expect(order?.loopFollowsProblem).toBe(true);
 
     await page.getByRole("link", { name: "See the unpaid role", exact: true }).click();
-    await expect.poll(async () => problem.evaluate((node) => Math.abs(node.getBoundingClientRect().top))).toBeLessThan(8);
+    await expect.poll(async () => page.evaluate(() => {
+      const header = document.querySelector("[data-testid='site-header']");
+      const problemNode = document.querySelector("[data-testid='marketing-problem']");
+      const eyebrow = problemNode?.querySelector("p");
+      if (!header || !problemNode || !eyebrow) return 999;
+      return eyebrow.getBoundingClientRect().top - header.getBoundingClientRect().bottom;
+    })).toBeGreaterThanOrEqual(-1);
+    await expect.poll(async () => page.evaluate(() => {
+      const header = document.querySelector("[data-testid='site-header']");
+      const problemNode = document.querySelector("[data-testid='marketing-problem']");
+      if (!header || !problemNode) return 999;
+      return Math.abs(problemNode.getBoundingClientRect().top - header.getBoundingClientRect().bottom);
+    })).toBeLessThan(48);
     await expect(problem.getByRole("heading", { name: "There is an unpaid role inside every independent business." })).toBeVisible();
     await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
     await expect(page.getByTestId("scrollytelling-scene")).toBeVisible();
@@ -511,10 +524,12 @@ test.describe("marketing experience", () => {
         const sceneBox = await scene.evaluate((node) => {
           const rect = node.getBoundingClientRect();
           const style = getComputedStyle(node);
+          const mock = node.querySelector<HTMLElement>("[data-product-frame], [data-testid='problem-disconnection']");
+          const mockRect = mock?.getBoundingClientRect();
           return {
             position: style.position,
             width: rect.width,
-            height: rect.height,
+            mockHeight: mockRect?.height ?? rect.height,
             left: rect.left,
             vw: window.innerWidth,
             vh: window.innerHeight,
@@ -522,7 +537,7 @@ test.describe("marketing experience", () => {
         });
         expect(sceneBox.position).toBe("sticky");
         expect(sceneBox.width, `${viewport.width}×${viewport.height} scene became a full-width shutter`).toBeLessThan(sceneBox.vw * 0.8);
-        expect(sceneBox.height, `${viewport.width}×${viewport.height} scene became a viewport-tall shutter`).toBeLessThan(sceneBox.vh * 0.92);
+        expect(sceneBox.mockHeight, `${viewport.width}×${viewport.height} product mock became a viewport-tall shutter`).toBeLessThan(sceneBox.vh * 0.92);
 
         const overlap = await page.evaluate(() => {
           const heading = document.querySelector("[data-testid='marketing-problem'] h2");

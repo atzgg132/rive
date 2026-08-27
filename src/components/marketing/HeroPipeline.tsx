@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  ArrowRight,
   BriefcaseBusiness,
   CircleDollarSign,
   FileSignature,
@@ -29,7 +28,6 @@ export function HeroPipeline() {
   const reducedMotion = useMarketingReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
   const [autoAdvance, setAutoAdvance] = useState(true);
-  const active = stages[activeIndex];
   const targetIndex = (activeIndex + 1) % stages.length;
   const wrapping = targetIndex === 0;
 
@@ -97,7 +95,7 @@ export function HeroPipeline() {
                 <span className="min-w-0 w-full">
                   <span
                     data-hero-stage-label={stage.label}
-                    className={`block truncate font-mono text-[0.56rem] font-bold uppercase tracking-[0.1em] sm:tracking-[0.16em] ${
+                    className={`block whitespace-normal break-all font-mono text-[0.56rem] font-bold uppercase leading-none tracking-[0.06em] sm:truncate sm:break-normal sm:leading-normal sm:tracking-[0.16em] ${
                       selected ? "text-primary" : "text-muted-foreground"
                     }`}
                   >
@@ -116,16 +114,6 @@ export function HeroPipeline() {
             );
           })}
         </div>
-      </div>
-
-      <div key={active.id} className="hero-stage-detail mt-3 text-center motion-safe:animate-hero-detail-in sm:mt-4">
-        <p className="mx-auto max-w-2xl text-balance text-[0.78rem] font-semibold leading-5 text-muted-foreground sm:text-[0.8rem] sm:leading-6">
-          {active.detail}
-        </p>
-        <p className="hero-stage-carry mt-1.5 flex items-center justify-center gap-1.5 font-mono text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-primary">
-          <ArrowRight className="h-3 w-3" aria-hidden="true" />
-          {active.carries}
-        </p>
       </div>
     </div>
   );

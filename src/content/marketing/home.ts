@@ -4,8 +4,6 @@ export type MarketingHeroStage = {
   id: "client" | "work" | "agreement" | "invoice" | "proof";
   label: string;
   short: string;
-  detail: string;
-  carries: string;
 };
 
 export type MarketingChapter = {
@@ -28,41 +26,11 @@ export const homeContent = {
     secondaryCta: { label: "See the unpaid role", href: "#problem" },
     proof: ["Open signup", "Free during beta", "Your data stays yours"],
     stages: [
-      {
-        id: "client",
-        label: "CLIENT",
-        short: "The relationship",
-        detail: "Clients give the rest of the workspace a place to belong. Work, Agreements, invoices, and activity stay in that context.",
-        carries: "Context flows into the work",
-      },
-      {
-        id: "work",
-        label: "WORK",
-        short: "The delivery",
-        detail: "Projects and milestones carry scope, dates, cost, and client context forward without a second setup ritual.",
-        carries: "The promise flows into the Agreement",
-      },
-      {
-        id: "agreement",
-        label: "AGREEMENT",
-        short: "The promise",
-        detail: "Review the terms and payment triggers before a draft is shared. The next step starts with what was agreed.",
-        carries: "Accepted terms flow into billing",
-      },
-      {
-        id: "invoice",
-        label: "INVOICE",
-        short: "The money",
-        detail: "Approved payment triggers can become draft invoices. Sending and recording payment remain explicit actions.",
-        carries: "Finished work flows into proof",
-      },
-      {
-        id: "proof",
-        label: "PROOF",
-        short: "The next client",
-        detail: "Selected projects can become public portfolio proof, so the value created does not disappear when delivery ends.",
-        carries: "Proof begins the next relationship",
-      },
+      { id: "client", label: "CLIENT", short: "The relationship" },
+      { id: "work", label: "WORK", short: "The delivery" },
+      { id: "agreement", label: "AGREEMENT", short: "The promise" },
+      { id: "invoice", label: "INVOICE", short: "The money" },
+      { id: "proof", label: "PROOF", short: "The next client" },
     ] satisfies MarketingHeroStage[],
   },
   tax: {
@@ -137,6 +105,8 @@ export const homeContent = {
             client: "Northstar Labs",
             project: "Product redesign",
             amount: "₹2,40,000",
+            steps: ["Parties & project", "Terms", "Payments & review"],
+            clauses: ["Scope and deliverables", "Review and acceptance", "Payment schedule"],
           },
         },
       },
@@ -144,7 +114,7 @@ export const homeContent = {
         id: "invoice-context",
         eyebrow: "03 / MONEY",
         title: "The invoice already knows what came before.",
-        body: "Client, project, Agreement, line items, due date, and currency arrive together. Sending and recording payment remain explicit actions.",
+        body: "Client, project, Agreement, line items, due date, and currency arrive together. Accepted terms can become a draft invoice. Native amounts stay intact, with a workspace display currency when money crossed borders. Sending and recording payment remain explicit actions.",
         visual: {
           kind: "invoice",
           props: {
@@ -188,8 +158,9 @@ export const homeContent = {
           kind: "import",
           props: {
             filename: "workspace-export.xlsx",
-            review: 31,
-            match: "Atlas Website ↔ Atlas relaunch",
+            sources: ["Clients", "Projects", "Invoices", "Expenses"],
+            totals: { ready: 1247, review: 31, skipped: 6 },
+            matches: ["Northstar Labs ↔ Northstar", "Atlas Website ↔ Atlas relaunch", "INV-1042 ↔ Product redesign"],
           },
         },
       },
@@ -203,103 +174,25 @@ export const homeContent = {
           props: {
             name: "Maya Rao",
             tagline: "Independent product designer",
-            project: "Northstar product system",
+            headline: "Products people understand before anyone explains them.",
+            projects: ["Northstar product system", "Atlas onboarding", "Fieldnote mobile"],
             views: [3, 5, 4, 8, 7, 12, 11, 16, 14, 22, 19, 27],
           },
         },
       },
     ] satisfies MarketingChapter[],
   },
-  import: {
-    eyebrow: "START WITH MOMENTUM",
-    title: "An empty state is not a fresh start. It is another migration project.",
-    body: "Bring the records you already trust. Rive profiles the files, previews relationships, flags uncertainty, and commits only after review.",
-    facts: ["CSV and XLSX imports", "Deduplication and fuzzy matching", "Relationship reconstruction", "Review before commit"],
-    visual: {
-      kicker: "The same morning, after one import",
-      summary: "2 linked, 1 paused",
-      title: "The scattered records, reconnected",
-      note: "workspace-export.xlsx, profiled and matched. Nothing committed until you reviewed it.",
-      footer: "Nothing retyped. Nothing rebuilt from memory.",
-      records: [
-        { label: "CLIENT", name: "Northstar Labs", detail: "Merged from two duplicate contact rows", status: "Merged", tone: "linked" as const },
-        { label: "WORK", name: "Product redesign", detail: "Scope arrived with the file", status: "Linked", tone: "linked" as const },
-        { label: "WORK", name: "Atlas Website ↔ Atlas relaunch — paused.", detail: "Fuzzy match, certainty ran out", status: "Paused", tone: "review" as const },
-      ],
-    },
-  },
-  agreement: {
-    eyebrow: "CONTRACT TO CASH",
-    title: "A promise should not disappear before the invoice.",
-    body: "The Agreement begins with client and project context, moves through deliberate review and recorded acceptance, then carries approved payment triggers into draft billing.",
-    tags: ["Contracts & acceptance", "Contract to cash"],
-    visual: {
-      kicker: "One agreement, carried forward",
-      summary: "Accepted to billed",
-      title: "The promise becomes the invoice",
-      note: "Product design agreement — Northstar. Accepted terms become the draft invoice.",
-      footer: "Sending and recording payment stay explicit actions.",
-      stages: [
-        {
-          label: "ACCEPTED",
-          name: "Accepted terms",
-          detail: "Reviewed clause by clause. Acceptance recorded Aug 12 with the terms it covers.",
-          status: "On the record",
-          carries: "becomes",
-        },
-        {
-          label: "INVOICE",
-          name: "INV-1042 drafted",
-          detail: "Client, project, line items, due date, and currency arrived together.",
-          status: "Waiting for you to send",
-          carries: null,
-        },
-      ],
-    },
-  },
-  remit: {
-    eyebrow: "MONEY ACROSS CURRENCIES",
-    title: "Know what crossed the books—even when money crossed borders.",
-    body: "Rive keeps each invoice and expense in its native currency, then gives the workspace a chosen display currency for a comparable view. Remit transfers are not presented as a shipped product.",
-    promises: ["Native amounts stay intact", "Conversion dates stay visible", "No transfer claim hidden in the maths"],
-    ledger: {
-      label: "Workspace display · INR",
-      note: "Illustrative workspace display",
-      rows: [
-        { record: "INV-1042", kind: "Invoice", native: "USD 2,400", rate: "83.00 · Aug 14", display: "₹1,99,200" },
-      ],
-    },
-  },
-  portfolio: {
-    eyebrow: "THE LOOP CLOSES",
-    title: "The work should sell the next work.",
-    body: "Portfolio Studio reuses selected project context to publish a site that still feels like yours. Analytics show what gets read. Enquiries arrive with the source project attached.",
-    visual: {
-      kicker: "412 reads on Northstar",
-      summary: "1 new enquiry",
-      title: "The next client arrives with context",
-      note: "The published site is doing quiet work: what got read, and who wrote back.",
-      footer: "Proof begins the next relationship.",
-      enquiry: {
-        from: "Priya Menon",
-        company: "Juniper Health",
-        received: "Today, 9:41 AM",
-        message: "We read the Northstar case study twice. We need the same clarity for our clinician tools — are you taking projects in October?",
-        source: "Via Northstar product system",
-      },
-    },
-  },
   remitNext: {
-    eyebrow: "NEXT: REMIT",
-    title: "Get paid across currencies. Remit previews the conversion—it does not move money.",
-    body: "Freelancers, studios, and agencies invoice in one currency and plan in another. This homepage preview uses live ECB mid-market rates so you can see a converted amount. Preview only. Not a payout and not a transfer.",
+    eyebrow: "Remit",
+    title: "The payout should follow the invoice.",
+    body: "Work is billed in the client's currency and lived in yours. Remit is the last hop of the operating loop: conversion you can see, destination you already know, payout from the same workspace as the invoice.",
     status: "In development",
     promises: [
-      { label: "Preview only", sub: "Converts an amount at the mid-market rate. It does not move money." },
-      { label: "Built for cross-currency work", sub: "See USD, EUR, or INR as a conversion, not as a shipped payout product." },
-      { label: "Not shipped", sub: "Remit transfers are not shipped. Follow the roadmap for what is next." },
+      { label: "Invoice to payout", sub: "The billed amount, the conversion, and the destination stay attached to the client and Agreement you already have." },
+      { label: "The currencies you actually use", sub: "USD, EUR, INR, and a mixed client book — without a separate payments product." },
+      { label: "Conversion you can inspect", sub: "Live ECB mid-market rates, so the number is in front of you before anyone commits." },
     ],
-    cta: { label: "Follow the roadmap", href: "/roadmap" },
+    cta: { label: "See it on the roadmap", href: "/roadmap" },
   },
   faq: {
     eyebrow: "STRAIGHT ANSWERS",
@@ -309,7 +202,7 @@ export const homeContent = {
       { question: "Is Rive open to everyone?", answer: "Yes. Rive is in open beta with open signup. You do not need an invitation, and access is free during beta." },
       { question: "Does Rive send contracts for e-signature?", answer: "Rive supports an Agreement workflow from composer to review, recorded acceptance, and linked billing. You still review every version and deliberate send." },
       { question: "Which calendar integrations are live?", answer: "A private Apple Calendar subscription feed is live. Google Calendar is pending approval and is not presented as available." },
-      { question: "Can Rive move money for me?", answer: "No. Remit transfers are not shipped. Rive currently records invoices, payments, expenses, and multi-currency financial context." },
+      { question: "Can Rive move money for me?", answer: "Not yet. Remit is in development. Today Rive records invoices, payments, expenses, and multi-currency context. Remit is how payouts will leave the workspace." },
       { question: "What happens to my data?", answer: "Your workspace data is yours. Rive does not sell it. We are building explicit export and portability into the product as the beta matures." },
     ],
   },

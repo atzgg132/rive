@@ -19,8 +19,8 @@ export function SectionShell({
   clipX?: boolean;
 }) {
   return (
-    <section id={id} className={cn("marketing-deferred-section relative py-20 sm:py-28 lg:py-32", className)}>
-      <div className={cn("relative mx-auto w-full min-w-0 max-w-7xl px-5 sm:px-8", clipX && "overflow-x-clip", innerClassName)}>{children}</div>
+    <section id={id} className={cn("marketing-deferred-section relative py-20 sm:py-28 lg:py-32", id && "scroll-mt-[5.5rem]", className)}>
+      <div className={cn("relative mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-8", clipX && "overflow-x-clip", innerClassName)}>{children}</div>
     </section>
   );
 }
