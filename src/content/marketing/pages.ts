@@ -45,7 +45,7 @@ export const founders = [
 export const aboutContent: MarketingPageContent = {
   eyebrow: "BUILT FROM THE WORK",
   title: "We got tired of watching good work disappear into bad operations.",
-  intro: "Rive is an operating workspace for independent professionals and digital service businesses. It is built by a small team in the same world: client promises, delivery pressure, invoices, follow-ups, and the need to make finished work earn its next opportunity.",
+  intro: "Rive is an operating workspace for independent professionals and digital service businesses. Open beta, open signup: the client, the delivery, the Agreement, the invoice, the calendar, the import, and the public proof live in one loop. It is built by a small team in the same world—client promises, delivery pressure, and the need to make finished work earn its next opportunity.",
   sections: [
     {
       eyebrow: "THE PREMISE",
@@ -67,46 +67,7 @@ export const aboutContent: MarketingPageContent = {
       cards: founders.map((founder) => ({ title: founder.name, meta: founder.role, body: founder.body })),
     },
   ],
-  cta: { headline: "Put the context back in the work.", label: "Build your workspace", href: "/register", note: "Open beta. No invitation required." },
-};
-
-export const careersContent: MarketingPageContent = {
-  eyebrow: "CAREERS AT RIVE",
-  title: "Build software whose quiet details carry someone’s livelihood.",
-  intro: "This is not productivity theatre. The work touches client trust, scope, deadlines, money, and public proof. We value people who can hold ambition and operational care at the same time.",
-  sections: [
-    {
-      title: "Small team. Visible ownership.",
-      cards: [
-        { title: "Own the outcome", body: "The work does not stop at a handoff. You follow it through product judgement, implementation, and the edge cases users actually meet." },
-        { title: "Write the truth", body: "We name limitations, show our reasoning, and prefer a precise no to a vague promise." },
-        { title: "Make calm software", body: "Fast matters. So do recovery, accessibility, and the feeling that the product will not surprise you at the worst moment." },
-      ],
-    },
-    {
-      eyebrow: "OPEN CONVERSATIONS",
-      title: "We hire for the work in front of us, not a permanent wall of roles.",
-      body: "If you have unusually strong product engineering, product design, community, or service-business operating experience, send a concise note with the work you are proud of and the problem you want to own.",
-    },
-  ],
-  cta: { headline: "The next hire should remove a real point of failure.", label: "Introduce yourself", href: "mailto:hello@rive.work", note: "Tell us what you would make true." },
-};
-
-export const pressContent: MarketingPageContent = {
-  eyebrow: "PRESS ROOM",
-  title: "The facts, without the launch fog.",
-  intro: "Rive is an open-beta operating workspace for independent professionals and digital service businesses. It connects clients, projects, Agreements, invoices, expenses, calendars, imports, and public portfolio proof.",
-  sections: [
-    {
-      title: "Company facts",
-      bullets: ["Founded in 2026 by Arnav Bhattacharya, Agnik Chakravorty, and Druhin Basu", "Open beta with open signup", "Built for independent professionals and digital service businesses", "Apple Calendar subscription feed available; Google Calendar pending approval", "No shipped Remit transfer product and no claimed AI co-pilot"],
-    },
-    {
-      title: "Approved boilerplate",
-      body: "Rive is an operating workspace for independent professionals and digital service businesses. It connects the client record to delivery, Agreements, invoices, expenses, calendars, data imports, and a public portfolio—so context moves with the work.",
-    },
-  ],
-  cta: { headline: "Use the facts. Ask for the rest.", label: "Contact the team", href: "mailto:hello@rive.work", note: "Media, founder interviews, and verified product detail." },
+  cta: { headline: "Put the context back in the work.", label: "Build your workspace", href: "/register", note: "Open beta. No invitation required. Free during beta." },
 };
 
 export const roadmapContent: MarketingPageContent = {
@@ -117,18 +78,32 @@ export const roadmapContent: MarketingPageContent = {
     {
       eyebrow: "LIVE NOW",
       title: "The operating loop",
-      bullets: ["Clients, projects, tasks, milestones, invoices, and expenses", "Agreement composer, review, recorded acceptance, and linked billing", "CSV and XLSX migration with review and relationship reconstruction", "Portfolio Studio, public portfolios, analytics, and enquiries", "Apple Calendar feed"],
+      bullets: [
+        "Clients, projects, tasks, milestones, invoices, and expenses",
+        "Agreement composer, review, recorded acceptance, and linked billing",
+        "Multi-currency display for invoices and expenses",
+        "CSV and XLSX migration with review and relationship reconstruction",
+        "Portfolio Studio, public portfolios, analytics, and enquiries",
+        "Apple Calendar feed",
+        "Open signup. Free during beta. One workspace.",
+      ],
     },
     {
       eyebrow: "NEXT",
       title: "Reliability before reach",
-      bullets: ["Deeper export and portability", "More migration adapters and clearer recovery", "Tighter Agreement and invoice audit history", "Calendar connection work once Google approves the integration", "Faster, more legible product surfaces on small screens"],
+      bullets: [
+        "Deeper export and portability",
+        "More migration adapters and clearer recovery",
+        "Tighter Agreement and invoice audit history",
+        "Calendar connection work once Google approves the integration",
+        "Public product docs when the surfaces are stable enough to document honestly",
+      ],
     },
     {
       eyebrow: "LATER",
       title: "Only after the foundation earns it",
       bullets: [
-        "Remit: payouts across currencies from the same workspace as the invoice",
+        "Remit: payout follows the invoice. In development.",
         "A public API",
         "Broader calendar connections",
       ],
@@ -139,27 +114,33 @@ export const roadmapContent: MarketingPageContent = {
 
 export const changelogContent: MarketingPageContent = {
   eyebrow: "CHANGELOG",
-  title: "Open beta",
-  intro: "A factual record of what is live. “Latest” means shipped to the open beta—not announced, mocked, or waiting on an approval.",
+  title: "What has shipped",
+  intro: "A factual record of the open beta. Everything here is live—not announced, mocked, or waiting on an approval.",
   sections: [
     {
-      eyebrow: "LATEST",
-      title: "Connected work, with fewer dead ends",
+      eyebrow: "ACCESS",
+      title: "Open beta",
+      body: "Signup is open. There is no waitlist and no invitation. Access is free during beta, with one complete workspace.",
+    },
+    {
+      eyebrow: "THE LOOP",
+      title: "Operating work, connected",
       cards: [
-        { title: "Portfolio Studio", meta: "Latest", body: "A work-first editor, public portfolio pages, practice views, analytics, media, and source-aware enquiries." },
-        { title: "Agreements", meta: "Latest", body: "Composer, reusable clauses, review links, recorded acceptance, payment triggers, and linked draft invoices." },
-        { title: "Migration Engine", meta: "Latest", body: "Multi-file CSV and XLSX profiling, deduplication, relationship review, and idempotent commit. Preview before commit; imported records are retained." },
-        { title: "Guided activation", meta: "Latest", body: "Goal-aware guidance that points to real actions without masking or blocking the workspace." },
+        { title: "Clients & delivery", body: "Clients, projects, tasks, and milestones keep briefs, dates, cost, and activity attached to the person they belong to." },
+        { title: "Agreements", body: "Composer, reusable clauses, review links, recorded acceptance, payment triggers, and linked draft invoices." },
+        { title: "Money", body: "Invoices and expenses remember the work. Native amounts stay intact, with a workspace display currency when money crossed borders. Sending and recording payment remain explicit." },
+        { title: "Time", body: "Project deadlines and tasks share one calendar. A private Apple Calendar feed is available. Google Calendar is pending approval and is not available." },
+      ],
+    },
+    {
+      eyebrow: "MOMENTUM",
+      title: "Proof, imports, and getting started",
+      cards: [
+        { title: "Migration Engine", body: "Multi-file CSV and XLSX profiling, deduplication, relationship review, and idempotent commit. Preview before commit; imported records are retained." },
+        { title: "Portfolio Studio", body: "A work-first editor, public portfolio pages, practice views, analytics, media, and source-aware enquiries." },
+        { title: "Help & Guides", body: "In-product Help & Guides and goal-aware activation that point to real actions without masking or blocking the workspace." },
       ],
     },
   ],
   cta: { headline: "Every release should close another dead end.", label: "See what comes next", href: "/roadmap" },
 };
-
-export const pressBrandAssets = [
-  { title: "Wordmark", href: "/brand/rive-wordmark.svg", body: "Default Rive wordmark, SVG." },
-  { title: "Wordmark · light", href: "/brand/rive-wordmark-light.svg", body: "Wordmark for light surfaces, SVG." },
-  { title: "Wordmark · dark", href: "/brand/rive-wordmark-dark.svg", body: "Wordmark for dark surfaces, SVG." },
-  { title: "Logo", href: "/brand-assets/logo.svg", body: "Standalone mark, SVG." },
-  { title: "Logo · dark", href: "/brand-assets/logo-dark.svg", body: "Standalone mark for dark surfaces, SVG." },
-] as const;

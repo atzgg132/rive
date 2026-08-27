@@ -3,11 +3,9 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const marketingRoutes = [
   "/",
   "/about",
-  "/careers",
   "/changelog",
   "/contact",
   "/cookies",
-  "/press",
   "/privacy",
   "/roadmap",
   "/terms",

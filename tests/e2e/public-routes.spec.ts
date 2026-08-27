@@ -3,13 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 const publicRoutes = [
   "/",
   "/about",
-  "/careers",
   "/changelog",
   "/contact",
   "/cookies",
   "/forgot-password",
   "/login",
-  "/press",
   "/privacy",
   "/register",
   "/reset-password",
@@ -229,8 +227,8 @@ test("marketing does not claim Google Calendar is available", async ({ page }) =
 
 test("changelog and roadmap describe the open-beta product, not a private alpha", async ({ page }) => {
   await page.goto("/changelog", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "What has shipped", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Open beta", exact: true })).toBeVisible();
-  await expect(page.getByText("Latest", { exact: true }).first()).toBeVisible();
 
   await page.goto("/roadmap", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Open beta is live. Next we make it dependable." })).toBeVisible();
