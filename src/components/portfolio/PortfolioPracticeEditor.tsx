@@ -3,6 +3,7 @@
 import { Button, Input, Textarea } from "@/components/ui";
 import { ArrowDown, ArrowUp, Layers, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import AccentColorField from "@/components/portfolio/studio/AccentColorField";
 import { normalizeSlug, RESERVED_PRACTICE_SLUGS, type PortfolioContent, type PortfolioPractice } from "@/utils/portfolio";
 
 const inputClass = "w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:ring-blue-950";
@@ -196,15 +197,11 @@ export default function PortfolioPracticeEditor({ content, slug, onChange }: Pro
                       <span className={labelClass}>Introduction</span>
                       <Textarea rows={3} className={inputClass} value={practice.description} placeholder="Shown in place of your main introduction when someone views this practice." onChange={(event) => update(practice.id, { description: event.target.value })} />
                     </label>
-                    <label className="flex flex-col gap-2">
-                      <span className={labelClass}>Accent colour</span>
-                      <Input
-                        type="color"
-                        className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-transparent dark:border-slate-700"
-                        value={practice.accent || "#2563EB"}
-                        onChange={(event) => update(practice.id, { accent: event.target.value })}
-                      />
-                    </label>
+                    <AccentColorField
+                      label="Accent colour"
+                      value={practice.accent || "#2563EB"}
+                      onChange={(accent) => update(practice.id, { accent })}
+                    />
                     <label className="flex items-center gap-2 self-end pb-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
                       <Input type="checkbox" checked={practice.visibility !== "private"} onChange={(event) => update(practice.id, { visibility: event.target.checked ? "public" : "private" })} />
                       Show this practice publicly

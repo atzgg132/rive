@@ -128,7 +128,7 @@ export default function StudioProfileImageEditor({
   return (
     <>
       <div className="mb-6 flex flex-col gap-4 border-b border-border pb-6 dark:border-slate-800 sm:flex-row sm:items-center" data-profile-image-editor>
-        <div className="grid aspect-square w-24 shrink-0 place-items-center overflow-hidden rounded-2xl bg-slate-100 text-2xl font-black text-slate-400 dark:bg-slate-800">
+        <div className="grid aspect-square w-24 min-h-0 min-w-0 shrink-0 place-items-center overflow-hidden rounded-2xl bg-slate-100 text-2xl font-black text-slate-400 dark:bg-slate-800">
           {imageUrl ? <img src={imageUrl} alt="" className="h-full w-full object-cover" /> : (name || "Y").slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">

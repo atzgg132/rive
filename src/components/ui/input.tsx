@@ -14,17 +14,21 @@ const choiceInputClassName =
 
 export type InputProps = React.ComponentPropsWithoutRef<typeof BaseInput>;
 
+const colorInputClassName =
+  "h-11 w-full cursor-pointer rounded-xl border border-input bg-transparent p-0";
+
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
     const isChoice = type === "checkbox" || type === "radio";
     const isFile = type === "file";
+    const isColor = type === "color";
 
     return (
       <BaseInput
         ref={ref}
         type={type}
         className={cn(
-          isChoice ? choiceInputClassName : isFile ? undefined : inputClassName,
+          isChoice ? choiceInputClassName : isFile ? undefined : isColor ? colorInputClassName : inputClassName,
           type === "radio" && "rounded-full",
           type === "checkbox" && "rounded",
           className,

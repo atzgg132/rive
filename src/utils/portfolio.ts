@@ -211,6 +211,15 @@ export const DEFAULT_PORTFOLIO_THEME: PortfolioTheme = {
   radius: "soft",
 };
 
+/** Native `<input type="color">` and the public CSS variable both need #RRGGBB. */
+export const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
+export function normalizeHexColor(value: string, fallback = DEFAULT_PORTFOLIO_THEME.accent): string {
+  const trimmed = value.trim();
+  const withHash = trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+  return HEX_COLOR_PATTERN.test(withHash) ? `#${withHash.slice(1).toUpperCase()}` : fallback;
+}
+
 /** The profile photo is rendered in the same square slot at every breakpoint. */
 export const PROFILE_IMAGE_ASPECT_RATIO = 1;
 export const MAX_PROFILE_IMAGE_UPLOAD_BYTES = 2 * 1024 * 1024;
@@ -615,7 +624,7 @@ function validatePractices(practices: unknown): string | null {
       const fieldValue = practice[field];
       if (fieldValue !== undefined && (typeof fieldValue !== "string" || fieldValue.length > MAX_TEXT_LENGTH)) return `Practice ${field} is too long.`;
     }
-    if (practice.accent !== undefined && (typeof practice.accent !== "string" || !/^#[0-9a-f]{6}$/i.test(practice.accent))) return "Practice accent colours must be hex values.";
+    if (practice.accent !== undefined && (typeof practice.accent !== "string" || !HEX_COLOR_PATTERN.test(practice.accent))) return "Practice accent colours must be hex values.";
     if (practice.visibility !== undefined && practice.visibility !== "public" && practice.visibility !== "private") return "Practice visibility is invalid.";
 
     // Address rules apply once the practice has been given an identity. An
@@ -735,6 +744,22 @@ export function validatePortfolioContent(value: unknown): string | null {
      the constraint here is the layout, not storage — a paragraph in this slot
      wraps over the headline on every template. */
   if (input.tagline !== undefined && (typeof input.tagline !== "string" || input.tagline.length > MAX_TAGLINE_LENGTH)) return `Keep the tagline under ${MAX_TAGLINE_LENGTH} characters.`;
+  return null;
+}
+
+export function validatePortfolioTheme(value: unknown): string | null {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object") return "Theme must be an object.";
+  const theme = value as Partial<PortfolioTheme>;
+  if (theme.accent !== undefined && (typeof theme.accent !== "string" || !HEX_COLOR_PATTERN.test(theme.accent))) {
+    return "Accent colour must be a hex value.";
+  }
+  if (theme.mode !== undefined && theme.mode !== "light" && theme.mode !== "dark" && theme.mode !== "system") {
+    return "Theme mode is invalid.";
+  }
+  if (theme.radius !== undefined && theme.radius !== "soft" && theme.radius !== "sharp") {
+    return "Theme corners are invalid.";
+  }
   return null;
 }
 

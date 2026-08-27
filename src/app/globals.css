@@ -313,10 +313,69 @@ body {
 }
 
 img,
-svg,
 video,
 canvas {
+  /* `max-width` without `height: auto` keeps the intrinsic height when the
+     width is constrained — a 3000px photo then punches a screen of empty
+     space through the page. Flex/grid `min-size: auto` is the same trap: the
+     item's minimum size becomes the image's natural box, so a framed thumbnail
+     still grows the layout. */
   max-width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+svg {
+  max-width: 100%;
+}
+
+/* Native file inputs paint a thumbnail of a chosen image at the file's
+   intrinsic size in Chromium and WebKit. That thumbnail ignores width/height
+   on the control, so an `sr-only` upload still expands the document — and
+   because the dashboard shell is `position: fixed`, scrolling that extra
+   document space hides the app. Keep every file control out of layout. */
+input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  opacity: 0;
+}
+
+input[type="color"] {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: inherit;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: 0;
+  border-radius: inherit;
+}
+
+/* The workspace is a fixed viewport shell. If html/body become a scroll
+   container (overflow-x: clip can promote overflow-y to auto), wheel events
+   move the document behind that shell and the app slides out of view. */
+html:has([data-dashboard-shell]),
+html:has([data-dashboard-shell]) body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 button,

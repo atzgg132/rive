@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { mergePortfolioContent, normalizeSlug, validatePortfolioContent, validatePortfolioForPublish } from "@/utils/portfolio";
+import { mergePortfolioContent, normalizeSlug, validatePortfolioContent, validatePortfolioForPublish, validatePortfolioTheme } from "@/utils/portfolio";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
@@ -77,7 +77,11 @@ export async function PATCH(req: NextRequest) {
       contentForStatus = mergedContent;
       syncedProfileImage = mergedContent.profileImageUrl;
     }
-    if (body.theme !== undefined) data.theme = { ...current.theme as object, ...body.theme };
+    if (body.theme !== undefined) {
+      const themeError = validatePortfolioTheme(body.theme);
+      if (themeError) return NextResponse.json({ success: false, message: themeError }, { status: 400 });
+      data.theme = { ...current.theme as object, ...body.theme };
+    }
     if (body.templateKey !== undefined && typeof body.templateKey === "string") data.templateKey = body.templateKey;
     if (body.seo !== undefined) data.seo = body.seo;
     if (body.slug !== undefined) {

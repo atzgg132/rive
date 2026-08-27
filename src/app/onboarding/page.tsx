@@ -599,7 +599,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mt-7 grid gap-5 sm:grid-cols-[140px_minmax(0,1fr)]">
                 <div>
-                  <div className="mx-auto grid h-28 w-28 place-items-center overflow-hidden rounded-3xl bg-blue-50 text-2xl font-black text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900">
+                  <div className="mx-auto grid h-28 w-28 min-h-0 min-w-0 place-items-center overflow-hidden rounded-3xl bg-blue-50 text-2xl font-black text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900">
                     {avatarUrl ? (
                       <img
                         src={avatarUrl}

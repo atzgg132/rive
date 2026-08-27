@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { createHmac, randomBytes, randomUUID, scryptSync } from "node:crypto";
 import { checkServerIdentity } from "node:tls";
+import { crc32, deflateSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 import { Pool } from "pg";
 
@@ -83,6 +84,62 @@ function profilePhotoFixture() {
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
   );
+}
+
+function pngChunk(type: string, data: Buffer) {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const payload = Buffer.concat([Buffer.from(type), data]);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE(crc32(payload) >>> 0);
+  return Buffer.concat([length, payload, checksum]);
+}
+
+/** A real large decoded image, compressed to a few kilobytes. 1×1 fixtures
+ *  cannot catch intrinsic-size overflow after an upload. */
+function largePhotoFixture(width = 1200, height = 1800) {
+  const stride = width * 3 + 1;
+  const raw = Buffer.alloc(stride * height);
+  for (let y = 0; y < height; y += 1) {
+    const row = y * stride;
+    raw[row] = 0;
+    for (let x = 0; x < width; x += 1) {
+      const i = row + 1 + x * 3;
+      raw[i] = 37;
+      raw[i + 1] = 99;
+      raw[i + 2] = 235;
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(raw, { level: 9 })),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+async function workspaceScrollState(page: import("@playwright/test").Page) {
+  return page.evaluate(() => {
+    const shell = document.querySelector("[data-dashboard-shell]");
+    const main = document.querySelector("main");
+    const html = document.documentElement;
+    return {
+      documentScrollHeight: html.scrollHeight,
+      documentClientHeight: html.clientHeight,
+      documentScrollTop: html.scrollTop || document.body.scrollTop,
+      bodyScrollHeight: document.body.scrollHeight,
+      viewportHeight: window.innerHeight,
+      shellTop: shell?.getBoundingClientRect().top ?? 0,
+      shellHeight: shell?.getBoundingClientRect().height ?? 0,
+      mainScrollHeight: main?.scrollHeight ?? 0,
+      mainClientHeight: main?.clientHeight ?? 0,
+    };
+  });
 }
 
 /**
@@ -469,7 +526,7 @@ test.describe("portfolio studio", () => {
     await coverInput.setInputFiles({
       name: "cover.png",
       mimeType: "image/png",
-      buffer: profilePhotoFixture(),
+      buffer: largePhotoFixture(),
     });
 
     await expect(page.getByText("image added", { exact: true })).toBeVisible({ timeout: 20_000 });
@@ -477,6 +534,37 @@ test.describe("portfolio studio", () => {
     await expect(project.getByText("Cover image ready", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible();
     await expect(page.locator("main")).toContainText("Selected work");
+
+    const previewBox = await project.locator("[data-project-cover-preview] img").boundingBox();
+    expect(previewBox?.height ?? 0, "the cover thumbnail must not use the photo's intrinsic height").toBeLessThan(80);
+
+    const fileBoxes = await page.locator('input[type="file"]').evaluateAll((inputs) =>
+      inputs.map((input) => {
+        const box = input.getBoundingClientRect();
+        return { height: box.height, width: box.width };
+      }),
+    );
+    for (const box of fileBoxes) {
+      expect(box.height).toBeLessThanOrEqual(2);
+      expect(box.width).toBeLessThanOrEqual(2);
+    }
+
+    const before = await workspaceScrollState(page);
+    expect(before.documentScrollHeight, "uploading media must not make the document taller than the viewport").toBeLessThanOrEqual(before.documentClientHeight + 1);
+    expect(Math.abs(before.shellTop)).toBeLessThanOrEqual(1);
+    expect(before.shellHeight).toBeLessThanOrEqual(before.viewportHeight + 1);
+
+    await page.locator("main").evaluate((main) => {
+      main.scrollTop = main.scrollHeight;
+    });
+    await page.locator("main").evaluate((main) => {
+      main.scrollTop = 0;
+    });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible();
+    const after = await workspaceScrollState(page);
+    expect(after.documentScrollTop, "scrolling after an upload must not move the document behind the shell").toBe(0);
+    expect(Math.abs(after.shellTop), "scrolling up must not hide the workspace chrome").toBeLessThanOrEqual(1);
+    expect(after.documentScrollHeight).toBeLessThanOrEqual(after.documentClientHeight + 1);
   });
 
   test("typed work survives leaving a section, and autosave never publishes", async ({ page, context }) => {
@@ -762,5 +850,42 @@ test.describe("portfolio studio", () => {
 
     // The whole point of the prompt: the owner's text is still on screen.
     await expect(page.getByPlaceholder("e.g. A calmer checkout for Acme")).toHaveValue("Kept local harbour");
+  });
+
+  test("accent colour changes apply in the studio and persist", async ({ page, context }) => {
+    const { token, user } = await studioUser("accent");
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Live preview")).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: /Appearance/i }).click();
+    const picker = page.locator("[data-accent-picker]");
+    await expect(picker).toBeVisible();
+
+    const well = await picker.locator('input[type="color"]').boundingBox();
+    expect(well?.width ?? 0, "the accent well must be a real click target, not a padded sliver").toBeGreaterThanOrEqual(40);
+    expect(well?.height ?? 0).toBeGreaterThanOrEqual(40);
+
+    await picker.getByRole("button", { name: "Use #DB2777" }).click();
+    await expect(picker.locator("[data-accent-sample]")).toHaveCSS("background-color", "rgb(219, 39, 119)");
+    await expect.poll(async () => (await picker.locator('input[type="color"]').inputValue()).toLowerCase()).toBe("#db2777");
+    await expect(picker.getByLabel("Accent hex value")).toHaveValue("#DB2777");
+
+    await expect.poll(async () => {
+      const accent = await page.locator('iframe[title$="portfolio preview"]').evaluate((frame) => {
+        const doc = (frame as HTMLIFrameElement).contentDocument;
+        const root = doc?.querySelector("[style*='--portfolio-accent']") as HTMLElement | null;
+        return root ? getComputedStyle(root).getPropertyValue("--portfolio-accent").trim() : "";
+      });
+      return accent.toUpperCase();
+    }, { timeout: 15_000 }).toBe("#DB2777");
+
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { theme: true } });
+      const theme = portfolio?.theme as { accent?: string } | null;
+      return theme?.accent?.toUpperCase();
+    }, { timeout: 15_000 }).toBe("#DB2777");
   });
 });

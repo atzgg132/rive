@@ -244,10 +244,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency}>
-    <div data-dashboard-shell className="fixed inset-0 flex h-screen min-h-0 overflow-hidden bg-background">
+    <div data-dashboard-shell className="fixed inset-0 flex min-h-0 overflow-hidden overscroll-none bg-background">
       <Toaster position="bottom-right" theme="system" />
       {/* ── Desktop Sidebar ── */}
-      <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col justify-between border-r border-border bg-card py-5 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
+      <aside className={`sticky top-0 hidden h-full shrink-0 flex-col justify-between border-r border-border bg-card py-5 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
         <div className="flex flex-col gap-7">
           <div className={`flex items-center ${sidebarCollapsed ? "flex-col gap-3" : "justify-between px-3"}`}>
             <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
