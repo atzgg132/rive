@@ -254,7 +254,7 @@ test.describe("marketing experience", () => {
   // at 720. Do not hide the labels. Do not add 1366×768 or 1440×900 to this loop.
   // Do not assert which pipeline node is active — interval autoplay may already be on WORK.
   const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
-  const minCtaProofGap = 12;
+  const minCtaProofGap = 24;
 
   for (const viewport of [
     { width: 1280, height: 720 },

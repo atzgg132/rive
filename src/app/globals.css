@@ -908,11 +908,11 @@ p {
   }
 
   section.marketing-hero .marketing-hero-ctas {
-    margin-top: clamp(1.25rem, 2.4svh, 2rem);
+    margin-top: clamp(1.5rem, 2.6svh, 2rem);
   }
 
   section.marketing-hero .marketing-hero-proof {
-    margin-top: clamp(1.25rem, 2.2svh, 1.75rem);
+    margin-top: clamp(1.75rem, 2.8svh, 2.25rem);
   }
 
   section.marketing-hero .marketing-hero-rail {
@@ -962,11 +962,11 @@ p {
   }
 
   section.marketing-hero .marketing-hero-ctas {
-    margin-top: clamp(1.25rem, 2svh, 1.75rem);
+    margin-top: clamp(1.5rem, 2.2svh, 2rem);
   }
 
   section.marketing-hero .marketing-hero-proof {
-    margin-top: clamp(1.25rem, 1.8svh, 1.75rem);
+    margin-top: clamp(1.75rem, 2svh, 2.25rem);
   }
 
   section.marketing-hero .marketing-hero-rail {
