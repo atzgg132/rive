@@ -113,7 +113,7 @@ export function ScrollytellingSection({
   const railKey = railChapter ? railChapter.id : "problem";
 
   return (
-    <div ref={rootRef} data-testid="scrollytelling-section" className="scrollytelling-section grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:gap-12 xl:gap-20">
+    <div ref={rootRef} data-testid="scrollytelling-section" className="scrollytelling-section grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:gap-12 xl:gap-20">
       <div>
         <article
           id="problem"
@@ -166,10 +166,10 @@ export function ScrollytellingSection({
             <DeferredProductScene className="scrollytelling-inline-visual mt-9" sceneKey={chapter.id} visual={chapter.visual} />
           </article>
         ))}
-        {/* Sticky rail unsticks when this column's bottom hits the fold.
+        {/* Sticky scene unsticks when this column's bottom hits the fold.
             Chapters are 70vh, not 100vh (no shutter). Without a tail the last
             beat never crosses the 18% activation line, so 06 / PROOF copy
-            shows while the rail stays on 05 / MOMENTUM. */}
+            shows while the scene stays on 05 / MOMENTUM. */}
         <div
           aria-hidden="true"
           data-testid="scrollytelling-tail"
@@ -177,11 +177,14 @@ export function ScrollytellingSection({
         />
       </div>
 
-      <div data-testid="scrollytelling-rail" className="scrollytelling-rail sticky top-0 h-screen min-w-0 place-items-center">
-        <div className="w-full" key={railKey}>
+      <aside
+        data-testid="scrollytelling-scene"
+        className="scrollytelling-scene sticky top-[5.5rem] z-0 min-w-0 self-start"
+      >
+        <div className="w-full max-h-[min(38rem,calc(100svh-7.5rem))] overflow-hidden" key={railKey}>
           <MarketingProductScene visual={railVisual} />
         </div>
-      </div>
+      </aside>
     </div>
   );
 }

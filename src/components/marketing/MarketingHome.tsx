@@ -67,8 +67,8 @@ export function MarketingHome() {
 
       <HairlineDivider />
 
-      <SectionShell id="import">
-        <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
+      <SectionShell id="import" className="marketing-inflow-section flex min-h-[100dvh] items-center">
+        <div className="marketing-inflow-grid grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
           <RevealOnScroll>
             <GlowingBadge>{homeContent.import.eyebrow}</GlowingBadge>
             <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.import.title}</h2>
@@ -79,8 +79,8 @@ export function MarketingHome() {
         </div>
       </SectionShell>
 
-      <SectionShell id="agreements" className="marketing-alt-band">
-        <div data-testid="marketing-agreements-section" className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
+      <SectionShell id="agreements" className="marketing-inflow-section marketing-alt-band flex min-h-[100dvh] items-center">
+        <div data-testid="marketing-agreements-section" className="marketing-inflow-grid grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
           <RevealOnScroll>
             <GlowingBadge>{homeContent.agreement.eyebrow}</GlowingBadge>
             <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.agreement.title}</h2>
@@ -91,8 +91,8 @@ export function MarketingHome() {
         </div>
       </SectionShell>
 
-      <SectionShell id="remit">
-        <div data-testid="remit-section" className="grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-start lg:gap-16">
+      <SectionShell id="remit" className="marketing-inflow-section flex min-h-[100dvh] items-center">
+        <div data-testid="remit-section" className="marketing-inflow-grid grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-16">
           <div data-testid="remit-story">
             <GlowingBadge>{homeContent.remit.eyebrow}</GlowingBadge>
             <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.remit.title}</h2>
@@ -101,17 +101,17 @@ export function MarketingHome() {
               {homeContent.remit.promises.map((promise) => <div key={promise} data-testid="remit-promise" className="flex items-center gap-3 rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-3 text-sm font-semibold text-muted-foreground"><CircleDollarSign className="h-4 w-4 text-primary" />{promise}</div>)}
             </div>
           </div>
-          <GlassPanel tier={3} className="min-w-0 p-6 sm:p-8 lg:min-w-[28rem]">
+          <GlassPanel tier={3} className="min-w-0 p-5 sm:p-6">
             <div data-testid="remit-calculator">
               <div className="flex items-center justify-between"><p className="font-mono text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-primary">{homeContent.remit.ledger.label}</p><Braces className="h-4 w-4 text-muted-foreground" /></div>
-              <div className="mt-6 overflow-hidden rounded-xl border border-[var(--stroke-hairline)]">
+              <div className="mt-5 overflow-hidden rounded-xl border border-[var(--stroke-hairline)]">
                 <div className="hidden grid-cols-[1.15fr_1fr_1fr_1fr] gap-3 border-b border-[var(--stroke-hairline)] bg-[var(--surface-glass)] px-4 py-2.5 sm:grid">
                   {["Record", "Native amount", "Rate · date", "Display"].map((column, index) => (
                     <span key={column} className={index === 0 ? "font-mono text-[0.54rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground" : "text-right font-mono text-[0.54rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground"}>{column}</span>
                   ))}
                 </div>
                 {homeContent.remit.ledger.rows.map((row) => (
-                  <div key={row.record} className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5 border-b border-[var(--stroke-hairline)] px-4 py-3 last:border-b-0 sm:grid-cols-[1.15fr_1fr_1fr_1fr] sm:items-baseline">
+                  <div key={row.record} className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5 px-4 py-3 sm:grid-cols-[1.15fr_1fr_1fr_1fr] sm:items-baseline">
                     <span>
                       <span className="block text-sm font-bold tracking-[-0.02em] text-foreground">{row.record}</span>
                       <span className="mt-0.5 block text-[0.66rem] text-muted-foreground">{row.kind}</span>
@@ -122,22 +122,14 @@ export function MarketingHome() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {homeContent.remit.ledger.totals.map((total, index) => (
-                  <div key={total.label} className={index === 0 ? "rounded-xl border border-primary/15 bg-[var(--surface-raised)] p-4" : "rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-4"}>
-                    <p className={index === 0 ? "font-mono text-[0.56rem] uppercase tracking-[0.12em] text-primary" : "font-mono text-[0.56rem] uppercase tracking-[0.12em] text-muted-foreground"}>{total.label}</p>
-                    <p className="mt-2 text-2xl font-black tabular-nums text-foreground">{total.value}</p>
-                  </div>
-                ))}
-              </div>
               <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-[var(--stroke-hairline)] p-4 text-sm"><span className="text-muted-foreground">Status</span><span className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-warning">{homeContent.remit.ledger.note}</span></div>
             </div>
           </GlassPanel>
         </div>
       </SectionShell>
 
-      <SectionShell id="portfolio" className="marketing-alt-band">
-        <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
+      <SectionShell id="portfolio" className="marketing-inflow-section marketing-alt-band flex min-h-[100dvh] items-center">
+        <div className="marketing-inflow-grid grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-20">
           <RevealOnScroll><GlowingBadge>{homeContent.portfolio.eyebrow}</GlowingBadge><h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-0.05em] text-foreground sm:text-6xl">{homeContent.portfolio.title}</h2><p className="mt-6 text-base leading-8 text-muted-foreground">{homeContent.portfolio.body}</p></RevealOnScroll>
           <PortfolioLoop {...homeContent.portfolio.visual} />
         </div>

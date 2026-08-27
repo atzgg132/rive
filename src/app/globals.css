@@ -718,21 +718,22 @@ p {
   outline-offset: 4px !important;
 }
 
-/* Desktop scrollytelling rail is in the HTML. CSS shows it at lg and hides it
+/* Desktop scrollytelling scene is in the HTML. CSS shows it at lg and hides it
    for mobile / reduced motion. JS must not mount or unmount it — that is how
-   the chapter rail vanished across reloads. */
-.scrollytelling-rail {
+   the chapter scene vanished across reloads. Block, not a stretching grid
+   that fills the viewport. */
+.scrollytelling-scene {
   display: none;
 }
 
 @media (min-width: 1024px) {
-  .scrollytelling-rail {
-    display: grid;
+  .scrollytelling-scene {
+    display: block;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scrollytelling-rail {
+  .scrollytelling-scene {
     display: none;
   }
 
@@ -758,6 +759,70 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .scrollytelling-inline-visual {
     display: block;
+  }
+}
+
+/* Short viewports: compress scrolly copy + card and the four in-flow
+   product sections so each idea fits one screen. Do not stretch chapters
+   to 100vh — they stay min-h-[70vh] from markup. */
+@media (max-height: 800px) {
+  .scrollytelling-section [data-testid="marketing-problem"] {
+    padding-top: clamp(1rem, 2.4svh, 1.75rem);
+    padding-bottom: clamp(1rem, 2.4svh, 1.75rem);
+  }
+
+  .scrollytelling-section [data-chapter-index] {
+    padding-top: clamp(1.25rem, 3svh, 2rem);
+    padding-bottom: clamp(1.25rem, 3svh, 2rem);
+  }
+
+  .scrollytelling-section h2,
+  .scrollytelling-section h3 {
+    margin-top: clamp(0.45rem, 1.1svh, 0.85rem);
+    font-size: clamp(1.4rem, 4svh + 0.1vw, 2.15rem);
+    line-height: 1.08;
+  }
+
+  .scrollytelling-section [data-chapter-index] > p:last-of-type {
+    margin-top: clamp(0.45rem, 1.2svh, 0.85rem);
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .scrollytelling-scene [data-product-frame] aside {
+    display: none;
+  }
+
+  .scrollytelling-scene [data-testid="problem-disconnection"] li,
+  .scrollytelling-scene [data-testid="import-reconnection"] li {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  section.marketing-inflow-section {
+    min-height: 100dvh;
+    padding-top: clamp(4.5rem, 7svh, 5.25rem);
+    padding-bottom: clamp(0.45rem, 1.4svh, 1.1rem);
+  }
+
+  section.marketing-inflow-section h2 {
+    margin-top: clamp(0.35rem, 1svh, 0.75rem);
+    font-size: clamp(1.5rem, 4.2svh + 0.12vw, 2.45rem);
+    line-height: 1.06;
+  }
+
+  section.marketing-inflow-section h2 + p {
+    margin-top: clamp(0.35rem, 1svh, 0.7rem);
+    font-size: clamp(0.8125rem, 1.05svh + 0.1vw, 0.95rem);
+    line-height: 1.45;
+  }
+
+  .marketing-inflow-grid {
+    gap: 1.25rem;
+  }
+
+  section.marketing-inflow-section .mt-8 {
+    margin-top: 0.75rem;
   }
 }
 
