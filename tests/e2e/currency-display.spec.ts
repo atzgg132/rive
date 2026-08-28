@@ -156,6 +156,16 @@ test("invoice rows expose page size choices and keep headers sticky", async ({ p
   await expect(page.getByText("Page 1 of 1")).toBeVisible();
 });
 
+test("the revenue header presents Create invoice as a primary button", async ({ page }) => {
+  await mockCurrencyWorkspace(page);
+  await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
+
+  const createInvoice = page.getByRole("button", { name: "Create invoice" });
+  await expect(createInvoice).toBeVisible({ timeout: 20_000 });
+  await expect(createInvoice).toHaveClass(/bg-primary/);
+  await expect(createInvoice).toHaveClass(/shadow-sm/);
+});
+
 test("project budgets follow the selected display currency on the list and detail page", async ({ page }) => {
   await mockCurrencyWorkspace(page);
   await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });

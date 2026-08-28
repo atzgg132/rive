@@ -213,7 +213,7 @@ function RevenueWorkspace() {
 
   return (
     <div className="workspace-page min-h-[calc(100vh-8rem)] space-y-7 animate-fade-in">
-      <PageHeader title="Revenue & invoices" description="A reliable view of what has been invoiced, collected, and needs attention across every currency." actions={<Link href="/workflow/invoices/new"><Button data-guide-target="revenue-create" className="gap-2"><Plus className="h-4 w-4" /> Create invoice</Button></Link>} />
+      <PageHeader title="Revenue & invoices" description="A reliable view of what has been invoiced, collected, and needs attention across every currency." actions={<Link href="/workflow/invoices/new"><Button data-guide-target="revenue-create" variant="default"><Plus className="h-4 w-4" /> Create invoice</Button></Link>} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map(({ label, value, icon: Icon, tone }) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p><span className={`grid h-8 w-8 place-items-center rounded-xl ${tone}`}><Icon className="h-4 w-4" /></span></div><p className="mt-4 text-2xl font-bold tracking-tight">{value === null ? (ratesStatus === "loading" ? "Converting…" : "—") : formatMoney(value, displayCurrency)}</p></div>)}
