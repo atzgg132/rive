@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
-import { generateUserToken, hashPassword, setSessionCookie } from "@/utils/userAuth";
+import { generateUserToken, GOOGLE_PLACEHOLDER_PASSWORD, setSessionCookie } from "@/utils/userAuth";
 import { googleLoginAvailable } from "@/utils/connectorConfig";
 import { exchangeGoogleLoginCode, getGoogleLoginProfile, verifyGoogleLoginState } from "@/utils/googleAuth";
 import { decideGoogleLogin } from "@/utils/googleLogin";
@@ -11,7 +11,6 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
-import crypto from "crypto";
 
 function loginError(req: NextRequest, code: string) {
   return NextResponse.redirect(new URL(`/login?google_error=${code}`, process.env.APP_URL || req.url));
@@ -87,7 +86,7 @@ export async function GET(req: NextRequest) {
           data: {
             email: profile.email,
             name: profile.name || null,
-            passwordHash: hashPassword(crypto.randomBytes(32).toString("hex")),
+            passwordHash: GOOGLE_PLACEHOLDER_PASSWORD,
             googleSubject: profile.sub,
             plan: "free",
             accountType: "customer",

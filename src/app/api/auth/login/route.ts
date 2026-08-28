@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
-import { verifyPassword, generateUserToken, setSessionCookie, hashPassword, passwordNeedsUpgrade } from "@/utils/userAuth";
+import { verifyPassword, generateUserToken, setSessionCookie, hashPassword, passwordNeedsUpgrade, isGooglePlaceholderPassword } from "@/utils/userAuth";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { sendLoginSuccessEmail } from "@/utils/email";
@@ -34,6 +34,13 @@ export async function POST(req: NextRequest) {
     const isPasswordCorrect = verifyPassword(password, user.passwordHash);
 
     if (!isPasswordCorrect) {
+      if (user.googleSubject && isGooglePlaceholderPassword(user.passwordHash)) {
+        return NextResponse.json({
+          success: false,
+          code: "GOOGLE_SIGN_IN",
+          message: "This account uses Google. Continue with Google, or set a password from Forgot password.",
+        }, { status: 401 });
+      }
       return NextResponse.json({ success: false, message: "Invalid email or password." }, { status: 401 });
     }
 

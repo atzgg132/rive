@@ -45,6 +45,13 @@ test("an email already linked to a different Google subject is refused", () => {
   );
 });
 
+test("a later Google login of an already-linked subject is a normal sign-in", () => {
+  assert.deepEqual(
+    decideGoogleLogin(identity, { id: "user-1", email: "owner@rive.work", googleSubject: "google-sub-1" }, null),
+    { action: "login", userId: "user-1" },
+  );
+});
+
 test("unverified Google emails are refused", () => {
   assert.deepEqual(
     decideGoogleLogin({ ...identity, emailVerified: false }, null, null),

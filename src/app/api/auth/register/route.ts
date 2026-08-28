@@ -51,13 +51,17 @@ export async function POST(req: NextRequest) {
 
     const existing = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, emailVerifiedAt: true, emailVerificationRequiredAt: true },
+      select: { id: true, emailVerifiedAt: true, emailVerificationRequiredAt: true, googleSubject: true },
     });
     if (existing) {
       return NextResponse.json({
         success: false,
-        code: existing.emailVerificationRequiredAt && !existing.emailVerifiedAt ? "EMAIL_NOT_VERIFIED" : "EMAIL_ALREADY_REGISTERED",
-        message: existing.emailVerificationRequiredAt && !existing.emailVerifiedAt
+        code: existing.googleSubject
+          ? "GOOGLE_SIGN_IN"
+          : existing.emailVerificationRequiredAt && !existing.emailVerifiedAt ? "EMAIL_NOT_VERIFIED" : "EMAIL_ALREADY_REGISTERED",
+        message: existing.googleSubject
+          ? "This email already has a Rive account. Sign in with Google, or set a password from Forgot password."
+          : existing.emailVerificationRequiredAt && !existing.emailVerifiedAt
           ? "This email already has an account waiting for verification. Check your inbox or request a new verification email."
           : "Email is already registered. Try logging in instead.",
       }, { status: 409 });
