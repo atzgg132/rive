@@ -33,16 +33,24 @@ Google Cloud configuration:
 2. Configure the OAuth consent screen as an external application.
 3. Add `rive.work` as an authorized domain.
 4. Configure the product name, support email, privacy policy, terms, and `hello@rive.work` developer contact.
-5. Request these scopes:
+5. Request these scopes (app login and Calendar must match this list exactly):
    - `openid`
    - `email`
+   - `profile`
    - `https://www.googleapis.com/auth/calendar.calendarlist.readonly`
    - `https://www.googleapis.com/auth/calendar.events`
 6. Create an OAuth 2.0 Web application client.
 7. Add these exact redirect URIs:
+   - `http://localhost:3000/api/auth/google/callback`
+   - `https://dev.rive.work/api/auth/google/callback`
+   - `https://www.rive.work/api/auth/google/callback`
    - `http://localhost:3000/api/calendar/connections/google/callback`
    - `https://dev.rive.work/api/calendar/connections/google/callback`
    - `https://www.rive.work/api/calendar/connections/google/callback`
+
+Sign in with Google is a separate OAuth request (`openid email profile` only). Calendar connect is a later, explicit step and requests Calendar scopes plus `openid` and `email` so the connected Google account can be identified. Do not add Calendar scopes to login.
+
+`GOOGLE_CALENDAR_ENABLED` is true for the `dev` SSM environment (https://dev.rive.work) and false for production. Do not flip production.
 8. While the consent screen is in testing, add every person who needs to test as a Google OAuth test user.
 9. Before broad launch, submit the consent screen for Google verification. Calendar event access is a sensitive scope and an unverified production app will be constrained.
 

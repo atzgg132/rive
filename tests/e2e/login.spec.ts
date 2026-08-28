@@ -155,3 +155,21 @@ test("an off-origin next path is ignored", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
   await expect(page).not.toHaveURL(/evil/);
 });
+
+test("Google sign-in appears when the OAuth client is configured", async ({ page }) => {
+  await page.route("**/api/auth/providers**", async (route) => {
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, google: true }),
+    });
+  });
+  await openLogin(page);
+  await expect(page.getByTestId("google-sign-in")).toBeVisible();
+  await expect(page.getByTestId("google-sign-in")).toHaveAttribute("href", "/api/auth/google/start");
+});
+
+test("a Google sign-in error is shown on the login form", async ({ page }) => {
+  await openLogin(page, "/login?google_error=access_denied");
+  await expect(page.getByTestId("login-alert")).toContainText("Google sign-in was cancelled.");
+});

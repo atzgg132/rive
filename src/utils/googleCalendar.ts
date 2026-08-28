@@ -6,8 +6,9 @@ import {
   connectorCredentialConfigured,
   googleCalendarAvailable,
 } from "@/utils/connectorConfig";
+import { GOOGLE_CALENDAR_OAUTH_SCOPES } from "@/utils/googleScopes";
 
-export { googleCalendarAvailable };
+export { googleCalendarAvailable, GOOGLE_CALENDAR_OAUTH_SCOPES };
 
 type GoogleCredentials = {
   accessToken: string;
@@ -69,12 +70,7 @@ export function googleAuthorizationUrl(state: string): string {
     prompt: "consent",
     include_granted_scopes: "true",
     state,
-    scope: [
-      "openid",
-      "email",
-      "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
-      "https://www.googleapis.com/auth/calendar.events",
-    ].join(" "),
+    scope: GOOGLE_CALENDAR_OAUTH_SCOPES.join(" "),
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }

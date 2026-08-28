@@ -71,6 +71,20 @@ test("login validates missing credentials on the server", async ({ request }) =>
   await expect(response.json()).resolves.toMatchObject({ success: false });
 });
 
+test("/api/auth/providers is public and does not leak credentials", async ({ request }) => {
+  const response = await request.get("/api/auth/providers");
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body).toMatchObject({ success: true });
+  expect(typeof body.google).toBe("boolean");
+});
+
+test("/api/auth/google/start redirects when Google login is unconfigured", async ({ request }) => {
+  const response = await request.get("/api/auth/google/start", { maxRedirects: 0 });
+  expect([302, 307]).toContain(response.status());
+  expect(response.headers()["location"] || "").toMatch(/google_error=not_configured|accounts\.google\.com/);
+});
+
 test("/api/guidance rejects unauthenticated access", async ({ request }) => {
   const response = await request.post("/api/guidance", { data: { event: "started", mode: "automatic" } });
   expect(response.status()).toBe(401);

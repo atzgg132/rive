@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import PasswordInput from "@/components/PasswordInput";
 import { authFieldClassName, authQuietButtonClassName, authSubmitClassName } from "@/components/auth/authClasses";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 export function RegisterForm({
@@ -129,9 +130,11 @@ export function RegisterForm({
       <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
         Free access during open beta. Start with the work that feels messiest today.
       </BaseDialog.Description>
-      <form method="post" onSubmit={handleRegister} className="mt-8 flex flex-col gap-5" data-testid="register-form" data-hydrated={hydrated ? "true" : "false"} data-invite={inviteToken || undefined}>
+      <div className="mt-8">
+        {error ? <Alert variant="destructive" className="mb-5 text-sm">{error}</Alert> : null}
+        <GoogleSignInButton />
+      <form method="post" onSubmit={handleRegister} className="flex flex-col gap-5" data-testid="register-form" data-hydrated={hydrated ? "true" : "false"} data-invite={inviteToken || undefined}>
         <HoneypotField inputRef={websiteRef} />
-        {error ? <Alert variant="destructive" className="text-sm">{error}</Alert> : null}
         <FormField label="Full name" htmlFor="register-name">
           <Input
             id="register-name"
@@ -195,6 +198,7 @@ export function RegisterForm({
           )}
         </button>
       </form>
+      </div>
       <p className="mt-8 text-sm text-muted-foreground">
         Already have an account?{" "}
         <button type="button" className={authQuietButtonClassName} onClick={() => onLogin(email)}>

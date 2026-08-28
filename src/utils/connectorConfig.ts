@@ -16,10 +16,21 @@ function calendarEncryptionKeyConfigured(): boolean {
   return connectorCredentialConfigured(process.env.CALENDAR_ENCRYPTION_KEY);
 }
 
+export function googleOAuthClientConfigured(): boolean {
+  return connectorCredentialConfigured(process.env.GOOGLE_CALENDAR_CLIENT_ID) &&
+    connectorCredentialConfigured(process.env.GOOGLE_CALENDAR_CLIENT_SECRET);
+}
+
+// Sign-in uses the same OAuth client as Calendar. It does not require the
+// Calendar feature flag or the token-encryption key — login never stores
+// Google refresh tokens.
+export function googleLoginAvailable(): boolean {
+  return googleOAuthClientConfigured();
+}
+
 export function googleCalendarAvailable(): boolean {
   return connectorFeatureEnabled(process.env.GOOGLE_CALENDAR_ENABLED) &&
-    connectorCredentialConfigured(process.env.GOOGLE_CALENDAR_CLIENT_ID) &&
-    connectorCredentialConfigured(process.env.GOOGLE_CALENDAR_CLIENT_SECRET) &&
+    googleOAuthClientConfigured() &&
     calendarEncryptionKeyConfigured();
 }
 

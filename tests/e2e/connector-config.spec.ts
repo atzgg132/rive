@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   googleCalendarAvailable,
+  googleLoginAvailable,
   zohoBooksAvailable,
 } from "../../src/utils/connectorConfig";
 
@@ -41,13 +42,16 @@ test.describe("connector configuration", () => {
     process.env.GOOGLE_CALENDAR_CLIENT_ID = "UNCONFIGURED";
     process.env.GOOGLE_CALENDAR_CLIENT_SECRET = "UNCONFIGURED";
     expect(googleCalendarAvailable()).toBe(false);
+    expect(googleLoginAvailable()).toBe(false);
 
     process.env.GOOGLE_CALENDAR_CLIENT_ID = "google-client-id";
     process.env.GOOGLE_CALENDAR_CLIENT_SECRET = "google-client-secret";
     expect(googleCalendarAvailable()).toBe(false);
+    expect(googleLoginAvailable()).toBe(true);
 
     process.env.GOOGLE_CALENDAR_ENABLED = "true";
     expect(googleCalendarAvailable()).toBe(true);
+    expect(googleLoginAvailable()).toBe(true);
   });
 
   test("placeholder Zoho credentials do not enable the connector", () => {
@@ -77,6 +81,7 @@ test.describe("connector configuration", () => {
 
     delete process.env.CALENDAR_ENCRYPTION_KEY;
     expect(googleCalendarAvailable()).toBe(false);
+    expect(googleLoginAvailable()).toBe(true);
     expect(zohoBooksAvailable()).toBe(false);
 
     process.env.CALENDAR_ENCRYPTION_KEY = "test-calendar-encryption-key";

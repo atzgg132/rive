@@ -102,7 +102,9 @@ resume path; relationship/duplicate E2E and abandon UI also exist. Keep the
 flag off until a disposable-database hosted pass succeeds.
 
 **Google Calendar:** search-before-create and unified OAuth state exist.
-`GOOGLE_CALENDAR_ENABLED` is false in `.env.example` and SSM. Keep it off.
+`GOOGLE_CALENDAR_ENABLED` is true in SSM for `dev` only and false for
+production. Sign in with Google (`openid email profile`) is separate from
+Calendar connect. Do not flip the production Calendar flag.
 
 **Zoho Books:** OAuth, org confirm, and sync APIs exist. There is no
 org-picker UI; sync still uses raw `fetch` in one path. `ZOHO_BOOKS_ENABLED`
@@ -160,8 +162,9 @@ EventBridge / SSM / Lambda only.
 - Revive the `test` branch
 - Redis (durable limiter is already Postgres: `src/utils/durableRateLimit.ts`)
 - Rebuild Learn / Careers / Press / docs marketing pages
-- Flip `MIGRATION_ENGINE_ENABLED`, `GOOGLE_CALENDAR_ENABLED`, or
-  `ZOHO_BOOKS_ENABLED` without a disposable-DB live pass
+- Flip `MIGRATION_ENGINE_ENABLED` or `ZOHO_BOOKS_ENABLED` without a
+  disposable-DB live pass
+- Flip `GOOGLE_CALENDAR_ENABLED` on production
 
 ## 4. After operational trust, if asked
 
