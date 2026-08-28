@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
-import { sendContractExecutedEmail } from "@/utils/email";
+import { buildContractExecutedEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import {
   assertContractsEnabled,
   classifyContractPublicLinkFailure,
@@ -29,7 +30,7 @@ async function resolveLink(token: string) {
   return prisma.contractReviewLink.findUnique({
     where: { tokenHash: hashAccessToken(token) },
     include: {
-      contract: { include: { client: { select: { name: true, email: true } } } },
+      contract: { include: { client: { select: { name: true, email: true } }, user: { select: { email: true } } } },
       version: true,
       signer: true,
     },
@@ -146,6 +147,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       completed: boolean;
       artifactHash: string | null;
       artifactToken: string | null;
+      executedMailJobIds: string[];
     };
     let completion: SignatureCompletion;
     try {
@@ -154,7 +156,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       if (!signer || signer.contractId !== link!.contractId) throw new Error("Acceptance party not found.");
       if (signer.status === "signed") {
         const currentContract = await tx.contract.findUnique({ where: { id: link!.contractId }, select: { status: true } });
-        return { alreadySigned: true, completed: currentContract?.status === "executed", artifactHash: null as string | null, artifactToken: null as string | null };
+        return { alreadySigned: true, completed: currentContract?.status === "executed", artifactHash: null as string | null, artifactToken: null as string | null, executedMailJobIds: [] as string[] };
       }
       if (signer.status !== "pending") throw new Error("This acceptance party is not allowed to record acceptance.");
       const prior = await tx.contractSigner.count({ where: { contractId: link!.contractId, sequence: { lt: signer.sequence }, status: { not: "signed" } } });
@@ -183,7 +185,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, eventType: "signer_signed", metadata: { signerId: signer.id, role: signer.role, consentTextVersion: CONTRACT_CONSENT_TEXT_VERSION }, ipHash: hashRequestValue(ip) } });
 
       const remaining = await tx.contractSigner.count({ where: { contractId: link!.contractId, status: { not: "signed" } } });
-      if (remaining > 0) return { alreadySigned: false, completed: false, artifactHash: null as string | null, artifactToken: null as string | null };
+      if (remaining > 0) return { alreadySigned: false, completed: false, artifactHash: null as string | null, artifactToken: null as string | null, executedMailJobIds: [] as string[] };
 
       const executedAt = new Date();
       const executed = await transitionContractStatus(tx, { where: { id: link!.contractId }, from: "signing", to: "executed", data: { executedAt, reviewExpiresAt: null } });
@@ -208,8 +210,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
        };
        const artifactHash = sha256(stableStringify(evidence));
        await tx.contractArtifact.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, artifactType: "signed_pdf", mimeType: "application/pdf", contentHash: artifactHash, content: evidence as unknown as Prisma.InputJsonValue } });
-      await tx.contractReviewLink.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, tokenHash: hashAccessToken(artifactToken), type: "artifact", expiresAt: new Date(executedAt.getTime() + 90 * 24 * 60 * 60 * 1000) } });
-      return { alreadySigned: false, completed: true, artifactHash, artifactToken };
+       await tx.contractReviewLink.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, tokenHash: hashAccessToken(artifactToken), type: "artifact", expiresAt: new Date(executedAt.getTime() + 90 * 24 * 60 * 60 * 1000) } });
+       const artifactUrl = `${(process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")}/api/public/contracts/artifact/${encodeURIComponent(artifactToken)}`;
+       const executedMailJobIds: string[] = [];
+       if (link!.contract.client.email) {
+         executedMailJobIds.push(await enqueueEmail(buildContractExecutedEmail({ to: link!.contract.client.email, recipientName: link!.contract.client.name, contractTitle: link!.contract.title, artifactUrl }), tx));
+       }
+       executedMailJobIds.push(await enqueueEmail(buildContractExecutedEmail({ to: link!.contract.user.email, recipientName: link!.contract.user.email, contractTitle: link!.contract.title, artifactUrl }), tx));
+       return { alreadySigned: false, completed: true, artifactHash, artifactToken, executedMailJobIds };
       });
     } catch (error) {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
@@ -230,6 +238,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         completed: currentContract.status === "executed",
         artifactHash: null,
         artifactToken: null,
+        executedMailJobIds: [],
       };
     }
 
@@ -240,10 +249,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         await recordProductEvent({ userId: executed.userId, eventName: PRODUCT_EVENTS.agreementAccepted, module: "agreements", entityType: "contract", entityId: executed.id, source: "public_acceptance", dedupeKey: `agreement_accepted:${executed.id}` });
         await processContractBilling({ userId: executed.userId, contractId: executed.id, limit: 100 }).catch((billingError) => console.error("Immediate contract billing check failed:", billingError));
         await createNotification({ userId: executed.userId, type: "contract_executed", title: "Agreement accepted", message: `${executed.title} has both parties’ acceptance recorded.`, href: `/workflow/contracts/${executed.id}` }).catch(() => undefined);
-        const artifactUrl = `${(process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")}/api/public/contracts/artifact/${encodeURIComponent(completion.artifactToken || "")}`;
-        if (executed.client.email) await sendContractExecutedEmail({ to: executed.client.email, recipientName: executed.client.name, contractTitle: executed.title, artifactUrl }).catch(() => undefined);
-        const owner = await prisma.user.findUnique({ where: { id: executed.userId }, select: { email: true } });
-        if (owner) await sendContractExecutedEmail({ to: owner.email, recipientName: owner.email, contractTitle: executed.title, artifactUrl }).catch(() => undefined);
+        if (getEmailProvider() !== "disabled") {
+          for (const jobId of completion.executedMailJobIds) {
+            await processEmailOutbox({ jobId }).catch((mailError) => console.error("Immediate executed Agreement mail attempt failed:", mailError));
+          }
+        }
       }
     }
     logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link!.contractId, versionId: link!.versionId, outcome: completion.completed ? "accepted" : completion.alreadySigned ? "already_accepted" : "acceptance_recorded", revoked: false, expired: false, rateLimited: false });

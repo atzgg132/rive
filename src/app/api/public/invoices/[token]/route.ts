@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { hashInvoicePublicToken } from "@/utils/invoicePublic";
+import { isPublicInvoiceLinkAvailable, recordPublicInvoiceView } from "@/utils/invoiceSend";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { getRequestIp } from "@/utils/rateLimit";
 import { hashRequestValue } from "@/utils/contracts";
@@ -15,15 +16,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   }
 
   const invoice = await prisma.invoice.findUnique({ where: { publicTokenHash: hashInvoicePublicToken(token) }, select: { id: true, userId: true, status: true, sentSnapshot: true, amountPaid: true, total: true, viewedAt: true } });
-  if (!invoice || !invoice.sentSnapshot || !["sent", "viewed", "overdue", "partially_paid", "paid"].includes(invoice.status)) {
+  if (!invoice || !isPublicInvoiceLinkAvailable(invoice)) {
     return NextResponse.json({ success: false, message: "This invoice link is no longer available." }, { status: 404 });
   }
 
-  const firstView = !invoice.viewedAt;
-  await prisma.invoice.update({ where: { id: invoice.id }, data: { viewedAt: invoice.viewedAt || new Date() } }).catch(() => undefined);
-  if (firstView) {
-    await prisma.invoiceEvent.create({ data: { invoiceId: invoice.id, eventType: "viewed", ipHash: hashRequestValue(ip) } }).catch(() => undefined);
-    await recordProductEvent({ userId: invoice.userId, eventName: PRODUCT_EVENTS.invoiceViewed, module: "invoices", entityType: "invoice", entityId: invoice.id, source: "public_link" });
+  const view = await recordPublicInvoiceView(invoice, hashRequestValue(ip)).catch(() => ({ status: invoice.status, firstView: false }));
+  if (view.firstView) {
+    await recordProductEvent({ userId: invoice.userId, eventName: PRODUCT_EVENTS.invoiceViewed, module: "invoices", entityType: "invoice", entityId: invoice.id, source: "public_link" })
+      .catch((eventError) => console.error("Public invoice product event failed:", eventError));
   }
 
   const snapshot = typeof invoice.sentSnapshot === "object" && invoice.sentSnapshot !== null && !Array.isArray(invoice.sentSnapshot)
@@ -33,5 +33,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
       return { ...sentSnapshot, amountPaid: invoice.amountPaid.toString(), outstanding: snapshotTotal.sub(invoice.amountPaid).toString() };
     })()
     : invoice.sentSnapshot;
-  return NextResponse.json({ success: true, invoice: { status: invoice.status, amountPaid: invoice.amountPaid.toString(), snapshot } }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ success: true, invoice: { status: view.status, amountPaid: invoice.amountPaid.toString(), snapshot } }, { headers: { "Cache-Control": "private, no-store" } });
 }

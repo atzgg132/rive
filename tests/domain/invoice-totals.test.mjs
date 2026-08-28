@@ -109,8 +109,8 @@ test("counts a partly paid invoice that is not yet due as outstanding", () => {
 });
 
 test("treats a past-due invoice as overdue before the lifecycle refresh relabels it", () => {
-  /* refreshOverdueInvoices rewrites partially_paid to overdue, but only when a
-     screen that calls it happens to load. The figures must not depend on that. */
+  /* Lifecycle no longer rewrites partially_paid to overdue. Outstanding still
+     uses isPastDue so figures do not depend on which status label is stored. */
   const beforeRefresh = [{ number: "RIVE-2026-017", currency: "INR", status: "partially_paid", total: 194_700, amountPaid: 100_000, dueDate: PAST }];
   const afterRefresh = [{ ...beforeRefresh[0], status: "overdue" }];
   assert.deepEqual(overviewStyle(beforeRefresh, NOW), overviewStyle(afterRefresh, NOW));

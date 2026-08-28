@@ -59,7 +59,9 @@ Implemented locally:
 - contract-generated invoices emit the same product events as manually created invoices;
 - public/revenue/PDF views show outstanding balance rather than mislabeling the gross total after payment.
 
-Still P0 before calling invoicing commercially complete: test real SMTP delivery and bounce/failure recovery, verify public-link behavior after void/payment races, and decide whether payment collection is manual-only for beta or whether a provider-backed pay button is required.
+Still P0 before calling invoicing commercially complete: test real SMTP delivery and bounce/failure recovery, and verify public-link behavior after void/payment races.
+
+**Beta payment collection (frozen):** collection is owner-recorded `method: "manual"` plus `paymentInstructions` on the public invoice (`src/app/api/workflow/invoices/[id]/payment/route.ts`). There is no Stripe, pay button, or payment webhook in this tranche. Revisit a provider only after a product decision, not by default.
 
 ## Rollout sequence
 

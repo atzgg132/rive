@@ -17,6 +17,12 @@ test.describe("connector configuration", () => {
     calendarEncryptionKey: process.env.CALENDAR_ENCRYPTION_KEY,
   };
 
+  test.beforeEach(() => {
+    process.env.GOOGLE_CALENDAR_ENABLED = "false";
+    process.env.ZOHO_BOOKS_ENABLED = "false";
+    process.env.CALENDAR_ENCRYPTION_KEY = "test-calendar-encryption-key";
+  });
+
   test.afterAll(() => {
     const restore = (key: string, value: string | undefined) => {
       if (value === undefined) delete process.env[key];

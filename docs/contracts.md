@@ -34,7 +34,7 @@ This release enables the current alpha acceptance record, not a regulated or ind
 
 The provider-neutral `EsignProvider` interface remains the seam for a future external provider. The current `local` and `rive` adapters are not a complete external e-sign integration: there is no completed callback route, webhook signature verification, or asynchronous reconciliation. `ESIGN_WEBHOOK_SECRET` is reserved for that future adapter and is not evidence that callbacks are active. No provider failure may mark an Agreement accepted.
 
-Public-link rate limiting currently uses a process-local development fallback. It is not production-grade or distributed; a shared adapter remains a Phase 0/P1 follow-up.
+Public-link **mutations** (sign, review, void) use the Postgres-backed `durableRateLimit` helper. Authenticated workspace routes may still use the process-local limiter. Public GETs (artifact, review, sign) are not rate-limited yet.
 
 ## Database setup
 

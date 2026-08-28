@@ -13,7 +13,7 @@ export async function refreshOverdueInvoices(userId?: string): Promise<number> {
     where: {
       ...(userId ? { userId } : {}),
       dueDate: { lt: now },
-      status: { in: ["sent", "viewed", "partially_paid"] },
+      status: { in: ["sent", "viewed"] },
     },
     select: { id: true, userId: true },
     take: 500,
@@ -24,7 +24,7 @@ export async function refreshOverdueInvoices(userId?: string): Promise<number> {
   await prisma.$transaction(async (tx) => {
     for (const candidate of candidates) {
       const updated = await tx.invoice.updateMany({
-        where: { id: candidate.id, status: { in: ["sent", "viewed", "partially_paid"] } },
+        where: { id: candidate.id, status: { in: ["sent", "viewed"] } },
         data: { status: "overdue" },
       });
       if (updated.count) {

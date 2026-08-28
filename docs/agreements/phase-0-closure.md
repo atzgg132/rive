@@ -1,5 +1,13 @@
 # Agreements Phase 0 closure
 
+> **Historical snapshot (2026-08-03).** This document records the evidence and
+> decision at the end of the original Phase 0 slice; its flags, limitations,
+> test counts, and closure status are not the current release state. See
+> `docs/RELEASE_TRANCHE_HANDOFF.md` and `docs/contracts.md` for the current
+> implementation and operational gates. In particular, later work added the
+> durable email outbox and database migration that were explicitly out of scope
+> here. The statements below are retained as a dated audit trail.
+
 Date: 2026-08-03
 Baseline: `29bb7f3` (`Complete contracts workflow and billing integration`)
 Scope: transition audit, database-free guards, terminology, provider fail-closed behavior, privacy-safe public-link telemetry, and test diagnosis.

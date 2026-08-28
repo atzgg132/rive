@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
-import { sendContractSigningEmail } from "@/utils/email";
+import { buildContractSigningEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import {
   assertContractsEnabled,
   CONTRACT_TOKEN_TTL_DAYS,
@@ -43,7 +45,11 @@ export async function POST(
     if (!signer.email) return NextResponse.json({ success: false, message: "The acceptance party needs an email address before a link can be issued." }, { status: 400 });
 
     const token = createAccessToken();
+    const tokenHash = hashAccessToken(token);
     const expiresAt = new Date(Date.now() + CONTRACT_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+    const signUrl = `${appUrl()}/sign/${encodeURIComponent(token)}`;
+    const shouldEmail = body?.sendEmail === true;
+    let outboxId = "";
     await prisma.$transaction(async (tx) => {
       await tx.contractReviewLink.updateMany({
         where: { contractId: id, signerId: signer.id, type: "sign", revokedAt: null },
@@ -54,7 +60,7 @@ export async function POST(
           contractId: id,
           versionId: version.id,
           signerId: signer.id,
-          tokenHash: hashAccessToken(token),
+          tokenHash,
           type: "sign",
           expiresAt,
         },
@@ -71,30 +77,43 @@ export async function POST(
           versionId: version.id,
           actorUserId: session.userId,
           eventType: "signing_link_reissued",
-          metadata: { role, signerId: signer.id, emailed: body?.sendEmail === true, expiresAt: expiresAt.toISOString() },
+          metadata: { role, signerId: signer.id, emailed: shouldEmail, expiresAt: expiresAt.toISOString() },
         },
       });
+      if (shouldEmail) {
+        outboxId = await enqueueEmail({
+          ...buildContractSigningEmail({ to: signer.email, signerName: signer.name, contractTitle: contract.title, signUrl, expiresAt }),
+          deliveryGuard: { kind: "contract_signing", signerId: signer.id, tokenHash },
+        }, tx);
+      }
     });
 
-    const signUrl = `${appUrl()}/sign/${encodeURIComponent(token)}`;
-    const email = body?.sendEmail === true
-      ? await sendContractSigningEmail({ to: signer.email, signerName: signer.name, contractTitle: contract.title, signUrl, expiresAt })
-      : null;
+    let delivered = false;
+    if (shouldEmail && outboxId && getEmailProvider() !== "disabled") {
+      const outbox = await processEmailOutbox({ jobId: outboxId }).catch((deliveryError) => {
+        console.error("Immediate Agreement signing-link email attempt failed:", deliveryError);
+        return null;
+      });
+      delivered = Boolean(outbox && outbox.sent > 0);
+    }
 
     return NextResponse.json({
       success: true,
       role,
       signUrl,
       expiresAt,
-      email: email ? { sent: email.sent, reason: email.reason } : null,
-      message: email
-        ? email.sent
+      email: shouldEmail ? { queued: true, sent: delivered } : null,
+      message: shouldEmail
+        ? delivered
           ? `${role === "client" ? "Client" : "Owner"} acceptance link reissued and emailed.`
-          : `Acceptance link reissued, but email delivery failed${email.reason ? `: ${email.reason}` : "."}`
+          : "Acceptance link reissued. Share it if email delivery is still pending."
         : `${role === "client" ? "Client" : "Owner"} acceptance link reissued.`,
     });
   } catch (error) {
     console.error("Signing link reissue error:", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ success: false, message: "A signing link was already reissued. Refresh before trying again." }, { status: 409 });
+    }
     return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to reissue the acceptance link." }, { status: 500 });
   }
 }

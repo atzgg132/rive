@@ -1,11 +1,11 @@
 # Connector launch setup
 
-Rive currently has two production-capable onboarding ingestion paths:
+Rive currently has two substantial onboarding ingestion foundations. Both stay disabled until their hosted verification gates pass:
 
-1. Google Calendar OAuth with encrypted token storage, calendar discovery, initial event import, ongoing synchronization, webhook renewal, and Rive-to-Google event updates.
-2. Universal CSV migration for clients, projects, invoices, and expenses, including previews, deduplication, and relationship matching.
+1. Google Calendar OAuth with encrypted token storage, calendar discovery, initial event import, ongoing synchronization, webhook renewal, and Rive-to-Google event updates. Launch still requires provider credentials and live read/write/webhook verification.
+2. Universal CSV migration for clients, projects, invoices, and expenses, including previews, deduplication, and relationship matching. Launch still requires a hosted disposable-database pass.
 
-The onboarding UI only labels Google Calendar as a live connector. CSV provider names describe supported export formats; they are not presented as direct API connections.
+The onboarding UI exposes Google Calendar only when its flag and credentials are present. CSV provider names describe supported export formats; they are not presented as direct API connections.
 
 ## Apple Calendar support
 
@@ -66,7 +66,7 @@ These are not enabled in the product until their provider applications and crede
 | Zoho Books | Zoho API Console server app | Client ID, client secret, regional data centre | Contacts, projects, invoices, expenses |
 | FreshBooks | FreshBooks developer app | Client ID, client secret | Clients, projects, invoices, expenses, time entries |
 
-For each provider, Rive will require local, dev, test, and production callback URLs following:
+For each provider, Rive will require local, development, and production callback URLs following:
 
 `https://<environment-domain>/api/connectors/<provider>/callback`
 

@@ -42,6 +42,7 @@ class MockDecimal {
 export const Prisma = {
   Decimal: MockDecimal,
   PrismaClientKnownRequestError,
+  JsonNull: null,
   InputJsonObject: Object,
   InputJsonValue: Object,
   JsonValue: Object,
@@ -69,6 +70,8 @@ function applyUpdate(record, data) {
   for (const [key, value] of Object.entries(data)) {
     if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && "increment" in value) {
       record[key] = (Number(record[key]) || 0) + value.increment;
+    } else if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && "decrement" in value) {
+      record[key] = (Number(record[key]) || 0) - value.decrement;
     } else {
       record[key] = value;
     }
@@ -107,6 +110,9 @@ export function createPrismaMock() {
     user: [],
     portfolioInquiry: [],
     emailOutbox: [],
+    invoiceEvent: [],
+    invoiceDelivery: [],
+    contractReviewLink: [],
   };
 
   let failOnCall = -1; // -1 = never; 0 = first $transaction call; 1 = second
@@ -259,6 +265,49 @@ export function createPrismaMock() {
         db.invoice.push(created);
         return pick(created, select);
       },
+      async findFirst({ where, select } = {}) {
+        const found = db.invoice.find((record) => matchEmailOutbox(record, where || {}));
+        return found ? pick(found, select) : null;
+      },
+      async findUnique({ where, select } = {}) {
+        const found = db.invoice.find((record) => matchEmailOutbox(record, where || {}));
+        return found ? pick(found, select) : null;
+      },
+      async findMany({ where, select, take } = {}) {
+        let list = db.invoice.filter((record) => matchEmailOutbox(record, where || {}));
+        if (typeof take === "number") list = list.slice(0, take);
+        return list.map((record) => pick(record, select));
+      },
+      async update({ where, data }) {
+        const record = db.invoice.find((row) => row.id === where.id);
+        if (!record) throw new Error(`invoice ${where.id} not found`);
+        applyUpdate(record, data);
+        return { ...record };
+      },
+      async updateMany({ where, data }) {
+        const list = db.invoice.filter((record) => matchEmailOutbox(record, where || {}));
+        for (const record of list) applyUpdate(record, data);
+        return { count: list.length };
+      },
+    },
+    invoiceEvent: {
+      async create({ data }) {
+        const created = row("invoiceEvent", { ...data });
+        db.invoiceEvent.push(created);
+        return { ...created };
+      },
+    },
+    invoiceDelivery: {
+      async create({ data, select }) {
+        const created = row("invoiceDelivery", { ...data });
+        db.invoiceDelivery.push(created);
+        return pick(created, select);
+      },
+      async updateMany({ where, data }) {
+        const list = db.invoiceDelivery.filter((delivery) => matchEmailOutbox(delivery, where || {}));
+        for (const delivery of list) applyUpdate(delivery, data);
+        return { count: list.length };
+      },
     },
     expense: {
       async create({ data, select }) {
@@ -312,6 +361,13 @@ export function createPrismaMock() {
         const list = db.emailOutbox.filter((job) => matchEmailOutbox(job, where));
         for (const job of list) applyUpdate(job, data);
         return { count: list.length };
+      },
+    },
+
+    contractReviewLink: {
+      async findFirst({ where, select } = {}) {
+        const link = db.contractReviewLink.find((candidate) => Object.entries(where || {}).every(([key, expected]) => matchFilter(candidate[key], expected)));
+        return link ? pick(link, select) : null;
       },
     },
 

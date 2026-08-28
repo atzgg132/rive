@@ -46,6 +46,10 @@ export function portfolioDraftStorageKey(portfolioId: string) {
   return `rive:portfolio-draft:${portfolioId}`;
 }
 
+export function shouldReplayQueuedPersist(queued: unknown, conflict: boolean): boolean {
+  return Boolean(queued) && !conflict;
+}
+
 export function createStudioId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }

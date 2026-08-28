@@ -2,7 +2,7 @@
 
 Rive runs in `ap-south-1` on a deliberately small AWS footprint:
 
-- one ARM64 EC2 host for the `prod`, `test`, and `dev` containers;
+- one ARM64 EC2 host for the `prod` and `dev` containers;
 - one private, encrypted RDS PostgreSQL instance with separate databases and roles;
 - one private S3 asset bucket per environment;
 - one encrypted migration queue and dead-letter queue per environment;
@@ -20,10 +20,16 @@ does not modify public DNS.
 - The database is not publicly accessible.
 - EC2 has no inbound SSH rule.
 - GitHub deploys through OIDC and a scoped AWS role.
-- `main`, `test`, and `dev` deploy automatically after their branch checks pass.
-- Scheduled jobs are disabled until DNS and all applications are healthy.
+- `dev` and `main` deploy automatically after their branch checks pass.
+- Scheduled jobs default off (`scheduled_jobs_enabled`) for a new stack. The
+  deployed environments explicitly enable them after health verification.
+  Confirm the dev EventBridge `email_outbox` rule is ENABLED before debugging
+  missing verification or inquiry mail — see `docs/RELEASE_TRANCHE_HANDOFF.md`.
 - Production RDS and Terraform state have deletion protection.
-- Development and test suppress real email delivery.
+- Development and test instances fall back to the EC2 SES role when
+  `EMAIL_PROVIDER` is missing or set to `disabled`, preserving verification and
+  recovery email on older stacks. Use `console` for an explicitly non-delivering
+  local provider; SES account/sandbox restrictions still apply.
 
 ## Terraform
 

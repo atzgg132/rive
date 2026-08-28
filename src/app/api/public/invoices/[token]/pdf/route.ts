@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { hashInvoicePublicToken } from "@/utils/invoicePublic";
+import { isPublicInvoiceLinkAvailable } from "@/utils/invoiceSend";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { getRequestIp } from "@/utils/rateLimit";
 import { hashRequestValue } from "@/utils/contracts";
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   }
 
   const invoice = await prisma.invoice.findUnique({ where: { publicTokenHash: hashInvoicePublicToken(token) }, select: { id: true, status: true, sentSnapshot: true, amountPaid: true, total: true } });
-  if (!invoice || !invoice.sentSnapshot || !["sent", "viewed", "overdue", "partially_paid", "paid"].includes(invoice.status)) {
+  if (!invoice || !isPublicInvoiceLinkAvailable(invoice)) {
     return NextResponse.json({ success: false, message: "This invoice link is no longer available." }, { status: 404 });
   }
   if (typeof invoice.sentSnapshot !== "object" || Array.isArray(invoice.sentSnapshot)) {

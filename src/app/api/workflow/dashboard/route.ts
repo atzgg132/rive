@@ -262,7 +262,7 @@ export async function GET(req: NextRequest) {
       prisma.calendarConnection.count({ where: { userId, status: "connected" } }),
       prisma.portfolio.findUnique({ where: { userId }, select: { id: true, status: true, publishedAt: true, content: true } }),
       prisma.project.count({ where: { userId, dueDate: { not: null } } }),
-      prisma.invoice.count({ where: { userId, status: { in: ["sent", "viewed", "overdue", "paid"] } } }),
+      prisma.invoice.count({ where: { userId, status: { in: ["sent", "viewed", "overdue", "partially_paid", "paid"] } } }),
       prisma.importJob.count({ where: { userId, engineVersion: 2 } }),
       prisma.importJob.count({
         where: {

@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { deliverPreparedEmail, type EmailResult, type PreparedEmail } from "@/utils/email";
+import { markInvoiceDeliverySettled } from "@/utils/invoiceSend";
 import { markInquiryNotificationSettled } from "@/utils/portfolioInquiryNotifications";
 
 const OUTBOX_ALGORITHM = "aes-256-gcm";
@@ -95,7 +96,7 @@ export async function processEmailOutbox(
 
   const reclaimed = await prisma.emailOutbox.updateMany({
     where: { status: "processing", updatedAt: { lte: staleBefore } },
-    data: { status: "queued" },
+    data: { status: "queued", attempts: { decrement: 1 } },
   });
 
   const jobs = await prisma.emailOutbox.findMany({
@@ -127,45 +128,81 @@ export async function processEmailOutbox(
     const attemptsAfterClaim = job.attempts + 1;
 
     try {
-      const result = await deliver(decryptPayload(job.encryptedPayload));
-      if (result.sent) {
-        await prisma.emailOutbox.update({
-          where: { id: job.id },
-          data: { status: "sent", processedAt: new Date(), lastError: null },
+      const email = decryptPayload(job.encryptedPayload);
+      if (!await isDeliveryStillValid(email)) {
+        await prisma.$transaction(async (tx) => {
+          await tx.emailOutbox.update({
+            where: { id: job.id },
+            data: { status: "failed", processedAt: new Date(), lastError: "The protected link was replaced or expired before delivery." },
+          });
+          await settleNotificationState(tx, job.type, job.id, "failed", "The protected link was replaced or expired before delivery.");
         });
-        await settleNotificationState(job.type, job.id, "sent");
+        failed += 1;
+        continue;
+      }
+      const result = await deliver(email);
+      if (result.sent) {
+        await prisma.$transaction(async (tx) => {
+          await tx.emailOutbox.update({
+            where: { id: job.id },
+            data: { status: "sent", processedAt: new Date(), lastError: null },
+          });
+          await settleNotificationState(tx, job.type, job.id, "sent", null, result.messageId);
+        });
         sent += 1;
         continue;
       }
 
       const retryable = attemptsAfterClaim < MAX_ATTEMPTS;
-      await prisma.emailOutbox.update({
-        where: { id: job.id },
-        data: {
-          status: retryable ? "queued" : "failed",
-          availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
-          lastError: result.reason || "Email delivery failed.",
-        },
-      });
-      if (retryable) retried += 1;
-      else {
-        await settleNotificationState(job.type, job.id, "failed", result.reason);
+      if (retryable) {
+        await prisma.emailOutbox.update({
+          where: { id: job.id },
+          data: {
+            status: "queued",
+            availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
+            lastError: result.reason || "Email delivery failed.",
+          },
+        });
+        retried += 1;
+      } else {
+        await prisma.$transaction(async (tx) => {
+          await tx.emailOutbox.update({
+            where: { id: job.id },
+            data: {
+              status: "failed",
+              availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
+              lastError: result.reason || "Email delivery failed.",
+            },
+          });
+          await settleNotificationState(tx, job.type, job.id, "failed", result.reason);
+        });
         failed += 1;
       }
     } catch (error) {
       const retryable = attemptsAfterClaim < MAX_ATTEMPTS;
       const reason = error instanceof Error ? error.message.slice(0, 500) : "Email outbox processing failed.";
-      await prisma.emailOutbox.update({
-        where: { id: job.id },
-        data: {
-          status: retryable ? "queued" : "failed",
-          availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
-          lastError: reason,
-        },
-      });
-      if (retryable) retried += 1;
-      else {
-        await settleNotificationState(job.type, job.id, "failed", reason);
+      if (retryable) {
+        await prisma.emailOutbox.update({
+          where: { id: job.id },
+          data: {
+            status: "queued",
+            availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
+            lastError: reason,
+          },
+        });
+        retried += 1;
+      } else {
+        await prisma.$transaction(async (tx) => {
+          await tx.emailOutbox.update({
+            where: { id: job.id },
+            data: {
+              status: "failed",
+              availableAt: new Date(Date.now() + retryDelayMs(attemptsAfterClaim)),
+              lastError: reason,
+            },
+          });
+          await settleNotificationState(tx, job.type, job.id, "failed", reason);
+        });
         failed += 1;
       }
     }
@@ -182,10 +219,44 @@ export async function processEmailOutbox(
  * because that is what it still is.
  */
 async function settleNotificationState(
+  client: EmailDbClient,
   type: string,
   jobId: string,
   outcome: "sent" | "failed",
   reason?: string | null,
+  providerMessageId?: string | null,
 ): Promise<void> {
-  if (type === "portfolio_inquiry") await markInquiryNotificationSettled(jobId, outcome, reason);
+  if (type === "portfolio_inquiry") await markInquiryNotificationSettled(jobId, outcome, reason, client);
+  if (type === "invoice_sent") await markInvoiceDeliverySettled(jobId, outcome, providerMessageId, reason, client);
+}
+
+async function isDeliveryStillValid(email: PreparedEmail): Promise<boolean> {
+  const guard = email.deliveryGuard;
+  if (!guard) return true;
+  if (guard.kind === "contract_signing") {
+    const activeLink = await prisma.contractReviewLink.findFirst({
+      where: {
+        signerId: guard.signerId,
+        tokenHash: guard.tokenHash,
+        type: "sign",
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+    return Boolean(activeLink);
+  }
+  if (guard.kind === "invoice_sent") {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: guard.invoiceId },
+      select: { status: true, publicTokenHash: true, sentSnapshot: true },
+    });
+    return Boolean(
+      invoice
+      && ["sent", "viewed", "overdue"].includes(invoice.status)
+      && invoice.publicTokenHash === guard.tokenHash
+      && invoice.sentSnapshot,
+    );
+  }
+  return false;
 }

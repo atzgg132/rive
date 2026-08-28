@@ -7,6 +7,7 @@ import {
   acquisitionSource,
   FUNNEL_DEFINITION_VERSION,
   INTERNAL_ACCOUNT_TYPES,
+  countsAsNativeDeadline,
   isMeaningfulProductEvent,
   isQualifiedUser,
   REAL_DATA_ORIGINS,
@@ -317,7 +318,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     const eligibleProjects = userProjects.filter((record) => within(record.createdAt, user.createdAt, 7) && Boolean(record.clientId) && eligibleClients.some((client) => client.id === record.clientId));
     const connectedProjectIds = new Set(eligibleProjects.map((project) => project.id));
     const connectedClientIds = new Set(eligibleClients.map((client) => client.id));
-    const nativeDeadline = eligibleProjects.some((project) => within(project.dueDate, user.createdAt, 7));
+    const nativeDeadline = eligibleProjects.some((project) => countsAsNativeDeadline(project));
     const nativeOutcome = nativeDeadline
       || userInvoices.some((invoice) => within(invoice.createdAt, user.createdAt, 7) && (connectedProjectIds.has(invoice.projectId || "") || connectedClientIds.has(invoice.clientId || "")))
       || userExpenses.some((expense) => within(expense.createdAt, user.createdAt, 7) && connectedProjectIds.has(expense.projectId || ""))

@@ -28,4 +28,4 @@ Each batch is transactional. A failed run may have completed earlier batches, bu
 
 `POST /api/cron/funnel-quality` is protected by the existing `Authorization: Bearer $CRON_SECRET` contract. It returns active threshold breaches, logs a structured payload, and returns HTTP 503 only for critical issues so the AWS job runner can surface a failed scheduled invocation. Warnings remain visible in the response, admin Reliability tab, and application logs without turning every data-quality warning into a job failure.
 
-The AWS EventBridge job is declared in `infrastructure/aws/jobs.tf` at 15-minute cadence for prod, test, and dev. It follows the existing `scheduled_jobs_enabled` infrastructure flag and should only be enabled after the environment's DNS and application health checks are green.
+The AWS EventBridge job is declared in `infrastructure/aws/jobs.tf` at 15-minute cadence for prod and dev. It follows the existing `scheduled_jobs_enabled` infrastructure flag and should only be enabled after the environment's DNS and application health checks are green.

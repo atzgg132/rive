@@ -2,7 +2,8 @@ import "server-only";
 
 import { prisma } from "@/utils/db";
 import { addDays, createNotification } from "@/utils/contracts";
-import { sendInvoiceReadyEmail } from "@/utils/email";
+import { buildInvoiceReadyEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { nextInvoiceNumber } from "@/utils/invoiceNumber";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
@@ -70,7 +71,7 @@ export async function processContractBilling(input: { userId?: string; contractI
     if (claimed.count !== 1) continue;
 
     try {
-      const invoice = await prisma.$transaction(async (tx) => {
+      const { invoice, outboxId } = await prisma.$transaction(async (tx) => {
         const invoiceNumber = await nextInvoiceNumber(tx, occurrence.contract.userId, "RIVE", now);
         const created = await tx.invoice.create({
           data: {
@@ -94,12 +95,17 @@ export async function processContractBilling(input: { userId?: string; contractI
         await tx.contractBillingOccurrence.update({ where: { id: occurrence.id }, data: { status: "draft_created", invoiceId: created.id, draftedAt: now, lastError: null } });
         await tx.contractPaymentPlanItem.update({ where: { id: item.id }, data: { status: "draft_created" } });
         await tx.contractEvent.create({ data: { contractId: occurrence.contract.id, eventType: "billing_draft_created", metadata: { occurrenceId: occurrence.id, invoiceId: created.id, triggerType: item.triggerType } } });
-        return created;
+        const invoiceReadyOutboxId = await enqueueEmail(buildInvoiceReadyEmail({ to: occurrence.contract.user.email, clientName: occurrence.contract.client.name, invoiceNumber: created.invoiceNumber, total: created.total.toString(), currency: created.currency, dueDate: created.dueDate }), tx);
+        return { invoice: created, outboxId: invoiceReadyOutboxId };
       });
       drafted += 1;
+      if (getEmailProvider() !== "disabled") {
+        await processEmailOutbox({ jobId: outboxId }).catch((mailError) => {
+          console.error("Immediate Agreement invoice-ready email attempt failed:", mailError);
+        });
+      }
       await recordProductEvent({ userId: occurrence.contract.userId, eventName: PRODUCT_EVENTS.invoiceCreated, module: "invoices", entityType: "invoice", entityId: invoice.id, dataOrigin: "user", properties: { generatedFrom: "agreement_billing" } });
       await createNotification({ userId: occurrence.contract.userId, type: "invoice_review", title: "Draft invoice ready for review", message: `${invoice.invoiceNumber} was generated from ${occurrence.contract.title}.`, href: `/workflow/revenue?invoiceId=${encodeURIComponent(invoice.id)}` }).catch(() => undefined);
-      await sendInvoiceReadyEmail({ to: occurrence.contract.user.email, clientName: occurrence.contract.client.name, invoiceNumber: invoice.invoiceNumber, total: invoice.total.toString(), currency: invoice.currency, dueDate: invoice.dueDate }).catch(() => undefined);
     } catch (error) {
       failed += 1;
       failures.push(occurrence.id);

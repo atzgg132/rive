@@ -75,3 +75,7 @@ export function isMeaningfulProductEvent(event: { eventName: string; properties:
 export function isRealDataEvent(event: { eventName: string; dataOrigin?: string | null }): boolean {
   return Boolean(event.dataOrigin && REAL_DATA_ORIGINS.has(event.dataOrigin) && REAL_DATA_EVENT_NAMES.has(event.eventName));
 }
+
+export function countsAsNativeDeadline(project: { dueDate: Date | string | null | undefined }): boolean {
+  return project.dueDate != null;
+}
