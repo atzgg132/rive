@@ -64,6 +64,7 @@ export function googleLoginAuthorizationUrl(state: string): string {
     scope: GOOGLE_LOGIN_SCOPES.join(" "),
     state,
     prompt: "select_account",
+    include_granted_scopes: "false",
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }

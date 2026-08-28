@@ -65,7 +65,7 @@ export const homeContent = {
     { eyebrow: "CLIENT", title: "A relationship, not a row.", body: "Briefs, projects, Agreements, invoices, expenses, and activity stay attached to the person they belong to.", metric: "One context" },
     { eyebrow: "WORK", title: "Delivery knows the promise.", body: "Projects and milestones carry dates, scope, cost, and client context forward without a second setup ritual.", metric: "No re-entry" },
     { eyebrow: "MONEY", title: "Billing remembers the work.", body: "Accepted terms can become draft invoices. Paid invoices and logged expenses become the financial view.", metric: "Contract to cash" },
-    { eyebrow: "TIME", title: "Dates stop hiding in tabs.", body: "Project deadlines and tasks share one calendar, with Google Calendar two-way sync and a private Apple Calendar feed.", metric: "One timeline" },
+    { eyebrow: "TIME", title: "Dates stop hiding in tabs.", body: "Project deadlines and tasks share one calendar, with a private Apple Calendar subscription feed.", metric: "One timeline" },
     { eyebrow: "MOMENTUM", title: "Start with what already exists.", body: "CSV and XLSX imports deduplicate records, rebuild relationships, and pause ambiguous matches for review.", metric: "Bring history" },
     { eyebrow: "PROOF", title: "The work sells the next work.", body: "Portfolio Studio turns selected projects into a public site with analytics and inbound enquiries.", metric: "Close the loop" },
   ],
@@ -135,7 +135,7 @@ export const homeContent = {
         id: "calendar-context",
         eyebrow: "04 / TIME",
         title: "The deadline lives where the work lives.",
-        body: "Project milestones and tasks appear on one calendar. Google Calendar syncs both ways; a private Apple Calendar feed carries Rive deadlines into the calendar you already check.",
+        body: "Project milestones and tasks appear on one calendar. A private Apple Calendar feed carries Rive deadlines into the calendar you already check.",
         visual: {
           kind: "calendar",
           props: {
@@ -201,7 +201,7 @@ export const homeContent = {
       { question: "Can I bring my existing data into Rive?", answer: "Yes. Import CSV or XLSX files for clients, projects, invoices, and expenses. Rive previews duplicates and relationships before anything is committed." },
       { question: "Is Rive open to everyone?", answer: "Yes. Rive is in open beta with open signup. You do not need an invitation, and access is free during beta." },
       { question: "Does Rive send contracts for e-signature?", answer: "Rive supports an Agreement workflow from composer to review, recorded acceptance, and linked billing. You still review every version and deliberate send." },
-      { question: "Which calendar integrations are live?", answer: "Google Calendar two-way sync is available after you connect it in Calendar. A private Apple Calendar subscription feed is also live." },
+      { question: "Which calendar integrations are live?", answer: "A private Apple Calendar subscription feed is live. Google Calendar is pending approval and is not presented as available." },
       { question: "Can Rive move money for me?", answer: "Not yet. Remit is in development. Today Rive records invoices, payments, expenses, and multi-currency context. Remit is how payouts will leave the workspace." },
       { question: "What happens to my data?", answer: "Your workspace data is yours. Rive does not sell it. We are building explicit export and portability into the product as the beta matures." },
     ],
