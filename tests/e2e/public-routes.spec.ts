@@ -215,14 +215,15 @@ test("registration password visibility control works for invited users", async (
   await expect(page.locator('input[type="text"]')).toHaveCount(2);
 });
 
-test("marketing does not claim Google Calendar is available", async ({ page }) => {
+test("marketing presents Google and Apple calendar as live", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Google Calendar" })).toHaveCount(0);
+  await expect(page.getByText("Google Calendar is pending approval")).toHaveCount(0);
+  await expect(page.getByText("Google Calendar two-way sync is available")).toBeVisible();
 
   await page.goto("/roadmap", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Apple Calendar feed", { exact: true })).toBeVisible();
+  await expect(page.getByText("Google Calendar two-way sync and a private Apple Calendar feed")).toBeVisible();
   await expect(page.getByText("activation analytics")).toHaveCount(0);
-  await expect(page.getByText("once Google approves the integration")).toBeVisible();
+  await expect(page.getByText("once Google approves the integration")).toHaveCount(0);
 });
 
 test("changelog and roadmap describe the open-beta product, not a private alpha", async ({ page }) => {

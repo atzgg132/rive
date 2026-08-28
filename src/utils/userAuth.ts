@@ -20,7 +20,14 @@ export function hashPassword(password: string): string {
   return `scrypt:${salt}:${hash}`;
 }
 
+export const GOOGLE_PLACEHOLDER_PASSWORD = "google-oauth:unusable";
+
+export function isGooglePlaceholderPassword(storedHash: string): boolean {
+  return storedHash.startsWith("google-oauth:");
+}
+
 export function verifyPassword(password: string, storedHash: string): boolean {
+  if (isGooglePlaceholderPassword(storedHash)) return false;
   try {
     const parts = storedHash.split(":");
     const isScrypt = parts[0] === "scrypt";
@@ -38,6 +45,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 }
 
 export function passwordNeedsUpgrade(storedHash: string): boolean {
+  if (isGooglePlaceholderPassword(storedHash)) return false;
   return !storedHash.startsWith("scrypt:");
 }
 

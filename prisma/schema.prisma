@@ -46,6 +46,7 @@ model User {
   name                        String?
   avatarUrl                   String?                @map("avatar_url")
   passwordHash                String                 @map("password_hash")
+  googleSubject               String?                @unique @map("google_subject")
   sessionVersion              Int                    @default(0) @map("session_version")
   plan                        String                 @default("free")
   emailVerifiedAt             DateTime?              @map("email_verified_at")

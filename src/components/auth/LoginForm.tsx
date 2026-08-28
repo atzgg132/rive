@@ -6,7 +6,9 @@ import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } fro
 import { Loader2 } from "lucide-react";
 import PasswordInput from "@/components/PasswordInput";
 import { resolveLoginDestination } from "@/utils/safeNextPath";
+import { googleLoginErrorMessage } from "@/utils/googleLogin";
 import { authFieldClassName, authQuietButtonClassName, authSubmitClassName } from "@/components/auth/authClasses";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export function LoginForm({
   initialEmail = "",
@@ -30,10 +32,19 @@ export function LoginForm({
   const [verificationRequired, setVerificationRequired] = useState(false);
   const alertRef = useRef<HTMLDivElement>(null);
   const hydrated = useSyncExternalStore(() => () => undefined, () => true, () => false);
+  const googleError = useSyncExternalStore(
+    () => () => undefined,
+    () => {
+      const code = new URLSearchParams(window.location.search).get("google_error");
+      return code ? googleLoginErrorMessage(code) : "";
+    },
+    () => "",
+  );
+  const shownError = error || googleError;
 
   useEffect(() => {
-    if (error) alertRef.current?.focus();
-  }, [error]);
+    if (shownError) alertRef.current?.focus();
+  }, [shownError]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -151,13 +162,14 @@ export function LoginForm({
         Sign in to pick it up.
       </BaseDialog.Description>
 
-      <form method="post" onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5" aria-busy={loading} data-testid="login-form" data-hydrated={hydrated ? "true" : "false"}>
-        {error ? (
-          <Alert ref={alertRef} variant="destructive" tabIndex={-1} className="text-sm outline-none" data-testid="login-alert">
-            {error}
+      <div className="mt-8">
+        {shownError ? (
+          <Alert ref={alertRef} variant="destructive" tabIndex={-1} className="mb-5 text-sm outline-none" data-testid="login-alert">
+            {shownError}
           </Alert>
         ) : null}
-
+        <GoogleSignInButton nextPath={nextPath} />
+      <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-5" aria-busy={loading} data-testid="login-form" data-hydrated={hydrated ? "true" : "false"}>
         <FormField label="Email address" htmlFor="login-email">
           <Input
             id="login-email"
@@ -212,6 +224,7 @@ export function LoginForm({
           )}
         </button>
       </form>
+      </div>
 
       <p className="mt-8 text-sm text-muted-foreground">
         New here?{" "}

@@ -82,14 +82,14 @@ Never ask for secrets to be pasted into chat.
 Rive is live in production as open beta. Marketing copy says so. The next
 slice is operational trust, not a greenfield ship.
 
-**On for users:** auth + open signup, onboarding, clients, projects, invoices
-(manual pay), expenses, native calendar + Apple ICS, portfolio studio +
+**On for users:** auth + open signup + Sign in with Google, onboarding, clients, projects, invoices
+(manual pay), expenses, native calendar + Google Calendar two-way sync + Apple ICS, portfolio studio +
 public `/p/[slug]`, Agreements (typed-name recorded acceptance;
 `CONTRACTS_ENABLED` is on), admin, funnel events, feedback widget, email
 outbox *code*.
 
-**Code exists, flags off:** Migration Engine v2, Google Calendar, and Zoho
-Books. Each flag is explicitly false in `.env.example` and SSM. Do not flip a
+**Code exists, flags off:** Migration Engine v2 and Zoho
+Books. Each remaining flag is explicitly false in `.env.example` and SSM. Do not flip a
 flag until that integration is verified live.
 
 **Documented-only:** QuickBooks / Xero / FreshBooks / Stripe / bank,
@@ -102,7 +102,8 @@ resume path; relationship/duplicate E2E and abandon UI also exist. Keep the
 flag off until a disposable-database hosted pass succeeds.
 
 **Google Calendar:** search-before-create and unified OAuth state exist.
-`GOOGLE_CALENDAR_ENABLED` is false in `.env.example` and SSM. Keep it off.
+`GOOGLE_CALENDAR_ENABLED` is true in SSM for `dev` and production. Sign in
+with Google (`openid email profile`) is separate from Calendar connect.
 
 **Zoho Books:** OAuth, org confirm, and sync APIs exist. There is no
 org-picker UI; sync still uses raw `fetch` in one path. `ZOHO_BOOKS_ENABLED`
@@ -160,8 +161,8 @@ EventBridge / SSM / Lambda only.
 - Revive the `test` branch
 - Redis (durable limiter is already Postgres: `src/utils/durableRateLimit.ts`)
 - Rebuild Learn / Careers / Press / docs marketing pages
-- Flip `MIGRATION_ENGINE_ENABLED`, `GOOGLE_CALENDAR_ENABLED`, or
-  `ZOHO_BOOKS_ENABLED` without a disposable-DB live pass
+- Flip `MIGRATION_ENGINE_ENABLED` or `ZOHO_BOOKS_ENABLED` without a
+  disposable-DB live pass
 
 ## 4. After operational trust, if asked
 
