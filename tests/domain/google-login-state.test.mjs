@@ -47,3 +47,15 @@ test("a Calendar connector state is not accepted as Google login state", () => {
   const signature = createHmac("sha256", process.env.SESSION_SECRET).update(payload).digest("base64url");
   assert.equal(verifyGoogleLoginState(`${payload}.${signature}`), null);
 });
+
+test("Google login does not request Calendar scopes or reuse prior grants", async () => {
+  process.env.GOOGLE_CALENDAR_CLIENT_ID = "test-client-id";
+  process.env.GOOGLE_CALENDAR_CLIENT_SECRET = "test-client-secret";
+  process.env.APP_URL = "https://www.rive.work";
+  const { googleLoginAuthorizationUrl, GOOGLE_LOGIN_SCOPES } = await import("../../src/utils/googleAuth.ts");
+  const url = new URL(googleLoginAuthorizationUrl("state-token"));
+  assert.equal(url.searchParams.get("scope"), GOOGLE_LOGIN_SCOPES.join(" "));
+  assert.equal(url.searchParams.get("include_granted_scopes"), "false");
+  assert.equal(url.searchParams.get("redirect_uri"), "https://www.rive.work/api/auth/google/callback");
+  assert.ok(!url.searchParams.get("scope")?.includes("calendar"));
+});

@@ -1,8 +1,8 @@
 # Connector launch setup
 
-Rive currently has two substantial onboarding ingestion foundations.
+Rive currently has two substantial onboarding ingestion foundations. Both stay disabled until their hosted verification gates pass:
 
-1. Google Calendar OAuth with encrypted token storage, calendar discovery, initial event import, ongoing synchronization, webhook renewal, and Rive-to-Google event updates. This is enabled in deployed environments when credentials are present.
+1. Google Calendar OAuth with encrypted token storage, calendar discovery, initial event import, ongoing synchronization, webhook renewal, and Rive-to-Google event updates. Launch still requires provider credentials and live read/write/webhook verification.
 2. Universal CSV migration for clients, projects, invoices, and expenses, including previews, deduplication, and relationship matching. Launch still requires a hosted disposable-database pass.
 
 The onboarding UI exposes Google Calendar only when its flag and credentials are present. CSV provider names describe supported export formats; they are not presented as direct API connections.
@@ -50,7 +50,7 @@ Google Cloud configuration:
 
 Sign in with Google is a separate OAuth request (`openid email profile` only). Calendar connect is a later, explicit step and requests Calendar scopes plus `openid` and `email` so the connected Google account can be identified. Do not add Calendar scopes to login.
 
-`GOOGLE_CALENDAR_ENABLED` is true for both the `dev` SSM environment (https://dev.rive.work) and production (https://www.rive.work).
+`GOOGLE_CALENDAR_ENABLED` is true for the `dev` SSM environment (https://dev.rive.work) and false for production. Do not flip production.
 8. While the consent screen is in testing, add every person who needs to test as a Google OAuth test user.
 9. Before broad launch, submit the consent screen for Google verification. Calendar event access is a sensitive scope and an unverified production app will be constrained.
 
