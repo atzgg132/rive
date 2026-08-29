@@ -416,6 +416,37 @@ textarea {
   .py-24 {
     padding-block: 4rem;
   }
+
+  /* On phones, lift authored type below 12px to 16px. A previous
+     wrapper-class floor made the same component 10px on one page and
+     12px on another; this applies everywhere and leaves desktop sizes
+     honest. Product-frame mocks keep their miniature type so they still
+     read as a desktop screenshot. */
+  :is(
+    .text-\[9px\],
+    .text-\[10px\],
+    .text-\[11px\],
+    .text-\[0\.45rem\],
+    .text-\[0\.46rem\],
+    .text-\[0\.48rem\],
+    .text-\[0\.5rem\],
+    .text-\[0\.54rem\],
+    .text-\[0\.55rem\],
+    .text-\[0\.56rem\],
+    .text-\[0\.58rem\],
+    .text-\[0\.6rem\],
+    .text-\[0\.62rem\],
+    .text-\[0\.64rem\],
+    .text-\[0\.66rem\],
+    .text-\[0\.68rem\],
+    .text-\[0\.6875rem\],
+    .text-\[0\.7rem\]
+  ):not([data-product-frame] *),
+  .rive-eyebrow,
+  .workspace-table th {
+    font-size: 1rem;
+    line-height: 1.375;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -439,13 +470,8 @@ textarea {
   }
 }
 
-/* The type floor used to be enforced here, by overriding what the markup said:
-   a `text-[10px]` class inside `.dashboard-overview`, `.portfolio-editor-panels`
-   or `.calendar-shell` actually rendered at 12px. Two problems with that. It
-   only worked on pages that remembered the wrapper class, so the same component
-   was 10px in one place and 12px in another; and it made the source lie, which
-   is why the sizes drifted in the first place. The markup now says `text-xs`
-   and means it. */
+/* Desktop type is honest: `text-xs` is 12px. Phone sizes below 12px are
+   lifted to 16px in the max-width 639px query above, not by wrapper class. */
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);

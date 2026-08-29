@@ -160,6 +160,51 @@ test.describe("marketing responsive guardrails", () => {
     expect(visibility!.signup, "signup was below the drawer fold").toBe(true);
   });
 
+  test("authored type below 12px becomes at least 16px at 390px", async ({ page }) => {
+    await installMarketingMocks(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const routes = ["/", "/contact", "/login", "/cookies"] as const;
+    for (const route of routes) {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.status(), `${route} returned an error document`).toBeLessThan(400);
+      await page.evaluate(() => document.fonts.ready);
+
+      const report = await page.evaluate(() => {
+        const SMALL_CLASS = /(?:^|\s)text-\[(?:9px|10px|11px|0\.(?:45|46|48|5|54|55|56|58|6|62|64|66|68|6875|7)rem)\](?:\s|$)/;
+        const skipTag = /^(SCRIPT|STYLE|NOSCRIPT|SVG|PATH|CANVAS|IMG|VIDEO|AUDIO)$/;
+        const under12: { routeHint: string; fontSize: number; className: string; text: string }[] = [];
+        const belowFloor: { routeHint: string; fontSize: number; className: string; text: string }[] = [];
+
+        const ownText = (node: Element) => Array.from(node.childNodes)
+          .filter((child) => child.nodeType === Node.TEXT_NODE)
+          .map((child) => (child.textContent || "").replace(/\s+/g, " ").trim())
+          .filter(Boolean)
+          .join(" ")
+          .slice(0, 80);
+
+        for (const node of document.body.querySelectorAll<HTMLElement>("*")) {
+          if (skipTag.test(node.tagName) || node.closest("svg") || node.closest("[data-product-frame]")) continue;
+          const style = getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden" || Number.parseFloat(style.opacity) === 0) continue;
+          if (style.clipPath === "inset(50%)" || node.classList.contains("sr-only")) continue;
+          const rect = node.getBoundingClientRect();
+          if (rect.width < 1 || rect.height < 1) continue;
+          const text = ownText(node);
+          const fontSize = Number.parseFloat(style.fontSize);
+          if (!Number.isFinite(fontSize)) continue;
+          const sample = { routeHint: "", fontSize, className: node.className.toString().slice(0, 160), text };
+          if (text && fontSize < 11.5) under12.push(sample);
+          if (SMALL_CLASS.test(node.className.toString()) && fontSize < 15.5) belowFloor.push({ ...sample, text: text || node.textContent?.trim().slice(0, 80) || "" });
+        }
+        return { under12, belowFloor };
+      });
+
+      expect(report.under12, `${route} still has type under 12px: ${JSON.stringify(report.under12.slice(0, 8))}`).toEqual([]);
+      expect(report.belowFloor, `${route} still has sub-12px classes under 16px: ${JSON.stringify(report.belowFloor.slice(0, 8))}`).toEqual([]);
+    }
+  });
+
   test("hash targets land below the fixed header", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/#agreement-context", { waitUntil: "load" });

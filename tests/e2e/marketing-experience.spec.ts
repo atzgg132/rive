@@ -638,21 +638,34 @@ test.describe("marketing experience", () => {
       if (request.resourceType() === "font") fontRequests.push(new URL(request.url()).pathname);
     });
 
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const documentResponse = await page.goto("/", { waitUntil: "domcontentloaded" });
+    const linkHeader = documentResponse?.headers().link ?? "";
+    expect(linkHeader).toContain("/fonts/outfit-marketing.woff2");
+    expect(linkHeader.toLowerCase()).toContain("rel=preload");
+    expect(linkHeader.toLowerCase()).toContain("fetchpriority=\"high\"");
+
     const preloadLinks = page.locator('head link[rel="preload"][as="font"]');
     await expect(preloadLinks).toHaveCount(2);
 
     const preloads = await preloadLinks.evaluateAll((links) =>
-      links.map((link) => ({
-        href: new URL((link as HTMLLinkElement).href).pathname,
-        type: (link as HTMLLinkElement).type,
-        crossOrigin: (link as HTMLLinkElement).crossOrigin,
-      })),
+      links.map((link) => {
+        const node = link as HTMLLinkElement;
+        return {
+          href: new URL(node.href).pathname,
+          type: node.type,
+          crossOrigin: node.crossOrigin,
+          fetchPriority: node.fetchPriority,
+        };
+      }),
     );
     expect(preloads).toEqual([
-      { href: "/fonts/outfit-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous" },
-      { href: "/fonts/jetbrains-mono-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous" },
+      { href: "/fonts/outfit-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous", fetchPriority: "high" },
+      { href: "/fonts/jetbrains-mono-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous", fetchPriority: "low" },
     ]);
+
+    const fontResponse = await page.request.get("/fonts/outfit-marketing.woff2");
+    expect(fontResponse.headers()["cache-control"]).toMatch(/max-age=31536000/);
+    expect(fontResponse.headers()["cache-control"]).toContain("immutable");
 
     const hero = page.locator("h1").first();
     await expect(hero).toBeVisible();
