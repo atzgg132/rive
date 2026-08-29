@@ -3,10 +3,39 @@ import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { AuroraGlow } from "@/components/marketing/AuroraGlow";
 import { GridField, NoiseOverlay } from "@/components/marketing/primitives";
+import { PRODUCTION_ORIGIN } from "@/lib/siteMetadata";
+
+type JsonLdNode =
+  | { "@type": "Organization"; "@id": string; name: string; url: string; logo: string }
+  | { "@type": "WebSite"; "@id": string; name: string; url: string; publisher: { "@id": string } };
+
+const structuredData: { "@context": string; "@graph": JsonLdNode[] } = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${PRODUCTION_ORIGIN}/#organization`,
+      name: "Rive",
+      url: PRODUCTION_ORIGIN,
+      logo: `${PRODUCTION_ORIGIN}/brand/rive-wordmark.svg`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${PRODUCTION_ORIGIN}/#website`,
+      name: "Rive",
+      url: PRODUCTION_ORIGIN,
+      publisher: { "@id": `${PRODUCTION_ORIGIN}/#organization` },
+    },
+  ],
+};
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div data-surface="marketing" className="marketing-root relative bg-[var(--surface-void)] text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <a
         href="#main-content"
         className="marketing-focus absolute left-4 top-4 z-[70] inline-flex -translate-y-[200%] rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground focus:translate-y-0 focus-visible:translate-y-0"

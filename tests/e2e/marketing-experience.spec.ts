@@ -762,6 +762,33 @@ test.describe("marketing experience", () => {
     ]));
   });
 
+  test("share and search head tags carry a real image and honest structured data", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const ogImageTag = page.locator('head meta[property="og:image"]');
+    const twitterImageTag = page.locator('head meta[name="twitter:image"]');
+    await expect(ogImageTag, "the homepage ships no og:image").toHaveCount(1);
+    await expect(twitterImageTag, "the homepage ships no twitter:image").toHaveCount(1);
+
+    const ogImage = await ogImageTag.getAttribute("content");
+    const twitterImage = await twitterImageTag.getAttribute("content");
+    expect(ogImage).toMatch(/^https?:\/\//);
+    expect(twitterImage).toMatch(/^https?:\/\//);
+
+    const image = await page.request.get(ogImage!);
+    expect(image.status(), `og:image did not serve: ${ogImage}`).toBe(200);
+    expect(image.headers()["content-type"]).toMatch(/^image\//);
+
+    const payloads = await page
+      .locator('script[type="application/ld+json"]')
+      .evaluateAll((nodes) => nodes.map((node) => node.textContent ?? ""));
+    expect(payloads, "the homepage ships no JSON-LD").toHaveLength(1);
+    const graph = (JSON.parse(payloads[0]) as { "@graph": { "@type": string }[] })["@graph"];
+    expect(graph.map((node) => node["@type"])).toEqual(
+      expect.arrayContaining(["Organization", "WebSite"]),
+    );
+  });
+
   test("marketing headings form a valid outline", async ({ page }) => {
     for (const route of ["/", "/about", "/contact", "/privacy", "/changelog", "/roadmap"]) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
