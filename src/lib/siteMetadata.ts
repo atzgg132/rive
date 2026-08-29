@@ -1,6 +1,5 @@
-/* Canonicals and structured-data identity name production even from a dev
-   deploy, or dev.rive.work competes with production in search results. Only
-   metadataBase follows the running host, so relative asset paths resolve. */
+/* Structured data names production from every environment. A dev deploy that
+   identified itself would compete with production in search results. */
 export const PRODUCTION_ORIGIN = "https://www.rive.work";
 
 export const deploymentOrigin = process.env.APP_URL || PRODUCTION_ORIGIN;
