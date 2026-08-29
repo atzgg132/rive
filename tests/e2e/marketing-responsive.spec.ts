@@ -113,10 +113,65 @@ test.describe("marketing responsive guardrails", () => {
         overflow: style.textOverflow,
         scrollWidth: node.scrollWidth,
         clientWidth: node.clientWidth,
+        lineBoxes: node.getClientRects().length,
       };
     });
     expect(box.overflow, "AGREEMENT should wrap instead of ellipsizing").not.toBe("ellipsis");
     expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth + 1);
+    expect(box.lineBoxes, "AGREEMENT split mid-word").toBe(1);
+  });
+
+  test("the mobile hero keeps a stepped type scale and one-line pipeline labels", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+
+    const geometry = await page.evaluate(() => {
+      const hero = document.querySelector("[data-testid='marketing-hero']");
+      const headline = hero?.querySelector("h1");
+      const lastLine = headline?.querySelector(":scope > span:last-child");
+      const body = hero?.querySelector(".marketing-hero-body");
+      const proof = hero?.querySelector(".marketing-hero-proof > span");
+      const cta = hero?.querySelector("a[href='/register']");
+      const labels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"].map((label) => {
+        const node = document.querySelector(`[data-hero-stage-label="${label}"]`);
+        if (!node) return { label, found: false as const };
+        return {
+          label,
+          found: true as const,
+          size: Number.parseFloat(getComputedStyle(node).fontSize),
+          lineBoxes: node.getClientRects().length,
+          overflow: getComputedStyle(node).textOverflow,
+          scrollWidth: node.scrollWidth,
+          clientWidth: node.clientWidth,
+        };
+      });
+      return {
+        h1Size: headline ? Number.parseFloat(getComputedStyle(headline).fontSize) : Number.NaN,
+        h1Lines: headline ? Array.from(headline.querySelectorAll(":scope > span")).length : 0,
+        lastLineBoxes: lastLine ? lastLine.getClientRects().length : 0,
+        bodySize: body ? Number.parseFloat(getComputedStyle(body).fontSize) : Number.NaN,
+        proofSize: proof ? Number.parseFloat(getComputedStyle(proof).fontSize) : Number.NaN,
+        ctaSize: cta ? Number.parseFloat(getComputedStyle(cta).fontSize) : Number.NaN,
+        labels,
+      };
+    });
+
+    expect(geometry.h1Size).toBeGreaterThanOrEqual(24);
+    expect(geometry.h1Size, `headline ${geometry.h1Size}px is still the desktop clamp`).toBeLessThan(34);
+    expect(geometry.h1Lines).toBe(3);
+    expect(geometry.lastLineBoxes, "you as middleware. wrapped onto a fourth line").toBe(1);
+    expect(geometry.bodySize).toBeGreaterThanOrEqual(15.5);
+    expect(geometry.bodySize).toBeLessThan(17.5);
+    expect(geometry.proofSize, "proof chips matched body size").toBeLessThan(geometry.bodySize - 1);
+    expect(geometry.ctaSize).toBeGreaterThanOrEqual(15.5);
+    for (const row of geometry.labels) {
+      expect(row.found, `missing ${row.label}`).toBe(true);
+      expect(row.size, `${row.label} ${row.size}px was lifted to body size`).toBeLessThan(14);
+      expect(row.overflow, `${row.label} ellipsized`).not.toBe("ellipsis");
+      expect(row.lineBoxes, `${row.label} split mid-word`).toBe(1);
+      expect(row.scrollWidth, `${row.label} overflowed`).toBeLessThanOrEqual(row.clientWidth + 1);
+    }
   });
 
   test("mobile drawer keeps Log in and signup in view without scrolling", async ({ page }) => {
@@ -184,7 +239,7 @@ test.describe("marketing responsive guardrails", () => {
           .slice(0, 80);
 
         for (const node of document.body.querySelectorAll<HTMLElement>("*")) {
-          if (skipTag.test(node.tagName) || node.closest("svg") || node.closest("[data-product-frame]")) continue;
+          if (skipTag.test(node.tagName) || node.closest("svg") || node.closest("[data-product-frame]") || node.closest("[data-hero-stage-label]")) continue;
           const style = getComputedStyle(node);
           if (style.display === "none" || style.visibility === "hidden" || Number.parseFloat(style.opacity) === 0) continue;
           if (style.clipPath === "inset(50%)" || node.classList.contains("sr-only")) continue;

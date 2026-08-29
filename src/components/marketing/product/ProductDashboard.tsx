@@ -52,7 +52,7 @@ export function ProductDashboard({ title, metrics, activity }: ProductDashboardP
           </div>
           <SvgChart values={[22, 28, 25, 42, 51, 47, 67, 74, 70, 88]} label="Revenue rising over six months" className="mt-2 w-full" />
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="hidden rounded-xl border border-slate-200 bg-white p-3 lg:block">
           <div className="flex items-center gap-1.5">
             <Activity className="h-3 w-3 text-blue-600" />
             <p className="text-[0.62rem] font-bold text-slate-800">Recent activity</p>

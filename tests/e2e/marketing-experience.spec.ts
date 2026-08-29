@@ -59,6 +59,13 @@ function viewportMinHeight(value: string) {
   return /^(100vh|100svh|100dvh|100lvh)$/.test(value.trim());
 }
 
+function isSeventyVhMinHeight(value: string, viewportHeight: number) {
+  if (/\b70vh\b/.test(value.trim())) return true;
+  const px = Number.parseFloat(value);
+  if (!Number.isFinite(px) || px === 0) return false;
+  return Math.abs(px - viewportHeight * 0.7) < 1;
+}
+
 /** Inner mock rows must not stay at opacity 0 — chrome alone is not a pass. */
 async function stuckHiddenRows(scene: Locator) {
   return scene.evaluate((node) => {
@@ -613,6 +620,7 @@ test.describe("marketing experience", () => {
     const scene = page.getByTestId("scrollytelling-scene");
     await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
     await page.locator("#problem").evaluate((node) => node.scrollIntoView({ block: "start" }));
+    await expect(page.getByTestId("problem-duties")).toBeVisible();
     await expect(scene.getByTestId("problem-disconnection")).toBeVisible();
     await expect(scene.locator("[data-product-frame]")).toHaveCount(0);
 
@@ -624,6 +632,7 @@ test.describe("marketing experience", () => {
       product: await scene.locator("[data-product-frame]").count(),
       problem: await scene.getByTestId("problem-disconnection").count(),
     })).toEqual({ product: 1, problem: 0 });
+    await expect(scene.getByText("Recent activity")).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/", { waitUntil: "load" });
@@ -631,6 +640,45 @@ test.describe("marketing experience", () => {
     await expect(page.getByTestId("marketing-problem").getByTestId("problem-disconnection")).toBeVisible();
     const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     expect(mobileOverflow).toBe(false);
+  });
+
+  test("mobile scrollytelling is one claim and one compact picture per beat", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/#product", { waitUntil: "load" });
+
+    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+    await expect(page.getByTestId("scrollytelling-scene")).toBeHidden();
+    await expect(page.getByTestId("problem-duties")).toBeHidden();
+    await expect(page.getByTestId("marketing-problem").getByText("Rebuild the client")).toBeHidden();
+    await expect(page.getByTestId("marketing-problem").getByTestId("problem-disconnection")).toBeVisible();
+    await expect(page.getByTestId("marketing-problem").getByText("Northstar Labs")).toBeVisible();
+    await expect(page.getByTestId("marketing-problem").getByText("No project attached")).toBeHidden();
+
+    const chapters = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll<HTMLElement>("[data-chapter-index]")).map((node) => {
+        const minHeight = getComputedStyle(node).minHeight;
+        return {
+          index: node.dataset.chapterIndex,
+          minHeight,
+          minPx: Number.parseFloat(minHeight) || 0,
+          vh: window.innerHeight,
+        };
+      });
+    });
+    expect(chapters).toHaveLength(7);
+    for (const cut of chapters) {
+      expect(
+        isSeventyVhMinHeight(cut.minHeight, cut.vh),
+        `chapter ${cut.index} still has a 70vh shutter (${cut.minHeight})`,
+      ).toBe(false);
+    }
+
+    const first = page.locator('[data-chapter-index="1"]');
+    await first.evaluate((node) => node.scrollIntoView({ block: "start" }));
+    await expect(first.locator("[data-product-frame]")).toBeVisible();
+    await expect(first.getByText("Revenue collected")).toBeVisible();
+    await expect(first.getByText("Recent activity")).toBeHidden();
   });
 
   for (const viewport of [

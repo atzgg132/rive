@@ -42,7 +42,7 @@ export function MarketingHome() {
             </div>
             <div aria-label="Proof points" className="marketing-hero-proof mt-5 flex flex-col items-center gap-2 sm:mt-8 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-6 sm:gap-y-3">
               {homeContent.hero.proof.map((item) => (
-                <span key={item} className="inline-flex items-center gap-2 font-mono text-[0.64rem] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+                <span key={item} className="inline-flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5 text-success" aria-hidden="true" />
                   {item}
                 </span>

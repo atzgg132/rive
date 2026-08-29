@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export function GlowingBadge({ children, pulse = false, className }: { children: ReactNode; pulse?: boolean; className?: string }) {
   return (
-    <span className={cn("relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary", className)}>
+    <span className={cn("relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary", className)}>
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-cyan-300/[0.08] to-transparent" />
       {pulse ? <span className="relative h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(96,165,250,0.9)] motion-safe:animate-pulse" /> : null}
       <span className="relative">{children}</span>

@@ -95,7 +95,7 @@ export function HeroPipeline() {
                 <span className="min-w-0 w-full">
                   <span
                     data-hero-stage-label={stage.label}
-                    className={`block whitespace-normal break-all font-mono text-[0.56rem] font-bold uppercase leading-none tracking-[0.06em] sm:truncate sm:break-normal sm:leading-normal sm:tracking-[0.16em] ${
+                    className={`block max-w-full whitespace-nowrap font-mono text-xs font-bold uppercase leading-none tracking-[0.04em] sm:truncate sm:leading-normal sm:tracking-[0.16em] ${
                       selected ? "text-primary" : "text-muted-foreground"
                     }`}
                   >

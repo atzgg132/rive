@@ -85,12 +85,15 @@ export function ScrollytellingSection({
           <span id="features" className="absolute top-0" aria-hidden="true" />
           <div
             data-testid="marketing-problem"
-            className="py-16 sm:py-20"
+            className="py-10 sm:py-12 lg:py-20"
           >
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-warning">{problem.eyebrow}</p>
-            <h2 className="mt-4 max-w-xl text-[1.85rem] font-black leading-[1.08] tracking-[-0.045em] text-foreground sm:text-4xl">{problem.title}</h2>
-            <p className="mt-4 max-w-lg text-[0.95rem] leading-7 text-muted-foreground">{problem.body}</p>
-            <ol className="mt-6 max-w-lg divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
+            <h2 className="mt-4 max-w-xl text-[1.65rem] font-black leading-[1.08] tracking-[-0.045em] text-foreground lg:text-4xl">{problem.title}</h2>
+            <p className="mt-4 max-w-lg text-sm leading-6 text-muted-foreground lg:text-[0.95rem] lg:leading-7">{problem.body}</p>
+            <ol
+              data-testid="problem-duties"
+              className="mt-6 hidden max-w-lg divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)] lg:block"
+            >
               {problem.duties.map((duty) => (
                 <li key={duty.label} className="grid grid-cols-[2rem_1fr] gap-3 py-2.5">
                   <span className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{duty.label}</span>
@@ -101,8 +104,8 @@ export function ScrollytellingSection({
                 </li>
               ))}
             </ol>
-            <p className="mt-6 max-w-lg text-lg font-black tracking-[-0.035em] text-foreground sm:text-xl">{problem.close}</p>
-            <div className="scrollytelling-inline-visual mt-9">
+            <p className="mt-6 max-w-lg text-base font-black tracking-[-0.035em] text-foreground lg:text-xl">{problem.close}</p>
+            <div className="scrollytelling-inline-visual mt-6 lg:mt-9">
               <ProblemDisconnection {...(problem.visual.props as unknown as ProblemDisconnectionProps)} />
             </div>
           </div>
@@ -115,12 +118,12 @@ export function ScrollytellingSection({
             ref={(node) => { chapterRefs.current[index + 1] = node; }}
             data-chapter-index={index + 1}
             data-active={activeIndex === index + 1 ? "true" : "false"}
-            className={cn("flex min-h-[70vh] scroll-mt-[5.5rem] flex-col justify-center py-14 transition-opacity duration-200", reduceMotion || activeIndex === index + 1 ? "opacity-100" : "lg:opacity-30")}
+            className={cn("flex scroll-mt-[5.5rem] flex-col py-8 transition-opacity duration-200 lg:min-h-[70vh] lg:justify-center lg:py-14", reduceMotion || activeIndex === index + 1 ? "opacity-100" : "lg:opacity-30")}
           >
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary">{index === 0 ? homeContent.scrolly.eyebrow : chapter.eyebrow}</p>
-            <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.045em] text-foreground sm:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
-            <p className="mt-6 max-w-lg text-base leading-8 text-muted-foreground">{chapter.body}</p>
-            <DeferredProductScene className="scrollytelling-inline-visual mt-9" sceneKey={chapter.id} visual={chapter.visual} />
+            <h3 className="mt-3 max-w-xl text-3xl font-black leading-[1.02] tracking-[-0.045em] text-foreground lg:mt-5 lg:text-4xl xl:text-5xl">{index === 0 ? homeContent.scrolly.title : chapter.title}</h3>
+            <p className="mt-4 max-w-lg text-sm leading-6 text-muted-foreground lg:mt-6 lg:text-base lg:leading-8">{chapter.body}</p>
+            <DeferredProductScene className="scrollytelling-inline-visual mt-6 lg:mt-9" sceneKey={chapter.id} visual={chapter.visual} />
           </article>
         ))}
         {/* Sticky scene unsticks when this column's bottom hits the fold.

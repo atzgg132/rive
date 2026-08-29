@@ -37,7 +37,7 @@ export function ProductCalendar({ month, days, events }: ProductCalendarProps) {
             </div>
           ))}
         </div>
-        <div className="relative grid h-64 grid-cols-5">
+        <div className="relative grid h-44 grid-cols-5 lg:h-64">
           {days.map((day, dayIndex) => (
             <div key={day} className={`relative ${dayIndex ? "border-l border-slate-200" : ""}`}>
               {Array.from({ length: 8 }, (_, index) => (
@@ -71,7 +71,7 @@ export function ProductCalendar({ month, days, events }: ProductCalendarProps) {
           </div>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[0.55rem] text-blue-800">
+      <div className="mt-3 hidden items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[0.55rem] text-blue-800 lg:flex">
         <span className="font-bold">Apple Calendar feed</span>
         <span className="rounded-full bg-white px-2 py-1 font-mono text-[0.45rem] font-bold uppercase tracking-[0.1em]">Subscribed</span>
       </div>

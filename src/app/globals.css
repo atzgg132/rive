@@ -441,11 +441,58 @@ textarea {
     .text-\[0\.68rem\],
     .text-\[0\.6875rem\],
     .text-\[0\.7rem\]
-  ):not([data-product-frame] *),
+  ):not([data-product-frame] *):not([data-hero-stage-label]),
   .rive-eyebrow,
   .workspace-table th {
     font-size: 1rem;
     line-height: 1.375;
+  }
+
+  /* Phone hero type scale. The desktop clamp is a 94px poster; on a 390px
+     screen that wraps the last line and the 16px type-floor makes proof and
+     CLIENT→PROOF the same size as the body. Keep the centered layout. */
+  section.marketing-hero h1 {
+    font-size: clamp(1.625rem, 1.15rem + 3.2vw, 2.125rem);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+  }
+
+  section.marketing-hero .marketing-hero-body {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  section.marketing-hero .marketing-hero-ctas a {
+    font-size: 1rem;
+  }
+
+  section.marketing-hero .marketing-hero-proof > span {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+  }
+
+  section.marketing-hero .marketing-hero-rail {
+    width: calc(100% + 2rem);
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+
+  .hero-pipeline [data-hero-stage-label] {
+    overflow: hidden;
+    font-size: 0.75rem;
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-overflow: clip;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
+@media (max-width: 359px) {
+  .hero-pipeline [data-hero-stage-label] {
+    font-size: 0.625rem;
   }
 }
 

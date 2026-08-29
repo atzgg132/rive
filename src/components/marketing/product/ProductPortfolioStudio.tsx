@@ -14,7 +14,7 @@ export function ProductPortfolioStudio(props: ProductPortfolioStudioProps) {
   return (
     <ProductFrame title="Portfolio Studio" eyebrow="Proof">
       <div className="grid gap-3 lg:grid-cols-[.62fr_1.38fr]">
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="hidden rounded-xl border border-slate-200 bg-white p-3 lg:block">
           <p className="font-mono text-[0.5rem] font-bold uppercase tracking-[0.12em] text-slate-600">Sections</p>
           <div className="mt-3 grid gap-2">
             {["Identity", "Selected work", "Services", "About", "Contact"].map((item, index) => (
