@@ -16,7 +16,11 @@ ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 ENV SESSION_SECRET=build-only-session-secret
 ENV CALENDAR_ENCRYPTION_KEY=build-only-calendar-key
 ENV CRON_SECRET=build-only-cron-secret
-ENV APP_URL=http://127.0.0.1:3000
+# metadataBase resolves at prerender, so this origin is baked into the marketing
+# HTML and the runner's env file cannot rewrite it. A deploy has to pass its own
+# public origin or every share card points crawlers at localhost.
+ARG APP_URL=http://127.0.0.1:3000
+ENV APP_URL=$APP_URL
 COPY --from=build-dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

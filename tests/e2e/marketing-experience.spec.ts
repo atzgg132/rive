@@ -775,6 +775,18 @@ test.describe("marketing experience", () => {
     expect(ogImage).toMatch(/^https?:\/\//);
     expect(twitterImage).toMatch(/^https?:\/\//);
 
+    /* metadataBase resolves while the page prerenders, so a build that bakes a
+       fixed origin ships share tags pointing away from the site serving them.
+       CI bakes 127.0.0.1 while Playwright drives localhost, so the two loopback
+       spellings of one host fold together. */
+    const servingOrigin = (value: string) => {
+      const { protocol, hostname, port } = new URL(value);
+      return `${protocol}//${hostname === "localhost" ? "127.0.0.1" : hostname}:${port}`;
+    };
+    const pageOrigin = servingOrigin(page.url());
+    expect(servingOrigin(ogImage!), "og:image points off the serving origin").toBe(pageOrigin);
+    expect(servingOrigin(twitterImage!), "twitter:image points off the serving origin").toBe(pageOrigin);
+
     const image = await page.request.get(ogImage!);
     expect(image.status(), `og:image did not serve: ${ogImage}`).toBe(200);
     expect(image.headers()["content-type"]).toMatch(/^image\//);
