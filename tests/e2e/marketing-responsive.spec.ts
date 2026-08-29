@@ -131,7 +131,7 @@ test.describe("marketing responsive guardrails", () => {
       const headline = hero?.querySelector("h1");
       const lastLine = headline?.querySelector(":scope > span:last-child");
       const body = hero?.querySelector(".marketing-hero-body");
-      const proof = hero?.querySelector(".marketing-hero-proof > span");
+      const eyebrow = hero?.querySelector(".hero-eyebrow");
       const cta = hero?.querySelector("a[href='/register']");
       const labels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"].map((label) => {
         const node = document.querySelector(`[data-hero-stage-label="${label}"]`);
@@ -151,19 +151,20 @@ test.describe("marketing responsive guardrails", () => {
         h1Lines: headline ? Array.from(headline.querySelectorAll(":scope > span")).length : 0,
         lastLineBoxes: lastLine ? lastLine.getClientRects().length : 0,
         bodySize: body ? Number.parseFloat(getComputedStyle(body).fontSize) : Number.NaN,
-        proofSize: proof ? Number.parseFloat(getComputedStyle(proof).fontSize) : Number.NaN,
+        eyebrowSize: eyebrow ? Number.parseFloat(getComputedStyle(eyebrow).fontSize) : Number.NaN,
         ctaSize: cta ? Number.parseFloat(getComputedStyle(cta).fontSize) : Number.NaN,
         labels,
       };
     });
 
-    expect(geometry.h1Size).toBeGreaterThanOrEqual(24);
-    expect(geometry.h1Size, `headline ${geometry.h1Size}px is still the desktop clamp`).toBeLessThan(34);
+    expect(geometry.h1Size).toBeGreaterThanOrEqual(28);
+    expect(geometry.h1Size, `headline ${geometry.h1Size}px is still the desktop clamp`).toBeLessThan(38);
     expect(geometry.h1Lines).toBe(3);
     expect(geometry.lastLineBoxes, "you as middleware. wrapped onto a fourth line").toBe(1);
     expect(geometry.bodySize).toBeGreaterThanOrEqual(15.5);
     expect(geometry.bodySize).toBeLessThan(17.5);
-    expect(geometry.proofSize, "proof chips matched body size").toBeLessThan(geometry.bodySize - 1);
+    expect(geometry.eyebrowSize, "OPEN BETA matched body size").toBeLessThan(geometry.bodySize - 1);
+    expect(geometry.eyebrowSize).toBeGreaterThanOrEqual(11.5);
     expect(geometry.ctaSize).toBeGreaterThanOrEqual(15.5);
     for (const row of geometry.labels) {
       expect(row.found, `missing ${row.label}`).toBe(true);
