@@ -1,7 +1,7 @@
 param(
   [int]$LocalPort = 5433,
   [string]$Region = "ap-south-1",
-  [ValidateSet("dev", "migrate", "status", "smoke", "cleanup-smoke", "inspect-smoke", "seed-portfolio")]
+  [ValidateSet("dev", "migrate", "status", "smoke", "cleanup-smoke", "inspect-smoke", "seed-portfolio", "seed-launch-film", "delete-launch-film")]
   [string]$Action = "dev"
 )
 
@@ -146,6 +146,23 @@ try {
     "cleanup-smoke" { node scripts/cleanup-contract-smoke.mjs }
     "inspect-smoke" { node scripts/inspect-contract-smoke.mjs }
     "seed-portfolio" { node scripts/seed-portfolio-media.mjs --email=atzgg132@gmail.com --apply }
+    "seed-launch-film" {
+      if (-not $env:LAUNCH_FILM_DEMO_EMAIL) {
+        throw "Set LAUNCH_FILM_DEMO_EMAIL to the dedicated launch-film account before seeding."
+      }
+      $seedArgs = @("scripts/seed-launch-film-demo.mjs", "--email=$($env:LAUNCH_FILM_DEMO_EMAIL)")
+      if ($env:LAUNCH_FILM_SEED_APPLY -eq "1") { $seedArgs += "--apply" }
+      if ($env:LAUNCH_FILM_SEED_STATE) { $seedArgs += "--state=$($env:LAUNCH_FILM_SEED_STATE)" }
+      node @seedArgs
+    }
+    "delete-launch-film" {
+      if (-not $env:LAUNCH_FILM_DEMO_EMAIL) {
+        throw "Set LAUNCH_FILM_DEMO_EMAIL to the dedicated launch-film account before deleting."
+      }
+      $deleteArgs = @("scripts/delete-launch-film-demo.mjs", "--email=$($env:LAUNCH_FILM_DEMO_EMAIL)")
+      if ($env:LAUNCH_FILM_SEED_APPLY -eq "1") { $deleteArgs += "--apply" }
+      node @deleteArgs
+    }
   }
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } finally {

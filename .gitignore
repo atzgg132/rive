@@ -36,6 +36,17 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+.env.launch-film
+
+# launch film: auth, generated captures, audio drafts, and renders stay local
+video/launch-film/.auth/
+video/launch-film/renders/
+video/launch-film/captures/
+video/launch-film/public/captures/
+video/launch-film/audio/generated/
+video/launch-film/audio/mix/
+video/launch-film/out/
+video/launch-film/node_modules/
 
 # vercel
 .vercel
