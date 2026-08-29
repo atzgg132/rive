@@ -168,6 +168,7 @@ test.describe("marketing responsive guardrails", () => {
     expect(geometry.ctaSize).toBeGreaterThanOrEqual(15.5);
     for (const row of geometry.labels) {
       expect(row.found, `missing ${row.label}`).toBe(true);
+      if (!row.found) continue;
       expect(row.size, `${row.label} ${row.size}px was lifted to body size`).toBeLessThan(14);
       expect(row.overflow, `${row.label} ellipsized`).not.toBe("ellipsis");
       expect(row.lineBoxes, `${row.label} split mid-word`).toBe(1);
