@@ -50,19 +50,121 @@ export function acquisitionSource(user: Pick<QualificationUser, "attribution">):
   return user.attribution?.firstTouchSource || user.attribution?.lastTouchSource || user.attribution?.referralSource || "uncaptured";
 }
 
-export function isQualifiedUser(user: QualificationUser): boolean {
-  if (user.accountType && INTERNAL_ACCOUNT_TYPES.has(user.accountType)) return false;
+export type QualificationBlocker =
+  | "internal"
+  | "email_not_ready"
+  | "onboarding_incomplete"
+  | "missing_business_type"
+  | "missing_profession"
+  | "missing_goal"
+  | "missing_starting_path"
+  | "uncaptured_source";
+
+export function qualificationBlockers(user: QualificationUser): QualificationBlocker[] {
+  const blockers: QualificationBlocker[] = [];
+  if (user.accountType && INTERNAL_ACCOUNT_TYPES.has(user.accountType)) blockers.push("internal");
   const onboarding = isRecord(user.onboardingData) ? user.onboardingData : {};
   const emailReady = !user.emailVerificationRequiredAt || Boolean(user.emailVerifiedAt);
-  return emailReady
-    && ["complete", "skipped"].includes(user.onboardingStatus)
-    && Boolean(user.businessType?.trim())
-    && Boolean(user.profession?.trim())
-    && typeof onboarding.goal === "string"
-    && Boolean(onboarding.goal.trim())
-    && typeof onboarding.startingPath === "string"
-    && Boolean(onboarding.startingPath.trim())
-    && acquisitionSource(user) !== "uncaptured";
+  if (!emailReady) blockers.push("email_not_ready");
+  if (!["complete", "skipped"].includes(user.onboardingStatus)) blockers.push("onboarding_incomplete");
+  if (!user.businessType?.trim()) blockers.push("missing_business_type");
+  if (!user.profession?.trim()) blockers.push("missing_profession");
+  if (typeof onboarding.goal !== "string" || !onboarding.goal.trim()) blockers.push("missing_goal");
+  if (typeof onboarding.startingPath !== "string" || !onboarding.startingPath.trim()) blockers.push("missing_starting_path");
+  if (acquisitionSource(user) === "uncaptured") blockers.push("uncaptured_source");
+  return blockers;
+}
+
+export function isQualifiedUser(user: QualificationUser): boolean {
+  return qualificationBlockers(user).length === 0;
+}
+
+export const ACTIVATION_WINDOW_DAYS = 7;
+
+export function withinDays(date: Date | string | null | undefined, start: Date, days: number): boolean {
+  if (date == null) return false;
+  const time = date instanceof Date ? date.getTime() : new Date(date).getTime();
+  if (!Number.isFinite(time)) return false;
+  return time >= start.getTime() && time <= start.getTime() + days * 24 * 60 * 60 * 1000;
+}
+
+export type ActivationFacts = {
+  signupAt: Date;
+  clients: Array<{ id: string; createdAt: Date }>;
+  projects: Array<{ id: string; clientId: string | null; dueDate: Date | string | null; createdAt: Date }>;
+  invoices: Array<{ projectId: string | null; clientId: string | null; createdAt: Date }>;
+  expenses: Array<{ projectId: string | null; createdAt: Date }>;
+  calendarEvents: Array<{ projectId: string | null; clientId: string | null; createdAt: Date }>;
+  importJobs: Array<{ completedAt: Date | null; createdAt: Date; unresolvedCount: number; records: Array<{ targetType: string }> }>;
+  portfolios: Array<{ publishedAt: Date | null; content: unknown }>;
+};
+
+export type ActivationBlocker =
+  | "no_client_in_window"
+  | "no_linked_project_in_window"
+  | "no_connected_outcome"
+  | "migration_incomplete"
+  | "portfolio_incomplete";
+
+export type ActivationPath = "native" | "migration" | "portfolio";
+
+export function evaluateActivation(facts: ActivationFacts): {
+  activated: boolean;
+  native: boolean;
+  migration: boolean;
+  portfolio: boolean;
+  paths: ActivationPath[];
+  blockers: ActivationBlocker[];
+} {
+  const start = facts.signupAt;
+  const eligibleClients = facts.clients.filter((record) => withinDays(record.createdAt, start, ACTIVATION_WINDOW_DAYS));
+  const eligibleProjects = facts.projects.filter((record) => (
+    withinDays(record.createdAt, start, ACTIVATION_WINDOW_DAYS)
+    && Boolean(record.clientId)
+    && eligibleClients.some((client) => client.id === record.clientId)
+  ));
+  const connectedProjectIds = new Set(eligibleProjects.map((project) => project.id));
+  const connectedClientIds = new Set(eligibleClients.map((client) => client.id));
+  const nativeDeadline = eligibleProjects.some((project) => countsAsNativeDeadline(project));
+  const nativeOutcome = nativeDeadline
+    || facts.invoices.some((invoice) => withinDays(invoice.createdAt, start, ACTIVATION_WINDOW_DAYS) && (connectedProjectIds.has(invoice.projectId || "") || connectedClientIds.has(invoice.clientId || "")))
+    || facts.expenses.some((expense) => withinDays(expense.createdAt, start, ACTIVATION_WINDOW_DAYS) && connectedProjectIds.has(expense.projectId || ""))
+    || facts.calendarEvents.some((event) => withinDays(event.createdAt, start, ACTIVATION_WINDOW_DAYS) && (connectedProjectIds.has(event.projectId || "") || connectedClientIds.has(event.clientId || "")));
+  const native = eligibleClients.length > 0 && eligibleProjects.length > 0 && nativeOutcome;
+  const migration = facts.importJobs.some((job) => (
+    withinDays(job.completedAt || job.createdAt, start, ACTIVATION_WINDOW_DAYS)
+    && job.unresolvedCount === 0
+    && new Set(job.records.map((record) => record.targetType)).size >= 2
+  ));
+  const realProjectIds = new Set(facts.projects.map((project) => `project-${project.id}`));
+  const portfolio = facts.portfolios.some((item) => {
+    if (!withinDays(item.publishedAt, start, ACTIVATION_WINDOW_DAYS)) return false;
+    const content = isRecord(item.content) ? item.content : {};
+    const contact = typeof content.contactEmail === "string" && Boolean(content.contactEmail.trim());
+    const projectsInPortfolio = Array.isArray(content.projects) && content.projects.some((project) => (
+      isRecord(project)
+      && typeof project.id === "string"
+      && realProjectIds.has(project.id)
+      && project.visibility !== "private"
+      && typeof project.title === "string"
+      && Boolean(project.title.trim())
+    ));
+    return contact && projectsInPortfolio;
+  });
+  const paths: ActivationPath[] = [];
+  if (native) paths.push("native");
+  if (migration) paths.push("migration");
+  if (portfolio) paths.push("portfolio");
+  const activated = paths.length > 0;
+  const blockers: ActivationBlocker[] = [];
+  if (!activated) {
+    if (eligibleClients.length === 0) blockers.push("no_client_in_window");
+    if (eligibleProjects.length === 0) blockers.push("no_linked_project_in_window");
+    if (!nativeOutcome) blockers.push("no_connected_outcome");
+    if (!migration) blockers.push("migration_incomplete");
+    if (!portfolio) blockers.push("portfolio_incomplete");
+  }
+  return { activated, native, migration, portfolio, paths, blockers };
 }
 
 export function isMeaningfulProductEvent(event: { eventName: string; properties: unknown }): boolean {
@@ -78,4 +180,44 @@ export function isRealDataEvent(event: { eventName: string; dataOrigin?: string 
 
 export function countsAsNativeDeadline(project: { dueDate: Date | string | null | undefined }): boolean {
   return project.dueDate != null;
+}
+
+export function hasRealDataRecords(counts: {
+  clients: number;
+  projects: number;
+  invoices: number;
+  expenses: number;
+  calendarEvents: number;
+}): boolean {
+  return counts.clients + counts.projects + counts.invoices + counts.expenses + counts.calendarEvents > 0;
+}
+
+export type FunnelUserSummary = {
+  qualified: boolean;
+  activated: boolean;
+  realData: boolean;
+  qualificationBlockers: QualificationBlocker[];
+  activationPaths: ActivationPath[];
+  activationBlockers: ActivationBlocker[];
+  stage: "registered" | "qualified" | "activated";
+};
+
+export function summarizeFunnelUser(input: {
+  user: QualificationUser;
+  activation: ReturnType<typeof evaluateActivation>;
+  realData: boolean;
+}): FunnelUserSummary {
+  const blockers = qualificationBlockers(input.user);
+  const qualified = blockers.length === 0;
+  const activated = qualified && input.activation.activated;
+  const stage = activated ? "activated" : qualified ? "qualified" : "registered";
+  return {
+    qualified,
+    activated,
+    realData: input.realData,
+    qualificationBlockers: blockers,
+    activationPaths: input.activation.paths,
+    activationBlockers: activated ? [] : input.activation.blockers,
+    stage,
+  };
 }

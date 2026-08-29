@@ -5,12 +5,15 @@ import { evaluateFunnelQuality, type FunnelQualityAlert } from "@/lib/analytics/
 import { prisma } from "@/utils/db";
 import {
   acquisitionSource,
+  ACTIVATION_WINDOW_DAYS,
+  evaluateActivation,
   FUNNEL_DEFINITION_VERSION,
   INTERNAL_ACCOUNT_TYPES,
-  countsAsNativeDeadline,
   isMeaningfulProductEvent,
   isQualifiedUser,
+  qualificationBlockers,
   REAL_DATA_ORIGINS,
+  withinDays,
 } from "@/utils/funnelDefinitions";
 
 type UserRow = {
@@ -44,16 +47,12 @@ type QualitySnapshot = {
 
 let cached: { expiresAt: number; value: AdminMetrics } | null = null;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
 function sourceFrom(user: UserRow): string {
   return acquisitionSource(user);
 }
 
 function within(date: Date | null, start: Date, days: number): boolean {
-  return Boolean(date && date.getTime() >= start.getTime() && date.getTime() <= start.getTime() + days * 24 * 60 * 60 * 1000);
+  return withinDays(date, start, days);
 }
 
 function dayKey(date: Date): string {
@@ -109,6 +108,17 @@ export type AdminMetrics = {
   };
   workflowDepth: { averageModules: number; buckets: Array<{ label: string; count: number }> };
   reliability: { productEvents24h: number; failedEmails24h: number; queuedEmails: number };
+  window: {
+    label: "all_customer_accounts";
+    signupSparklineDays: number;
+    activationWindowDays: number;
+    deepActivationWindowDays: number;
+  };
+  dropOff: {
+    unqualified: number;
+    qualifiedNotActivated: number;
+    blockerCounts: Array<{ blocker: string; count: number }>;
+  };
   quality: {
     schemaVersion: number;
     contractRejections24h: number;
@@ -177,7 +187,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     prisma.client.findMany({
       where: { userId: { in: customerIds }, dataOrigin: { in: Array.from(REAL_DATA_ORIGINS) } },
       select: { id: true, userId: true, createdAt: true },
-    }).catch(() => [] as Array<{ id: string; userId: string; createdAt: Date }>),
+    }),
     prisma.project.findMany({
       where: { userId: { in: customerIds }, dataOrigin: { in: Array.from(REAL_DATA_ORIGINS) } },
       select: { id: true, userId: true, clientId: true, dueDate: true, createdAt: true },
@@ -266,6 +276,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   const sourceSignup = new Map<string, number>();
   const sourceQualified = new Map<string, number>();
   const activationPath = new Map<string, number>();
+  const blockerCounts = new Map<string, number>();
   const activeWeek = new Set<string>();
   const activeMonth = new Set<string>();
   const moduleCounts: number[] = [];
@@ -278,6 +289,8 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   let connected = 0;
   let realDataUsers = 0;
   let realDataRecords = 0;
+  let unqualified = 0;
+  let qualifiedNotActivated = 0;
   const retentionDenominatorUsers = qualifiedUsers.filter((user) => user.createdAt <= new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000));
   const retentionDenominatorIdSet = new Set(retentionDenominatorUsers.map((user) => user.id));
   let retentionNumerator = 0;
@@ -312,33 +325,31 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     const userPortfolios = portfoliosByUser.get(user.id) || [];
     const realRecords = [...userClients, ...userProjects, ...userInvoices, ...userExpenses, ...userCalendar].filter((record) => within(record.createdAt, user.createdAt, 3650));
     if (realRecords.length) { realDataUsers += 1; realDataRecords += realRecords.length; }
-    if (!isQualified) continue;
-
-    const eligibleClients = userClients.filter((record) => within(record.createdAt, user.createdAt, 7));
-    const eligibleProjects = userProjects.filter((record) => within(record.createdAt, user.createdAt, 7) && Boolean(record.clientId) && eligibleClients.some((client) => client.id === record.clientId));
-    const connectedProjectIds = new Set(eligibleProjects.map((project) => project.id));
-    const connectedClientIds = new Set(eligibleClients.map((client) => client.id));
-    const nativeDeadline = eligibleProjects.some((project) => countsAsNativeDeadline(project));
-    const nativeOutcome = nativeDeadline
-      || userInvoices.some((invoice) => within(invoice.createdAt, user.createdAt, 7) && (connectedProjectIds.has(invoice.projectId || "") || connectedClientIds.has(invoice.clientId || "")))
-      || userExpenses.some((expense) => within(expense.createdAt, user.createdAt, 7) && connectedProjectIds.has(expense.projectId || ""))
-      || userCalendar.some((event) => within(event.createdAt, user.createdAt, 7) && (connectedProjectIds.has(event.projectId || "") || connectedClientIds.has(event.clientId || "")));
-    const native = eligibleClients.length > 0 && eligibleProjects.length > 0 && nativeOutcome;
-    const migration = userImports.some((job) => within(job.completedAt || job.createdAt, user.createdAt, 7) && job.unresolvedCount === 0 && new Set(job.records.map((record) => record.targetType)).size >= 2);
-    const portfolio = userPortfolios.some((item) => {
-      if (!within(item.publishedAt, user.createdAt, 7)) return false;
-      const content = isRecord(item.content) ? item.content : {};
-      const contact = typeof content.contactEmail === "string" && Boolean(content.contactEmail.trim());
-      const realProjectIds = new Set(userProjects.map((project) => `project-${project.id}`));
-      const projectsInPortfolio = Array.isArray(content.projects) && content.projects.some((project) => isRecord(project) && typeof project.id === "string" && realProjectIds.has(project.id) && project.visibility !== "private" && typeof project.title === "string" && Boolean(project.title.trim()));
-      return contact && projectsInPortfolio;
+    const activation = evaluateActivation({
+      signupAt: user.createdAt,
+      clients: userClients,
+      projects: userProjects,
+      invoices: userInvoices,
+      expenses: userExpenses,
+      calendarEvents: userCalendar,
+      importJobs: userImports,
+      portfolios: userPortfolios,
     });
-    const isActivated = native || migration || portfolio;
+    if (!isQualified) {
+      unqualified += 1;
+      for (const blocker of qualificationBlockers(user)) addToMap(blockerCounts, `qualification:${blocker}`);
+      continue;
+    }
+
+    const isActivated = activation.activated;
     if (isActivated) {
       activated += 1;
-      if (native) { nativeCount += 1; addToMap(activationPath, "native"); }
-      if (migration) { migrationCount += 1; addToMap(activationPath, "migration"); }
-      if (portfolio) { portfolioCount += 1; addToMap(activationPath, "portfolio"); }
+      if (activation.native) { nativeCount += 1; addToMap(activationPath, "native"); }
+      if (activation.migration) { migrationCount += 1; addToMap(activationPath, "migration"); }
+      if (activation.portfolio) { portfolioCount += 1; addToMap(activationPath, "portfolio"); }
+    } else {
+      qualifiedNotActivated += 1;
+      for (const blocker of activation.blockers) addToMap(blockerCounts, `activation:${blocker}`);
     }
 
     const meaningful = userEvents.filter((event) => isMeaningfulProductEvent(event) && within(event.occurredAt, user.createdAt, 14));
@@ -393,6 +404,17 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     retention: { available: retentionDenominatorUsers.length > 0, numerator: retentionNumerator, denominator: retentionDenominatorUsers.length, rate: pct(retentionNumerator, retentionDenominatorUsers.length), definition: "Qualified users active in days 7–13 after signup, among cohorts at least 14 days old." },
     workflowDepth: { averageModules, buckets },
     reliability: { productEvents24h, failedEmails24h, queuedEmails },
+    window: {
+      label: "all_customer_accounts",
+      signupSparklineDays: 14,
+      activationWindowDays: ACTIVATION_WINDOW_DAYS,
+      deepActivationWindowDays: 14,
+    },
+    dropOff: {
+      unqualified,
+      qualifiedNotActivated,
+      blockerCounts: Array.from(blockerCounts.entries()).map(([blocker, count]) => ({ blocker, count })).sort((a, b) => b.count - a.count),
+    },
     quality: {
       ...qualityData,
       alerts: evaluateFunnelQuality({

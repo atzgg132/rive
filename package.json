@@ -29,6 +29,7 @@
     "db:seed:freelancer-demo": "node --env-file=.env.local scripts/seed-freelancer-demo.mjs",
     "db:seed:portfolio-media:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action seed-portfolio",
     "analytics:backfill": "node scripts/backfill-product-events.mjs",
+    "analytics:diagnose": "node --experimental-strip-types --import ./scripts/diagnose-loader.mjs --env-file=.env.local scripts/diagnose-funnel-user.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

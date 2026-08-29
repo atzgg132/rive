@@ -24,6 +24,18 @@ APP_ENV=prod npm run analytics:backfill -- --apply --confirm-production-backfill
 
 Each batch is transactional. A failed run may have completed earlier batches, but re-running the same command is idempotent. Never raise `--max-candidates` without reviewing why the candidate count changed.
 
+## Diagnose one account
+
+Read-only. Prints funnel gates (qualification blockers, activation paths, workspace counts) for a single email. It never writes, and it never prints tokens, password hashes, or invoice contents.
+
+```bash
+npm run analytics:diagnose -- --email=bhargav8517@gmail.com
+```
+
+The npm script loads `.env.local` when present. Against another database, set `DATABASE_URL` in the environment instead.
+
+Point `DATABASE_URL` at the environment you want to inspect. Production uses the same ops `DATABASE_URL` as other scripts; do not copy dumps into git.
+
 ## Quality monitoring
 
 `POST /api/cron/funnel-quality` is protected by the existing `Authorization: Bearer $CRON_SECRET` contract. It returns active threshold breaches, logs a structured payload, and returns HTTP 503 only for critical issues so the AWS job runner can surface a failed scheduled invocation. Warnings remain visible in the response, admin Reliability tab, and application logs without turning every data-quality warning into a job failure.
