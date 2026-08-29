@@ -178,6 +178,67 @@ test.describe("marketing experience", () => {
     });
   }
 
+  /** Chapter activation once lived inside the resolved value of a dynamic gsap
+   *  import, so a chunk that never arrives left the rail on the first mock for
+   *  the whole page. A stale ?dpl= after a deploy, an ad blocker, or a dropped
+   *  request is enough. Nothing about which chapter is active may wait on a
+   *  deferred bundle.
+   *
+   *  The route drops a chunk that carries ScrollTrigger and not the page's own
+   *  markup. `next dev` puts both in one chunk, so this only bites against the
+   *  production build the deploy and CI jobs run. Aborting the shared dev chunk
+   *  would stop hydration and prove nothing. */
+  test("every right-rail chapter still activates when the gsap chunk never loads", async ({ page }) => {
+    await page.route("**/_next/static/**/*.js", async (route) => {
+      const response = await route.fetch().catch(() => null);
+      if (!response) return route.continue();
+      const body = await response.text();
+      if (body.includes("ScrollTrigger") && !body.includes("scrollytelling-section")) return route.abort("failed");
+      return route.fulfill({ response, body });
+    });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+
+    const scene = page.getByTestId("scrollytelling-scene");
+    await expect(scene).toBeVisible();
+
+    for (const beat of RAIL_INNER_COPY) {
+      const chapter = page.locator(`[data-chapter-index="${beat.index}"]`);
+      await chapter.evaluate((node) => node.scrollIntoView({ block: "start" }));
+      await expect(chapter, `chapter ${beat.index} never activated without gsap`).toHaveAttribute("data-active", "true");
+      for (const text of beat.copy) {
+        await expect(scene.getByText(text), `chapter ${beat.index} left the rail on the previous mock without gsap`).toBeVisible();
+      }
+      await expect(scene.locator("[data-product-frame], [data-testid='problem-disconnection']")).toHaveCount(1);
+    }
+    await expect(scene.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
+  });
+
+  /** The desktop and mobile behaviours were picked once from matchMedia at
+   *  mount, so a window that grew past 1024px kept the mobile observer while
+   *  CSS showed the sticky scene, and the rail then trailed the copy. */
+  test("the right-rail follows the copy after a narrow window widens into desktop", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 900, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+    await expect(page.getByTestId("scrollytelling-scene")).not.toBeVisible();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const scene = page.getByTestId("scrollytelling-scene");
+    await expect(scene).toBeVisible();
+    await expect(page.locator('[data-chapter-index="1"]'), "inactive chapters never dimmed after the window widened").toHaveCSS("opacity", "0.3");
+
+    for (const beat of RAIL_INNER_COPY) {
+      const chapter = page.locator(`[data-chapter-index="${beat.index}"]`);
+      await chapter.evaluate((node) => node.scrollIntoView({ block: "start" }));
+      await expect(chapter, `chapter ${beat.index} never activated after the window widened`).toHaveAttribute("data-active", "true");
+      for (const text of beat.copy) {
+        await expect(scene.getByText(text), `chapter ${beat.index} left the rail behind after the window widened`).toBeVisible();
+      }
+    }
+  });
+
   test("desktop scrollytelling scene stays in the HTML and survives two hard reloads at 1920×1080", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1920, height: 1080 });
@@ -638,12 +699,18 @@ test.describe("marketing experience", () => {
       if (request.resourceType() === "font") fontRequests.push(new URL(request.url()).pathname);
     });
 
-    const documentResponse = await page.goto("/", { waitUntil: "domcontentloaded" });
-    const linkHeader = documentResponse?.headers().link ?? "";
-    expect(linkHeader).toContain("/fonts/outfit-marketing.woff2");
-    expect(linkHeader.toLowerCase()).toContain("rel=preload");
-    expect(linkHeader.toLowerCase()).toContain("fetchpriority=\"high\"");
+    /* The document response has to carry both preloads on its own, before any
+       client JavaScript runs. React picks the transport from the render mode.
+       A prerendered `/` gets head tags in the cached HTML and a per-request
+       render gets an HTTP Link header, so assert against both. */
+    const documentOnly = await page.request.get("/");
+    const advertised = `${documentOnly.headers().link ?? ""}\n${await documentOnly.text()}`.toLowerCase();
+    expect(advertised, "the document response never advertised the Outfit preload").toContain("/fonts/outfit-marketing.woff2");
+    expect(advertised, "the document response never advertised the Mono preload").toContain("/fonts/jetbrains-mono-marketing.woff2");
+    expect(advertised).toMatch(/rel="?preload/);
+    expect(advertised).toContain("fetchpriority=\"high\"");
 
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     const preloadLinks = page.locator('head link[rel="preload"][as="font"]');
     await expect(preloadLinks).toHaveCount(2);
 

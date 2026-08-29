@@ -27,84 +27,41 @@ export function ScrollytellingSection({
   problem: ProblemBeat;
   chapters: readonly MarketingChapter[];
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
   const chapterRefs = useRef<Array<HTMLElement | null>>([]);
   const activeRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const reduceMotion = useMarketingReducedMotion();
 
+  /* A scroll listener, not ScrollTrigger, and one rule at every width. The
+     active chapter decides what the rail renders, so it must not wait on a
+     dynamic gsap import. A chunk that never arrived froze the rail on the first
+     mock for a whole page. The old desktop and mobile split read matchMedia
+     once at mount, so a window grown past 1024px kept the mobile observer.
+     Dimming is Tailwind's `lg:opacity-30`, which follows the live media query
+     instead of an inline style written at mount. */
   useLayoutEffect(() => {
-    const root = rootRef.current;
     const blocks = chapterRefs.current.filter((node): node is HTMLElement => Boolean(node));
-    if (!root || blocks.length === 0) return;
+    if (blocks.length === 0) return;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-    if (reduced || !isDesktop) {
-      blocks.forEach((block) => { block.style.opacity = "1"; });
-      const observer = new IntersectionObserver((entries) => {
-        const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (!visible) return;
-        const next = Number((visible.target as HTMLElement).dataset.chapterIndex || 0);
-        if (next !== activeRef.current) {
-          activeRef.current = next;
-          setActiveIndex(next);
-        }
-      }, { rootMargin: "-28% 0px -38%", threshold: [0.2, 0.45, 0.7] });
-      blocks.forEach((block) => observer.observe(block));
-      return () => observer.disconnect();
-    }
+    let frame = 0;
+    const sync = () => {
+      frame = 0;
+      const next = activeFromScroll(blocks);
+      if (next === activeRef.current) return;
+      activeRef.current = next;
+      setActiveIndex(next);
+    };
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(sync);
+    };
 
-    let cancelled = false;
-    let context: { revert: () => void } | undefined;
-    let resizeTimer = 0;
-    let removeResize: () => void = () => undefined;
-
-    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapModule, scrollModule]) => {
-      if (cancelled) return;
-      const gsap = gsapModule.gsap;
-      const ScrollTrigger = scrollModule.ScrollTrigger;
-      gsap.registerPlugin(ScrollTrigger);
-      ScrollTrigger.config({ ignoreMobileResize: true });
-      context = gsap.context(() => {
-        gsap.set(blocks, { opacity: 0.3 });
-        gsap.set(blocks[0], { opacity: 1 });
-
-        const applyActive = (next: number) => {
-          if (next === activeRef.current) return;
-          activeRef.current = next;
-          setActiveIndex(next);
-          gsap.to(blocks, {
-            opacity: (index: number) => (index === next ? 1 : 0.3),
-            duration: 0.18,
-            overwrite: true,
-            ease: "power2.out",
-          });
-        };
-
-        ScrollTrigger.create({
-          trigger: root,
-          start: "top top",
-          end: "bottom bottom",
-          onUpdate: () => applyActive(activeFromScroll(blocks)),
-          onRefresh: () => applyActive(activeFromScroll(blocks)),
-        });
-        applyActive(activeFromScroll(blocks));
-      }, root);
-
-      const onResize = () => {
-        window.clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 160);
-      };
-      window.addEventListener("resize", onResize, { passive: true });
-      removeResize = () => window.removeEventListener("resize", onResize);
-    });
-
+    sync();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule, { passive: true });
     return () => {
-      cancelled = true;
-      window.clearTimeout(resizeTimer);
-      removeResize();
-      context?.revert();
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
     };
   }, [chapters.length]);
 
@@ -113,7 +70,7 @@ export function ScrollytellingSection({
   const railKey = railChapter ? railChapter.id : "problem";
 
   return (
-    <div ref={rootRef} data-testid="scrollytelling-section" className="scrollytelling-section grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:gap-12 xl:gap-20">
+    <div data-testid="scrollytelling-section" className="scrollytelling-section grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:gap-12 xl:gap-20">
       <div>
         <article
           id="problem"
@@ -121,7 +78,7 @@ export function ScrollytellingSection({
           data-chapter-index="0"
           data-active={activeIndex === 0 ? "true" : "false"}
           className={cn(
-            "relative scroll-mt-[5.5rem]",
+            "relative scroll-mt-[5.5rem] transition-opacity duration-200",
             reduceMotion || activeIndex === 0 ? "opacity-100" : "lg:opacity-30",
           )}
         >
