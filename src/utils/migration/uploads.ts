@@ -3,6 +3,7 @@ import "server-only";
 import crypto, { createHash } from "node:crypto";
 import { GetObjectCommand, PutObjectCommand, PutObjectTaggingCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { migrationUploadHeaders } from "@/utils/migration/uploadContract";
 
 export type DurableUploadManifest = {
   id: string;
@@ -41,7 +42,7 @@ export async function presignMigrationUpload(input: Omit<DurableUploadManifest, 
   });
   return {
     uploadUrl: await getSignedUrl(client, command, { expiresIn: 300 }),
-    headers: { "Content-Type": input.mimeType, "x-amz-tagging": "migration-state=incomplete" },
+    headers: migrationUploadHeaders(input.mimeType),
   };
 }
 
