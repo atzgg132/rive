@@ -146,7 +146,7 @@ try {
     "migrate" { npx prisma migrate deploy }
     "status" { npx prisma migrate status }
     "smoke" { node scripts/smoke-contracts.mjs }
-    "migration-smoke" { node --experimental-strip-types --import ./tests/helpers/module-loader.mjs scripts/smoke-migration.mjs }
+    "migration-smoke" { node --experimental-strip-types --import ./scripts/hosted-module-loader.mjs scripts/smoke-migration.mjs }
     "cleanup-smoke" { node scripts/cleanup-contract-smoke.mjs }
     "inspect-smoke" { node scripts/inspect-contract-smoke.mjs }
     "seed-portfolio" { node scripts/seed-portfolio-media.mjs --email=atzgg132@gmail.com --apply }
