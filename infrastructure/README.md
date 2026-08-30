@@ -36,11 +36,11 @@ does not modify public DNS.
 > **APPLY PROTOCOL:** the state-reconciliation freeze was lifted on 2026-08-30
 > after a credential-safe migration-foundation plan applied with zero destroys.
 > Always save and inspect a plan before applying. Stop on any replacement or
-> destroy. The live scheduled jobs are enabled, while
-> `scheduled_jobs_enabled` defaults to `false`; a full plan must explicitly
-> preserve the live value or it will propose disabling those rules. Use a
-> targeted plan only for a deliberately isolated recovery or staged rollout,
-> then follow with a reviewed full plan to reconcile the remaining drift.
+> destroy. The live scheduled jobs are enabled and the Terraform default now
+> matches that state; setting `scheduled_jobs_enabled=false` is an explicit
+> incident-response action. Use a targeted plan only for a deliberately isolated
+> recovery or staged rollout, then follow with a reviewed full plan to reconcile
+> the remaining drift.
 
 The bootstrap stack creates the encrypted, versioned state bucket:
 
