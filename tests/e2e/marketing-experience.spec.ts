@@ -59,6 +59,13 @@ function viewportMinHeight(value: string) {
   return /^(100vh|100svh|100dvh|100lvh)$/.test(value.trim());
 }
 
+function isSeventyVhMinHeight(value: string, viewportHeight: number) {
+  if (/\b70vh\b/.test(value.trim())) return true;
+  const px = Number.parseFloat(value);
+  if (!Number.isFinite(px) || px === 0) return false;
+  return Math.abs(px - viewportHeight * 0.7) < 1;
+}
+
 /** Inner mock rows must not stay at opacity 0 — chrome alone is not a pass. */
 async function stuckHiddenRows(scene: Locator) {
   return scene.evaluate((node) => {
@@ -178,6 +185,67 @@ test.describe("marketing experience", () => {
     });
   }
 
+  /** Chapter activation once lived inside the resolved value of a dynamic gsap
+   *  import, so a chunk that never arrives left the rail on the first mock for
+   *  the whole page. A stale ?dpl= after a deploy, an ad blocker, or a dropped
+   *  request is enough. Nothing about which chapter is active may wait on a
+   *  deferred bundle.
+   *
+   *  The route drops a chunk that carries ScrollTrigger and not the page's own
+   *  markup. `next dev` puts both in one chunk, so this only bites against the
+   *  production build the deploy and CI jobs run. Aborting the shared dev chunk
+   *  would stop hydration and prove nothing. */
+  test("every right-rail chapter still activates when the gsap chunk never loads", async ({ page }) => {
+    await page.route("**/_next/static/**/*.js", async (route) => {
+      const response = await route.fetch().catch(() => null);
+      if (!response) return route.continue();
+      const body = await response.text();
+      if (body.includes("ScrollTrigger") && !body.includes("scrollytelling-section")) return route.abort("failed");
+      return route.fulfill({ response, body });
+    });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+
+    const scene = page.getByTestId("scrollytelling-scene");
+    await expect(scene).toBeVisible();
+
+    for (const beat of RAIL_INNER_COPY) {
+      const chapter = page.locator(`[data-chapter-index="${beat.index}"]`);
+      await chapter.evaluate((node) => node.scrollIntoView({ block: "start" }));
+      await expect(chapter, `chapter ${beat.index} never activated without gsap`).toHaveAttribute("data-active", "true");
+      for (const text of beat.copy) {
+        await expect(scene.getByText(text), `chapter ${beat.index} left the rail on the previous mock without gsap`).toBeVisible();
+      }
+      await expect(scene.locator("[data-product-frame], [data-testid='problem-disconnection']")).toHaveCount(1);
+    }
+    await expect(scene.locator("[data-product-frame]").getByText("Migration Engine")).toHaveCount(0);
+  });
+
+  /** The desktop and mobile behaviours were picked once from matchMedia at
+   *  mount, so a window that grew past 1024px kept the mobile observer while
+   *  CSS showed the sticky scene, and the rail then trailed the copy. */
+  test("the right-rail follows the copy after a narrow window widens into desktop", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 900, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+    await expect(page.getByTestId("scrollytelling-scene")).not.toBeVisible();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const scene = page.getByTestId("scrollytelling-scene");
+    await expect(scene).toBeVisible();
+    await expect(page.locator('[data-chapter-index="1"]'), "inactive chapters never dimmed after the window widened").toHaveCSS("opacity", "0.3");
+
+    for (const beat of RAIL_INNER_COPY) {
+      const chapter = page.locator(`[data-chapter-index="${beat.index}"]`);
+      await chapter.evaluate((node) => node.scrollIntoView({ block: "start" }));
+      await expect(chapter, `chapter ${beat.index} never activated after the window widened`).toHaveAttribute("data-active", "true");
+      for (const text of beat.copy) {
+        await expect(scene.getByText(text), `chapter ${beat.index} left the rail behind after the window widened`).toBeVisible();
+      }
+    }
+  });
+
   test("desktop scrollytelling scene stays in the HTML and survives two hard reloads at 1920×1080", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1920, height: 1080 });
@@ -294,14 +362,13 @@ test.describe("marketing experience", () => {
   });
 
   // SHIP-GATE ONLY: 1920×1080 @ 150% Windows ≈ 1280×720 CSS, and 1920×1200 @ 150% ≈ 1280×800.
-  // First screen at scrollY=0: a readable hero — headline, both CTAs, and the
-  // proof chips with a real gap so chips cannot sit on the buttons. The
-  // CLIENT→PROOF rail may continue below the fold; do not crush the hero to
+  // First screen at scrollY=0: a readable hero — headline and both CTAs.
+  // The CLIENT→PROOF rail may continue below the fold; do not crush the hero to
   // force it into one viewport. Extra short lines under the labels may drop
   // at 720. Do not hide the labels. Do not add 1366×768 or 1440×900 to this loop.
   // Do not assert which pipeline node is active — interval autoplay may already be on WORK.
   const heroStageLabels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"] as const;
-  const minCtaProofGap = 24;
+  const minCtaRailGap = 24;
 
   for (const viewport of [
     { width: 1280, height: 720 },
@@ -320,9 +387,7 @@ test.describe("marketing experience", () => {
       await expect(hero.locator("h1")).toBeVisible();
       await expect(hero.getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
       await expect(hero.getByRole("link", { name: "See the unpaid role", exact: true })).toBeVisible();
-      await expect(hero.getByText("Open signup")).toBeVisible();
-      await expect(hero.getByText("Free during beta")).toBeVisible();
-      await expect(hero.getByText("Your data stays yours")).toBeVisible();
+      await expect(hero.getByText("OPEN BETA", { exact: true })).toBeVisible();
       await expect(pipeline).toBeVisible();
       await expect(pipeline.getByTestId(/hero-stage-/)).toHaveCount(5);
 
@@ -337,18 +402,13 @@ test.describe("marketing experience", () => {
         const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
         const primary = heroNode?.querySelector("a[href='/register']");
         const secondary = heroNode?.querySelector("a[href='#problem']");
-        const chips = heroNode
-          ? Array.from(heroNode.querySelectorAll("span")).filter((node) => /open signup|free during beta|your data stays yours/i.test(node.textContent || ""))
-          : [];
-        if (!headline || !pipelineNode || !primary || !secondary || chips.length < 3) return null;
+        if (!headline || !pipelineNode || !primary || !secondary) return null;
         const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
         const headlineRect = headline.getBoundingClientRect();
         const pipelineRect = pipelineNode.getBoundingClientRect();
         const primaryRect = primary.getBoundingClientRect();
         const secondaryRect = secondary.getBoundingClientRect();
-        const chipRects = chips.map((chip) => chip.getBoundingClientRect());
         const ctaBottom = Math.max(primaryRect.bottom, secondaryRect.bottom);
-        const chipTop = Math.min(...chipRects.map((rect) => rect.top));
         const overlaps = (a: DOMRect, b: DOMRect) => a.bottom > b.top + 1 && a.top < b.bottom - 1 && a.left < b.right - 1 && a.right > b.left + 1;
         const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
         const labels = stageLabels.map((label) => {
@@ -376,9 +436,8 @@ test.describe("marketing experience", () => {
           headlineFits: inFirstScreen(headlineRect),
           primaryFits: inFirstScreen(primaryRect),
           secondaryFits: inFirstScreen(secondaryRect),
-          chipsFit: chipRects.every((rect) => inFirstScreen(rect)),
-          ctaProofGap: chipTop - ctaBottom,
-          ctaProofOverlap: chipRects.some((rect) => overlaps(primaryRect, rect) || overlaps(secondaryRect, rect)),
+          ctaRailGap: pipelineRect.top - ctaBottom,
+          ctaRailOverlap: overlaps(primaryRect, pipelineRect) || overlaps(secondaryRect, pipelineRect),
           headlineCtaOverlap: overlaps(headlineRect, primaryRect) || overlaps(headlineRect, secondaryRect),
           labels,
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -391,10 +450,9 @@ test.describe("marketing experience", () => {
       expect(geometry!.headlineFits, `${viewport.width}×${viewport.height} headline clipped`).toBe(true);
       expect(geometry!.primaryFits, `${viewport.width}×${viewport.height} primary CTA clipped`).toBe(true);
       expect(geometry!.secondaryFits, `${viewport.width}×${viewport.height} secondary CTA clipped`).toBe(true);
-      expect(geometry!.chipsFit, `${viewport.width}×${viewport.height} proof chips clipped`).toBe(true);
-      expect(geometry!.ctaProofOverlap, `${viewport.width}×${viewport.height} proof chips overlap CTAs`).toBe(false);
+      expect(geometry!.ctaRailOverlap, `${viewport.width}×${viewport.height} pipeline overlaps CTAs`).toBe(false);
       expect(geometry!.headlineCtaOverlap, `${viewport.width}×${viewport.height} headline overlaps CTAs`).toBe(false);
-      expect(geometry!.ctaProofGap, `${viewport.width}×${viewport.height} CTA/proof gap ${geometry!.ctaProofGap}`).toBeGreaterThanOrEqual(minCtaProofGap);
+      expect(geometry!.ctaRailGap, `${viewport.width}×${viewport.height} CTA/rail gap ${geometry!.ctaRailGap}`).toBeGreaterThanOrEqual(minCtaRailGap);
       expect(geometry!.overflow).toBe(false);
       expect(geometry!.labels).toHaveLength(heroStageLabels.length);
       for (const row of geometry!.labels) {
@@ -430,18 +488,14 @@ test.describe("marketing experience", () => {
         const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
         const primary = heroNode?.querySelector("a[href='/register']");
         const secondary = heroNode?.querySelector("a[href='#problem']");
-        const chips = heroNode
-          ? Array.from(heroNode.querySelectorAll("span")).filter((node) => /open signup|free during beta|your data stays yours/i.test(node.textContent || ""))
-          : [];
-        if (!headline || !pipelineNode || !primary || !secondary || chips.length < 3) return null;
+        if (!headline || !pipelineNode || !primary || !secondary) return null;
         const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
         const overlaps = (a: DOMRect, b: DOMRect) => a.bottom > b.top + 1 && a.top < b.bottom - 1 && a.left < b.right - 1 && a.right > b.left + 1;
         const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
         const primaryRect = primary.getBoundingClientRect();
         const secondaryRect = secondary.getBoundingClientRect();
-        const chipRects = chips.map((chip) => chip.getBoundingClientRect());
+        const pipelineRect = pipelineNode.getBoundingClientRect();
         const ctaBottom = Math.max(primaryRect.bottom, secondaryRect.bottom);
-        const chipTop = Math.min(...chipRects.map((rect) => rect.top));
         const labels = stageLabels.map((label) => {
           const node = pipelineNode.querySelector(`[data-hero-stage-label="${label}"]`);
           if (!node) return { label, found: false as const, inFirstScreen: false };
@@ -454,12 +508,12 @@ test.describe("marketing experience", () => {
           headlineFits: inFirstScreen(headline.getBoundingClientRect()),
           primaryFits: inFirstScreen(primaryRect),
           secondaryFits: inFirstScreen(secondaryRect),
-          pipelineFits: inFirstScreen(pipelineNode.getBoundingClientRect()),
-          pipelineBottom: pipelineNode.getBoundingClientRect().bottom,
+          pipelineFits: inFirstScreen(pipelineRect),
+          pipelineBottom: pipelineRect.bottom,
           h1Size: Number.parseFloat(getComputedStyle(headline).fontSize),
           shortsDisplay: shortNode ? getComputedStyle(shortNode).display : "missing",
-          ctaProofGap: chipTop - ctaBottom,
-          ctaProofOverlap: chipRects.some((rect) => overlaps(primaryRect, rect) || overlaps(secondaryRect, rect)),
+          ctaRailGap: pipelineRect.top - ctaBottom,
+          ctaRailOverlap: overlaps(primaryRect, pipelineRect) || overlaps(secondaryRect, pipelineRect),
           labels,
         };
       }, [...heroStageLabels]);
@@ -473,8 +527,8 @@ test.describe("marketing experience", () => {
       expect(geometry!.pipelineBottom).toBeLessThanOrEqual(geometry!.innerHeight - 24);
       expect(geometry!.h1Size, "150% scale left the 104px desktop headline").toBeLessThan(72);
       expect(geometry!.shortsDisplay, "150% QHD dropped the stage shorts").not.toBe("none");
-      expect(geometry!.ctaProofOverlap, "1707×960 proof chips overlap CTAs").toBe(false);
-      expect(geometry!.ctaProofGap, `1707×960 CTA/proof gap ${geometry!.ctaProofGap}`).toBeGreaterThanOrEqual(minCtaProofGap);
+      expect(geometry!.ctaRailOverlap, "1707×960 pipeline overlaps CTAs").toBe(false);
+      expect(geometry!.ctaRailGap, `1707×960 CTA/rail gap ${geometry!.ctaRailGap}`).toBeGreaterThanOrEqual(minCtaRailGap);
       for (const row of geometry!.labels) {
         expect(row.found, `1707×960 missing ${row.label}`).toBe(true);
         expect(row.inFirstScreen, `1707×960 ${row.label} clipped`).toBe(true);
@@ -552,6 +606,7 @@ test.describe("marketing experience", () => {
     const scene = page.getByTestId("scrollytelling-scene");
     await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
     await page.locator("#problem").evaluate((node) => node.scrollIntoView({ block: "start" }));
+    await expect(page.getByTestId("problem-duties")).toBeVisible();
     await expect(scene.getByTestId("problem-disconnection")).toBeVisible();
     await expect(scene.locator("[data-product-frame]")).toHaveCount(0);
 
@@ -563,6 +618,7 @@ test.describe("marketing experience", () => {
       product: await scene.locator("[data-product-frame]").count(),
       problem: await scene.getByTestId("problem-disconnection").count(),
     })).toEqual({ product: 1, problem: 0 });
+    await expect(scene.getByText("Recent activity")).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/", { waitUntil: "load" });
@@ -570,6 +626,45 @@ test.describe("marketing experience", () => {
     await expect(page.getByTestId("marketing-problem").getByTestId("problem-disconnection")).toBeVisible();
     const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     expect(mobileOverflow).toBe(false);
+  });
+
+  test("mobile scrollytelling is one claim and one compact picture per beat", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/#product", { waitUntil: "load" });
+
+    await expect(page.getByTestId("scrollytelling-rail")).toHaveCount(0);
+    await expect(page.getByTestId("scrollytelling-scene")).toBeHidden();
+    await expect(page.getByTestId("problem-duties")).toBeHidden();
+    await expect(page.getByTestId("marketing-problem").getByText("Rebuild the client")).toBeHidden();
+    await expect(page.getByTestId("marketing-problem").getByTestId("problem-disconnection")).toBeVisible();
+    await expect(page.getByTestId("marketing-problem").getByText("Northstar Labs")).toBeVisible();
+    await expect(page.getByTestId("marketing-problem").getByText("No project attached")).toBeHidden();
+
+    const chapters = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll<HTMLElement>("[data-chapter-index]")).map((node) => {
+        const minHeight = getComputedStyle(node).minHeight;
+        return {
+          index: node.dataset.chapterIndex,
+          minHeight,
+          minPx: Number.parseFloat(minHeight) || 0,
+          vh: window.innerHeight,
+        };
+      });
+    });
+    expect(chapters).toHaveLength(7);
+    for (const cut of chapters) {
+      expect(
+        isSeventyVhMinHeight(cut.minHeight, cut.vh),
+        `chapter ${cut.index} still has a 70vh shutter (${cut.minHeight})`,
+      ).toBe(false);
+    }
+
+    const first = page.locator('[data-chapter-index="1"]');
+    await first.evaluate((node) => node.scrollIntoView({ block: "start" }));
+    await expect(first.locator("[data-product-frame]")).toBeVisible();
+    await expect(first.getByText("Revenue collected")).toBeVisible();
+    await expect(first.getByText("Recent activity")).toBeHidden();
   });
 
   for (const viewport of [
@@ -638,21 +733,40 @@ test.describe("marketing experience", () => {
       if (request.resourceType() === "font") fontRequests.push(new URL(request.url()).pathname);
     });
 
+    /* The document response has to carry both preloads on its own, before any
+       client JavaScript runs. React picks the transport from the render mode.
+       A prerendered `/` gets head tags in the cached HTML and a per-request
+       render gets an HTTP Link header, so assert against both. */
+    const documentOnly = await page.request.get("/");
+    const advertised = `${documentOnly.headers().link ?? ""}\n${await documentOnly.text()}`.toLowerCase();
+    expect(advertised, "the document response never advertised the Outfit preload").toContain("/fonts/outfit-marketing.woff2");
+    expect(advertised, "the document response never advertised the Mono preload").toContain("/fonts/jetbrains-mono-marketing.woff2");
+    expect(advertised).toMatch(/rel="?preload/);
+    expect(advertised).toContain("fetchpriority=\"high\"");
+
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const preloadLinks = page.locator('head link[rel="preload"][as="font"]');
     await expect(preloadLinks).toHaveCount(2);
 
     const preloads = await preloadLinks.evaluateAll((links) =>
-      links.map((link) => ({
-        href: new URL((link as HTMLLinkElement).href).pathname,
-        type: (link as HTMLLinkElement).type,
-        crossOrigin: (link as HTMLLinkElement).crossOrigin,
-      })),
+      links.map((link) => {
+        const node = link as HTMLLinkElement;
+        return {
+          href: new URL(node.href).pathname,
+          type: node.type,
+          crossOrigin: node.crossOrigin,
+          fetchPriority: node.fetchPriority,
+        };
+      }),
     );
     expect(preloads).toEqual([
-      { href: "/fonts/outfit-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous" },
-      { href: "/fonts/jetbrains-mono-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous" },
+      { href: "/fonts/outfit-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous", fetchPriority: "high" },
+      { href: "/fonts/jetbrains-mono-marketing.woff2", type: "font/woff2", crossOrigin: "anonymous", fetchPriority: "low" },
     ]);
+
+    const fontResponse = await page.request.get("/fonts/outfit-marketing.woff2");
+    expect(fontResponse.headers()["cache-control"]).toMatch(/max-age=31536000/);
+    expect(fontResponse.headers()["cache-control"]).toContain("immutable");
 
     const hero = page.locator("h1").first();
     await expect(hero).toBeVisible();
@@ -680,6 +794,45 @@ test.describe("marketing experience", () => {
       "/fonts/outfit-marketing.woff2",
       "/fonts/jetbrains-mono-marketing.woff2",
     ]));
+  });
+
+  test("share and search head tags carry a real image and honest structured data", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const ogImageTag = page.locator('head meta[property="og:image"]');
+    const twitterImageTag = page.locator('head meta[name="twitter:image"]');
+    await expect(ogImageTag, "the homepage ships no og:image").toHaveCount(1);
+    await expect(twitterImageTag, "the homepage ships no twitter:image").toHaveCount(1);
+
+    const ogImage = await ogImageTag.getAttribute("content");
+    const twitterImage = await twitterImageTag.getAttribute("content");
+    expect(ogImage).toMatch(/^https?:\/\//);
+    expect(twitterImage).toMatch(/^https?:\/\//);
+
+    /* metadataBase resolves while the page prerenders, so a build that bakes a
+       fixed origin ships share tags pointing away from the site serving them.
+       CI bakes 127.0.0.1 while Playwright drives localhost, so the two loopback
+       spellings of one host fold together. */
+    const servingOrigin = (value: string) => {
+      const { protocol, hostname, port } = new URL(value);
+      return `${protocol}//${hostname === "localhost" ? "127.0.0.1" : hostname}:${port}`;
+    };
+    const pageOrigin = servingOrigin(page.url());
+    expect(servingOrigin(ogImage!), "og:image points off the serving origin").toBe(pageOrigin);
+    expect(servingOrigin(twitterImage!), "twitter:image points off the serving origin").toBe(pageOrigin);
+
+    const image = await page.request.get(ogImage!);
+    expect(image.status(), `og:image did not serve: ${ogImage}`).toBe(200);
+    expect(image.headers()["content-type"]).toMatch(/^image\//);
+
+    const payloads = await page
+      .locator('script[type="application/ld+json"]')
+      .evaluateAll((nodes) => nodes.map((node) => node.textContent ?? ""));
+    expect(payloads, "the homepage ships no JSON-LD").toHaveLength(1);
+    const graph = (JSON.parse(payloads[0]) as { "@graph": { "@type": string }[] })["@graph"];
+    expect(graph.map((node) => node["@type"])).toEqual(
+      expect.arrayContaining(["Organization", "WebSite"]),
+    );
   });
 
   test("marketing headings form a valid outline", async ({ page }) => {

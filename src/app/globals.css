@@ -403,6 +403,12 @@ textarea {
 
 /* Legacy marketing pages used desktop-only spacing. Keep their authored
    desktop rhythm while providing a safe mobile gutter everywhere. */
+section.marketing-hero .hero-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+}
+
 @media (max-width: 639px) {
   .text-8xl,
   .text-7xl,
@@ -415,6 +421,78 @@ textarea {
   .py-28,
   .py-24 {
     padding-block: 4rem;
+  }
+
+  /* On phones, lift authored type below 12px to 16px. A previous
+     wrapper-class floor made the same component 10px on one page and
+     12px on another; this applies everywhere and leaves desktop sizes
+     honest. Product-frame mocks keep their miniature type so they still
+     read as a desktop screenshot. */
+  :is(
+    .text-\[9px\],
+    .text-\[10px\],
+    .text-\[11px\],
+    .text-\[0\.45rem\],
+    .text-\[0\.46rem\],
+    .text-\[0\.48rem\],
+    .text-\[0\.5rem\],
+    .text-\[0\.54rem\],
+    .text-\[0\.55rem\],
+    .text-\[0\.56rem\],
+    .text-\[0\.58rem\],
+    .text-\[0\.6rem\],
+    .text-\[0\.62rem\],
+    .text-\[0\.64rem\],
+    .text-\[0\.66rem\],
+    .text-\[0\.68rem\],
+    .text-\[0\.6875rem\],
+    .text-\[0\.7rem\]
+  ):not([data-product-frame] *):not([data-hero-stage-label]),
+  .rive-eyebrow,
+  .workspace-table th {
+    font-size: 1rem;
+    line-height: 1.375;
+  }
+
+  /* Phone hero type scale. The desktop clamp is a 94px poster; on a 390px
+     screen that wraps the last line and the 16px type-floor made the kicker
+     the same size as the body. Keep the centered layout. */
+  section.marketing-hero h1 {
+    font-size: clamp(1.75rem, 1.2rem + 3.6vw, 2.25rem);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+  }
+
+  section.marketing-hero .marketing-hero-body {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  section.marketing-hero .marketing-hero-ctas a {
+    font-size: 1rem;
+  }
+
+  section.marketing-hero .marketing-hero-rail {
+    width: calc(100% + 2rem);
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+
+  .hero-pipeline [data-hero-stage-label] {
+    overflow: hidden;
+    font-size: 0.75rem;
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-overflow: clip;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
+@media (max-width: 359px) {
+  .hero-pipeline [data-hero-stage-label] {
+    font-size: 0.625rem;
   }
 }
 
@@ -439,13 +517,8 @@ textarea {
   }
 }
 
-/* The type floor used to be enforced here, by overriding what the markup said:
-   a `text-[10px]` class inside `.dashboard-overview`, `.portfolio-editor-panels`
-   or `.calendar-shell` actually rendered at 12px. Two problems with that. It
-   only worked on pages that remembered the wrapper class, so the same component
-   was 10px in one place and 12px in another; and it made the source lie, which
-   is why the sizes drifted in the first place. The markup now says `text-xs`
-   and means it. */
+/* Desktop type is honest: `text-xs` is 12px. Phone sizes below 12px are
+   lifted to 16px in the max-width 639px query above, not by wrapper class. */
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
@@ -916,7 +989,7 @@ p {
 
 /* Short first screens. Playwright 1280×720 / 1280×800 is `max-height: 800px`
    at 1x. Shrink the 104px headline so the hero stays readable — do not collapse
-   CTA / proof spacing to force CLIENT→PROOF onto the first viewport. The unpaid
+   CTA spacing to force CLIENT→PROOF onto the first viewport. The unpaid
    role scrolly continues below. 1440×900 @ 1x visual baselines stay out.
    `min-width: 1024px` keeps this laptop compression off short phones.
    `section.marketing-hero` beats Tailwind padding / margin utilities. */
@@ -954,10 +1027,6 @@ p {
     margin-top: clamp(1.5rem, 2.6svh, 2rem);
   }
 
-  section.marketing-hero .marketing-hero-proof {
-    margin-top: clamp(1.75rem, 2.8svh, 2.25rem);
-  }
-
   section.marketing-hero .marketing-hero-rail {
     margin-top: clamp(1.5rem, 3svh, 2.5rem);
   }
@@ -976,8 +1045,8 @@ p {
 }
 
 /* 150% Windows on QHD-class 14" (CSS taller than 800px, dpr ≥ 1.25). Shrink the
-   104px headline so the rail can clear the fold without stacking proof chips
-   onto the CTAs. Keep vertical centering on this taller CSS viewport. */
+   104px headline so the rail can clear the fold. Keep vertical centering on
+   this taller CSS viewport. */
 @media (min-width: 1024px) and (min-height: 801px) and (max-height: 1100px) and (min-resolution: 1.25dppx) {
   section.marketing-hero {
     min-height: 100dvh;
@@ -1008,12 +1077,8 @@ p {
     margin-top: clamp(1.5rem, 2.2svh, 2rem);
   }
 
-  section.marketing-hero .marketing-hero-proof {
-    margin-top: clamp(1.75rem, 2svh, 2.25rem);
-  }
-
   section.marketing-hero .marketing-hero-rail {
-    margin-top: clamp(1.25rem, 2.2svh, 2rem);
+    margin-top: clamp(1.625rem, 2.6svh, 2.25rem);
   }
 }
 

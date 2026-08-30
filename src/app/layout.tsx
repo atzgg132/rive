@@ -4,8 +4,10 @@ import { FontPreloads } from "@/components/FontPreloads";
 import PageViewTracker from "@/components/PageViewTracker";
 import { AuthOverlayProvider } from "@/components/auth/AuthOverlayProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { deploymentOrigin } from "@/lib/siteMetadata";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(deploymentOrigin),
   title: "Rive — Connected client, project, contract and financial operations",
   description:
     "Rive is an all-in-one workspace for digital service businesses to manage clients, projects, contracts, revenue, invoices, expenses, calendars, imports, and portfolios.",

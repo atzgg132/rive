@@ -32,7 +32,7 @@ export function ProductImport({ filename, sources, totals, matches }: ProductImp
       }
     >
       <div className="grid gap-3 lg:grid-cols-[.78fr_1.22fr]">
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="hidden rounded-xl border border-slate-200 bg-white p-3 lg:block">
           <p className="font-mono text-[0.48rem] font-bold uppercase tracking-[0.12em] text-slate-600">Detected records</p>
           <div className="mt-3 grid gap-2">
             {sources.map((source, index) => (

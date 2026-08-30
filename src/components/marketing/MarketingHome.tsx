@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowDown, ArrowRight } from "lucide-react";
 import { homeContent } from "@/content/marketing/home";
 import { pricingContent } from "@/content/marketing/pricing";
 import { ConnectedSignalField } from "@/components/marketing/ConnectedSignalField";
@@ -21,8 +21,8 @@ export function MarketingHome() {
         >
           <ConnectedSignalField className="opacity-55" />
           <div className="marketing-hero-inner relative z-10 mx-auto flex max-w-[76rem] flex-col items-center px-4 text-center sm:px-8">
-            <GlowingBadge pulse>{homeContent.hero.eyebrow}</GlowingBadge>
-            <h1 className="mt-5 text-[clamp(2.35rem,1.4rem+5vw,6.5rem)] font-black leading-[0.94] tracking-[-0.05em] text-foreground sm:mt-6">
+            <GlowingBadge pulse className="hero-eyebrow px-2 py-1 tracking-[0.14em]">{homeContent.hero.eyebrow}</GlowingBadge>
+            <h1 className="mt-4 text-[clamp(2.35rem,1.4rem+5vw,6.5rem)] font-black leading-[0.94] tracking-[-0.05em] text-foreground sm:mt-6">
               <span className="block animate-hero-line-in" style={{ animationDelay: "0ms" }}>Your business</span>
               <span className="block animate-hero-line-in" style={{ animationDelay: "80ms" }}>should not need</span>
               <span className="block animate-hero-line-in" style={{ animationDelay: "160ms" }}>
@@ -40,15 +40,7 @@ export function MarketingHome() {
                 {homeContent.hero.secondaryCta.label} <ArrowDown className="ml-2 h-4 w-4" aria-hidden="true" />
               </SmoothAnchor>
             </div>
-            <div aria-label="Proof points" className="marketing-hero-proof mt-5 flex flex-col items-center gap-2 sm:mt-8 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-6 sm:gap-y-3">
-              {homeContent.hero.proof.map((item) => (
-                <span key={item} className="inline-flex items-center gap-2 font-mono text-[0.64rem] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
-                  <ShieldCheck className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-                  {item}
-                </span>
-              ))}
-            </div>
-            <div className="marketing-hero-rail mt-10 w-full sm:mt-14">
+            <div className="marketing-hero-rail mt-8 w-full sm:mt-14">
               <HeroPipeline />
             </div>
           </div>

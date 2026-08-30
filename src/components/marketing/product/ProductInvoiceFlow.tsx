@@ -76,7 +76,7 @@ export function ProductInvoiceFlow(props: ProductInvoiceFlowProps) {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-4 hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[0.55rem] font-bold text-slate-600">
             <FileSignature className="h-3 w-3" /> Linked Agreement
           </span>

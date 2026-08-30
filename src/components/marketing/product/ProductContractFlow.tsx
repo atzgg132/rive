@@ -81,7 +81,7 @@ export function ProductContractFlow(props: ProductContractFlowProps) {
             ))}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="hidden rounded-xl border border-slate-200 bg-white p-3 lg:block">
           <p className="font-mono text-[0.5rem] font-bold uppercase tracking-[0.12em] text-slate-600">Draft summary</p>
           <dl className="mt-3 grid gap-3 text-[0.56rem]">
             <div>

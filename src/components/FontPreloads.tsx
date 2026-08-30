@@ -1,18 +1,20 @@
-"use client";
+import { preload } from "react-dom";
 
-import ReactDOM from "react-dom";
-
+/* Server-only so React emits HTTP Link preloads on the document response
+   (TTFB), not only <link> tags after the HTML body. Outfit is the hero/LCP
+   face; Mono is labels and stays low-priority so it cannot win the first hop. */
 const FONT_PRELOADS = [
-  "/fonts/outfit-marketing.woff2",
-  "/fonts/jetbrains-mono-marketing.woff2",
+  { href: "/fonts/outfit-marketing.woff2", fetchPriority: "high" },
+  { href: "/fonts/jetbrains-mono-marketing.woff2", fetchPriority: "low" },
 ] as const;
 
 export function FontPreloads() {
-  for (const href of FONT_PRELOADS) {
-    ReactDOM.preload(href, {
+  for (const { href, fetchPriority } of FONT_PRELOADS) {
+    preload(href, {
       as: "font",
       type: "font/woff2",
       crossOrigin: "anonymous",
+      fetchPriority,
     });
   }
 

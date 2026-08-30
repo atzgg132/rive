@@ -24,7 +24,6 @@ export const homeContent = {
     body: "One workspace for the client, the work, the Agreement, the invoice, and the proof—so context moves without you rebuilding the story every morning.",
     primaryCta: { label: "Build your workspace", href: "/register" },
     secondaryCta: { label: "See the unpaid role", href: "#problem" },
-    proof: ["Open signup", "Free during beta", "Your data stays yours"],
     stages: [
       { id: "client", label: "CLIENT", short: "The relationship" },
       { id: "work", label: "WORK", short: "The delivery" },

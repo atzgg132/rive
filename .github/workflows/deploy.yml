@@ -97,7 +97,9 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
-          build-args: DEPLOYMENT_VERSION=${{ github.sha }}
+          build-args: |
+            DEPLOYMENT_VERSION=${{ github.sha }}
+            APP_URL=${{ github.ref_name == 'main' && 'https://www.rive.work' || 'https://dev.rive.work' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build and push migration image

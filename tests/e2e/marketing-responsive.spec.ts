@@ -113,10 +113,67 @@ test.describe("marketing responsive guardrails", () => {
         overflow: style.textOverflow,
         scrollWidth: node.scrollWidth,
         clientWidth: node.clientWidth,
+        lineBoxes: node.getClientRects().length,
       };
     });
     expect(box.overflow, "AGREEMENT should wrap instead of ellipsizing").not.toBe("ellipsis");
     expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth + 1);
+    expect(box.lineBoxes, "AGREEMENT split mid-word").toBe(1);
+  });
+
+  test("the mobile hero keeps a stepped type scale and one-line pipeline labels", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+
+    const geometry = await page.evaluate(() => {
+      const hero = document.querySelector("[data-testid='marketing-hero']");
+      const headline = hero?.querySelector("h1");
+      const lastLine = headline?.querySelector(":scope > span:last-child");
+      const body = hero?.querySelector(".marketing-hero-body");
+      const eyebrow = hero?.querySelector(".hero-eyebrow");
+      const cta = hero?.querySelector("a[href='/register']");
+      const labels = ["CLIENT", "WORK", "AGREEMENT", "INVOICE", "PROOF"].map((label) => {
+        const node = document.querySelector(`[data-hero-stage-label="${label}"]`);
+        if (!node) return { label, found: false as const };
+        return {
+          label,
+          found: true as const,
+          size: Number.parseFloat(getComputedStyle(node).fontSize),
+          lineBoxes: node.getClientRects().length,
+          overflow: getComputedStyle(node).textOverflow,
+          scrollWidth: node.scrollWidth,
+          clientWidth: node.clientWidth,
+        };
+      });
+      return {
+        h1Size: headline ? Number.parseFloat(getComputedStyle(headline).fontSize) : Number.NaN,
+        h1Lines: headline ? Array.from(headline.querySelectorAll(":scope > span")).length : 0,
+        lastLineBoxes: lastLine ? lastLine.getClientRects().length : 0,
+        bodySize: body ? Number.parseFloat(getComputedStyle(body).fontSize) : Number.NaN,
+        eyebrowSize: eyebrow ? Number.parseFloat(getComputedStyle(eyebrow).fontSize) : Number.NaN,
+        ctaSize: cta ? Number.parseFloat(getComputedStyle(cta).fontSize) : Number.NaN,
+        labels,
+      };
+    });
+
+    expect(geometry.h1Size).toBeGreaterThanOrEqual(28);
+    expect(geometry.h1Size, `headline ${geometry.h1Size}px is still the desktop clamp`).toBeLessThan(38);
+    expect(geometry.h1Lines).toBe(3);
+    expect(geometry.lastLineBoxes, "you as middleware. wrapped onto a fourth line").toBe(1);
+    expect(geometry.bodySize).toBeGreaterThanOrEqual(15.5);
+    expect(geometry.bodySize).toBeLessThan(17.5);
+    expect(geometry.eyebrowSize, "OPEN BETA matched body size").toBeLessThan(geometry.bodySize - 1);
+    expect(geometry.eyebrowSize).toBeGreaterThanOrEqual(11.5);
+    expect(geometry.ctaSize).toBeGreaterThanOrEqual(15.5);
+    for (const row of geometry.labels) {
+      expect(row.found, `missing ${row.label}`).toBe(true);
+      if (!row.found) continue;
+      expect(row.size, `${row.label} ${row.size}px was lifted to body size`).toBeLessThan(14);
+      expect(row.overflow, `${row.label} ellipsized`).not.toBe("ellipsis");
+      expect(row.lineBoxes, `${row.label} split mid-word`).toBe(1);
+      expect(row.scrollWidth, `${row.label} overflowed`).toBeLessThanOrEqual(row.clientWidth + 1);
+    }
   });
 
   test("mobile drawer keeps Log in and signup in view without scrolling", async ({ page }) => {
@@ -158,6 +215,51 @@ test.describe("marketing responsive guardrails", () => {
     expect(visibility).not.toBeNull();
     expect(visibility!.login, "Log in was below the drawer fold").toBe(true);
     expect(visibility!.signup, "signup was below the drawer fold").toBe(true);
+  });
+
+  test("authored type below 12px becomes at least 16px at 390px", async ({ page }) => {
+    await installMarketingMocks(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const routes = ["/", "/contact", "/login", "/cookies"] as const;
+    for (const route of routes) {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.status(), `${route} returned an error document`).toBeLessThan(400);
+      await page.evaluate(() => document.fonts.ready);
+
+      const report = await page.evaluate(() => {
+        const SMALL_CLASS = /(?:^|\s)text-\[(?:9px|10px|11px|0\.(?:45|46|48|5|54|55|56|58|6|62|64|66|68|6875|7)rem)\](?:\s|$)/;
+        const skipTag = /^(SCRIPT|STYLE|NOSCRIPT|SVG|PATH|CANVAS|IMG|VIDEO|AUDIO)$/;
+        const under12: { routeHint: string; fontSize: number; className: string; text: string }[] = [];
+        const belowFloor: { routeHint: string; fontSize: number; className: string; text: string }[] = [];
+
+        const ownText = (node: Element) => Array.from(node.childNodes)
+          .filter((child) => child.nodeType === Node.TEXT_NODE)
+          .map((child) => (child.textContent || "").replace(/\s+/g, " ").trim())
+          .filter(Boolean)
+          .join(" ")
+          .slice(0, 80);
+
+        for (const node of document.body.querySelectorAll<HTMLElement>("*")) {
+          if (skipTag.test(node.tagName) || node.closest("svg") || node.closest("[data-product-frame]") || node.closest("[data-hero-stage-label]")) continue;
+          const style = getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden" || Number.parseFloat(style.opacity) === 0) continue;
+          if (style.clipPath === "inset(50%)" || node.classList.contains("sr-only")) continue;
+          const rect = node.getBoundingClientRect();
+          if (rect.width < 1 || rect.height < 1) continue;
+          const text = ownText(node);
+          const fontSize = Number.parseFloat(style.fontSize);
+          if (!Number.isFinite(fontSize)) continue;
+          const sample = { routeHint: "", fontSize, className: node.className.toString().slice(0, 160), text };
+          if (text && fontSize < 11.5) under12.push(sample);
+          if (SMALL_CLASS.test(node.className.toString()) && fontSize < 15.5) belowFloor.push({ ...sample, text: text || node.textContent?.trim().slice(0, 80) || "" });
+        }
+        return { under12, belowFloor };
+      });
+
+      expect(report.under12, `${route} still has type under 12px: ${JSON.stringify(report.under12.slice(0, 8))}`).toEqual([]);
+      expect(report.belowFloor, `${route} still has sub-12px classes under 16px: ${JSON.stringify(report.belowFloor.slice(0, 8))}`).toEqual([]);
+    }
   });
 
   test("hash targets land below the fixed header", async ({ page }) => {
