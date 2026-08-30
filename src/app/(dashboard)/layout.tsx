@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const data = await res.json().catch(() => null);
           if (cancelled) return;
           if (res.ok && data?.success) {
-            if (data.user.onboarding_status && data.user.onboarding_status !== "complete" && data.user.onboarding_status !== "skipped") {
+            if (pathname !== "/migrate" && data.user.onboarding_status && data.user.onboarding_status !== "complete" && data.user.onboarding_status !== "skipped") {
               router.replace("/onboarding");
               return;
             }
@@ -151,7 +151,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     if (!user) return;

@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       return tx.user.update({
         where: { id: authToken.userId! },
         data: { emailVerifiedAt: now },
-        select: { id: true, email: true, name: true, plan: true, sessionVersion: true, onboardingStatus: true },
+        select: { id: true, email: true, name: true, plan: true, sessionVersion: true, onboardingStatus: true, onboardingData: true },
       });
     });
     if (!result) {
@@ -51,10 +51,14 @@ export async function POST(req: NextRequest) {
     });
     await recordActivationEvent(result.id, ACTIVATION_EVENTS.registered, { verified: true });
 
+    const onboardingData = result.onboardingData as Record<string, unknown> | null;
+    const migrationIntent = onboardingData?.goal === "migrate";
     const response = NextResponse.json({
       success: true,
       message: "Email verified. Your workspace is ready.",
-      destination: result.onboardingStatus === "complete" || result.onboardingStatus === "skipped" ? "/dashboard" : "/onboarding",
+      destination: migrationIntent
+        ? "/migrate"
+        : result.onboardingStatus === "complete" || result.onboardingStatus === "skipped" ? "/dashboard" : "/onboarding",
       user: { id: result.id, email: result.email, name: result.name, plan: result.plan },
     });
     setSessionCookie(response, generateUserToken(result.id, result.email, result.plan, result.sessionVersion));

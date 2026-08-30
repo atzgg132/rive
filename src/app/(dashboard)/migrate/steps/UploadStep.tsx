@@ -77,7 +77,7 @@ export default function UploadStep({
             id="migration-files"
             type="file"
             multiple
-            accept=".csv,.tsv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="sr-only"
             onChange={(event) => {
               addFiles(event.target.files);

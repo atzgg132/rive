@@ -6,7 +6,7 @@ import { connectorCredentialConfigured } from "@/utils/connectorConfig";
  * Follows the repository's existing `X_ENABLED` convention so the new
  * experience can be validated in staging and switched off without a deploy.
  * While it is off the original onboarding importer remains the only import
- * path, which keeps the rollback story simple: flip the flag, nothing else.
+ * path. SSM owns the switch so an operator kill survives Terraform applies.
  */
 export function migrationEngineAvailable(): boolean {
   return process.env.MIGRATION_ENGINE_ENABLED?.trim().toLowerCase() === "true";

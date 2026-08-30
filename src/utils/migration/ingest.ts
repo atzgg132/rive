@@ -44,6 +44,8 @@ export type IngestedSource = {
   mimeType: string;
   sizeBytes: number;
   checksum: string;
+  /** Private durable-upload object shared by every sheet from one workbook. */
+  objectKey?: string;
 };
 
 export type IngestResult =

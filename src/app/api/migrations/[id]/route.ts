@@ -7,10 +7,10 @@ import { mappingOptions } from "@/lib/migration/fields";
 import { MIGRATION_ENTITIES, type ImportPlan, type MigrationState, type SourceClassification } from "@/lib/migration/types";
 import type { RecordResolution, SourceOverrides } from "@/lib/migration/pipeline";
 import { migrationEngineAvailable } from "@/utils/migration/config";
-import { analyzeMigration } from "@/utils/migration/analyze";
 import { isEditable, loadSession, transition } from "@/utils/migration/session";
 import { MIGRATION_EVENTS, recordMigrationEvent } from "@/utils/migration/analytics";
 import { isValidIsoCurrency } from "@/lib/migration/normalize/money";
+import { dispatchMigrationWork } from "@/utils/migration/dispatch";
 
 /**
  * A single migration: read its full state, or record a review decision.
@@ -48,11 +48,11 @@ export async function GET(req: NextRequest, context: RouteContext) {
   // The review screen only ever needs the records that need attention. Clean
   // rows are counted, not shipped — a 20,000-row migration must not become a
   // 20,000-row JSON payload.
-  const where: Prisma.MigrationRecordWhereInput = { importJobId: job.id };
+  const where: Prisma.MigrationRecordWhereInput = { importJobId: job.id, active: true };
   if (filter === "issues") where.status = { in: ["review", "error"] };
   else if (MIGRATION_ENTITIES.includes(filter as never)) where.entity = filter;
 
-  const [records, total, counts] = await Promise.all([
+  const [records, total, counts, operationCounts, excludedRecords] = await Promise.all([
     prisma.migrationRecord.findMany({
       where,
       orderBy: [{ entity: "asc" }, { sourceRow: "asc" }],
@@ -66,17 +66,37 @@ export async function GET(req: NextRequest, context: RouteContext) {
       },
     }),
     prisma.migrationRecord.count({ where }),
-    prisma.migrationRecord.groupBy({ by: ["entity", "status"], where: { importJobId: job.id }, _count: true }),
+    prisma.migrationRecord.groupBy({ by: ["entity", "status"], where: { importJobId: job.id, active: true }, _count: true }),
+    prisma.migrationOperation.groupBy({ by: ["status"], where: { importJobId: job.id }, _count: true }),
+    prisma.migrationRecord.findMany({
+      where: { importJobId: job.id, active: true, action: "skip" },
+      orderBy: [{ entity: "asc" }, { sourceRow: "asc" }],
+      take: 200,
+      select: { sourceKey: true, entity: true, sourceRow: true, errors: true, warnings: true },
+    }),
   ]);
 
   const plan = job.plan as unknown as ImportPlan | null;
+  const operationCount = (status: string) => operationCounts.find((entry) => entry.status === status)?._count || 0;
+  const appliedCount = operationCount("applied") + operationCount("skipped");
+  const pendingCount = operationCount("pending") + operationCount("failed");
+  const progressTotal = Math.max(0, job.progressTotal);
+  const progressPercent = progressTotal > 0
+    ? Math.min(100, Math.round((job.progressCompleted / progressTotal) * 100))
+    : (["completed", "completed_with_issues"].includes(job.status) ? 100 : 0);
+  const canCommit = Boolean(
+    plan
+    && plan.reviewItems.length === 0
+    && plan.blocked.length === 0
+    && ["ready", "review_required"].includes(job.status),
+  );
 
   return NextResponse.json({
     success: true,
     migration: {
       id: job.id,
       state: job.status as MigrationState,
-      editable: isEditable(job.status as MigrationState),
+      editable: isEditable(job.status as MigrationState) && appliedCount === 0 && pendingCount === 0,
       planHash: job.planHash,
       planVersion: job.planVersion,
       defaultCurrency: job.defaultCurrency,
@@ -84,8 +104,12 @@ export async function GET(req: NextRequest, context: RouteContext) {
       completedAt: job.completedAt,
       rolledBackAt: job.rolledBackAt,
       error: job.error,
+      failurePhase: job.failurePhase,
+      failureCode: job.failureCode,
+      attemptCount: job.attemptCount,
     },
     sources: job.files.map((file) => ({
+      fileId: file.id,
       sourceId: file.sourceId,
       name: file.name,
       sheetName: file.sheetName,
@@ -98,6 +122,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
       profile: file.profile,
       mapping: file.mapping,
       overrides: file.overrides,
+      uploadStatus: job.status === "queued_analysis" && ["verified", "parsed"].includes(file.uploadStatus)
+        ? "queued"
+        : ["profiling", "mapping"].includes(job.status) && ["verified", "parsed"].includes(file.uploadStatus)
+          ? "analyzing"
+          : file.uploadStatus,
+      uploadedAt: file.uploadedAt,
+      uploadError: file.uploadError,
       // Only the fields that belong to this source's record type, so the
       // manual mapper never offers an expense field on an invoice sheet.
       options: MIGRATION_ENTITIES.includes(file.entity as never)
@@ -119,6 +150,32 @@ export async function GET(req: NextRequest, context: RouteContext) {
     pagination: { page, pageSize: REVIEW_PAGE_SIZE, total },
     counts,
     summary: job.summary,
+    progress: {
+      phase: job.phase,
+      completed: job.progressCompleted,
+      total: progressTotal,
+      percent: progressPercent,
+      lastHeartbeatAt: job.lastHeartbeatAt,
+    },
+    canCommit,
+    unresolved: {
+      review: plan?.reviewItems.length || 0,
+      invalid: plan?.blocked.length || 0,
+      total: (plan?.reviewItems.length || 0) + (plan?.blocked.length || 0),
+    },
+    excluded: {
+      count: plan?.totals.skip || excludedRecords.length,
+      rows: excludedRecords,
+      truncated: (plan?.totals.skip || 0) > excludedRecords.length,
+    },
+    recovery: {
+      canRetry: job.status === "failed" && Boolean(job.failurePhase),
+      canReplaceFiles: appliedCount === 0 && job.failurePhase !== "commit" && ["uploading", "failed"].includes(job.status),
+      appliedCount,
+      pendingCount,
+      supportReference: `RIVE-MIG-${job.id.slice(-8).toUpperCase()}`,
+      supportRequested: Boolean(job.supportRequestedAt),
+    },
   });
 }
 
@@ -207,6 +264,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     );
   }
 
+  const committedOperations = await prisma.migrationOperation.count({ where: { importJobId: job.id } });
+  if (committedOperations > 0) {
+    return NextResponse.json(
+      { success: false, message: "This migration has begun importing. Its approved plan is now frozen; retry that exact plan instead." },
+      { status: 409 },
+    );
+  }
+
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ success: false, message: "Invalid request body." }, { status: 400 });
@@ -275,22 +340,38 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     });
   }
 
+  const queued = await prisma.importJob.update({
+    where: { id: job.id },
+    data: {
+      inputRevision: { increment: 1 },
+      status: "queued_analysis",
+      phase: "queued_analysis",
+      planHash: null,
+      failurePhase: null,
+      failureCode: null,
+      error: null,
+      progressCompleted: 0,
+      completedAt: null,
+    },
+    select: { inputRevision: true },
+  });
   try {
-    const analysis = await analyzeMigration(session.userId, job.id);
+    const dispatched = await dispatchMigrationWork({
+      migrationId: job.id,
+      operation: "reanalyze",
+      inputRevision: queued.inputRevision,
+    });
     return NextResponse.json({
       success: true,
-      state: analysis.state,
-      // The plan hash changes whenever a decision changes the outcome, which is
-      // exactly what invalidates a stale preview.
-      planHash: analysis.plan.planHash,
-      counts: analysis.plan.counts,
-      totals: analysis.plan.totals,
-      metrics: analysis.plan.metrics,
-      reviewCount: analysis.plan.reviewItems.length,
-      blockedCount: analysis.plan.blocked.length,
-    });
+      state: dispatched.queued ? "queued_analysis" : dispatched.outcome?.status,
+      inputRevision: queued.inputRevision,
+    }, { status: dispatched.queued ? 202 : 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message.slice(0, 500) : "Re-analysis failed.";
+    const message = error instanceof Error ? error.message.slice(0, 500) : "Re-analysis could not be queued.";
+    await prisma.importJob.update({
+      where: { id: job.id },
+      data: { status: "failed", phase: "recovery", failurePhase: "analysis", failureCode: "enqueue_failed", error: message },
+    });
     return NextResponse.json({ success: false, message: `Rive could not re-check this migration: ${message}` }, { status: 500 });
   }
 }
@@ -314,7 +395,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const abandoned = await transition(
     job.id,
     session.userId,
-    ["created", "uploading", "profiling", "mapping", "review_required", "ready", "failed"],
+    ["created", "uploading", "queued_analysis", "profiling", "mapping", "review_required", "ready", "failed"],
     "abandoned",
     { completedAt: new Date() },
   );

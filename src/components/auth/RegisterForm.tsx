@@ -14,11 +14,15 @@ export function RegisterForm({
   initialEmail = "",
   inviteToken = "",
   startPending = false,
+  nextPath = "",
+  goal = "",
   onLogin,
 }: {
   initialEmail?: string;
   inviteToken?: string;
   startPending?: boolean;
+  nextPath?: string;
+  goal?: string;
   onLogin: (email: string) => void;
 }) {
   const [name, setName] = useState("");
@@ -49,6 +53,8 @@ export function RegisterForm({
           inviteToken: inviteToken || undefined,
           website: websiteRef.current?.value ?? "",
           startedAt: startedAtRef.current,
+          next: nextPath,
+          goal,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -132,7 +138,7 @@ export function RegisterForm({
       </BaseDialog.Description>
       <div className="mt-8">
         {error ? <Alert variant="destructive" className="mb-5 text-sm">{error}</Alert> : null}
-        <GoogleSignInButton />
+        <GoogleSignInButton nextPath={nextPath} />
       <form method="post" onSubmit={handleRegister} className="flex flex-col gap-5" data-testid="register-form" data-hydrated={hydrated ? "true" : "false"} data-invite={inviteToken || undefined}>
         <HoneypotField inputRef={websiteRef} />
         <FormField label="Full name" htmlFor="register-name">

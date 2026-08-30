@@ -717,6 +717,10 @@ model ImportJob {
   planHash        String?              @map("plan_hash")
   planVersion     Int                  @default(0) @map("plan_version")
   plan            Json?
+  // Every upload, mapping edit, or review decision increments the input
+  // revision. An asynchronous analysis may only publish a plan for the
+  // revision it claimed, so a slow worker can never overwrite a newer choice.
+  inputRevision   Int                  @default(0) @map("input_revision")
   // Currency chosen for this migration when a source does not state one.
   defaultCurrency String?              @map("default_currency")
   totalRows       Int                  @default(0) @map("total_rows")
@@ -725,6 +729,15 @@ model ImportJob {
   updatedRecords  Int                  @default(0) @map("updated_records")
   skippedRecords  Int                  @default(0) @map("skipped_records")
   unresolvedCount Int                  @default(0) @map("unresolved_count")
+  progressCompleted Int                @default(0) @map("progress_completed")
+  progressTotal   Int                  @default(0) @map("progress_total")
+  failurePhase    String?              @map("failure_phase")
+  failureCode     String?              @map("failure_code")
+  lastHeartbeatAt DateTime?            @map("last_heartbeat_at")
+  attemptCount    Int                  @default(0) @map("attempt_count")
+  workerLeaseId   String?              @map("worker_lease_id")
+  workerLeaseExpiresAt DateTime?        @map("worker_lease_expires_at")
+  supportRequestedAt DateTime?          @map("support_requested_at")
   summary         Json?
   error           String?
   startedAt       DateTime?            @map("started_at")
@@ -751,6 +764,14 @@ model ImportFile {
   mimeType    String            @map("mime_type")
   sizeBytes   Int               @map("size_bytes")
   checksum    String
+  // Original uploads live privately in object storage for a bounded recovery
+  // window. Existing inline/legacy sources have no object key and are already
+  // considered verified.
+  objectKey    String?           @map("object_key")
+  uploadStatus String            @default("verified") @map("upload_status")
+  uploadedAt   DateTime?         @map("uploaded_at")
+  expiresAt    DateTime?         @map("expires_at")
+  uploadError  String?           @map("upload_error")
   entity      String
   rowCount    Int               @map("row_count")
   headers     Json
@@ -843,6 +864,9 @@ model MigrationRecord {
   groupKey               String?     @map("group_key")
   status                 String      @default("ready")
   action                 String      @default("create")
+  // Re-analysis supersedes staged rows without deleting them. Only active rows
+  // participate in preview and commit; inactive rows remain audit evidence.
+  active                 Boolean     @default(true)
   /// Set once the record has been written, so rollback can find it.
   targetType             String?     @map("target_type")
   targetId               String?     @map("target_id")
@@ -851,6 +875,7 @@ model MigrationRecord {
 
   @@unique([importJobId, sourceKey])
   @@index([importJobId, entity, status])
+  @@index([importJobId, active, entity, status])
   @@index([importJobId, groupKey])
   @@map("migration_records")
 }
@@ -918,11 +943,13 @@ model ImportMapping {
   entity    String
   name      String
   mapping   Json
+  active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, provider, entity, name])
   @@index([userId, provider])
+  @@index([userId, active, updatedAt])
   @@map("import_mappings")
 }
 

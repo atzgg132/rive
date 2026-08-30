@@ -10,8 +10,7 @@ import { ENTITY_LABELS } from "../types";
  * Step 6 — done.
  *
  * Shows what actually landed, taken from the commit result rather than the
- * plan, and points at the workspace it built. Undo stays visible: a migration
- * the user cannot reverse is a migration they will hesitate to run.
+ * plan, and points at the workspace it built.
  */
 export default function SuccessStep({
   result,
@@ -54,8 +53,8 @@ export default function SuccessStep({
 
         <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
-            Changed your mind? You can undo this import from your migration history for anything you have not edited
-            since.
+            Existing records were not overwritten. Imported records now remain in your workspace; migration history keeps
+            the source-to-record audit trail.
           </p>
           <div className="flex shrink-0 flex-wrap gap-2">
             <Button type="button" variant="ghost" onClick={onStartAnother}>

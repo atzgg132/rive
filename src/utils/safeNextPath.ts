@@ -34,6 +34,7 @@ export function resolveLoginDestination(
   nextCandidate: string | null | undefined,
 ): string {
   const destination = apiDestination || "/dashboard";
+  if (safeNextPath(nextCandidate) === "/migrate") return "/migrate";
   if (destination !== "/dashboard") return destination;
   return safeNextPath(nextCandidate) || destination;
 }

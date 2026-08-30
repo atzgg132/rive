@@ -222,6 +222,26 @@ test("blocks rows that cannot become valid records and imports the rest", () => 
   assert.equal(result.plan.metrics.errorCount >= 2, true);
 });
 
+test("an invalid row leaves the unresolved queue only after an explicit skip", () => {
+  const csv = [
+    "invoice_no,total,currency,issue_date",
+    "INV-010,not-a-number,INR,2026-04-03",
+  ].join("\n");
+  const first = run([source("s3", "invoices.csv", csv)]);
+  assert.equal(first.plan.blocked.length, 1);
+  const sourceKey = first.records[0].source.sourceKey;
+
+  const resolved = run(
+    [source("s3", "invoices.csv", csv)],
+    EMPTY_WORKSPACE,
+    { resolutions: { [sourceKey]: { decision: "skip" } } },
+  );
+  assert.equal(resolved.plan.blocked.length, 0);
+  assert.equal(resolved.plan.reviewItems.length, 0);
+  assert.equal(resolved.plan.totals.skip, 1);
+  assert.equal(resolved.plan.operations.length, 0);
+});
+
 test("refuses to guess an ambiguous currency and blocks only those rows", () => {
   const dollars = [
     "invoice_no,customer,total,issue_date",

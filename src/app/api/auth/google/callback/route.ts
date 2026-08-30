@@ -17,6 +17,7 @@ function loginError(req: NextRequest, code: string) {
 }
 
 function loginDestination(onboardingStatus: string, nextPath: string) {
+  if (nextPath === "/migrate") return "/migrate";
   if (onboardingStatus === "complete" || onboardingStatus === "skipped") {
     return nextPath || "/dashboard";
   }
@@ -95,6 +96,7 @@ export async function GET(req: NextRequest) {
             onboardingStep: 0,
             timeZone: "UTC",
             currency: "USD",
+            onboardingData: state.next === "/migrate" ? { goal: "migrate", startingPath: "import" } : undefined,
           },
           select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true },
         });

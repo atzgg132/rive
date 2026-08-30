@@ -18,6 +18,7 @@ export const MIGRATION_EVENTS = {
   mappingGenerated: "migration_mapping_generated",
   manualMappingUsed: "migration_manual_mapping_used",
   reviewStarted: "migration_review_started",
+  reviewCompleted: "migration_review_completed",
   issueResolved: "migration_issue_resolved",
   planCreated: "migration_plan_created",
   commitStarted: "migration_commit_started",
@@ -60,6 +61,30 @@ export type MigrationEventProperties = {
   reason?: string;
 };
 
+function safeProperties(properties: MigrationEventProperties): Prisma.InputJsonObject {
+  const result: Record<string, Prisma.InputJsonValue> = {};
+  for (const key of [
+    "fileCount", "recordCount", "autoMappingRate", "manualMappingCount", "relationshipResolutionRate",
+    "duplicateRate", "errorCount", "warningCount", "reviewCount", "durationMs", "timeToImportMs",
+    "migrationVersion", "confidence",
+  ] as const) {
+    const value = properties[key];
+    if (typeof value === "number" && Number.isFinite(value)) result[key] = value;
+  }
+  for (const key of ["sourceType", "entity", "classification", "outcome"] as const) {
+    const value = properties[key];
+    if (typeof value === "string" && /^[a-z0-9_.-]{1,80}$/i.test(value)) result[key] = value;
+  }
+  if (properties.entityCounts) {
+    result.entityCounts = Object.fromEntries(Object.entries(properties.entityCounts)
+      .filter(([key, value]) => /^[a-z0-9_-]{1,40}$/i.test(key) && Number.isFinite(value))
+      .map(([key, value]) => [key, value]));
+  }
+  // `reason` is intentionally not persisted. Provider/Prisma messages can
+  // contain a filename or source value; failure phase/code live on ImportJob.
+  return result as Prisma.InputJsonObject;
+}
+
 /**
  * Record one migration event.
  *
@@ -78,7 +103,7 @@ export async function recordMigrationEvent(
         userId,
         importJobId,
         event,
-        properties: properties as Prisma.InputJsonObject,
+        properties: safeProperties(properties),
       },
     });
   } catch (error) {

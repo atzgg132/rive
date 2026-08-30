@@ -246,10 +246,12 @@ export type ImportPlan = {
 export const MIGRATION_STATES = [
   "created",
   "uploading",
+  "queued_analysis",
   "profiling",
   "mapping",
   "review_required",
   "ready",
+  "queued_commit",
   "committing",
   "completed",
   "completed_with_issues",

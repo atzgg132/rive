@@ -73,9 +73,8 @@ export default function PlanStep({
           </div>
 
           {plan.blocked.length ? (
-            <Alert variant="warning">
-              {plan.blocked.length} {plan.blocked.length === 1 ? "row" : "rows"} will not be imported because
-              {plan.blocked.length === 1 ? " it is" : " they are"} missing something Rive needs. Everything else still imports.
+            <Alert variant="destructive">
+              Return to review and explicitly skip or resolve all {plan.blocked.length} invalid {plan.blocked.length === 1 ? "row" : "rows"}.
             </Alert>
           ) : null}
 
@@ -90,10 +89,22 @@ export default function PlanStep({
           <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
             <p className="text-xs text-muted-foreground">
               Rive matched {Math.round(plan.metrics.autoMappingRate * 100)}% of columns and{" "}
-              {Math.round(plan.metrics.relationshipResolutionRate * 100)}% of relationships without asking. You can undo
-              this import afterwards for anything you have not changed.
+              {Math.round(plan.metrics.relationshipResolutionRate * 100)}% of relationships without asking. Existing records
+              are never overwritten. Records created by this import remain in your workspace after commit.
             </p>
           </div>
+
+          {detail.excluded.count > 0 ? (
+            <div className="rounded-xl border border-border px-4 py-3">
+              <p className="text-xs font-semibold text-foreground">Excluded rows ({detail.excluded.count})</p>
+              <ul className="mt-2 max-h-36 space-y-1 overflow-auto text-xs text-muted-foreground">
+                {detail.excluded.rows.map((row) => (
+                  <li key={row.sourceKey}>{ENTITY_LABELS[row.entity] || row.entity} · source row {row.sourceRow}</li>
+                ))}
+              </ul>
+              {detail.excluded.truncated ? <p className="mt-2 text-xs text-muted-foreground">The complete exclusion list remains in the migration audit record.</p> : null}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -101,7 +112,7 @@ export default function PlanStep({
         <Button type="button" variant="ghost" onClick={onBack} disabled={committing}>
           Back to review
         </Button>
-        <Button type="button" data-guide-target="migration-upload" onClick={onCommit} disabled={committing || plan.totals.create + plan.totals.link === 0}>
+        <Button type="button" data-guide-target="migration-upload" onClick={onCommit} disabled={committing || !detail.canCommit || plan.totals.create + plan.totals.link === 0}>
           {committing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
           {committing ? "Importing" : "Import workspace"}
         </Button>

@@ -16,6 +16,7 @@ import { applyDeduplication } from "@/lib/migration/dedupe";
 import { validateRecords } from "@/lib/migration/validate";
 import { buildImportPlan } from "@/lib/migration/plan";
 import { buildWorkspaceIndex } from "@/lib/migration/workspace";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 /**
  * Analysis: persist sources, run the deterministic pipeline, store the result.
@@ -87,6 +88,12 @@ function toDateOnly(value: Date | null): string | null {
 
 /** Persist newly uploaded sources onto an existing migration. */
 export async function persistSources(importJobId: string, sources: IngestedSource[]): Promise<void> {
+  const objectKeys = Array.from(new Set(sources.map((source) => source.objectKey).filter((value): value is string => Boolean(value))));
+  const existingObjectFiles = objectKeys.length
+    ? await prisma.importFile.findMany({ where: { importJobId, objectKey: { in: objectKeys } }, orderBy: { createdAt: "asc" } })
+    : [];
+  const usedFileIds = new Set<string>();
+
   for (const source of sources) {
     const { table } = source;
     const payload = {
@@ -103,7 +110,19 @@ export async function persistSources(importJobId: string, sources: IngestedSourc
       encoding: table.encoding,
       delimiter: table.delimiter,
       headerRow: table.headerRowIndex,
+      ...(source.objectKey ? { objectKey: source.objectKey, uploadStatus: "parsed", uploadError: null } : {}),
     };
+    if (source.objectKey) {
+      const candidates = existingObjectFiles.filter((file) => file.objectKey === source.objectKey);
+      const exact = candidates.find((file) => file.sourceId === source.sourceId);
+      const unassigned = candidates.find((file) => !usedFileIds.has(file.id) && !file.sourceId);
+      const target = exact || unassigned;
+      if (target) {
+        await prisma.importFile.update({ where: { id: target.id }, data: { sourceId: source.sourceId, ...payload } });
+        usedFileIds.add(target.id);
+        continue;
+      }
+    }
     // Re-uploading the same bytes replaces the source rather than adding a
     // second copy; `sourceId` makes that deterministic.
     await prisma.importFile.upsert({
@@ -111,6 +130,15 @@ export async function persistSources(importJobId: string, sources: IngestedSourc
       create: { importJobId, sourceId: source.sourceId, ...payload },
       update: payload,
     });
+  }
+
+  // If a replacement workbook contains fewer sheets, retain the old sheet rows
+  // as audit evidence but exclude them from future analysis.
+  for (const file of existingObjectFiles) {
+    if (!usedFileIds.has(file.id) && file.sourceId) {
+      const stillPresent = sources.some((source) => source.objectKey === file.objectKey && source.sourceId === file.sourceId);
+      if (!stillPresent) await prisma.importFile.update({ where: { id: file.id }, data: { uploadStatus: "superseded" } });
+    }
   }
 }
 
@@ -146,6 +174,13 @@ export type AnalysisResult = {
   recordCount: number;
 };
 
+export class StaleMigrationInputError extends Error {
+  constructor() {
+    super("Migration input changed while analysis was running.");
+    this.name = "StaleMigrationInputError";
+  }
+}
+
 /**
  * Re-run the full pipeline for a migration and persist everything it produced.
  *
@@ -154,7 +189,7 @@ export type AnalysisResult = {
  * and duplicates are global properties of the whole upload, so a partial
  * re-analysis could leave the plan internally inconsistent.
  */
-export async function analyzeMigration(userId: string, importJobId: string): Promise<AnalysisResult> {
+export async function analyzeMigration(userId: string, importJobId: string, expectedInputRevision?: number): Promise<AnalysisResult> {
   const job = await prisma.importJob.findFirstOrThrow({
     where: { id: importJobId, userId },
     include: { files: { orderBy: { createdAt: "asc" } } },
@@ -162,7 +197,7 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
 
   const workspace = await loadWorkspaceSnapshot(userId);
   const sources: PipelineSource[] = job.files
-    .filter((file) => file.sourceId)
+    .filter((file) => file.sourceId && file.uploadStatus !== "superseded")
     .map((file) => ({
       sourceId: file.sourceId as string,
       table: toSourceTable(file),
@@ -188,11 +223,14 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
   const openQuestions = result.unclassified.length + result.needsConfirmation.length;
   const state = nextState(result.plan, openQuestions);
 
-  // Replace the staged IR wholesale. Rewriting is safe because nothing has been
-  // committed yet; once operations exist, re-analysis is refused upstream.
+  // Supersede staged rows without deleting audit evidence. Source keys are
+  // stable, so rows still produced are updated in place and rows that disappear
+  // after a review decision remain inactive.
   await prisma.$transaction(async (transaction) => {
-    await transaction.migrationRecord.deleteMany({ where: { importJobId } });
-
+    if (expectedInputRevision !== undefined) {
+      const current = await transaction.importJob.findUnique({ where: { id: importJobId }, select: { inputRevision: true } });
+      if (!current || current.inputRevision !== expectedInputRevision) throw new StaleMigrationInputError();
+    }
     for (const analyzed of result.sources) {
       const file = filesBySourceId.get(analyzed.sourceId);
       if (!file) continue;
@@ -217,11 +255,11 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
       });
     }
 
-    if (result.records.length) {
-      await transaction.migrationRecord.createMany({
-        data: result.records.map((record) => toRecordRow(importJobId, record, filesBySourceId)),
-      });
-    }
+    await persistActiveRecords(
+      transaction,
+      importJobId,
+      result.records.map((record) => toRecordRow(importJobId, record, filesBySourceId)),
+    );
 
     await transaction.importJob.update({
       where: { id: importJobId },
@@ -233,7 +271,12 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
         plan: result.plan as unknown as Prisma.InputJsonValue,
         totalRows: sources.reduce((sum, source) => sum + source.table.rows.length, 0),
         processedRows: result.records.length,
-        unresolvedCount: result.plan.reviewItems.length + openQuestions,
+        unresolvedCount: result.plan.reviewItems.length + result.plan.blocked.length + openQuestions,
+        progressCompleted: result.records.length,
+        progressTotal: result.records.length,
+        lastHeartbeatAt: new Date(),
+        failurePhase: null,
+        failureCode: null,
         summary: {
           ...summary,
           // Resolutions are carried forward explicitly. Overwriting `summary`
@@ -272,7 +315,24 @@ export async function analyzeMigration(userId: string, importJobId: string): Pro
         expenses: result.plan.counts.expenses.create,
       },
     }),
+    ...(state === "ready" ? [recordMigrationEvent(userId, MIGRATION_EVENTS.reviewCompleted, importJobId, {
+      recordCount: result.plan.operations.length,
+      reviewCount: 0,
+      errorCount: 0,
+    })] : []),
   ]);
+
+  if (state === "ready") {
+    await recordProductEvent({
+      userId,
+      eventName: PRODUCT_EVENTS.importReviewCompleted,
+      module: "migration",
+      entityType: "migration",
+      entityId: importJobId,
+      dedupeKey: `migration:review:${importJobId}:${result.plan.planHash}`,
+      properties: { operationCount: result.plan.operations.length },
+    });
+  }
 
   return { plan: result.plan, state, recordCount: result.records.length };
 }
@@ -310,7 +370,23 @@ function toRecordRow(
     groupKey: record.groupKey,
     status: record.status,
     action: record.action,
+    active: true,
   };
+}
+
+async function persistActiveRecords(
+  transaction: Prisma.TransactionClient,
+  importJobId: string,
+  rows: Prisma.MigrationRecordCreateManyInput[],
+): Promise<void> {
+  await transaction.migrationRecord.updateMany({ where: { importJobId, active: true }, data: { active: false } });
+  for (const row of rows) {
+    await transaction.migrationRecord.upsert({
+      where: { importJobId_sourceKey: { importJobId, sourceKey: row.sourceKey } },
+      create: row,
+      update: { ...row, active: true },
+    });
+  }
 }
 
 export type ProviderAnalysisResult = {
@@ -370,12 +446,11 @@ export async function persistProviderRecords(
   const state = nextState(plan, 0);
 
   await prisma.$transaction(async (transaction) => {
-    await transaction.migrationRecord.deleteMany({ where: { importJobId } });
-    if (records.length) {
-      await transaction.migrationRecord.createMany({
-        data: records.map((record) => toRecordRow(importJobId, record, new Map())),
-      });
-    }
+    await persistActiveRecords(
+      transaction,
+      importJobId,
+      records.map((record) => toRecordRow(importJobId, record, new Map())),
+    );
     await transaction.importJob.update({
       where: { id: importJobId },
       data: {

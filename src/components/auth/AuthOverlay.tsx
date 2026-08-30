@@ -68,6 +68,8 @@ export function AuthOverlay({
                   initialEmail={params.email}
                   inviteToken={params.invite}
                   startPending={startPending}
+                  nextPath={params.next}
+                  goal={params.goal}
                   onLogin={(email) => onViewChange("login", { email })}
                 />
               ) : null}

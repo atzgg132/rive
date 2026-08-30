@@ -36,7 +36,7 @@ resource "aws_s3_bucket_cors_configuration" "assets" {
   for_each = local.environments
   bucket   = aws_s3_bucket.assets[each.key].id
   cors_rule {
-    allowed_headers = ["content-type"]
+    allowed_headers = ["content-type", "x-amz-tagging"]
     allowed_methods = ["PUT"]
     allowed_origins = [var.environment_domains[each.key]]
     expose_headers  = ["etag"]
@@ -84,6 +84,33 @@ resource "aws_s3_bucket_lifecycle_configuration" "assets" {
     status = "Enabled"
     noncurrent_version_expiration {
       noncurrent_days = each.key == "prod" ? 30 : 7
+    }
+  }
+
+  # Originals are retained only for the documented recovery window. Parsed
+  # provenance remains in PostgreSQL after the private object expires.
+  rule {
+    id     = "expire-migration-originals"
+    status = "Enabled"
+    filter {
+      prefix = "migration/"
+    }
+    expiration {
+      days = 30
+    }
+  }
+
+  rule {
+    id     = "expire-unverified-migration-objects"
+    status = "Enabled"
+    filter {
+      tag {
+        key   = "migration-state"
+        value = "incomplete"
+      }
+    }
+    expiration {
+      days = 1
     }
   }
 }

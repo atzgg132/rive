@@ -282,7 +282,7 @@ test.describe("migration", () => {
     });
     // The second attempt is refused outright rather than creating duplicates.
     expect(second.status()).toBe(409);
-    expect(firstBody.total).toBeGreaterThan(0);
+    expect(firstBody.state).toMatch(/^completed/);
   });
 
   test("a stale plan hash is refused", async ({ context, page, baseURL, request }) => {

@@ -267,16 +267,21 @@ function applyResolutions(records: MigrationRecordIR[], resolutions: Record<stri
 
   for (const record of records) {
     const resolution = resolutions[record.source.sourceKey];
-    if (!resolution || record.errors.length) continue;
+    if (!resolution) continue;
+
+    // Invalid rows can never be imported, but the user can explicitly exclude
+    // one so it leaves the unresolved queue and appears in the final skip list.
+    if (resolution.decision === "skip") {
+      record.action = "skip";
+      record.status = "skipped";
+      continue;
+    }
+    if (record.errors.length) continue;
 
     switch (resolution.decision) {
       case "create":
         record.action = "create";
         record.status = "ready";
-        break;
-      case "skip":
-        record.action = "skip";
-        record.status = "skipped";
         break;
       case "merge": {
         // Accept the strongest suggested duplicate. Against an existing

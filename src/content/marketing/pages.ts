@@ -82,7 +82,7 @@ export const roadmapContent: MarketingPageContent = {
         "Clients, projects, tasks, milestones, invoices, and expenses",
         "Agreement composer, review, recorded acceptance, and linked billing",
         "Multi-currency display for invoices and expenses",
-        "CSV and XLSX migration with review and relationship reconstruction",
+        "CSV and XLSX migration with preview and review (production validation in progress)",
         "Portfolio Studio, public portfolios, analytics, and enquiries",
         "Apple Calendar feed",
         "Open signup. Free during beta. One workspace.",
@@ -136,7 +136,7 @@ export const changelogContent: MarketingPageContent = {
       eyebrow: "MOMENTUM",
       title: "Proof, imports, and getting started",
       cards: [
-        { title: "Migration Engine", body: "Multi-file CSV and XLSX profiling, deduplication, relationship review, and idempotent commit. Preview before commit; imported records are retained." },
+        { title: "Migration Engine", body: "Multi-file CSV and XLSX preview with retained provenance. Production validation of relationship review and resumable commit is in progress; imported records are retained." },
         { title: "Portfolio Studio", body: "A work-first editor, public portfolio pages, practice views, analytics, media, and source-aware enquiries." },
         { title: "Help & Guides", body: "In-product Help & Guides and goal-aware activation that point to real actions without masking or blocking the workspace." },
       ],

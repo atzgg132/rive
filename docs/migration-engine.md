@@ -1,5 +1,10 @@
 # Rive Migration Engine
 
+> **Rollout status (August 2026):** the acquisition-wedge implementation is
+> complete in code, but `MIGRATION_ENGINE_ENABLED` remains `false`. Do not use
+> the full migration promise in acquisition copy until the hosted smoke, dev
+> browser journey, and 48-hour soak described below have passed.
+
 Bring an existing service business into Rive from the CSV and XLSX exports it
 already runs on, and reconstruct a connected workspace — clients, projects,
 invoices, and expenses — without asking the owner to start again.
@@ -71,8 +76,9 @@ architectural decision here, and it buys four things at once:
 - provenance survives to the committed record and beyond;
 - re-mapping is a recompute, not a re-upload.
 
-`raw` is kept forever alongside `normalized`. Debugging, rollback, auditing,
-improved mappings, and future LLM routing all depend on it.
+`raw` is kept alongside `normalized`. Debugging, auditing, improved mappings,
+and future LLM routing all depend on it. Original encrypted upload objects
+expire after 30 days; incomplete upload objects expire after one day.
 
 ---
 
@@ -218,9 +224,9 @@ it creates.
 
 ---
 
-## Rollback
+## Retention and recovery
 
-Rollback is **disabled by policy**. Imported Client, Project, Invoice, and
+Deletion-based rollback is **disabled by policy**. Imported Client, Project, Invoice, and
 Expense rows are never removed. `src/utils/migration/rollback.ts` has no Prisma
 calls; `previewRollback` / `executeRollback` return a disabled outcome.
 
@@ -310,8 +316,10 @@ MIGRATION_ENGINE_ENABLED="false"   # gates the route, the APIs, and the onboardi
 MAX_UPLOAD_BYTES="10485760"        # platform-wide cap; migration takes the lower of this and its own
 ```
 
-While the flag is off the route 404s and the original onboarding importer
-remains the only import path, which keeps the rollback story to a single flag.
+While the flag is off, `/migrate-to-rive` presents qualified pre-launch copy
+and a general signup action. Migration APIs and the dashboard route remain
+unavailable. The flag is operator-managed in SSM and defaults to `false`; a
+Terraform apply must not silently enable it.
 
 Limits (`MIGRATION_LIMITS`): 10 files, 12 sheets per workbook, 5 MB per file,
 20 MB total, 10,000 rows per source, 20,000 rows total, 128 columns.
@@ -323,6 +331,7 @@ Limits (`MIGRATION_LIMITS`): 10 files, 12 sheets per workbook, 5 MB per file,
 ```bash
 npm run test:domain     # engine unit + integration tests, no database needed
 npm run test:e2e        # browser journey; needs a database, a seeded user, and the flag on
+npm run migration:smoke:aws # retained @example.invalid fixture against hosted dev Postgres
 node scripts/build-migration-fixtures.mjs   # regenerate the XLSX fixtures
 ```
 
@@ -331,3 +340,25 @@ include the adversarial cases on purpose: weird headers, duplicates, missing
 emails, multiple currencies, unknown statuses, ambiguous and invalid dates,
 negative expenses, semicolon delimiters, empty and headers-only files, and a
 multi-sheet workbook with a title row above the real header.
+
+## Acquisition rollout gate
+
+The public promise, when enabled, is limited to generic CSV/XLSX imports for
+clients, projects, invoices, and expenses. It promises preview, explicit review
+of uncertainty, and idempotent retry. It does not promise vendor fidelity,
+updates to existing records, or removal of imported records.
+
+Promotion order is fixed:
+
+1. Apply the additive schema and queue/storage infrastructure to dev.
+2. Run `npm run migration:smoke:aws`; keep its reserved fixture rows.
+3. Enable the operator-managed flag on dev only and run the complete browser
+   journey against `dev.rive.work`.
+4. Soak for 48 hours with zero DLQ messages, stale jobs, count mismatches, or
+   unexplained failures.
+5. Promote `dev` to `main` through a merge-commit pull request, then enable the
+   production flag only after the same production checks.
+
+Any integrity or tenant-isolation incident disables the flag immediately. A
+non-empty DLQ or an unrecovered-failure rate above 5% after 20 sessions pauses
+the dedicated acquisition CTA.
