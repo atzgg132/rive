@@ -483,7 +483,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page).toHaveScreenshot(`overview-${theme}-390x844.png`, { fullPage: false });
 
     await page.goto("/onboarding?restart=1", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Tell us enough to personalize everything else." })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "What kind of work do you run?" })).toBeVisible({ timeout: 20_000 });
     await expect(page).toHaveScreenshot(`onboarding-${theme}-390x844.png`, { fullPage: false });
   });
 }
@@ -492,7 +492,7 @@ for (const theme of ["light", "dark"] as const) {
   test(`onboarding ${theme} desktop visual`, async ({ page }) => {
     await prepareVisualPage(page, theme);
     await page.goto("/onboarding?restart=1", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Tell us enough to personalize everything else." })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "What kind of work do you run?" })).toBeVisible({ timeout: 20_000 });
     await expect(page).toHaveScreenshot(`onboarding-${theme}-1440x900.png`, { fullPage: false });
   });
 }
