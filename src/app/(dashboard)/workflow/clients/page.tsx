@@ -26,6 +26,7 @@ import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import type { PaginationMeta } from "@/lib/pagination";
+import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
 interface Client {
   id: string;
@@ -45,6 +46,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  const { engagementFlow } = useFeatureAvailability();
   const { displayCurrency, convert, format } = useCurrency();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
@@ -277,7 +279,7 @@ export default function ClientsPage() {
           why="This is the context Rive reuses across the rest of your workspace."
           next="Add one client you are actively working with."
           after="Your projects and invoices can reuse these details."
-          action={<Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
+          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Start engagement</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
         />
       ) : (<>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

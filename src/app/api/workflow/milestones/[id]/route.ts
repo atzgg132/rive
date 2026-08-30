@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { processContractBilling } from "@/utils/contractBilling";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -60,6 +61,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return result;
     });
     const billing = await processContractBilling({ userId: session.userId, limit: 100 }).catch((error) => ({ error: error instanceof Error ? error.message : "Billing check failed." }));
+    if (completed && !milestone.completed) {
+      await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.milestoneCompleted, module: "projects", entityType: "milestone", entityId: id, dataOrigin: "user" });
+    }
     return NextResponse.json({ success: true, message: completed && !milestone.completed ? "Milestone completed. Any eligible contract invoice has been prepared as a draft for review." : "Milestone updated. Contract snapshots were not rewritten.", milestone: { id: updated.id, title: updated.title, due_date: updated.dueDate, completed: updated.completed, completed_at: updated.completedAt }, billing });
   } catch (error) {
     console.error("Milestone update error:", error);

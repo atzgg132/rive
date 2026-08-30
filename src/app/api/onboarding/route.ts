@@ -12,6 +12,8 @@ import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_STARTING_PATHS } from "@/lib/activation";
 import { nextInvoiceNumber } from "@/utils/invoiceNumber";
+import { contractsAvailable } from "@/utils/contracts";
+import { engagementFlowAvailable } from "@/utils/engagements";
 
 const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
@@ -72,6 +74,8 @@ export async function GET(req: NextRequest) {
       // When the migration engine is on, onboarding hands the import journey
       // over to it rather than offering a second, weaker importer alongside.
       migrationEngine: migrationEngineAvailable(),
+      engagementFlow: engagementFlowAvailable(),
+      agreements: contractsAvailable(),
     },
   });
 }

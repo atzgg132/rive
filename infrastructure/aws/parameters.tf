@@ -36,6 +36,7 @@ locals {
       "${environment}/CONTRACTS_RECORDED_ACCEPTANCE_ENABLED"        = "true"
       "${environment}/CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION" = "false"
       "${environment}/MIGRATION_ENGINE_ENABLED"                     = "false"
+      "${environment}/ENGAGEMENT_FLOW_ENABLED"                      = environment == "dev" ? "true" : "false"
       "${environment}/GOOGLE_CALENDAR_ENABLED"                      = environment == "dev" ? "true" : "false"
       "${environment}/ZOHO_BOOKS_ENABLED"                           = "false"
       "${environment}/ZOHO_ACCOUNTS_URL"                            = "https://accounts.zoho.in"

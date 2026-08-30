@@ -33,10 +33,12 @@ export default function NewInvoicePage() {
   const [items, setItems] = useState<LineItem[]>([{ description: "", quantity: "1", unitPrice: "0" }]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [createdFromEngagement, setCreatedFromEngagement] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const requestedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("invoiceId") : null;
+    const isEngagementHandoff = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "engagement";
     void Promise.all([
       fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
       fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
@@ -45,6 +47,7 @@ export default function NewInvoicePage() {
       const clientData = await clientResponse.json().catch(() => null);
       const projectData = await projectResponse.json().catch(() => null);
       if (cancelled) return;
+      setCreatedFromEngagement(isEngagementHandoff);
       if (clientData?.success) setClients(clientData.clients || []);
       if (projectData?.success) setProjects(projectData.projects || []);
       if (requestedId && invoiceResponse) {
@@ -98,6 +101,7 @@ export default function NewInvoicePage() {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
+      {createdFromEngagement && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100"><p className="font-bold">Your engagement is connected and this invoice is still a private draft.</p><p className="mt-1 text-xs">Review the details below. Nothing is sent until you choose to send it.</p></div>}
       <div className="flex flex-wrap items-start justify-between gap-4"><div><Link href="/workflow/revenue" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Revenue & invoices</Link><h1 className="mt-3 text-3xl font-bold tracking-tight">{editingId ? "Review draft invoice" : "Create a polished invoice"}</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Build the draft on the left, then check the client-facing document on the right before sending it.</p></div><Link href="/workflow/invoice-settings"><Button variant="outline" size="sm" className="gap-2"><Settings2 className="h-4 w-4" /> Invoice settings</Button></Link></div>
       <form onSubmit={submit} className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <section data-guide-target="invoice-details" className="space-y-5">

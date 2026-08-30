@@ -7,7 +7,17 @@ import { Search, Users, DollarSign, Briefcase, Receipt, PlusCircle, Settings, La
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 
-export default function CommandPalette({ open, setOpen, agreementsEnabled = false }: { open: boolean, setOpen: (open: boolean) => void; agreementsEnabled?: boolean }) {
+export default function CommandPalette({
+  open,
+  setOpen,
+  agreementsEnabled = false,
+  engagementFlowEnabled = false,
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  agreementsEnabled?: boolean;
+  engagementFlowEnabled?: boolean;
+}) {
   const router = useRouter();
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -170,6 +180,14 @@ export default function CommandPalette({ open, setOpen, agreementsEnabled = fals
             </Command.Group>
 
             <Command.Group heading="Quick Actions" className="px-2 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {engagementFlowEnabled && (
+                <Command.Item
+                  onSelect={() => runCommand(() => router.push("/workflow/start-engagement"))}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 aria-selected:bg-blue-50 aria-selected:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:aria-selected:bg-blue-900/30"
+                >
+                  <PlusCircle className="h-4 w-4" /> Start a client engagement
+                </Command.Item>
+              )}
               <Command.Item
                 onSelect={() => runCommand(() => router.push("/workflow/invoices/new"))}
                 className="flex items-center gap-2 px-3 py-2.5 mt-1 rounded-lg text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 aria-selected:bg-emerald-50 aria-selected:text-emerald-700 dark:aria-selected:bg-emerald-900/30 dark:aria-selected:text-emerald-400"

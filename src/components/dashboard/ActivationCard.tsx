@@ -9,10 +9,11 @@ import { Button } from "@/components/ui";
 type ActivationCardProps = {
   plan: ActivationPlan;
   firstRun?: boolean;
+  engagementFlowEnabled?: boolean;
   onDismissed?: () => void;
 };
 
-export function ActivationCard({ plan, firstRun = false, onDismissed }: ActivationCardProps) {
+export function ActivationCard({ plan, firstRun = false, engagementFlowEnabled = false, onDismissed }: ActivationCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dismissed, setDismissed] = useState(plan.guidanceDismissed);
@@ -37,7 +38,14 @@ export function ActivationCard({ plan, firstRun = false, onDismissed }: Activati
     }
   }
 
-  const recommended = plan.recommendedAction;
+  const recommended = engagementFlowEnabled && (plan.counts.clients === 0 || plan.counts.projects === 0)
+    ? {
+        id: "start_engagement",
+        label: "Start a client engagement",
+        description: "Create the client, work, first deadline, and optional billing draft together.",
+        href: "/workflow/start-engagement",
+      }
+    : plan.recommendedAction;
 
   return (
     <section

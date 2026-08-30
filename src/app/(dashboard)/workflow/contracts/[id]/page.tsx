@@ -140,6 +140,8 @@ export default function ContractDetailPage() {
   const [finalizeOpenComments, setFinalizeOpenComments] = useState<number | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidNote, setVoidNote] = useState("");
+  const [engagementInvoiceId, setEngagementInvoiceId] = useState<string | null>(null);
+  const [createdFromEngagement, setCreatedFromEngagement] = useState(false);
 
   const hydrateEditor = (nextContract: Contract) => {
     const latest = nextContract.versions[0]?.content;
@@ -170,6 +172,14 @@ export default function ContractDetailPage() {
       if (!response.ok || !payload.success) throw new Error(payload.message || "Unable to load Agreement.");
       setContract(payload.contract);
       if (!preserveEditor) hydrateEditor(payload.contract);
+      if (typeof window !== "undefined") {
+        const query = new URLSearchParams(window.location.search);
+        if (query.get("from") === "engagement") {
+          setCreatedFromEngagement(true);
+          setEngagementInvoiceId(query.get("nextInvoiceId"));
+          if (query.get("edit") === "1") setEditing(true);
+        }
+      }
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to load Agreement.");
     } finally {
@@ -273,6 +283,17 @@ export default function ContractDetailPage() {
   const status = statusMeta[contract.status] || { label: contract.status, description: "Open Agreement record.", badge: "outline" as const };
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 animate-fade-in">
+      {createdFromEngagement && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+          <p className="font-bold">Your engagement is connected and this Agreement is still private.</p>
+          <p className="mt-1 text-xs leading-5">Review the editable draft before sharing it with your client.</p>
+          {engagementInvoiceId && (
+            <Link href={`/workflow/invoices/new?invoiceId=${encodeURIComponent(engagementInvoiceId)}&from=engagement`} className="mt-3 inline-flex items-center gap-1 text-xs font-bold underline">
+              Review the linked invoice next <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/workflow/contracts" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Agreements</Link>
         <div className="flex flex-wrap items-center gap-2"><Badge variant={status.badge}>{status.label}</Badge><Badge variant="outline"><ShieldCheck className="h-3.5 w-3.5" /> Version {version?.version || "—"}</Badge></div>

@@ -25,6 +25,7 @@ import {
   PanelLeftOpen,
   ChevronDown,
   CircleHelp,
+  Plus,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
@@ -61,6 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [agreementsEnabled, setAgreementsEnabled] = useState(false);
+  const [engagementFlowEnabled, setEngagementFlowEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -127,6 +129,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }
             setUser(data.user);
             setAgreementsEnabled(data.featureAvailability?.agreements === true);
+            setEngagementFlowEnabled(data.featureAvailability?.engagementFlow === true);
             setLoading(false);
             return;
           }
@@ -242,7 +245,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled }}>
+    <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled, engagementFlow: engagementFlowEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency}>
     <div data-dashboard-shell className="fixed inset-0 flex min-h-0 overflow-hidden overscroll-none bg-background">
       <Toaster position="bottom-right" theme="system" />
@@ -313,6 +316,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <RiveLogo height={24} />
           </Link>
           <div className="flex items-center gap-1">
+            {engagementFlowEnabled && (
+              <Button
+                size="icon"
+                aria-label="Start a client engagement"
+                title="Start a client engagement"
+                onClick={() => router.push("/workflow/start-engagement")}
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            )}
             <CurrencySwitcher compact />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
@@ -350,6 +363,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-3">
+            {engagementFlowEnabled && (
+              <Button size="sm" className="gap-2 whitespace-nowrap" onClick={() => router.push("/workflow/start-engagement")}>
+                <Plus className="h-4 w-4" />
+                Start engagement
+              </Button>
+            )}
             <CurrencySwitcher />
             <ThemeToggle />
             <GuidedExperience activation={activation} pathname={pathname} onActivationChange={setActivation} />
@@ -410,6 +429,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
 
               <nav className="flex flex-col gap-1 flex-1">
+                {engagementFlowEnabled && (
+                  <Button className="mb-3 w-full justify-start gap-2" onClick={() => { setMobileMenuOpen(false); router.push("/workflow/start-engagement"); }}>
+                    <Plus className="h-4 w-4" />
+                    Start engagement
+                  </Button>
+                )}
                 {navLinks.map((link) => renderNavLink(link, true))}
                 {moreNavLinks.length > 0 && (
                   <>
@@ -457,7 +482,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* ── Command Palette Wrapper ── */}
-      <CommandPalette open={commandPaletteOpen} setOpen={setCommandPaletteOpen} agreementsEnabled={agreementsEnabled} />
+      <CommandPalette
+        open={commandPaletteOpen}
+        setOpen={setCommandPaletteOpen}
+        agreementsEnabled={agreementsEnabled}
+        engagementFlowEnabled={engagementFlowEnabled}
+      />
       {user ? <div className="fixed bottom-4 right-4 z-40"><FeedbackWidget {...feedbackContext} /></div> : null}
     </div>
     </CurrencyProvider>

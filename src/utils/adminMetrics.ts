@@ -67,6 +67,12 @@ function addToMap(map: Map<string, number>, key: string, count = 1): void {
   map.set(key, (map.get(key) || 0) + count);
 }
 
+function percentile(values: number[], position: number): number | null {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return Math.round(sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * position) - 1)] * 10) / 10;
+}
+
 export type AdminMetrics = {
   definitionVersion: string;
   generatedAt: string;
@@ -89,6 +95,18 @@ export type AdminMetrics = {
     migration: number;
     portfolio: number;
     pathBreakdown: Array<{ path: string; count: number }>;
+  };
+  engagement: {
+    prospectiveSince: string | null;
+    createdUsers: number;
+    createdFlows: number;
+    medianHoursToCreate: number | null;
+    p75HoursToCreate: number | null;
+    firstSession: { completed: number; started: number; rate: number | null };
+    sevenDay: { completed: number; eligible: number; rate: number | null };
+    followThrough: { users: number; eligible: number; rate: number | null };
+    steps: Array<{ step: string; users: number; flows: number }>;
+    failures: Array<{ code: string; entryPoint: string; count: number }>;
   };
   deepActivation: {
     deeplyActivated: number;
@@ -216,7 +234,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     // oldest customer signup instead of silently dropping mature cohorts.
     prisma.productEvent.findMany({
       where: { environment, userId: { in: customerIds }, occurredAt: { gte: eventSince } },
-      select: { userId: true, eventName: true, module: true, occurredAt: true, properties: true, entityId: true },
+      select: { userId: true, eventName: true, module: true, occurredAt: true, properties: true, entityId: true, requestId: true, sessionId: true, source: true },
       orderBy: { occurredAt: "asc" },
       take: 200_000,
     }),
@@ -380,6 +398,53 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   ];
   const uncapturedSignups = customerUsers.filter((user) => sourceFrom(user) === "uncaptured").length;
 
+  const engagementEvents = events.filter((event) => event.eventName.startsWith("engagement_"));
+  const engagementCreatedEvents = engagementEvents.filter((event) => event.eventName === "engagement_created" && event.userId);
+  const engagementCreatedUsers = new Set(engagementCreatedEvents.map((event) => event.userId!));
+  const engagementCreatedFlows = new Set(engagementCreatedEvents.map((event) => event.requestId).filter((value): value is string => Boolean(value)));
+  const hoursToCreate = engagementCreatedEvents.flatMap((event) => {
+    const user = customerUsers.find((candidate) => candidate.id === event.userId);
+    return user ? [Math.max(0, (event.occurredAt.getTime() - user.createdAt.getTime()) / 3_600_000)] : [];
+  });
+  const startedSessions = new Set(engagementEvents.filter((event) => event.eventName === "engagement_flow_started" && event.sessionId).map((event) => event.sessionId!));
+  const completedSessions = new Set(engagementCreatedEvents.filter((event) => event.sessionId && startedSessions.has(event.sessionId)).map((event) => event.sessionId!));
+  const prospectiveSinceDate = engagementEvents[0]?.occurredAt || null;
+  const prospectiveUsers = prospectiveSinceDate ? customerUsers.filter((user) => user.createdAt >= prospectiveSinceDate) : [];
+  const sevenDayEligible = prospectiveUsers.filter((user) => user.createdAt <= ago7d || engagementCreatedEvents.some((event) => event.userId === user.id));
+  const sevenDayCompleted = sevenDayEligible.filter((user) => engagementCreatedEvents.some((event) => event.userId === user.id && within(event.occurredAt, user.createdAt, 7)));
+  const stepNames = ["started", "client", "work", "setup", "created"];
+  const engagementSteps = stepNames.map((step) => {
+    const matches = step === "started"
+      ? engagementEvents.filter((event) => event.eventName === "engagement_flow_started")
+      : step === "created"
+        ? engagementCreatedEvents
+        : engagementEvents.filter((event) => event.eventName === "engagement_step_completed" && (event.properties as Record<string, unknown> | null)?.step === step);
+    return {
+      step,
+      users: new Set(matches.map((event) => event.userId).filter(Boolean)).size,
+      flows: new Set(matches.map((event) => event.requestId).filter(Boolean)).size,
+    };
+  });
+  const failureMap = new Map<string, number>();
+  for (const event of engagementEvents.filter((candidate) => candidate.eventName === "engagement_create_failed")) {
+    const properties = event.properties as Record<string, unknown> | null;
+    const code = typeof properties?.failureCode === "string" ? properties.failureCode : "unknown";
+    const entryPoint = typeof properties?.entryPoint === "string" ? properties.entryPoint : "unknown";
+    addToMap(failureMap, `${code}|${entryPoint}`);
+  }
+  const followEventNames = new Set(["agreement_draft_reviewed", "agreement_reviewed", "invoice_draft_reviewed", "invoice_sent", "milestone_completed", "calendar_used", "expense_created", "payment_recorded"]);
+  const followEligible = prospectiveUsers.filter((user) => (clientsByUser.get(user.id) || []).length > 0);
+  const followUsers = followEligible.filter((user) => {
+    const firstClient = (clientsByUser.get(user.id) || []).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+    if (!firstClient) return false;
+    return (eventsByUser.get(user.id) || []).some((event) => {
+      const deliberateRecord = ["project_created", "invoice_created"].includes(event.eventName) && event.source !== "engagement_flow";
+      return (followEventNames.has(event.eventName) || deliberateRecord)
+        && event.occurredAt > firstClient.createdAt
+        && within(event.occurredAt, firstClient.createdAt, 7);
+    });
+  });
+
   const qualityData = {
     ...quality,
     schemaVersion: PRODUCT_EVENT_SCHEMA_VERSION,
@@ -398,6 +463,18 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     },
     qualification: { qualified: qualifiedUsers.length, rate: pct(qualifiedUsers.length, customerUsers.length), sourceBreakdown },
     activation: { activated, rate: pct(activated, qualifiedUsers.length), native: nativeCount, migration: migrationCount, portfolio: portfolioCount, pathBreakdown: Array.from(activationPath.entries()).map(([path, count]) => ({ path, count })) },
+    engagement: {
+      prospectiveSince: prospectiveSinceDate?.toISOString() || null,
+      createdUsers: engagementCreatedUsers.size,
+      createdFlows: engagementCreatedFlows.size,
+      medianHoursToCreate: percentile(hoursToCreate, 0.5),
+      p75HoursToCreate: percentile(hoursToCreate, 0.75),
+      firstSession: { completed: completedSessions.size, started: startedSessions.size, rate: pct(completedSessions.size, startedSessions.size) },
+      sevenDay: { completed: sevenDayCompleted.length, eligible: sevenDayEligible.length, rate: pct(sevenDayCompleted.length, sevenDayEligible.length) },
+      followThrough: { users: followUsers.length, eligible: followEligible.length, rate: pct(followUsers.length, followEligible.length) },
+      steps: engagementSteps,
+      failures: Array.from(failureMap.entries()).map(([key, count]) => { const [code, entryPoint] = key.split("|"); return { code, entryPoint, count }; }).sort((a, b) => b.count - a.count),
+    },
     deepActivation: { deeplyActivated: deep, rateAmongActivated: pct(deep, activated), averageModules, usersWithTwoActiveDays: twoActiveDays, connectedWorkflows: connected },
     realData: { users: realDataUsers, records: realDataRecords },
     activeUsers: { wau: activeWeek.size, mau: activeMonth.size },

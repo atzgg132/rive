@@ -12,3 +12,10 @@ test("every deploy receives an explicit disabled Migration Engine flag", () => {
     /"\$\{environment\}\/MIGRATION_ENGINE_ENABLED"\s*=\s*"false"/,
   );
 });
+
+test("engagement flow rolls out on dev before production", () => {
+  assert.match(
+    parameters,
+    /"\$\{environment\}\/ENGAGEMENT_FLOW_ENABLED"\s*=\s*environment\s*==\s*"dev"\s*\?\s*"true"\s*:\s*"false"/,
+  );
+});

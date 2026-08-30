@@ -4,9 +4,10 @@ import { createContext, useContext, type ReactNode } from "react";
 
 type FeatureAvailability = {
   agreements: boolean;
+  engagementFlow: boolean;
 };
 
-const FeatureAvailabilityContext = createContext<FeatureAvailability>({ agreements: false });
+const FeatureAvailabilityContext = createContext<FeatureAvailability>({ agreements: false, engagementFlow: false });
 
 export function FeatureAvailabilityProvider({
   value,

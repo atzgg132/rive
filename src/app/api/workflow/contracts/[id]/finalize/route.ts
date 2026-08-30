@@ -3,6 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { assertContractsEnabled, transitionContractStatus } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await tx.contractReviewLink.updateMany({ where: { contractId: id, type: "review", revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "contract_finalized", metadata: { version: contract.versions[0].version, openCommentsAcknowledged: openCommentCount } } });
     });
+    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.agreementDraftReviewed, module: "contracts", entityType: "contract", entityId: id, dataOrigin: "user" });
     return NextResponse.json({ success: true, status: "ready_to_sign", version: contract.versions[0].version, message: "Agreement version finalized. Start recorded acceptance when you are ready." });
   } catch (error) {
     console.error("Contract finalize error:", error);
