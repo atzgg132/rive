@@ -14,6 +14,22 @@ const productFunnel = {
   signups: { total: 10, verified: 8, last24h: 1, last7d: 3, daily: Array.from({ length: 14 }, (_, index) => ({ day: `2026-08-${String(index + 1).padStart(2, "0")}`, count: index === 13 ? 1 : 0 })) },
   qualification: { qualified: 4, rate: 40, sourceBreakdown: [{ source: "direct", signups: 10, qualified: 4 }] },
   activation: { activated: 1, rate: 25, native: 1, migration: 0, portfolio: 0, pathBreakdown: [{ path: "native", count: 1 }] },
+  engagement: {
+    prospectiveSince: "2026-08-30T00:00:00.000Z",
+    createdUsers: 1,
+    createdFlows: 1,
+    medianHoursToCreate: 0.4,
+    p75HoursToCreate: 0.4,
+    firstSession: { completed: 1, started: 2, rate: 50 },
+    sevenDay: { completed: 1, eligible: 2, rate: 50 },
+    followThrough: { users: 1, eligible: 1, rate: 100 },
+    steps: [
+      { step: "client", users: 2, flows: 2 },
+      { step: "work", users: 1, flows: 1 },
+      { step: "setup", users: 1, flows: 1 },
+    ],
+    failures: [],
+  },
   deepActivation: { deeplyActivated: 0, rateAmongActivated: 0, averageModules: 1.2, usersWithTwoActiveDays: 1, connectedWorkflows: 1 },
   realData: { users: 5, records: 12 },
   activeUsers: { wau: 2, mau: 3 },
@@ -110,6 +126,8 @@ test.describe("admin control room", () => {
     await page.goto("/admin");
     await page.getByRole("button", { name: "Funnel" }).click();
 
+    await expect(page.getByRole("heading", { name: "Where users stop" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start a client engagement" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Why they stop" })).toBeVisible();
     await expect(page.getByText("No primary goal")).toBeVisible();
     await expect(page.getByText("No client-linked project in 7 days")).toBeVisible();

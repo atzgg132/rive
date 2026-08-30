@@ -15,6 +15,7 @@ import {
   validatePaymentPlanItem,
 } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
 function clean(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -200,6 +201,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       await tx.contractReviewLink.updateMany({ where: { contractId: id, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, versionId: version.id, actorUserId: session.userId, eventType: "contract_version_created", metadata: { version: versionNumber, projectSnapshotSynced: syncProjectSnapshot } } });
       return version.id;
+    });
+
+    await recordProductEvent({
+      userId: session.userId,
+      eventName: PRODUCT_EVENTS.agreementDraftReviewed,
+      module: "contracts",
+      entityType: "contract",
+      entityId: id,
+      dataOrigin: "user",
     });
 
     return NextResponse.json({ success: true, versionId: updated, message: "A new editable Agreement version was created." });

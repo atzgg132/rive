@@ -4,16 +4,12 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { readIdempotentResult, recordIdempotentResult } from "@/utils/idempotency";
 import {
-  buildContractContent,
-  type ContractContent,
   contractsAvailable,
   CONTRACT_MAX_TITLE_LENGTH,
-  getConfiguredEsignProvider,
   normalizeSections,
-  sha256,
-  stableStringify,
   validatePaymentPlanItem,
 } from "@/utils/contracts";
+import { createAgreementDraft } from "@/utils/contractDraft";
 import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
 function clean(value: unknown, max: number): string {
@@ -248,103 +244,18 @@ export async function POST(req: NextRequest) {
 
     const governingLaw = clean(body.governingLaw ?? "India", 160) || "India";
     const jurisdiction = clean(body.jurisdiction, 160) || null;
-    const ownerName = owner.name || owner.email;
-
     const created = await prisma.$transaction(async (tx) => {
-      const contract = await tx.contract.create({
-        data: {
-          userId: owner.id,
-          clientId: client.id,
-          projectId: project?.id || null,
-          title,
-          currency,
-          governingLaw,
-          jurisdiction,
-          provider: getConfiguredEsignProvider(),
-        },
-      });
-
-      await tx.contractSigner.createMany({
-        data: [
-          { contractId: contract.id, userId: owner.id, role: "owner", sequence: 2, name: ownerName, email: owner.email },
-          { contractId: contract.id, clientId: client.id, role: "client", sequence: 1, name: client.name, email: client.email || "" },
-        ],
-      });
-
-      for (const item of plan) {
-        await tx.contractPaymentPlanItem.create({
-          data: {
-            contractId: contract.id,
-            milestoneId: item.milestoneId,
-            label: item.label,
-            amount: item.amount,
-            currency: item.currency,
-            triggerType: item.triggerType,
-            triggerDate: item.triggerDate,
-            dueDays: item.dueDays,
-            invoiceDescription: item.invoiceDescription,
-            sequence: item.sequence,
-          },
-        });
-      }
-
-      const persistedPlan = await tx.contractPaymentPlanItem.findMany({
-        where: { contractId: contract.id },
-        include: { milestone: { select: { title: true } } },
-        orderBy: { sequence: "asc" },
-      });
-      const content = buildContractContent({
+      return createAgreementDraft(tx, {
+        owner: { id: owner.id, name: owner.name || owner.email, email: owner.email },
+        client,
+        project,
         title,
-        ownerName,
-        ownerEmail: owner.email,
-        clientName: client.name,
-        clientEmail: client.email,
-        clientCompany: client.company,
-        clientAddress: client.address,
-        projectTitle: project?.title || null,
-        projectDescription: project?.description || null,
+        currency,
         governingLaw,
         jurisdiction,
         sections,
-        currency,
-        paymentPlan: persistedPlan.map((item) => ({
-          id: item.id,
-          label: item.label,
-          amount: item.amount.toString(),
-          currency: item.currency,
-          triggerType: item.triggerType as ContractContent["paymentPlan"]["items"][number]["triggerType"],
-          triggerDate: item.triggerDate?.toISOString() || null,
-          dueDays: item.dueDays,
-          milestoneId: item.milestoneId,
-          milestoneTitle: item.milestone?.title || null,
-          invoiceDescription: item.invoiceDescription,
-          sequence: item.sequence,
-        })),
+        paymentPlan: plan,
       });
-      const version = await tx.contractVersion.create({
-        data: {
-          contractId: contract.id,
-          version: 1,
-          content: content as unknown as Prisma.InputJsonValue,
-          contentHash: sha256(stableStringify(content)),
-          createdByUserId: owner.id,
-        },
-      });
-      await tx.contractEvent.create({
-        data: { contractId: contract.id, versionId: version.id, actorUserId: owner.id, eventType: "contract_created", metadata: { provider: getConfiguredEsignProvider() } },
-      });
-      if (project) {
-        await tx.project.update({
-          where: { id: project.id },
-          data: {
-            contractCoverage: "rive",
-            externalContractLabel: null,
-            externalContractUrl: null,
-            contractDecisionAt: new Date(),
-          },
-        });
-      }
-      return { contractId: contract.id, versionId: version.id };
     });
 
     // Record the idempotency result only after the creation actually

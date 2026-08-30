@@ -23,6 +23,9 @@ export const MEANINGFUL_PRODUCT_EVENTS = new Set([
   "agreement_accepted",
   "invoice_viewed",
   "payment_recorded",
+  "agreement_draft_reviewed",
+  "invoice_draft_reviewed",
+  "milestone_completed",
 ]);
 
 type AttributionLike = {

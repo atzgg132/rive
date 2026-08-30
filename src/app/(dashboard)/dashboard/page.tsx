@@ -20,6 +20,7 @@ import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { ActivationCard } from "@/components/dashboard/ActivationCard";
 import type { ActivationPlan } from "@/lib/activation";
+import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
 interface Stats {
   totalPaid: number;
@@ -71,6 +72,7 @@ const AnalyticsCharts = dynamic(() => import("@/components/dashboard/AnalyticsCh
 
 export default function DashboardOverview() {
   const { displayCurrency, format } = useCurrency();
+  const { engagementFlow } = useFeatureAvailability();
   const [stats, setStats] = useState<Stats>({
     totalPaid: 0,
     totalPending: 0,
@@ -204,6 +206,7 @@ export default function DashboardOverview() {
         <ActivationCard
           plan={activation}
           firstRun={isFirstRun}
+          engagementFlowEnabled={engagementFlow}
           onDismissed={() => setActivation((current) => current ? { ...current, guidanceDismissed: true } : current)}
         />
       )}

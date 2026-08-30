@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { contractsAvailable } from "@/utils/contracts";
+import { engagementFlowAvailable } from "@/utils/engagements";
 
 export async function GET(req: NextRequest) {
   try {
@@ -63,6 +64,7 @@ export async function GET(req: NextRequest) {
       user: formattedUser,
       featureAvailability: {
         agreements: contractsAvailable(),
+        engagementFlow: engagementFlowAvailable(),
       },
     });
     response.headers.set("Cache-Control", "no-store, max-age=0");

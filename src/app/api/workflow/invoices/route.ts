@@ -456,6 +456,17 @@ export async function PUT(req: NextRequest) {
       }
     });
 
+    if (contentEditRequested && existingInvoice.status === "draft") {
+      await recordProductEvent({
+        userId: session.userId,
+        eventName: PRODUCT_EVENTS.invoiceDraftReviewed,
+        module: "invoices",
+        entityType: "invoice",
+        entityId: id,
+        dataOrigin: "user",
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: "Invoice updated successfully."

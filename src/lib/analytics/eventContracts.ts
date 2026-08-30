@@ -34,6 +34,14 @@ export const PRODUCT_EVENTS = {
   feedbackSubmitted: "feedback_submitted",
   invoiceViewed: "invoice_viewed",
   paymentRecorded: "payment_recorded",
+  engagementFlowStarted: "engagement_flow_started",
+  engagementStepViewed: "engagement_step_viewed",
+  engagementStepCompleted: "engagement_step_completed",
+  engagementCreated: "engagement_created",
+  engagementCreateFailed: "engagement_create_failed",
+  agreementDraftReviewed: "agreement_draft_reviewed",
+  invoiceDraftReviewed: "invoice_draft_reviewed",
+  milestoneCompleted: "milestone_completed",
 } as const;
 
 type CoreProductEventName = (typeof PRODUCT_EVENTS)[keyof typeof PRODUCT_EVENTS];
@@ -81,6 +89,7 @@ export const REAL_DATA_EVENT_NAMES = new Set<string>([
   PRODUCT_EVENTS.expenseCreated,
   PRODUCT_EVENTS.importCommitted,
   PRODUCT_EVENTS.portfolioPublished,
+  PRODUCT_EVENTS.engagementCreated,
 ]);
 
 type ContractRequirement = "identity" | "module" | "entity" | "dataOrigin";
@@ -122,6 +131,14 @@ export const PRODUCT_EVENT_CONTRACTS: Record<ProductEventName, ProductEventContr
   feedback_submitted: { version: 1, requirements: identityAndModule, description: "A feedback response was submitted." },
   invoice_viewed: { version: 1, requirements: entityEvent, description: "A public invoice was viewed." },
   payment_recorded: { version: 1, requirements: entityEvent, description: "A payment was recorded against an invoice." },
+  engagement_flow_started: { version: 1, requirements: identityAndModule, description: "A user opened the start-engagement composer." },
+  engagement_step_viewed: { version: 1, requirements: identityAndModule, description: "A start-engagement step was shown." },
+  engagement_step_completed: { version: 1, requirements: identityAndModule, description: "A start-engagement step passed validation." },
+  engagement_created: { version: 1, requirements: realDataEntityEvent, description: "A connected client engagement graph was created." },
+  engagement_create_failed: { version: 1, requirements: identityAndModule, description: "Start-engagement creation failed before a graph was committed." },
+  agreement_draft_reviewed: { version: 1, requirements: entityEvent, description: "An owner deliberately saved or finalized an Agreement draft after review." },
+  invoice_draft_reviewed: { version: 1, requirements: entityEvent, description: "An owner deliberately saved an existing invoice draft after review." },
+  milestone_completed: { version: 1, requirements: entityEvent, description: "A user marked a project milestone complete." },
   "activation.registered": { version: 1, requirements: identityAndModule, description: "The registered activation milestone was recorded." },
   "activation.onboarding_started": { version: 1, requirements: identityAndModule, description: "The onboarding activation milestone was recorded." },
   "activation.profile_substantially_completed": { version: 1, requirements: identityAndModule, description: "The profile activation milestone was recorded." },

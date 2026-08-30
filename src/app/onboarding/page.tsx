@@ -2,7 +2,7 @@
 
 import { Button, Input, Textarea, Select } from "@/components/ui";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -17,7 +17,6 @@ import {
   Globe2,
   Link2,
   Loader2,
-  Receipt,
   Rocket,
   Sparkles,
   Upload,
@@ -27,10 +26,7 @@ import {
 import { toast, Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { uploadImage } from "@/utils/clientUploads";
-
-/* User uploads are validated data URLs or remote hosts unavailable to a static image allowlist. */
-/* eslint-disable @next/next/no-img-element */
+import { StartEngagementComposer } from "@/components/engagements/StartEngagementComposer";
 
 type ImportPreview = {
   name: string;
@@ -126,39 +122,6 @@ const BUSINESS_TYPES = [
     icon: WalletCards,
   },
 ];
-const GOALS = [
-  {
-    id: "organize",
-    title: "Organize client work",
-    detail: "Projects, deadlines, and tasks in one system.",
-    icon: BriefcaseBusiness,
-  },
-  {
-    id: "get_paid",
-    title: "Get paid faster",
-    detail: "Invoices, due dates, and collections.",
-    icon: WalletCards,
-  },
-  {
-    id: "understand_finances",
-    title: "Understand my numbers",
-    detail: "Profit, expenses, and business signals.",
-    icon: Receipt,
-  },
-  {
-    id: "publish_portfolio",
-    title: "Publish proof of work",
-    detail: "Create a portfolio from what rive. knows.",
-    icon: Globe2,
-  },
-  {
-    id: "migrate",
-    title: "Move from another tool",
-    detail: "Bring existing business data with you.",
-    icon: FileSpreadsheet,
-  },
-];
-
 export default function OnboardingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -170,11 +133,8 @@ export default function OnboardingPage() {
   const [currency, setCurrency] = useState("INR");
   const [timeZone, setTimeZone] = useState("Asia/Calcutta");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [goal, setGoal] = useState("organize");
   const [sources, setSources] = useState<string[]>([]);
-  const [path, setPath] = useState<"import" | "quickstart" | "clean">("import");
+  const [path, setPath] = useState<"import" | "quickstart" | "clean">("quickstart");
   const [files, setFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<ImportPreview[]>([]);
   const [importJobId, setImportJobId] = useState("");
@@ -193,6 +153,8 @@ export default function OnboardingPage() {
   // When the migration engine is live it owns importing entirely; this step
   // hands over to it instead of offering a second importer beside it.
   const [migrationEngine, setMigrationEngine] = useState(false);
+  const [engagementFlow, setEngagementFlow] = useState(false);
+  const [agreementsAvailable, setAgreementsAvailable] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -228,11 +190,12 @@ export default function OnboardingPage() {
           : data.user.timeZone,
       );
       setAvatarUrl(data.user.avatarUrl || "");
-      setGoal(data.user.onboardingData?.goal || "organize");
       const connectorAvailability = data.connectorAvailability || {};
       const nextGoogleAvailable = connectorAvailability.googleCalendar === true;
       const nextZohoAvailable = connectorAvailability.zohoBooks === true;
       setMigrationEngine(data.featureAvailability?.migrationEngine === true);
+      setEngagementFlow(data.featureAvailability?.engagementFlow === true);
+      setAgreementsAvailable(data.featureAvailability?.agreements === true);
       const savedSources = normalizeSourceSelection(data.user.onboardingData?.sources);
       setSources(savedSources.filter((source) => source !== "google_calendar" || nextGoogleAvailable));
       const savedPath = data.user.onboardingData?.startingPath;
@@ -268,20 +231,24 @@ export default function OnboardingPage() {
         router.replace("/dashboard");
         return;
       }
-      if (focus === "goal") setStep(1);
+      if (focus === "goal") setStep(0);
       else if (focus === "import") {
         setPath("import");
         setStep(3);
-      } else setStep(restarting ? 0 : Math.min(data.user.onboardingStep || 0, 3));
+      } else {
+        const savedStep = Number(data.user.onboardingStep) || 0;
+        setStep(restarting || savedStep < 2 ? 0 : Math.min(savedStep, 3));
+      }
       setLoading(false);
     }
     void load();
   }, [router]);
 
-  const progress = useMemo(
-    () => Math.min(100, Math.round(((Math.min(step, 3) + 1) / 4) * 100)),
-    [step],
-  );
+  const progress = useMemo(() => {
+    const stage = step === 0 ? 0 : step === 2 ? 1 : step === 3 ? 2 : 3;
+    return Math.round(((stage + 1) / 4) * 100);
+  }, [step]);
+  const onboardingStage = step === 0 ? 0 : step === 2 ? 1 : step === 3 ? 2 : 3;
   const googleConnection = connections.find(
     (connection) => googleAvailable && connection.provider === "google",
   );
@@ -304,14 +271,15 @@ export default function OnboardingPage() {
           currency,
           timeZone,
           avatarUrl,
-          step: 1,
+          goal: "organize",
+          step: 2,
           status: "in_progress",
         }),
       });
       const data = await response.json();
       if (!response.ok)
         throw new Error(data.message || "Profile could not be saved.");
-      setStep(1);
+      setStep(2);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Profile could not be saved.",
@@ -321,25 +289,13 @@ export default function OnboardingPage() {
     }
   }
 
-  async function saveGoal() {
-    setSaving(true);
-    const response = await fetch("/api/onboarding", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goal, step: 2, status: "in_progress" }),
-    });
-    setSaving(false);
-    if (!response.ok) return toast.error("Your goal could not be saved.");
-    setStep(2);
-  }
-
   async function saveSourcesAndContinue() {
     setSaving(true);
     try {
       const response = await fetch("/api/onboarding", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sources, startingPath: path, step: 3, status: "in_progress" }),
+        body: JSON.stringify({ goal: path === "import" ? "migrate" : "organize", sources, startingPath: path, step: 3, status: "in_progress" }),
       });
       if (!response.ok)
         throw new Error("Your starting point could not be saved.");
@@ -368,29 +324,6 @@ export default function OnboardingPage() {
         ? current.filter((item) => item !== source)
         : [...current.filter((item) => item !== "starting_fresh"), source];
     });
-  }
-
-  async function handleAvatar(file?: File) {
-    if (!file) return;
-    if (
-      !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
-      file.size > 1.8 * 1024 * 1024
-    ) {
-      return toast.error("Use a PNG, JPEG, or WebP image under 1.8 MB.");
-    }
-    setAvatarUploading(true);
-    try {
-      setAvatarUrl(await uploadImage(file));
-      toast.success("Profile photo added.");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Profile photo could not be uploaded.",
-      );
-    } finally {
-      setAvatarUploading(false);
-    }
   }
 
   async function runImport(mode: "preview" | "commit") {
@@ -478,7 +411,7 @@ export default function OnboardingPage() {
     const response = await fetch("/api/onboarding", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "complete", startingPath: "clean", step: 5 }),
+      body: JSON.stringify({ status: "complete", goal: "organize", startingPath: "clean", step: 5 }),
     });
     setSaving(false);
     if (!response.ok) return toast.error("Setup could not be completed.");
@@ -490,7 +423,7 @@ export default function OnboardingPage() {
     void fetch("/api/onboarding", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startingPath: nextPath, step: 2, status: "in_progress" }),
+      body: JSON.stringify({ goal: nextPath === "import" ? "migrate" : "organize", startingPath: nextPath, step: 2, status: "in_progress" }),
     }).catch(() => undefined);
   }
 
@@ -562,19 +495,19 @@ export default function OnboardingPage() {
           </p>
           <div className="mt-8 space-y-3">
             {[
-              "Your business",
-              "Your priority",
-              "Your fastest path",
+              "Essentials",
+              "Choose a starting path",
+              "Create real context",
               "Workspace ready",
             ].map((label, index) => (
               <div
                 key={label}
-                className={`flex items-center gap-3 text-xs font-bold ${step >= index ? "text-blue-700 dark:text-blue-300" : "text-slate-400"}`}
+                className={`flex items-center gap-3 text-xs font-bold ${onboardingStage >= index ? "text-blue-700 dark:text-blue-300" : "text-slate-400"}`}
               >
                 <span
-                  className={`grid h-7 w-7 place-items-center rounded-full border ${step > index ? "border-blue-600 bg-blue-600 text-white" : step === index ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950" : "border-slate-200 dark:border-slate-700"}`}
+                  className={`grid h-7 w-7 place-items-center rounded-full border ${onboardingStage > index ? "border-blue-600 bg-blue-600 text-white" : onboardingStage === index ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950" : "border-slate-200 dark:border-slate-700"}`}
                 >
-                  {step > index ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                  {onboardingStage > index ? <Check className="h-3.5 w-3.5" /> : index + 1}
                 </span>
                 {label}
               </div>
@@ -586,75 +519,19 @@ export default function OnboardingPage() {
           {step === 0 && (
             <div className="p-6 sm:p-9">
               <div className="max-w-2xl">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-                  First, make rive. yours
-                </p>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">One quick setup</p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
-                  Tell us enough to personalize everything else.
+                  What kind of work do you run?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                  This identity will prefill your portfolio, financial defaults,
-                  calendar, and future imports.
+                  We inherited your name from signup and detected your regional defaults. Add what you do, then start with real work.
                 </p>
               </div>
-              <div className="mt-7 grid gap-5 sm:grid-cols-[140px_minmax(0,1fr)]">
-                <div>
-                  <div className="mx-auto grid h-28 w-28 min-h-0 min-w-0 place-items-center overflow-hidden rounded-3xl bg-blue-50 text-2xl font-black text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900">
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      name.slice(0, 2) || "You"
-                    )}
+              <div className="mt-7 grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
+                    <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Signed in as</p>
+                    <p className="mt-1 text-sm font-black">{name}</p>
                   </div>
-                  <Button
-                    type="button"
-                    data-testid="onboarding-avatar-upload"
-                    aria-controls="onboarding-avatar-input"
-                    disabled={avatarUploading}
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 px-3 py-2 text-xs font-bold text-blue-700 disabled:cursor-wait dark:border-blue-800 dark:text-blue-300"
-                  >
-                    {avatarUploading ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Uploading…
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-3.5 w-3.5" />
-                        Upload photo
-                      </>
-                    )}
-                  </Button>
-                  <Input
-                    ref={avatarInputRef}
-                    id="onboarding-avatar-input"
-                    data-testid="onboarding-avatar-input"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="sr-only"
-                    onChange={(event) => {
-                      const file = event.currentTarget.files?.[0];
-                      event.currentTarget.value = "";
-                      void handleAvatar(file);
-                    }}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label>
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
-                      Your name
-                    </span>
-                    <Input
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      className={inputClass}
-                    />
-                  </label>
                   <label>
                     <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
                       What do you do?
@@ -699,7 +576,6 @@ export default function OnboardingPage() {
                       className={inputClass}
                     />
                   </label>
-                </div>
               </div>
               <div className="mt-7">
                 <p className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
@@ -745,78 +621,18 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 1 && (
-            <div className="p-6 sm:p-9">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-                Choose your first win
-              </p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
-                What should rive. improve first?
-              </h2>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                We will prioritize your setup and dashboard around this—not lock
-                you into it.
-              </p>
-              <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                {GOALS.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Button
-                      key={item.id}
-                      type="button"
-                      aria-pressed={goal === item.id}
-                      onClick={() => setGoal(item.id)}
-                      className={`flex gap-4 rounded-2xl border p-4 text-left ${item.id === "migrate" ? "sm:col-span-2" : ""} ${goal === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 hover:border-blue-200 dark:border-slate-700"}`}
-                    >
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-800">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <span>
-                        <span className="block text-sm font-black">
-                          {item.title}
-                        </span>
-                        <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
-                          {item.detail}
-                        </span>
-                      </span>
-                    </Button>
-                  );
-                })}
-              </div>
-              <div className="mt-7 flex justify-between">
-                <Button
-                  onClick={() => setStep(0)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  onClick={saveGoal}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
-                >
-                  Choose my path <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
           {step === 2 && (
             <div className="p-6 sm:p-9">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-                Bring your business with you
+                Choose how to begin
               </p>
               <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
-                Start with context, not an empty workspace.
+                Start with the fastest path to useful context.
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Tell Rive where your work lives today. Select one or more
-                existing sources, or choose Mostly starting fresh if you do
-                not have records to bring across. Then choose one way to
-                populate the workspace.
+                Start one real client engagement, import existing records, or explore an empty workspace. You can use every tool later.
               </p>
-              <div className="mt-7">
+              <div className="hidden">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
                   Where is your business information today? <span className="normal-case tracking-normal font-semibold">Select all existing sources, or choose one fresh start.</span>
                 </p>
@@ -851,7 +667,7 @@ export default function OnboardingPage() {
               </div>
               {googleAvailable && (
                 <div
-                  className={`mt-7 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${googleConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-blue-200 bg-blue-50/60 dark:border-blue-900 dark:bg-blue-950/20"}`}
+                  className={`hidden mt-7 flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${googleConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-blue-200 bg-blue-50/60 dark:border-blue-900 dark:bg-blue-950/20"}`}
                 >
                   <div className="flex min-w-0 gap-4">
                     <span
@@ -897,7 +713,7 @@ export default function OnboardingPage() {
               )}
               {zohoAvailable && (
                 <div
-                  className={`mt-4 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${zohoConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-violet-200 bg-violet-50/60 dark:border-violet-900 dark:bg-violet-950/20"}`}
+                  className={`hidden mt-4 flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${zohoConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-violet-200 bg-violet-50/60 dark:border-violet-900 dark:bg-violet-950/20"}`}
                 >
                   <div className="flex min-w-0 gap-4">
                     <span
@@ -940,30 +756,30 @@ export default function OnboardingPage() {
               )}
               <div className="mt-7">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                  Choose one way to populate operational data
+                  Choose one starting path
                 </p>
                 <div className="mt-3 grid gap-4 md:grid-cols-3">
                   {[
+                    {
+                      id: "quickstart" as const,
+                      icon: Rocket,
+                      title: "Start a client engagement",
+                      detail:
+                        "Create the client, work, milestone, Agreement, and optional invoice as one connected flow.",
+                      badge: "Recommended",
+                    },
                     {
                       id: "import" as const,
                       icon: FileSpreadsheet,
                       title: "Import my work",
                       detail:
-                        "Upload CSV or XLSX exports from Zoho, FreshBooks, QuickBooks, Wave, Xero, or spreadsheets.",
-                      badge: "Fastest switch",
-                    },
-                    {
-                      id: "quickstart" as const,
-                      icon: Rocket,
-                      title: "Build one real workflow",
-                      detail:
-                        "Create a connected client, project, deadline, and optional draft invoice.",
-                      badge: "Best first run",
+                        "Bring existing client, project, invoice, and expense records into Rive.",
+                      badge: "For switching",
                     },
                     {
                       id: "clean" as const,
                       icon: Sparkles,
-                      title: "Start clean",
+                      title: "Explore Rive",
                       detail:
                         "Enter an empty workspace with a contextual activation checklist.",
                       badge: "No sample data",
@@ -993,7 +809,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mt-7 flex justify-between">
                 <Button
-                  onClick={() => setStep(1)}
+                  onClick={() => setStep(0)}
                   className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -1196,7 +1012,26 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 3 && path === "quickstart" && (
+          {step === 3 && path === "quickstart" && engagementFlow && (
+            <div className="p-3 sm:p-6">
+              <StartEngagementComposer
+                entryPoint="onboarding"
+                currency={currency}
+                agreementsAvailable={agreementsAvailable}
+                onCreated={(result) => router.replace(result.nextAction.href)}
+              />
+              <Button
+                type="button"
+                onClick={() => setStep(2)}
+                className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-slate-500"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Choose another path
+              </Button>
+            </div>
+          )}
+
+          {step === 3 && path === "quickstart" && !engagementFlow && (
             <form onSubmit={createQuickstart} className="p-6 sm:p-9">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
                 One connected workflow

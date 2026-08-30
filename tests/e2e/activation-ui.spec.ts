@@ -135,7 +135,7 @@ async function installWorkspaceMocks(page: Page, state: MockState) {
     const url = new URL(request.url());
     const pathname = url.pathname;
     if (pathname === "/api/auth/session") {
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { id: "activation-test-user", name: "Activation Tester", email: "activation@rive.test", plan: "free", onboarding_status: state.onboardingStatus || "complete", display_currency: "USD" }, featureAvailability: { agreements: true } }) });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { id: "activation-test-user", name: "Activation Tester", email: "activation@rive.test", plan: "free", onboarding_status: state.onboardingStatus || "complete", display_currency: "USD" }, featureAvailability: { agreements: true, engagementFlow: true } }) });
     }
     if (pathname === "/api/activation" || pathname === "/api/workflow/dashboard") {
       const requestedGoal = url.searchParams.get("goal") as Goal | null;
@@ -227,7 +227,7 @@ async function installWorkspaceMocks(page: Page, state: MockState) {
 async function installOnboardingMocks(page: Page, state: MockState) {
   await page.route("**/api/onboarding**", async (route) => {
     if (route.request().method() === "GET") {
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { name: "Activation Tester", profession: "Product designer", businessType: "freelancer", businessTypes: ["freelancer"], currency: "USD", timeZone: "UTC", avatarUrl: "", onboardingStatus: state.onboardingStatus || "in_progress", onboardingStep: state.onboardingStep || 0, onboardingData: { goal: state.goal, sources: state.sources || [], startingPath: state.startingPath, guidanceDismissed: state.guidanceDismissed, guidanceCompleted: state.guidanceCompleted } }, connections: [], businessConnections: [], connectorAvailability: { googleCalendar: false, zohoBooks: false } }) });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { name: "Activation Tester", profession: "Product designer", businessType: "freelancer", businessTypes: ["freelancer"], currency: "USD", timeZone: "UTC", avatarUrl: "", onboardingStatus: state.onboardingStatus || "in_progress", onboardingStep: state.onboardingStep || 0, onboardingData: { goal: state.goal, sources: state.sources || [], startingPath: state.startingPath, guidanceDismissed: state.guidanceDismissed, guidanceCompleted: state.guidanceCompleted } }, connections: [], businessConnections: [], connectorAvailability: { googleCalendar: false, zohoBooks: false }, featureAvailability: { engagementFlow: true, agreements: true, migrationEngine: false } }) });
     }
     const body = route.request().postDataJSON() as Record<string, unknown> | null;
     if (body?.mode === "quickstart") {
@@ -251,6 +251,12 @@ async function installOnboardingMocks(page: Page, state: MockState) {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, user: { onboardingStatus: state.onboardingStatus, onboardingStep: state.onboardingStep } }) });
   });
   await page.route("**/api/onboarding/import/jobs", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, jobs: [] }) }));
+  await page.route("**/api/engagement-events", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) }));
+  await page.route("**/api/workflow/start-engagement", async (route) => {
+    state.onboardingStatus = "complete";
+    state.onboardingStep = 5;
+    return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ success: true, records: { clientId: "client-1", projectId: "project-1", milestoneId: "milestone-1" }, nextAction: { kind: "milestone_plan", href: "/dashboard", label: "Open project" } }) });
+  });
   await page.route("**/api/uploads/presign", async (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Inline upload fallback" }) }));
 }
 
@@ -283,7 +289,7 @@ test.describe("goal-aware activation", () => {
     await page.locator("#login-password").fill("activation-password");
     await page.getByTestId("login-submit").click();
     await expect(page).toHaveURL(/\/onboarding/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Start with context, not an empty workspace." })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Start with the fastest path to useful context." })).toBeVisible({ timeout: 15_000 });
   });
 
   test("a completed user logs in to the dashboard without reopening onboarding", async ({ page }) => {
@@ -305,23 +311,23 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
-    await expect(page.getByText("Add your first client").first()).toBeVisible();
+    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
     await expect(page.getByTestId("activation-card")).toBeVisible();
     await expect(page.getByText("More tools")).toBeVisible();
     await page.getByRole("button", { name: "Open Getting Started" }).click();
     await expect(page.getByTestId("getting-started-panel")).toBeVisible();
-    await page.getByRole("link", { name: "Add your first client" }).last().click();
-    await expect(page).toHaveURL(/\/workflow\/clients/, { timeout: 15_000 });
+    await page.getByRole("link", { name: "Start a client engagement" }).last().click();
+    await expect(page).toHaveURL(/\/workflow\/start-engagement/, { timeout: 15_000 });
   });
 
   test("get-paid recommendation advances as client, project and invoice context appears", async ({ page }) => {
     const state: MockState = { goal: "get_paid", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Add your first client").first()).toBeVisible();
+    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
     state.counts.clients = 1;
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Create your first project").first()).toBeVisible();
+    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
     state.counts.projects = 1;
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.getByText("Create your first invoice").first()).toBeVisible();
@@ -330,15 +336,15 @@ test.describe("goal-aware activation", () => {
     await expect(page.getByText("Review and send an invoice").first()).toBeVisible();
   });
 
-  test("publish-proof and migrate goals expose their correct first action", async ({ page }) => {
+  test("the central engagement action stays recommended across legacy goals", async ({ page }) => {
     const state: MockState = { goal: "publish_portfolio", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Complete your profile").first()).toBeVisible();
+    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
     state.goal = "migrate";
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Import your work").first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Import your work" }).first()).toHaveAttribute("href", "/migrate");
+    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Start a client engagement" }).first()).toHaveAttribute("href", "/workflow/start-engagement");
   });
 
   test("start-clean and incomplete onboarding remain resumable", async ({ page }) => {
@@ -346,14 +352,14 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await installOnboardingMocks(page, state);
     await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Start with context, not an empty workspace." })).toBeVisible();
-    await page.getByRole("button", { name: "Start clean" }).click();
+    await expect(page.getByRole("heading", { name: "Start with the fastest path to useful context." })).toBeVisible();
+    await page.getByRole("button", { name: /Explore Rive/ }).click();
     await page.getByRole("button", { name: "Open my workspace" }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
     expect(state.onboardingStatus).toBe("complete");
   });
 
-  test("mobile onboarding photo trigger opens the picker and keeps work cards left-aligned", async ({ page }) => {
+  test("mobile essentials inherit identity and keep work cards left-aligned", async ({ page }) => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 0 };
     await installWorkspaceMocks(page, state);
     await installOnboardingMocks(page, state);
@@ -364,16 +370,8 @@ test.describe("goal-aware activation", () => {
     await expect(firstWorkType).toBeVisible();
     await expect(firstWorkType).toHaveCSS("justify-content", "flex-start");
 
-    const chooser = page.waitForEvent("filechooser");
-    await page.getByTestId("onboarding-avatar-upload").click();
-    await (await chooser).setFiles({
-      name: "avatar.png",
-      mimeType: "image/png",
-      buffer: Buffer.from("synthetic avatar"),
-    });
-
-    await expect(page.locator('img[alt=""]').first()).toBeVisible();
-    await expect(page.getByText("Profile photo added.")).toBeVisible();
+    await expect(page.getByText("Activation Tester", { exact: true })).toBeVisible();
+    await expect(page.getByText("Signed in as", { exact: true })).toBeVisible();
 
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
@@ -387,32 +385,31 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await installOnboardingMocks(page, state);
     await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Start with context, not an empty workspace." })).toBeVisible();
-    await page.getByRole("button", { name: "Build one real workflow" }).click();
+    await expect(page.getByRole("heading", { name: "Start with the fastest path to useful context." })).toBeVisible();
     await page.getByRole("button", { name: "Continue" }).click();
-    await expect(page.getByRole("heading", { name: "Start with work you are actually doing." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start a client engagement" })).toBeVisible();
     await page.getByLabel("Client name").fill("Northstar Studio");
-    await page.getByLabel("Project").fill("Launch site");
-    await page.getByRole("button", { name: "create my workspace" }).click();
-    await expect(page.getByText("Workspace activated")).toBeVisible();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByLabel("Project name").fill("Launch site");
+    await page.getByLabel("First milestone").fill("Launch approval");
+    await page.getByLabel("Milestone due date").fill("2026-09-15");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Start engagement" }).click();
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
     expect(state.onboardingStatus).toBe("complete");
   });
 
-  test("source context keeps existing records separate from a fresh start", async ({ page }) => {
+  test("all three onboarding paths remain accessible", async ({ page }) => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 }, onboardingStatus: "in_progress", onboardingStep: 2 };
     await installWorkspaceMocks(page, state);
     await installOnboardingMocks(page, state);
     await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Spreadsheets / CSV" }).click();
-    await page.getByRole("button", { name: "Zoho Books export" }).click();
-    await expect(page.getByRole("button", { name: "Spreadsheets / CSV" })).toHaveAttribute("aria-pressed", "true");
-    await page.getByRole("button", { name: /Mostly starting fresh/ }).click();
-    await expect(page.getByRole("button", { name: /Mostly starting fresh/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: "Spreadsheets / CSV" })).toHaveAttribute("aria-pressed", "false");
-    await expect(page.getByRole("button", { name: "Zoho Books export" })).toHaveAttribute("aria-pressed", "false");
-    await page.getByRole("button", { name: "QuickBooks export" }).click();
-    await expect(page.getByRole("button", { name: "QuickBooks export" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: /Mostly starting fresh/ })).toHaveAttribute("aria-pressed", "false");
+    const engagement = page.getByRole("button", { name: /Start a client engagement/ });
+    await expect(engagement).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: /Import my work/ }).click();
+    await expect(page.getByRole("button", { name: /Import my work/ })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: /Explore Rive/ }).click();
+    await expect(page.getByRole("button", { name: /Explore Rive/ })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("skip setup still shows the activation checklist", async ({ page }) => {

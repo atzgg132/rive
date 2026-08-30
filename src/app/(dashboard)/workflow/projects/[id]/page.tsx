@@ -37,6 +37,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
   const [externalFormOpen, setExternalFormOpen] = useState(false);
   const [externalLabel, setExternalLabel] = useState("Agreement handled outside Rive");
   const [externalUrl, setExternalUrl] = useState("");
+  const [createdFromEngagement, setCreatedFromEngagement] = useState(false);
 
   useEffect(() => {
     async function loadProject() {
@@ -46,6 +47,12 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
           const data = await res.json();
           if (data.success) {
             setProject(data.project);
+            const query = new URLSearchParams(window.location.search);
+            if (query.get("from") === "engagement") {
+              setCreatedFromEngagement(true);
+              const milestoneId = query.get("milestoneId");
+              if (milestoneId) window.setTimeout(() => document.getElementById(`milestone-${milestoneId}`)?.focus(), 0);
+            }
           } else {
             toast.error(data.message);
           }
@@ -140,6 +147,12 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in pb-12">
+      {createdFromEngagement && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+          <p className="font-bold">Your client, project, and first milestone are connected.</p>
+          <p className="mt-1 text-xs">Plan the milestone below; its due date is already available to Calendar.</p>
+        </div>
+      )}
       {/* Header Breadcrumbs */}
       <div>
         <Link href="/workflow/projects" className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary mb-4 transition-colors">
@@ -236,6 +249,9 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
             ) : (
               <p className="text-sm text-slate-400 italic">No project description provided.</p>
             )}
+            {project.contractCoverage === "undecided" && project.description ? (
+              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">Scope is saved with this project. The Agreement decision remains open; this brief is not a legal contract.</p>
+            ) : null}
           </div>
 
           {/* Milestones */}
@@ -251,7 +267,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
             ) : (
               <div className="flex flex-col gap-3">
                 {project.milestones.map((milestone) => (
-                  <div key={milestone.id} className="flex items-center justify-between gap-4 rounded-xl border border-border dark:border-slate-700 p-4">
+                  <div id={`milestone-${milestone.id}`} tabIndex={-1} key={milestone.id} className="flex items-center justify-between gap-4 rounded-xl border border-border p-4 outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700">
                     <div className="min-w-0">
                       <p className={`truncate text-sm font-semibold ${milestone.completed ? "text-emerald-700 dark:text-emerald-300" : "text-foreground dark:text-slate-200"}`}>{milestone.title}</p>
                       <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">Due {milestone.dueDate ? formatDate(milestone.dueDate) : "No due date"}</p>
