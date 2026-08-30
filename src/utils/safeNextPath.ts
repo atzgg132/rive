@@ -28,13 +28,22 @@ export function safeNextPath(value: string | null | undefined): string | null {
   }
 }
 
+/** A safe migration destination, including an immutable session query. */
+export function safeMigrationNextPath(value: string | null | undefined): string | null {
+  const path = safeNextPath(value);
+  if (!path) return null;
+  const url = new URL(path, "https://www.rive.work");
+  return url.pathname === "/migrate" ? path : null;
+}
+
 /** Honor `next` only after onboarding is done (API sent the operator to the dashboard). */
 export function resolveLoginDestination(
   apiDestination: string | null | undefined,
   nextCandidate: string | null | undefined,
 ): string {
   const destination = apiDestination || "/dashboard";
-  if (safeNextPath(nextCandidate) === "/migrate") return "/migrate";
+  const migrationPath = safeMigrationNextPath(nextCandidate);
+  if (migrationPath) return migrationPath;
   if (destination !== "/dashboard") return destination;
   return safeNextPath(nextCandidate) || destination;
 }
