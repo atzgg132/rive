@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const mappings = await prisma.importMapping.findMany({
     where: {
       userId: session.userId,
+      active: true,
       ...(provider && PROVIDER.test(provider) ? { provider } : {}),
     },
     orderBy: { updatedAt: "desc" },
@@ -36,7 +37,7 @@ export async function PUT(req: NextRequest) {
   }
   const saved = await prisma.importMapping.upsert({
     where: { userId_provider_entity_name: { userId: session.userId, provider, entity, name } },
-    update: { mapping },
+    update: { mapping, active: true },
     create: { userId: session.userId, provider, entity, name, mapping },
   });
   return NextResponse.json({ success: true, mapping: saved });
@@ -47,7 +48,7 @@ export async function DELETE(req: NextRequest) {
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ success: false, message: "Mapping ID is required." }, { status: 400 });
-  const deleted = await prisma.importMapping.deleteMany({ where: { id, userId: session.userId } });
-  if (!deleted.count) return NextResponse.json({ success: false, message: "Mapping not found." }, { status: 404 });
+  const retired = await prisma.importMapping.updateMany({ where: { id, userId: session.userId, active: true }, data: { active: false } });
+  if (!retired.count) return NextResponse.json({ success: false, message: "Mapping not found." }, { status: 404 });
   return NextResponse.json({ success: true });
 }

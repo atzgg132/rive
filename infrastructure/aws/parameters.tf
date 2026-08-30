@@ -35,7 +35,6 @@ locals {
       # the application in production.
       "${environment}/CONTRACTS_RECORDED_ACCEPTANCE_ENABLED"        = "true"
       "${environment}/CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION" = "false"
-      "${environment}/MIGRATION_ENGINE_ENABLED"                     = "false"
       "${environment}/ENGAGEMENT_FLOW_ENABLED"                      = environment == "dev" ? "true" : "false"
       "${environment}/GOOGLE_CALENDAR_ENABLED"                      = environment == "dev" ? "true" : "false"
       "${environment}/ZOHO_BOOKS_ENABLED"                           = "false"
@@ -50,6 +49,7 @@ locals {
       "${environment}/SES_CONFIGURATION_SET"                        = aws_sesv2_configuration_set.transactional.configuration_set_name
       "${environment}/ASSET_BUCKET"                                 = aws_s3_bucket.assets[environment].id
       "${environment}/MIGRATION_QUEUE_URL"                          = aws_sqs_queue.migration[environment].url
+      "${environment}/MIGRATION_DLQ_URL"                            = aws_sqs_queue.migration_dead_letter[environment].url
       "${environment}/MAX_UPLOAD_BYTES"                             = "10485760"
       # Ceiling for portfolio video. Per-format caps live in the application so
       # they can be tuned without a deploy; this is the hard upper bound.
@@ -66,6 +66,7 @@ locals {
   # configured values are bootstrap-only fallbacks for a genuinely new stack;
   # once imported, Terraform must preserve the live values.
   operator_managed_parameters = {
+    "dev/MIGRATION_ENGINE_ENABLED"       = "false"
     "dev/GOOGLE_CALENDAR_CLIENT_ID"      = var.google_calendar_client_id
     "dev/GOOGLE_CALENDAR_CLIENT_SECRET"  = var.google_calendar_client_secret
     "dev/SMTP_PASS"                      = "DISABLED"
@@ -73,10 +74,21 @@ locals {
     "dev/ZOHO_BOOKS_CLIENT_SECRET"       = var.zoho_books_client_secret
     "prod/GOOGLE_CALENDAR_CLIENT_ID"     = var.google_calendar_client_id
     "prod/GOOGLE_CALENDAR_CLIENT_SECRET" = var.google_calendar_client_secret
+    "prod/MIGRATION_ENGINE_ENABLED"      = "false"
     "prod/SMTP_PASS"                     = var.smtp_password
     "prod/ZOHO_BOOKS_CLIENT_ID"          = var.zoho_books_client_id
     "prod/ZOHO_BOOKS_CLIENT_SECRET"      = var.zoho_books_client_secret
   }
+}
+
+moved {
+  from = aws_ssm_parameter.environment["dev/MIGRATION_ENGINE_ENABLED"]
+  to   = aws_ssm_parameter.operator_managed["dev/MIGRATION_ENGINE_ENABLED"]
+}
+
+moved {
+  from = aws_ssm_parameter.environment["prod/MIGRATION_ENGINE_ENABLED"]
+  to   = aws_ssm_parameter.operator_managed["prod/MIGRATION_ENGINE_ENABLED"]
 }
 
 resource "aws_ssm_parameter" "environment" {

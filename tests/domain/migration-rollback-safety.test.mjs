@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readdirSync, statSync } from "node:fs";
 
 // Structural regression guard, not a DB-backed integration test: no database
 // dependency, so it runs in the same no-DB `test:domain` suite as the rest of
@@ -51,5 +52,24 @@ test("the audited rollback module cannot delete a record even if called directly
       new RegExp(`${model}\\.delete(Many)?\\(`, "i"),
       `${model}.delete(Many) must not appear in rollback.ts`,
     );
+  }
+});
+
+function sourceFiles(root) {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = `${root}/${entry.name}`;
+    return entry.isDirectory() ? sourceFiles(path) : entry.name.endsWith(".ts") ? [path] : [];
+  });
+}
+
+test("the full migration persistence and API surface contains no database delete", () => {
+  const roots = [
+    fileURLToPath(new URL("../../src/utils/migration", import.meta.url)),
+    fileURLToPath(new URL("../../src/app/api/migrations", import.meta.url)),
+    fileURLToPath(new URL("../../src/app/api/onboarding/import", import.meta.url)),
+  ].filter((path) => statSync(path).isDirectory());
+  for (const file of roots.flatMap(sourceFiles)) {
+    const source = readFileSync(file, "utf8");
+    assert.doesNotMatch(source, /\.(?:delete|deleteMany)\s*\(/, `database deletion is forbidden in ${file}`);
   }
 });

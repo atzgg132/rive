@@ -31,7 +31,7 @@ resource "aws_lambda_function" "job_runner" {
   handler          = "job_runner.handler"
   filename         = data.archive_file.job_runner.output_path
   source_code_hash = data.archive_file.job_runner.output_base64sha256
-  timeout          = 90
+  timeout          = 330
   memory_size      = 128
 
   environment {
@@ -47,6 +47,24 @@ resource "aws_lambda_function" "job_runner" {
 resource "aws_cloudwatch_log_group" "job_runner" {
   name              = "/aws/lambda/${aws_lambda_function.job_runner.function_name}"
   retention_in_days = 14
+}
+
+resource "aws_iam_role_policy" "job_runner_migration_queue" {
+  name = "rive-migration-queue-consumer"
+  role = aws_iam_role.job_runner.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:ChangeMessageVisibility",
+      ]
+      Resource = [for queue in aws_sqs_queue.migration : queue.arn]
+    }]
+  })
 }
 
 locals {
@@ -153,6 +171,20 @@ resource "aws_sqs_queue" "migration" {
     deadLetterTargetArn = aws_sqs_queue.migration_dead_letter[each.key].arn
     maxReceiveCount     = 5
   })
+}
+
+resource "aws_lambda_event_source_mapping" "migration" {
+  for_each         = local.environments
+  event_source_arn = aws_sqs_queue.migration[each.key].arn
+  function_name    = aws_lambda_function.job_runner.arn
+  # Dev is the pre-production gate. Production consumption is enabled only in
+  # the dev -> main promotion that also deploys the worker endpoint there.
+  enabled                            = each.key == "dev"
+  batch_size                         = 1
+  function_response_types            = ["ReportBatchItemFailures"]
+  maximum_batching_window_in_seconds = 0
+
+  depends_on = [aws_iam_role_policy.job_runner_migration_queue]
 }
 
 resource "aws_cloudwatch_metric_alarm" "migration_dead_letters" {

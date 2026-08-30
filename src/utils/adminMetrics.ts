@@ -3,6 +3,7 @@ import "server-only";
 import { PRODUCT_EVENT_NAMES, PRODUCT_EVENT_SCHEMA_VERSION, REAL_DATA_EVENT_NAMES } from "@/lib/analytics/eventContracts";
 import { evaluateFunnelQuality, type FunnelQualityAlert } from "@/lib/analytics/funnelQuality";
 import { prisma } from "@/utils/db";
+import { GetQueueAttributesCommand, SQSClient } from "@aws-sdk/client-sqs";
 import {
   acquisitionSource,
   ACTIVATION_WINDOW_DAYS,
@@ -46,6 +47,22 @@ type QualitySnapshot = {
 };
 
 let cached: { expiresAt: number; value: AdminMetrics } | null = null;
+
+async function migrationDlqDepth(): Promise<number | null> {
+  const queueUrl = process.env.MIGRATION_DLQ_URL;
+  const region = process.env.AWS_REGION;
+  if (!queueUrl || !region) return null;
+  try {
+    const result = await new SQSClient({ region }).send(new GetQueueAttributesCommand({
+      QueueUrl: queueUrl,
+      AttributeNames: ["ApproximateNumberOfMessages", "ApproximateNumberOfMessagesNotVisible"],
+    }));
+    return Number(result.Attributes?.ApproximateNumberOfMessages || 0)
+      + Number(result.Attributes?.ApproximateNumberOfMessagesNotVisible || 0);
+  } catch {
+    return null;
+  }
+}
 
 function sourceFrom(user: UserRow): string {
   return acquisitionSource(user);
@@ -125,7 +142,27 @@ export type AdminMetrics = {
     definition: string;
   };
   workflowDepth: { averageModules: number; buckets: Array<{ label: string; count: number }> };
-  reliability: { productEvents24h: number; failedEmails24h: number; queuedEmails: number };
+  reliability: {
+    productEvents24h: number;
+    failedEmails24h: number;
+    queuedEmails: number;
+    migration: {
+      sessions24h: number;
+      sessions7d: number;
+      completionRate24h: number | null;
+      completionRate7d: number | null;
+      failed24h: number;
+      recoveredRetries7d: number;
+      staleJobs: number;
+      assistanceBacklog: number;
+      p50AnalysisMinutes: number | null;
+      p95AnalysisMinutes: number | null;
+      p50CommitMinutes: number | null;
+      p95CommitMinutes: number | null;
+      dlqMessages: number | null;
+      failures: Array<{ phase: string; code: string; count: number }>;
+    };
+  };
   window: {
     label: "all_customer_accounts";
     signupSparklineDays: number;
@@ -200,6 +237,10 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     productEvents24h,
     failedEmails24h,
     queuedEmails,
+    migrationReliabilityJobs,
+    migrationReliabilityEvents,
+    migrationAssistanceBacklog,
+    migrationDlqMessages,
     quality,
   ] = await Promise.all([
     prisma.client.findMany({
@@ -241,6 +282,22 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     prisma.productEvent.count({ where: { environment, occurredAt: { gte: ago24h } } }),
     prisma.emailDelivery.count({ where: { status: { in: ["failed", "delivery_failed"] }, createdAt: { gte: ago24h } } }),
     prisma.emailOutbox.count({ where: { status: { in: ["queued", "processing"] } } }),
+    prisma.importJob.findMany({
+      where: { engineVersion: 2, mode: "migration", createdAt: { gte: ago7d } },
+      select: {
+        id: true, status: true, phase: true, failurePhase: true, failureCode: true,
+        attemptCount: true, createdAt: true, completedAt: true, lastHeartbeatAt: true,
+      },
+      take: 20_000,
+    }),
+    prisma.migrationEvent.findMany({
+      where: { createdAt: { gte: ago7d }, event: { in: ["migration_started", "migration_plan_created", "migration_commit_started", "migration_completed"] } },
+      select: { importJobId: true, event: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+      take: 80_000,
+    }),
+    prisma.feedback.count({ where: { feedbackType: "migration_support", status: { in: ["new", "reviewing"] } } }),
+    migrationDlqDepth(),
     Promise.all([
       prisma.productEvent.findFirst({ where: { environment }, orderBy: { occurredAt: "desc" }, select: { occurredAt: true } }).catch(() => null),
       prisma.productEventIssue.count({ where: { environment, createdAt: { gte: ago24h } } }).catch(() => 0),
@@ -451,6 +508,52 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     uncapturedSignups,
     uncapturedSignupRate: pct(uncapturedSignups, customerUsers.length),
   };
+  const completedStates = new Set(["completed", "completed_with_issues"]);
+  const jobs24h = migrationReliabilityJobs.filter((job) => job.createdAt >= ago24h);
+  const completed24h = jobs24h.filter((job) => completedStates.has(job.status)).length;
+  const completed7d = migrationReliabilityJobs.filter((job) => completedStates.has(job.status)).length;
+  const staleCutoff = now.getTime() - 15 * 60 * 1000;
+  const terminalStates = new Set(["completed", "completed_with_issues", "failed", "abandoned", "rolled_back"]);
+  const migrationFailureMap = new Map<string, number>();
+  for (const job of migrationReliabilityJobs.filter((candidate) => candidate.status === "failed")) {
+    addToMap(migrationFailureMap, `${job.failurePhase || job.phase || "unknown"}|${job.failureCode || "unknown"}`);
+  }
+  const eventTimes = new Map<string, Map<string, Date>>();
+  for (const event of migrationReliabilityEvents) {
+    if (!event.importJobId) continue;
+    const current = eventTimes.get(event.importJobId) || new Map<string, Date>();
+    if (!current.has(event.event)) current.set(event.event, event.createdAt);
+    eventTimes.set(event.importJobId, current);
+  }
+  const analysisMinutes: number[] = [];
+  const commitMinutes: number[] = [];
+  for (const eventsForJob of eventTimes.values()) {
+    const started = eventsForJob.get("migration_started");
+    const planned = eventsForJob.get("migration_plan_created");
+    const commitStarted = eventsForJob.get("migration_commit_started");
+    const completed = eventsForJob.get("migration_completed");
+    if (started && planned && planned >= started) analysisMinutes.push((planned.getTime() - started.getTime()) / 60_000);
+    if (commitStarted && completed && completed >= commitStarted) commitMinutes.push((completed.getTime() - commitStarted.getTime()) / 60_000);
+  }
+  const migrationReliability = {
+    sessions24h: jobs24h.length,
+    sessions7d: migrationReliabilityJobs.length,
+    completionRate24h: pct(completed24h, jobs24h.length),
+    completionRate7d: pct(completed7d, migrationReliabilityJobs.length),
+    failed24h: jobs24h.filter((job) => job.status === "failed").length,
+    recoveredRetries7d: migrationReliabilityJobs.filter((job) => job.attemptCount > 1 && completedStates.has(job.status)).length,
+    staleJobs: migrationReliabilityJobs.filter((job) => !terminalStates.has(job.status) && (job.lastHeartbeatAt || job.createdAt).getTime() < staleCutoff).length,
+    assistanceBacklog: migrationAssistanceBacklog,
+    p50AnalysisMinutes: percentile(analysisMinutes, 0.5),
+    p95AnalysisMinutes: percentile(analysisMinutes, 0.95),
+    p50CommitMinutes: percentile(commitMinutes, 0.5),
+    p95CommitMinutes: percentile(commitMinutes, 0.95),
+    dlqMessages: migrationDlqMessages,
+    failures: Array.from(migrationFailureMap.entries()).map(([key, count]) => {
+      const [phase, code] = key.split("|");
+      return { phase, code, count };
+    }).sort((a, b) => b.count - a.count),
+  };
   const metrics: AdminMetrics = {
     definitionVersion: FUNNEL_DEFINITION_VERSION,
     generatedAt: now.toISOString(),
@@ -480,7 +583,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     activeUsers: { wau: activeWeek.size, mau: activeMonth.size },
     retention: { available: retentionDenominatorUsers.length > 0, numerator: retentionNumerator, denominator: retentionDenominatorUsers.length, rate: pct(retentionNumerator, retentionDenominatorUsers.length), definition: "Qualified users active in days 7–13 after signup, among cohorts at least 14 days old." },
     workflowDepth: { averageModules, buckets },
-    reliability: { productEvents24h, failedEmails24h, queuedEmails },
+    reliability: { productEvents24h, failedEmails24h, queuedEmails, migration: migrationReliability },
     window: {
       label: "all_customer_accounts",
       signupSparklineDays: 14,

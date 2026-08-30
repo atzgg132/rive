@@ -110,7 +110,7 @@ function isResumable(status: string): boolean {
   // A commit in flight is safe to reopen: the wizard only observes it and
   // polls until the server reaches a terminal state. It never starts a second
   // commit from this button.
-  return ["created", "uploading", "profiling", "mapping", "review_required", "ready", "failed", "committing"].includes(status);
+  return ["created", "uploading", "queued_analysis", "profiling", "mapping", "review_required", "ready", "queued_commit", "failed", "committing"].includes(status);
 }
 
 function statusLabel(status: string): string {
@@ -121,6 +121,8 @@ function statusLabel(status: string): string {
     case "review_required": return "Needs review";
     case "ready": return "Ready to import";
     case "committing": return "Importing";
+    case "queued_commit": return "Queued to import";
+    case "queued_analysis": return "Queued to analyze";
     case "failed": return "Stopped";
     case "rolled_back": return "Previously undone";
     default: return "In progress";

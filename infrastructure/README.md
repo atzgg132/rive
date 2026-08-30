@@ -33,11 +33,14 @@ does not modify public DNS.
 
 ## Terraform
 
-> **APPLY FREEZE:** Do not run `terraform apply` against the platform stack
-> while the current state reconciliation is in progress. Planning, validation,
-> state inspection, and reviewed imports are allowed. Targeted or full applies
-> require explicit operator approval after a clean credential-safe plan has
-> been reviewed.
+> **APPLY PROTOCOL:** the state-reconciliation freeze was lifted on 2026-08-30
+> after a credential-safe migration-foundation plan applied with zero destroys.
+> Always save and inspect a plan before applying. Stop on any replacement or
+> destroy. The live scheduled jobs are enabled and the Terraform default now
+> matches that state; setting `scheduled_jobs_enabled=false` is an explicit
+> incident-response action. Use a targeted plan only for a deliberately isolated
+> recovery or staged rollout, then follow with a reviewed full plan to reconcile
+> the remaining drift.
 
 The bootstrap stack creates the encrypted, versioned state bucket:
 
@@ -94,12 +97,15 @@ credentials or an outbound SMTP port.
 Terraform provisions `rive-<environment>-migration` and a matching dead-letter
 queue. Queue URLs are exposed through `MIGRATION_QUEUE_URL`. Jobs are retried
 five times before entering the DLQ, and CloudWatch raises an alarm when a
-dead-letter message appears.
+dead-letter message appears. The shared Lambda consumes the dev queue only;
+the production event-source mapping remains disabled until the same worker
+endpoint has been promoted to production.
 
-Small file previews and commits currently run in the application process while
-recording durable PostgreSQL import jobs. Larger provider imports can move to
-the same queue contract without changing provenance, reconciliation, or
-rollback semantics.
+Migration analysis and commit run through the queue contract. PostgreSQL leases,
+input revisions, and the per-operation ledger make duplicate delivery safe.
+`MIGRATION_ENGINE_ENABLED` is operator-managed and defaults to `false` in both
+environments; enabling the product route and enabling a queue consumer are
+separate rollout decisions.
 
 ## Zoho Books
 

@@ -863,13 +863,13 @@ export default function OnboardingPage() {
                 Migration studio
               </p>
               <h2 className="mt-2 text-2xl font-black tracking-tight">
-                Bring your records across with a safety net.
+                Preview your records before bringing them across.
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
                 Upload separate client, project, invoice, or expense exports
-                together. Rive detects them, previews the result, preserves
-                where every record came from, and lets you roll back the
-                migration later.
+                together. Rive detects them, previews the result, and preserves
+                where every record came from. Imported records remain in your
+                workspace after commit.
               </p>
               <label className="mt-7 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-5 py-10 text-center hover:border-blue-400 dark:border-blue-900 dark:bg-blue-950/20">
                 <Upload className="h-8 w-8 text-blue-600" />

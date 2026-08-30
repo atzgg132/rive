@@ -63,6 +63,9 @@ jobs:
       - run: npm run build
       - name: Run E2E tests
         env:
+          # Exercise migration only in the ephemeral CI app process. This does
+          # not alter the operator-managed deployed kill switch.
+          MIGRATION_ENGINE_ENABLED: "true"
           PLAYWRIGHT_SERVER: production
           PLAYWRIGHT_WORKERS: 4
         run: npm run test:e2e

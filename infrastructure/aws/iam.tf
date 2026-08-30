@@ -60,6 +60,7 @@ data "aws_iam_policy_document" "app" {
     actions = [
       "s3:GetObject",
       "s3:PutObject",
+      "s3:PutObjectTagging",
       "s3:DeleteObject",
       "s3:AbortMultipartUpload",
     ]
@@ -72,18 +73,18 @@ data "aws_iam_policy_document" "app" {
   }
 
   statement {
-    sid = "MigrationQueues"
+    sid = "SubmitMigrationWork"
     actions = [
       "sqs:SendMessage",
-      "sqs:ReceiveMessage",
-      "sqs:DeleteMessage",
-      "sqs:ChangeMessageVisibility",
       "sqs:GetQueueAttributes",
     ]
-    resources = concat(
-      [for queue in aws_sqs_queue.migration : queue.arn],
-      [for queue in aws_sqs_queue.migration_dead_letter : queue.arn],
-    )
+    resources = [for queue in aws_sqs_queue.migration : queue.arn]
+  }
+
+  statement {
+    sid       = "ObserveMigrationFailures"
+    actions   = ["sqs:GetQueueAttributes"]
+    resources = [for queue in aws_sqs_queue.migration_dead_letter : queue.arn]
   }
 
   statement {

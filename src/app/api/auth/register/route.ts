@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     const name = typeof body?.name === "string" ? body.name.trim().slice(0, 160) : "";
     const password = typeof body?.password === "string" ? body.password : "";
     const inviteToken = typeof body?.inviteToken === "string" ? body.inviteToken.trim() : "";
+    const migrationIntent = body?.goal === "migrate" && body?.next === "/migrate";
 
     // Keep automated form posts from consuming database work. Honeypot hits
     // and instant POSTs get the same 201 a real signup would, so the filler
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
           onboardingStep: 0,
           timeZone: "UTC",
           currency: "USD",
+          onboardingData: migrationIntent ? { goal: "migrate", startingPath: "import" } : undefined,
         },
         select: {
           id: true,

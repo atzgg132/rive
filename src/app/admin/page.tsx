@@ -20,7 +20,17 @@ type Funnel = {
   activeUsers: { wau: number; mau: number };
   retention: { available: boolean; numerator: number; denominator: number; rate: number | null; definition: string };
   workflowDepth: { averageModules: number; buckets: Array<{ label: string; count: number }> };
-  reliability: { productEvents24h: number; failedEmails24h: number; queuedEmails: number };
+  reliability: {
+    productEvents24h: number;
+    failedEmails24h: number;
+    queuedEmails: number;
+    migration: {
+      sessions24h: number; sessions7d: number; completionRate24h: number | null; completionRate7d: number | null;
+      failed24h: number; recoveredRetries7d: number; staleJobs: number; assistanceBacklog: number;
+      p50AnalysisMinutes: number | null; p95AnalysisMinutes: number | null; p50CommitMinutes: number | null; p95CommitMinutes: number | null;
+      dlqMessages: number | null; failures: Array<{ phase: string; code: string; count: number }>;
+    };
+  };
   window?: { label: string; signupSparklineDays: number; activationWindowDays: number; deepActivationWindowDays: number };
   dropOff?: { unqualified: number; qualifiedNotActivated: number; blockerCounts: Array<{ blocker: string; count: number }> };
   quality: { schemaVersion: number; contractRejections24h: number; unknownEventNames24h: number; missingIdentityEvents24h: number; missingDataOriginEvents24h: number; unknownOriginRecords: number; latestEventAt: string | null; eventLagMinutes: number | null; uncapturedSignups: number; uncapturedSignupRate: number | null; alerts: FunnelQualityAlert[] };
@@ -31,7 +41,7 @@ type FunnelDiagnosis = { stage: string; qualified: boolean; activated: boolean; 
 type FeedbackRow = { id: string; promptKey: string | null; feedbackType: string; module: string | null; rating: number | null; body: string | null; contactAllowed: boolean; status: string; createdAt: string; user: { email: string; name: string | null } | null };
 type FeedbackSummary = { counts: Record<string, number>; averageRating: number | null; ratedCount: number; contactable: number };
 type LegacyRow = { id: number; email: string; type: string; status: string; created_at: string; registered: boolean };
-type Tab = "overview" | "funnel" | "users" | "feedback" | "reliability" | "legacy";
+type Tab = "overview" | "funnel" | "users" | "feedback" | "reliability" | "migration" | "legacy";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof BarChart3 }> = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -39,6 +49,7 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof BarChart3 }> = [
   { id: "users", label: "Users", icon: Users },
   { id: "feedback", label: "Feedback", icon: MessageSquare },
   { id: "reliability", label: "Reliability", icon: AlertCircle },
+  { id: "migration", label: "Migration reliability", icon: Activity },
   { id: "legacy", label: "Legacy archive", icon: Clock3 },
 ];
 
@@ -501,6 +512,44 @@ function Reliability({ funnel, retry, loading, error }: { funnel: Funnel | null;
   return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Reliability</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Is the product actually working</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Delivery and instrumentation health. If email is failing here, signups look slow on every other tab for a reason that has nothing to do with demand.</p></div>{error ? <LoadError message={error} onRetry={retry} loading={loading} /> : null}<div className="grid gap-4 sm:grid-cols-3"><Metric label="Failed emails / 24h" value={funnel.reliability.failedEmails24h} detail={funnel.reliability.failedEmails24h > 0 ? "Password resets and verification links are affected" : "Delivery is healthy"} tone={funnel.reliability.failedEmails24h > 0 ? "red" : "green"} /><Metric label="Queued email jobs" value={funnel.reliability.queuedEmails} detail={funnel.reliability.queuedEmails > 0 ? "Waiting in the outbox to be retried" : "Outbox is empty"} tone={funnel.reliability.queuedEmails > 0 ? "amber" : "blue"} /><Metric label="Product events / 24h" value={funnel.reliability.productEvents24h} detail={funnel.quality.eventLagMinutes === null ? "No events recorded yet" : `Most recent ${funnel.quality.eventLagMinutes}m ago`} tone={funnel.reliability.productEvents24h === 0 ? "amber" : "blue"} /></div><Panel title="Action queue" eyebrow={quality.alerts.length ? `${quality.alerts.length} active signal${quality.alerts.length === 1 ? "" : "s"}` : "No active threshold breaches"}>{quality.alerts.length ? <div className="space-y-3">{quality.alerts.map((item) => <div key={item.fingerprint} className={`rounded-xl border p-4 ${item.severity === "critical" ? "border-red-200 bg-red-50 text-red-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold">{item.title}</p><span className="rounded-full bg-white/70 px-2 py-1 text-xs font-bold uppercase tracking-wide">{item.severity}</span></div><p className="mt-2 text-sm opacity-80">{item.detail}</p><p className="mt-2 text-xs font-semibold opacity-90">Next: {item.action}</p></div>)}</div> : <p className="text-sm text-muted-foreground">The scheduled funnel-quality check has no active threshold breaches.</p>}</Panel><Panel title="Cohort-quality monitoring" eyebrow={`Event envelope schema v${quality.schemaVersion}`}><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Contract rejects / 24h</p><p className="mt-1 text-2xl font-bold">{quality.contractRejections24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Unknown event names / 24h</p><p className="mt-1 text-2xl font-bold">{quality.unknownEventNames24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Uncaptured signup source</p><p className="mt-1 text-2xl font-bold">{quality.uncapturedSignups} <span className="text-sm font-normal text-muted-foreground">({rate(quality.uncapturedSignupRate)})</span></p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Missing event identity / 24h</p><p className="mt-1 text-2xl font-bold">{quality.missingIdentityEvents24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Missing data origin / 24h</p><p className="mt-1 text-2xl font-bold">{quality.missingDataOriginEvents24h}</p></div><div className="rounded-xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Event freshness</p><p className="mt-1 text-2xl font-bold">{quality.eventLagMinutes === null ? "No events" : `${quality.eventLagMinutes}m`}</p></div></div><p className="mt-4 text-xs text-muted-foreground">Unknown-origin business records: {quality.unknownOriginRecords}. Latest event: {quality.latestEventAt ? ago(quality.latestEventAt) : "not recorded"}.</p></Panel><Panel title="When not to trust these numbers"><ul className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2"><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Event freshness is stale.</span> Analytics writes never block a business action, so a broken pipeline shows up as flat metrics rather than errors. Check freshness above before reading a drop as real.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Contract rejects are non-zero.</span> Rejected events are discarded, so the funnel undercounts by roughly that amount.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Uncaptured signup source is high.</span> Those users are counted in totals but cannot be attributed, so the source breakdown understates every channel.</li><li className="rounded-xl bg-muted/50 p-4"><span className="font-semibold text-card-foreground">Emails are failing.</span> Unverified accounts stall before qualifying, which depresses every downstream rate for a delivery reason, not a product one.</li></ul></Panel></div>;
 }
 
+function MigrationReliability({ funnel, retry, loading, error }: { funnel: Funnel | null; retry: () => void; loading: boolean; error: string }) {
+  if (!funnel) return <FunnelUnavailable message={error} retry={retry} loading={loading} />;
+  const migration = funnel.reliability.migration;
+  const duration = (value: number | null) => value === null ? "Not available" : `${value}m`;
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-sm font-semibold text-primary">Reliability · Migration</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Can imports finish without uncertainty</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Completion, recovery, stale work, DLQ state, duration, and assistance demand. Counts never include filenames or customer cell values.</p>
+      </div>
+      {error ? <LoadError message={error} onRetry={retry} loading={loading} /> : null}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric label="Completion / 24h" value={rate(migration.completionRate24h)} detail={`${migration.sessions24h} sessions`} tone={migration.failed24h > 0 ? "amber" : "green"} />
+        <Metric label="Completion / 7d" value={rate(migration.completionRate7d)} detail={`${migration.sessions7d} sessions`} tone="blue" />
+        <Metric label="Recovered retries / 7d" value={migration.recoveredRetries7d} detail="Completed after more than one worker attempt" tone="green" />
+        <Metric label="Assistance backlog" value={migration.assistanceBacklog} detail="New or reviewing support requests" tone={migration.assistanceBacklog > 0 ? "amber" : "blue"} />
+        <Metric label="Stale jobs" value={migration.staleJobs} detail="No heartbeat for 15 minutes" tone={migration.staleJobs > 0 ? "red" : "green"} />
+        <Metric label="DLQ messages" value={migration.dlqMessages === null ? "Unavailable" : migration.dlqMessages} detail="Any message pauses the acquisition CTA" tone={(migration.dlqMessages || 0) > 0 ? "red" : "green"} />
+        <Metric label="Analysis p50 / p95" value={`${duration(migration.p50AnalysisMinutes)} / ${duration(migration.p95AnalysisMinutes)}`} detail="Started to hashed preview" tone="blue" />
+        <Metric label="Commit p50 / p95" value={`${duration(migration.p50CommitMinutes)} / ${duration(migration.p95CommitMinutes)}`} detail="Commit claim to completed ledger" tone="blue" />
+      </div>
+      <Panel title="Failures by phase and code" eyebrow={`${migration.failed24h} failed in rolling 24h`}>
+        {migration.failures.length ? (
+          <div className="divide-y divide-border">
+            {migration.failures.map((failure) => (
+              <div key={`${failure.phase}:${failure.code}`} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                <div><p className="text-sm font-semibold text-card-foreground">{failure.phase}</p><p className="text-xs text-muted-foreground">{failure.code}</p></div>
+                <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive">{failure.count}</span>
+              </div>
+            ))}
+          </div>
+        ) : <Empty text="No migration failures in the last 7 days." />}
+      </Panel>
+    </div>
+  );
+}
+
 function LegacyTab() {
   const [items, setItems] = useState<LegacyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -566,7 +615,9 @@ function Dashboard({ onLogout, onSessionExpired }: { onLogout: () => void; onSes
           ? <FeedbackTab />
           : tab === "reliability"
             ? <Reliability funnel={funnel} retry={load} loading={loading} error={error} />
-            : <LegacyTab />;
+            : tab === "migration"
+              ? <MigrationReliability funnel={funnel} retry={load} loading={loading} error={error} />
+              : <LegacyTab />;
 
   return <div className="min-h-screen bg-background"><header className="sticky top-0 z-20 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-8"><div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4"><div className="flex items-center gap-5"><RiveLogo height={28} /><span className="hidden h-5 w-px bg-border sm:block" /><span className="hidden text-sm font-semibold text-muted-foreground sm:block">Admin workspace</span></div><div className="flex items-center gap-2"><span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:block">Open beta</span><Button type="button" variant="ghost" size="sm" onClick={onLogout} className="gap-2"><LogOut className="h-4 w-4" /> Sign out</Button></div></div></header><div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-8 lg:flex-row"><aside className="lg:w-52 lg:shrink-0"><nav aria-label="Admin sections" className="flex gap-2 overflow-x-auto lg:flex-col">{tabs.map(({ id, label, icon: Icon }) => <Button type="button" key={id} variant={tab === id ? "default" : "ghost"} size="sm" onClick={() => setTab(id)} className="justify-start whitespace-nowrap"><Icon className="h-4 w-4" />{label}</Button>)}</nav></aside><main className="min-w-0 flex-1">{content}</main></div></div>;
 }

@@ -97,9 +97,14 @@ multi-seat/RBAC, commercial e-sign, data export as a product.
 
 **Goal 0 (no-delete):** still true. Do not rebuild rollback-as-delete.
 
-**Migration Engine v2:** crash-resume coverage includes the exact stale-commit
-resume path; relationship/duplicate E2E and abandon UI also exist. Keep the
-flag off until a disposable-database hosted pass succeeds.
+**Migration Engine v2 acquisition wedge:** durable per-file S3 upload,
+SQS/DLQ workers, leases, revision-safe analysis, ledger-backed partial-commit
+resume, paginated review, explicit unresolved dispositions, recovery/support
+UX, migration-intent auth routing, acquisition copy, and Admin Reliability
+metrics are implemented. The schema migration is additive and the flag is
+operator-managed with a default of false. Keep it off until
+`npm run migration:smoke:aws`, the deployed dev browser journey, and the
+48-hour zero-DLQ/stale-job/count-mismatch soak all pass.
 
 **Google Calendar:** search-before-create and unified OAuth state exist.
 `GOOGLE_CALENDAR_ENABLED` is true in SSM for `dev` only and false for
@@ -148,8 +153,11 @@ How I will verify it: Admin Reliability shows outbox draining; a new dev signup 
 What must not be pasted into chat: CRON_SECRET, SMTP/SES credentials, SESSION_SECRET
 ```
 
-Do not `terraform apply` while the infrastructure apply freeze holds. Inspect
-EventBridge / SSM / Lambda only.
+The infrastructure apply freeze was lifted on 2026-08-30 after the migration
+foundation applied from a saved, credential-safe plan with zero destroys. Full
+plans must explicitly preserve the live enabled scheduled-job state; the
+Terraform variable still defaults to false. Stop on any replacement or destroy,
+and never apply an unreviewed plan.
 
 ## 3. Do not do
 
@@ -168,8 +176,10 @@ EventBridge / SSM / Lambda only.
 
 ## 4. After operational trust, if asked
 
-1. Run the Migration Engine against a disposable hosted database, then enable
-   its existing flag on dev only if that pass is clean.
+1. Apply the additive Migration Engine schema/queue/storage changes to dev,
+   run the retained-fixture hosted smoke, then enable its operator-managed flag
+   on dev only if that pass is clean. Complete the browser journey and 48-hour
+   soak before a `dev` → `main` merge-commit PR.
 2. Zoho org-picker UI + sync via `zohoFetch`; keep the flag off until a
    sandbox import.
 3. Calendar mocked push / webhook / outbox tests; keep the flag off.

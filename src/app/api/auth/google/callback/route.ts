@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
+import { safeMigrationNextPath } from "@/utils/safeNextPath";
 import { generateUserToken, GOOGLE_PLACEHOLDER_PASSWORD, setSessionCookie } from "@/utils/userAuth";
 import { googleLoginAvailable } from "@/utils/connectorConfig";
 import { exchangeGoogleLoginCode, getGoogleLoginProfile, verifyGoogleLoginState } from "@/utils/googleAuth";
@@ -17,6 +18,8 @@ function loginError(req: NextRequest, code: string) {
 }
 
 function loginDestination(onboardingStatus: string, nextPath: string) {
+  const migrationPath = safeMigrationNextPath(nextPath);
+  if (migrationPath) return migrationPath;
   if (onboardingStatus === "complete" || onboardingStatus === "skipped") {
     return nextPath || "/dashboard";
   }
@@ -95,6 +98,7 @@ export async function GET(req: NextRequest) {
             onboardingStep: 0,
             timeZone: "UTC",
             currency: "USD",
+            onboardingData: state.next === "/migrate" ? { goal: "migrate", startingPath: "import" } : undefined,
           },
           select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true },
         });

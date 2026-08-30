@@ -3,11 +3,8 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { migrationEngineAvailable } from "@/utils/migration/config";
-import { commitMigration } from "@/utils/migration/commit";
-import { ensureDefaultCalendar } from "@/utils/calendar";
-import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
-import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
-import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { dispatchMigrationWork } from "@/utils/migration/dispatch";
+import type { ImportPlan } from "@/lib/migration/types";
 
 /**
  * Commit a reviewed migration.
@@ -18,7 +15,7 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
  */
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -41,41 +38,61 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ success: false, message: "Review the import summary before importing." }, { status: 400 });
   }
 
-  const outcome = await commitMigration(session.userId, id, planHash);
-
-  if (outcome.status === "conflict") {
-    return NextResponse.json({ success: false, ...outcome }, { status: 409 });
+  const job = await prisma.importJob.findFirst({
+    where: { id, userId: session.userId, engineVersion: 2 },
+    select: { status: true, planHash: true, plan: true, inputRevision: true },
+  });
+  if (!job) return NextResponse.json({ success: false, message: "Migration not found." }, { status: 404 });
+  if (job.planHash !== planHash) {
+    return NextResponse.json({ success: false, message: "This migration changed since you reviewed it. Review the current preview." }, { status: 409 });
   }
-  if (outcome.status === "failed") {
-    // A partial import is reported truthfully, with counts, rather than as an
-    // opaque server error. The ledger already records exactly where it stopped.
-    return NextResponse.json({ success: false, ...outcome }, { status: 500 });
-  }
-
-  const total = outcome.created.clients + outcome.created.projects + outcome.created.invoices + outcome.created.expenses;
-
-  if (total > 0) {
-    // Imported data is real business context, so the workspace is provisioned
-    // and activation advanced exactly as it would be for hand-entered records.
-    await Promise.all([
-      ensureDefaultCalendar(session.userId),
-      ensurePrefilledPortfolio(session.userId),
-      prisma.user.updateMany({
-        where: { id: session.userId, onboardingStatus: { not: "complete" } },
-        data: { onboardingStatus: "complete", onboardingStep: 5 },
-      }),
-    ]);
-    if (outcome.created.clients > 0) {
-      await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstClientCreated, { source: "migration" });
-    }
-    if (outcome.created.projects > 0) {
-      await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstProjectCreated, { source: "migration" });
-    }
-    if (outcome.created.invoices > 0 || outcome.created.expenses > 0) {
-      await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { source: "migration" });
-    }
-    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.importCommitted, module: "migration", entityType: "migration", entityId: id, dataOrigin: "imported", properties: { total } });
+  const plan = job.plan as unknown as ImportPlan | null;
+  if (!plan || plan.reviewItems.length > 0 || plan.blocked.length > 0) {
+    return NextResponse.json({
+      success: false,
+      message: "Resolve or explicitly skip every uncertain and invalid row before importing.",
+      unresolved: (plan?.reviewItems.length || 0) + (plan?.blocked.length || 0),
+    }, { status: 409 });
   }
 
-  return NextResponse.json({ success: true, ...outcome, total });
+  const claimed = await prisma.importJob.updateMany({
+    where: { id, userId: session.userId, status: { in: ["ready", "review_required"] }, planHash },
+    data: {
+      status: "queued_commit",
+      phase: "queued_commit",
+      progressCompleted: 0,
+      progressTotal: plan.operations.length,
+      failurePhase: null,
+      failureCode: null,
+      error: null,
+      completedAt: null,
+    },
+  });
+  if (claimed.count !== 1) {
+    return NextResponse.json({ success: false, message: "This migration is already running or has been imported." }, { status: 409 });
+  }
+
+  try {
+    const dispatched = await dispatchMigrationWork({
+      migrationId: id,
+      operation: "commit",
+      inputRevision: job.inputRevision,
+      planHash,
+    });
+    return NextResponse.json({
+      success: true,
+      migrationId: id,
+      state: dispatched.queued ? "queued_commit" : dispatched.outcome?.status,
+    }, { status: dispatched.queued ? 202 : 200 });
+  } catch {
+    await prisma.importJob.updateMany({
+      where: { id, status: "queued_commit" },
+      data: { status: "failed", phase: "recovery", failurePhase: "commit", failureCode: "enqueue_failed", error: "Commit could not be queued." },
+    });
+    return NextResponse.json({
+      success: false,
+      migrationId: id,
+      message: "The import stopped safely. Retry the same plan to continue without duplicates.",
+    }, { status: 500 });
+  }
 }

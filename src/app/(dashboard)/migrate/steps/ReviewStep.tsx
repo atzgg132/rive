@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, Link2, Loader2, Users } from "lucide-react";
+import { AlertTriangle, ChevronDown, Eye, Link2, Loader2, Users } from "lucide-react";
 
 import { Alert, Badge, Button, Card, CardContent, Select } from "@/components/ui";
 import { DISPLAY_CURRENCIES } from "@/lib/currency";
@@ -69,6 +69,15 @@ export default function ReviewStep({
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-card px-4 py-3" role="status" aria-live="polite">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="font-semibold text-foreground">Decision progress</span>
+          <span className="text-muted-foreground">{detail.unresolved.total} remaining</span>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {detail.unresolved.review} uncertain matches · {detail.unresolved.invalid} invalid rows
+        </p>
+      </div>
       {nothingToDo ? (
         <Alert variant="success">
           Everything matched. There is nothing here that needs a decision from you.
@@ -104,7 +113,7 @@ export default function ReviewStep({
                     disabled={busy}
                     onChange={(event) => {
                       if (!event.target.value) return;
-                      onPatch({ sources: { [source.sourceId]: { classification: event.target.value } } });
+                      onPatch({ sources: { [source.sourceId!]: { classification: event.target.value } } });
                     }}
                   >
                     <option value="">Choose what this file holds…</option>
@@ -188,6 +197,15 @@ export default function ReviewStep({
                     onClick={() => onPatch({ resolutions: { [record.sourceKey]: { decision: "create" } } })}
                   >
                     Keep separate
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => onPatch({ resolutions: { [record.sourceKey]: { decision: "skip" } } })}
+                  >
+                    Skip this row
                   </Button>
                 </div>
                 {record.relationshipCandidates[0]?.evidence?.length ? (
@@ -276,6 +294,8 @@ export default function ReviewStep({
 
       <ColumnMapping sources={detail.sources} busy={busy} onPatch={onPatch} />
 
+      <RecordPreview migrationId={detail.migration.id} />
+
       {blocked.length ? (
         <Card>
           <CardContent className="space-y-3">
@@ -289,6 +309,16 @@ export default function ReviewStep({
                 <li key={item.sourceKey} className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5">
                   <p className="text-sm font-medium text-foreground">{item.label}</p>
                   <p className="mt-0.5 text-xs text-destructive">{item.message}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    disabled={busy}
+                    onClick={() => onPatch({ resolutions: { [item.sourceKey]: { decision: "skip" } } })}
+                  >
+                    Skip for now
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -310,11 +340,88 @@ export default function ReviewStep({
               Rechecking
             </span>
           ) : null}
-          <Button type="button" data-guide-target="migration-review" onClick={onContinue} disabled={busy}>
+          <Button type="button" data-guide-target="migration-review" onClick={onContinue} disabled={busy || detail.unresolved.total > 0 || unclassified.length > 0}>
             See what will be imported
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function RecordPreview({ migrationId }: { migrationId: string }) {
+  const [filter, setFilter] = useState("clients");
+  const [records, setRecords] = useState<MigrationRecordView[]>([]);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  async function open(nextFilter: string, nextPage = 0) {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/migrations/${migrationId}?filter=${nextFilter}&page=${nextPage}`);
+      const data = await response.json();
+      if (!response.ok) return;
+      setFilter(nextFilter);
+      setPage(nextPage);
+      setRecords(data.records || []);
+      setTotal(data.pagination?.total || 0);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-4">
+        <SectionHeading icon={<Eye className="h-4 w-4" aria-hidden="true" />} title="Record preview" description="Inspect source provenance, raw and normalized values, warnings, proposed action, and relationships before commit." />
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(ENTITY_LABELS).map(([value, label]) => (
+            <Button key={value} type="button" size="sm" variant={filter === value ? "default" : "secondary"} disabled={loading} onClick={() => void open(value)}>{label}</Button>
+          ))}
+        </div>
+        {!records.length && !loading ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => void open(filter)}>Load {ENTITY_LABELS[filter]?.toLowerCase()} preview</Button>
+        ) : null}
+        {loading ? <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading preview</p> : null}
+        <div className="space-y-3">
+          {records.map((record) => (
+            <article key={record.sourceKey} className="rounded-xl border border-border bg-background p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-foreground">{labelOf(record)}</p>
+                <Badge variant={record.action === "skip" ? "warning" : record.action === "link" ? "secondary" : "success"}>{record.action}</Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{record.importFile?.name}{record.importFile?.sheetName ? ` · ${record.importFile.sheetName}` : ""} · row {record.sourceRow}</p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <ValueBlock label="Source values" value={record.raw} />
+                <ValueBlock label="Rive values" value={record.normalized} />
+              </div>
+              {record.relationshipCandidates.length ? <p className="mt-3 text-xs text-muted-foreground">Relationships: {record.relationshipCandidates.map((candidate) => `${candidate.label} (${Math.round(candidate.confidence * 100)}%)`).join(", ")}</p> : null}
+              {record.warnings.length ? <p className="mt-2 text-xs text-warning-foreground">Warnings: {record.warnings.map((warning) => warning.message).join(" · ")}</p> : null}
+            </article>
+          ))}
+        </div>
+        {total > 50 ? (
+          <div className="flex items-center justify-between gap-3">
+            <Button type="button" size="sm" variant="ghost" disabled={loading || page === 0} onClick={() => void open(filter, page - 1)}>Previous</Button>
+            <span className="text-xs text-muted-foreground">{page * 50 + 1}–{Math.min(total, (page + 1) * 50)} of {total}</span>
+            <Button type="button" size="sm" variant="ghost" disabled={loading || (page + 1) * 50 >= total} onClick={() => void open(filter, page + 1)}>Next</Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ValueBlock({ label, value }: { label: string; value: Record<string, unknown> }) {
+  return (
+    <div className="rounded-lg bg-muted/40 px-3 py-2">
+      <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <dl className="mt-2 space-y-1 text-xs">
+        {Object.entries(value).slice(0, 10).map(([key, entry]) => (
+          <div key={key} className="grid grid-cols-[minmax(5rem,0.4fr)_1fr] gap-2"><dt className="truncate text-muted-foreground">{key}</dt><dd className="truncate text-foreground">{String(entry ?? "—")}</dd></div>
+        ))}
+      </dl>
     </div>
   );
 }
@@ -405,6 +512,7 @@ function BulkIssueRow({
     // answer covers the same value wherever it appears.
     const payload: Record<string, unknown> = {};
     for (const source of sources) {
+      if (!source.sourceId) continue;
       payload[source.sourceId] = { valueMappings: { [issue.kind]: { [issue.sourceValue]: value } } };
     }
     onPatch({ sources: payload });
@@ -477,6 +585,8 @@ function ColumnMapping({
           description="Rive matched these itself. Open a file to check or change anything."
         />
         {mappable.map((source) => {
+          if (!source.sourceId) return null;
+          const sourceId = source.sourceId;
           const unresolved = (source.mapping || []).filter((mapping) => mapping.status === "UNRESOLVED").length;
           const isOpen = open === source.sourceId;
           return (
@@ -523,7 +633,7 @@ function ColumnMapping({
                           onChange={(event) =>
                             onPatch({
                               sources: {
-                                [source.sourceId]: { mappings: { [mapping.sourceColumn]: event.target.value || null } },
+                                [sourceId]: { mappings: { [mapping.sourceColumn]: event.target.value || null } },
                               },
                             })
                           }

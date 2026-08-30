@@ -50,6 +50,8 @@ ADD --chmod=0444 https://truststore.pki.rds.amazonaws.com/global/global-bundle.p
 COPY --from=migrator-dependencies /app/node_modules ./node_modules
 COPY package.json prisma.config.ts ./
 COPY prisma ./prisma
+COPY src ./src
+COPY scripts/smoke-migration.mjs scripts/hosted-module-loader.mjs scripts/hosted-resolution-hook.mjs ./scripts/
 CMD ["npx", "prisma", "migrate", "deploy"]
 
 FROM node:24-alpine AS runner

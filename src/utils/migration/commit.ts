@@ -131,6 +131,26 @@ async function materializeLedger(importJobId: string, plan: ImportPlan): Promise
   });
 }
 
+async function summarizeLedger(importJobId: string, plan: ImportPlan) {
+  const operations = await prisma.migrationOperation.findMany({
+    where: { importJobId, planHash: plan.planHash, status: { in: ["applied", "skipped"] } },
+    select: { action: true, entity: true, status: true },
+  });
+  const created = { clients: 0, projects: 0, invoices: 0, expenses: 0 } as Record<MigrationEntity, number>;
+  let linked = 0;
+  let skipped = plan.totals.skip;
+  for (const operation of operations) {
+    if (operation.status === "skipped") {
+      skipped += 1;
+    } else if (operation.action === "link") {
+      linked += 1;
+    } else if (operation.action === "create" && operation.entity in created) {
+      created[operation.entity as MigrationEntity] += 1;
+    }
+  }
+  return { created, linked, skipped };
+}
+
 export async function commitMigration(
   userId: string,
   importJobId: string,
@@ -163,12 +183,32 @@ export async function commitMigration(
   if (!plan?.operations) {
     return { status: "conflict", created: empty, linked: 0, skipped: 0, failed: 0, message: "This migration has no plan to run yet." };
   }
+  if (plan.reviewItems.length > 0 || plan.blocked.length > 0) {
+    return {
+      status: "conflict",
+      created: empty,
+      linked: 0,
+      skipped: 0,
+      failed: 0,
+      message: "Resolve or explicitly skip every uncertain and invalid row before importing.",
+    };
+  }
 
   // Claim the migration. A second concurrent request matches no rows and is
   // told to wait rather than running the same operations twice.
   const claimed = await prisma.importJob.updateMany({
-    where: { id: importJobId, userId, status: { in: ["ready", "review_required", "failed"] } },
-    data: { status: "committing", phase: phaseFor("committing"), startedAt: new Date(), error: null },
+    where: { id: importJobId, userId, status: { in: ["ready", "review_required", "failed", "queued_commit"] } },
+    data: {
+      status: "committing",
+      phase: phaseFor("committing"),
+      startedAt: new Date(),
+      error: null,
+      failurePhase: null,
+      failureCode: null,
+      progressCompleted: 0,
+      progressTotal: plan.operations.length,
+      lastHeartbeatAt: new Date(),
+    },
   });
 
   if (!claimed.count) {
@@ -198,9 +238,6 @@ export async function commitMigration(
     recordCount: plan.operations.length,
   });
 
-  const created: Record<MigrationEntity, number> = { ...empty };
-  let linked = 0;
-  let skipped = 0;
   const resolution: Resolution = { clientIdByGroup: new Map(), projectIdBySourceKey: new Map() };
 
   // Seed the resolution map from work a previous attempt already applied, so a
@@ -211,7 +248,7 @@ export async function commitMigration(
   });
   if (alreadyApplied.length) {
     const staged = await prisma.migrationRecord.findMany({
-      where: { importJobId, sourceKey: { in: alreadyApplied.map((operation) => operation.sourceKey) } },
+      where: { importJobId, active: true, sourceKey: { in: alreadyApplied.map((operation) => operation.sourceKey) } },
       select: { sourceKey: true, groupKey: true },
     });
     const groupBySourceKey = new Map(staged.map((record) => [record.sourceKey, record.groupKey]));
@@ -247,7 +284,7 @@ export async function commitMigration(
 
   for (const [, operations] of [...byBatch.entries()].sort((a, b) => a[0] - b[0])) {
     const staged = await prisma.migrationRecord.findMany({
-      where: { importJobId, sourceKey: { in: operations.map((operation) => operation.sourceKey) } },
+      where: { importJobId, active: true, sourceKey: { in: operations.map((operation) => operation.sourceKey) } },
       select: {
         id: true, entity: true, sourceKey: true, sourceRow: true, importFileId: true,
         normalized: true, resolvedRelationships: true, duplicateCandidates: true, groupKey: true,
@@ -264,7 +301,6 @@ export async function commitMigration(
               where: { id: operation.id },
               data: { status: "skipped", error: "The staged record no longer exists.", appliedAt: new Date() },
             });
-            skipped += 1;
             continue;
           }
 
@@ -287,7 +323,6 @@ export async function commitMigration(
               where: { id: record.id },
               data: { targetType: record.entity, targetId },
             });
-            linked += 1;
             continue;
           }
 
@@ -297,11 +332,9 @@ export async function commitMigration(
               where: { id: operation.id },
               data: { status: "skipped", error: "A record with these details already exists.", appliedAt: new Date() },
             });
-            skipped += 1;
             continue;
           }
 
-          created[record.entity as MigrationEntity] += 1;
           await transaction.migrationRecord.update({
             where: { id: record.id },
             data: { targetType: outcome.targetType, targetId: outcome.id },
@@ -340,65 +373,88 @@ export async function commitMigration(
         where: { importJobId, id: { in: operations.map((operation) => operation.id) }, status: "pending" },
         data: { status: "failed", error: message },
       });
+      const cumulative = await summarizeLedger(importJobId, plan);
       await prisma.importJob.update({
         where: { id: importJobId },
         data: {
           status: "failed",
           phase: phaseFor("failed"),
           error: message,
-          createdRecords: totalOf(created),
-          skippedRecords: skipped,
+          createdRecords: totalOf(cumulative.created),
+          updatedRecords: cumulative.linked,
+          skippedRecords: cumulative.skipped,
           completedAt: new Date(),
+          failurePhase: "commit",
+          failureCode: "batch_failed",
+          lastHeartbeatAt: new Date(),
         },
       });
       await recordMigrationEvent(userId, MIGRATION_EVENTS.failed, importJobId, {
-        recordCount: totalOf(created),
+        recordCount: totalOf(cumulative.created),
         errorCount: operations.length,
         reason: message.slice(0, 200),
       });
       return {
         status: "failed",
-        created,
-        linked,
-        skipped,
+        created: cumulative.created,
+        linked: cumulative.linked,
+        skipped: cumulative.skipped,
         failed: operations.length,
         // Everything before this batch really was imported. Saying so is the
         // difference between a recoverable failure and an unknowable one.
-        message: `${totalOf(created)} records were imported before this stopped. Nothing after it was written.`,
+        message: `${totalOf(cumulative.created)} records were imported before this stopped. Nothing after it was written.`,
         failedOperation: { label: failing.sourceKey, entity: failing.entity, error: message },
       };
     }
+
+    const completedOperations = await prisma.migrationOperation.count({
+      where: { importJobId, planHash: plan.planHash, status: { in: ["applied", "skipped"] } },
+    });
+    await prisma.importJob.update({
+      where: { id: importJobId },
+      data: {
+        progressCompleted: completedOperations,
+        progressTotal: plan.operations.length,
+        lastHeartbeatAt: new Date(),
+      },
+    });
   }
 
   const remaining = await prisma.migrationOperation.count({ where: { importJobId, status: "pending" } });
   const failedCount = await prisma.migrationOperation.count({ where: { importJobId, status: "failed" } });
   const finalStatus = failedCount > 0 || remaining > 0 || plan.blocked.length > 0 ? "completed_with_issues" : "completed";
+  const cumulative = await summarizeLedger(importJobId, plan);
 
   await prisma.importJob.update({
     where: { id: importJobId },
     data: {
       status: finalStatus,
       phase: phaseFor(finalStatus),
-      createdRecords: totalOf(created),
-      updatedRecords: linked,
-      skippedRecords: skipped + plan.blocked.length,
+      createdRecords: totalOf(cumulative.created),
+      updatedRecords: cumulative.linked,
+      skippedRecords: cumulative.skipped,
       unresolvedCount: plan.blocked.length,
       completedAt: new Date(),
       error: null,
+      failurePhase: null,
+      failureCode: null,
+      progressCompleted: plan.operations.length,
+      progressTotal: plan.operations.length,
+      lastHeartbeatAt: new Date(),
       summary: {
         metrics: plan.metrics,
         counts: plan.counts,
-        created,
-        linked,
-        skipped,
+        created: cumulative.created,
+        linked: cumulative.linked,
+        skipped: cumulative.skipped,
         blocked: plan.blocked.length,
       } as unknown as Prisma.InputJsonValue,
     },
   });
 
   await recordMigrationEvent(userId, MIGRATION_EVENTS.completed, importJobId, {
-    recordCount: totalOf(created),
-    entityCounts: created,
+    recordCount: totalOf(cumulative.created),
+    entityCounts: cumulative.created,
     autoMappingRate: plan.metrics.autoMappingRate,
     relationshipResolutionRate: plan.metrics.relationshipResolutionRate,
     duplicateRate: plan.metrics.duplicateRate,
@@ -408,7 +464,7 @@ export async function commitMigration(
     outcome: finalStatus,
   });
 
-  return { status: finalStatus, created, linked, skipped, failed: failedCount };
+  return { status: finalStatus, created: cumulative.created, linked: cumulative.linked, skipped: cumulative.skipped, failed: failedCount };
 }
 
 function totalOf(created: Record<MigrationEntity, number>): number {

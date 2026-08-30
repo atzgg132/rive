@@ -1,7 +1,7 @@
 param(
   [int]$LocalPort = 5433,
   [string]$Region = "ap-south-1",
-  [ValidateSet("dev", "migrate", "status", "smoke", "cleanup-smoke", "inspect-smoke", "seed-portfolio", "seed-launch-film", "delete-launch-film")]
+  [ValidateSet("dev", "migrate", "status", "smoke", "migration-smoke", "cleanup-smoke", "inspect-smoke", "seed-portfolio", "seed-launch-film", "delete-launch-film")]
   [string]$Action = "dev"
 )
 
@@ -113,14 +113,17 @@ $tunnel = Start-Process `
   -PassThru
 
 try {
-  $deadline = [DateTime]::UtcNow.AddSeconds(25)
+  # Session Manager can take longer than 25 seconds to hand off to the local
+  # plugin after a fresh AWS login. Keep the wait bounded, but leave enough
+  # room for that authenticated startup path.
+  $deadline = [DateTime]::UtcNow.AddSeconds(60)
   while (-not (Test-LocalPort $LocalPort)) {
     if ($tunnel.HasExited) {
       $details = if (Test-Path -LiteralPath $errorLog) { Get-Content -LiteralPath $errorLog -Raw } else { "" }
       throw "The AWS database tunnel exited before it was ready. $details"
     }
     if ([DateTime]::UtcNow -ge $deadline) {
-      throw "The AWS database tunnel did not open local port $LocalPort within 25 seconds."
+      throw "The AWS database tunnel did not open local port $LocalPort within 60 seconds."
     }
     Start-Sleep -Milliseconds 300
   }
@@ -143,6 +146,7 @@ try {
     "migrate" { npx prisma migrate deploy }
     "status" { npx prisma migrate status }
     "smoke" { node scripts/smoke-contracts.mjs }
+    "migration-smoke" { node --experimental-strip-types --import ./scripts/hosted-module-loader.mjs scripts/smoke-migration.mjs }
     "cleanup-smoke" { node scripts/cleanup-contract-smoke.mjs }
     "inspect-smoke" { node scripts/inspect-contract-smoke.mjs }
     "seed-portfolio" { node scripts/seed-portfolio-media.mjs --email=atzgg132@gmail.com --apply }
@@ -170,6 +174,12 @@ try {
     Stop-Process -Id $tunnel.Id -Force
     $tunnel.WaitForExit()
   }
+  # A slow aws -> session-manager-plugin handoff can occur after the startup
+  # deadline. Discover children created by this invocation again so they do
+  # not survive a failed tunnel attempt.
+  $sessionPluginIds = @(Get-Process -Name "session-manager-plugin" -ErrorAction SilentlyContinue |
+    Where-Object { $existingPluginIds -notcontains $_.Id } |
+    Select-Object -ExpandProperty Id)
   foreach ($sessionPluginId in $sessionPluginIds) {
     $plugin = Get-Process -Id $sessionPluginId -ErrorAction SilentlyContinue
     if ($plugin -and $plugin.ProcessName -eq "session-manager-plugin") {

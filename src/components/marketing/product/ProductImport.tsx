@@ -53,7 +53,7 @@ export function ProductImport({ filename, sources, totals, matches }: ProductImp
             />
           </div>
           <p className="mt-2 text-[0.5rem] font-semibold text-slate-600">
-            {complete ? "Profile complete. Ready for review." : "Profiling columns and relationships…"}
+            {complete ? "Profile complete. Ready for review." : "Profiling columns and values…"}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-3">
@@ -74,7 +74,7 @@ export function ProductImport({ filename, sources, totals, matches }: ProductImp
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
             <p className="flex items-center gap-1.5 text-[0.54rem] font-bold text-amber-900">
               <AlertTriangle className="h-3 w-3" />
-              Relationships to confirm
+              Rows to confirm before import
             </p>
             <div className="mt-2 grid gap-1.5">
               {matches.map((match, index) => (

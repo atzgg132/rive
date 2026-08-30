@@ -132,8 +132,8 @@ variable "environment_domains" {
 
 variable "scheduled_jobs_enabled" {
   type        = bool
-  default     = false
-  description = "Enable only after all environment DNS records and applications are healthy."
+  default     = true
+  description = "Keep the established EventBridge schedules running. Set false only as an explicit incident-response override."
 }
 
 variable "contract_billing_jobs_enabled" {

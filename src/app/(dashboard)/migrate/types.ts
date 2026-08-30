@@ -3,7 +3,8 @@
 export type MigrationLimits = { maxFiles: number; maxRows: number; maxFileMb: number };
 
 export type MigrationSource = {
-  sourceId: string;
+  fileId: string;
+  sourceId: string | null;
   name: string;
   sheetName: string | null;
   entity: string;
@@ -23,6 +24,9 @@ export type MigrationSource = {
     candidateMappings: Array<{ target: string; confidence: number; reason: string }>;
   }> | null;
   overrides: Record<string, unknown> | null;
+  uploadStatus: "waiting" | "uploading" | "verified" | "parsed" | "queued" | "analyzing" | "failed" | "superseded";
+  uploadedAt: string | null;
+  uploadError: string | null;
   options: Array<{ value: string; label: string }>;
 };
 
@@ -72,8 +76,8 @@ export type MigrationRecordView = {
 };
 
 export type MigrationState =
-  | "created" | "uploading" | "profiling" | "mapping" | "review_required"
-  | "ready" | "committing" | "completed" | "completed_with_issues" | "failed" | "abandoned" | "rolled_back";
+  | "created" | "uploading" | "queued_analysis" | "profiling" | "mapping" | "review_required"
+  | "ready" | "queued_commit" | "committing" | "completed" | "completed_with_issues" | "failed" | "abandoned" | "rolled_back";
 
 export type MigrationDetail = {
   migration: {
@@ -87,12 +91,31 @@ export type MigrationDetail = {
     completedAt: string | null;
     rolledBackAt: string | null;
     error: string | null;
+    failurePhase: string | null;
+    failureCode: string | null;
+    attemptCount: number;
   };
   sources: MigrationSource[];
   plan: MigrationPlanView | null;
   records: MigrationRecordView[];
   pagination: { page: number; pageSize: number; total: number };
   summary: Record<string, unknown> | null;
+  progress: { phase: string; completed: number; total: number; percent: number; lastHeartbeatAt: string | null };
+  canCommit: boolean;
+  unresolved: { review: number; invalid: number; total: number };
+  excluded: {
+    count: number;
+    rows: Array<{ sourceKey: string; entity: string; sourceRow: number; errors: unknown[]; warnings: unknown[] }>;
+    truncated: boolean;
+  };
+  recovery: {
+    canRetry: boolean;
+    canReplaceFiles: boolean;
+    appliedCount: number;
+    pendingCount: number;
+    supportReference: string;
+    supportRequested: boolean;
+  };
 };
 
 export type MigrationHistoryEntry = {

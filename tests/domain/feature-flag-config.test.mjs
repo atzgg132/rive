@@ -6,11 +6,11 @@ const parameters = await readFile(
   new URL("../../infrastructure/aws/parameters.tf", import.meta.url),
   "utf8",
 );
-test("every deploy receives an explicit disabled Migration Engine flag", () => {
-  assert.match(
-    parameters,
-    /"\$\{environment\}\/MIGRATION_ENGINE_ENABLED"\s*=\s*"false"/,
-  );
+test("the Migration Engine kill switch is operator-managed and defaults off", () => {
+  assert.match(parameters, /"dev\/MIGRATION_ENGINE_ENABLED"\s*=\s*"false"/);
+  assert.match(parameters, /"prod\/MIGRATION_ENGINE_ENABLED"\s*=\s*"false"/);
+  assert.match(parameters, /aws_ssm_parameter\.operator_managed\["dev\/MIGRATION_ENGINE_ENABLED"\]/);
+  assert.match(parameters, /aws_ssm_parameter\.operator_managed\["prod\/MIGRATION_ENGINE_ENABLED"\]/);
 });
 
 test("engagement flow rolls out on dev before production", () => {

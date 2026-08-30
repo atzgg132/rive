@@ -228,8 +228,8 @@ test("a commit that crashes mid-batch can be resumed without duplicating any rec
   assert.equal(second.status, "completed", "the resumed commit completes");
   assert.deepEqual(
     second.created,
-    { clients: 0, projects: PROJECT_COUNT, invoices: INVOICE_COUNT, expenses: 0 },
-    "only the second batch was created on resume",
+    { clients: CLIENT_COUNT, projects: PROJECT_COUNT, invoices: INVOICE_COUNT, expenses: 0 },
+    "the resumed result reports the complete import, including earlier applied batches",
   );
   assert.equal(second.failed, 0);
 
