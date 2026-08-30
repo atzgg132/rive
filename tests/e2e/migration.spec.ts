@@ -114,7 +114,12 @@ function fixture(name: string) {
 async function uploadAndAnalyze(page: Page, names: string[]) {
   await page.setInputFiles("#migration-files", names.map(fixture));
   const analysis = page.waitForResponse(
-    (response) => response.url().includes("/api/migrations") && response.request().method() === "POST",
+    (response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/migrations"
+        && response.request().method() === "POST"
+        && response.status() < 400;
+    },
   );
   await page.getByRole("button", { name: "Analyze files" }).click();
   const response = await analysis;
