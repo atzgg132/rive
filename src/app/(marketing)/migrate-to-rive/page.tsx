@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { ArrowRight, CheckCircle2, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 
@@ -8,7 +9,11 @@ export const metadata: Metadata = {
   description: "Bring clients, projects, invoices, and expenses into Rive from CSV or XLSX with a review before commit.",
 };
 
-export default function MigrateToRivePage() {
+export default async function MigrateToRivePage() {
+  // This flag is operator-managed at container start, not a build argument.
+  // Evaluate it for each request so the acquisition promise follows the live
+  // kill switch instead of being frozen into the image during prerendering.
+  await connection();
   const available = migrationEngineAvailable();
   const cta = available ? "/register?goal=migrate&next=%2Fmigrate" : "/register";
 
