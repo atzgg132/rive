@@ -160,6 +160,16 @@ test.describe("migration", () => {
     "Set MIGRATION_ENGINE_ENABLED=true to run migration tests.",
   );
 
+  test("public /migrate-to-rive landing page renders with live acquisition copy and working CTA", async ({ page }) => {
+    await page.goto("/migrate-to-rive", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Bring your existing business into Rive." })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Upload CSV or XLSX exports for clients, projects, invoices, and expenses.")).toBeVisible();
+
+    const cta = page.getByRole("link", { name: "Start with my existing data" });
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute("href", "/register?goal=migrate&next=%2Fmigrate");
+  });
+
   test("imports multiple files end to end and lands on a populated workspace", async ({ context, page, baseURL }) => {
     await authenticate(context, baseURL!);
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
@@ -204,6 +214,37 @@ test.describe("migration", () => {
     // racing the client-side transition against the URL alone.
     await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/dashboard/);
+
+    // Assert that Overview displays the imported activity and metrics
+    await expect(page.getByText("Acme Technologies Pvt Ltd").first()).toBeVisible({ timeout: 15_000 });
+
+    // Navigate to Clients and verify imported clients
+    await page.goto("/workflow/clients", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Clients" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Acme Technologies Pvt Ltd")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Globex Corporation")).toBeVisible();
+    await expect(page.getByText("Initech Design Studio")).toBeVisible();
+
+    // Navigate to Projects and verify imported projects and client links
+    await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Website redesign")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Brand refresh")).toBeVisible();
+    await expect(page.getByText("Mobile app")).toBeVisible();
+
+    // Navigate to Revenue (Invoices) and verify imported invoices
+    await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Revenue & invoices" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("INV-001")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("INV-002")).toBeVisible();
+    await expect(page.getByText("INV-003")).toBeVisible();
+
+    // Navigate to Expenses and verify imported expenses
+    await page.goto("/workflow/expenses", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Expenses" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Figma")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Adobe Creative Cloud")).toBeVisible();
+    await expect(page.getByText("IndiGo")).toBeVisible();
   });
 
   test("asks about an unknown currency and applies the answer to every row", async ({ context, page, baseURL }) => {

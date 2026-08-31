@@ -10,6 +10,7 @@
     "contracts:smoke:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action smoke",
     "contracts:cleanup-smoke:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action cleanup-smoke",
     "migration:smoke:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action migration-smoke",
+    "migration:e2e:aws": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-aws.ps1 -Action migration-e2e",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",

@@ -1,7 +1,7 @@
 param(
   [int]$LocalPort = 5433,
   [string]$Region = "ap-south-1",
-  [ValidateSet("dev", "migrate", "status", "smoke", "migration-smoke", "cleanup-smoke", "inspect-smoke", "seed-portfolio", "seed-launch-film", "delete-launch-film")]
+  [ValidateSet("dev", "migrate", "status", "smoke", "migration-smoke", "migration-e2e", "cleanup-smoke", "inspect-smoke", "seed-portfolio", "seed-launch-film", "delete-launch-film")]
   [string]$Action = "dev"
 )
 
@@ -147,6 +147,14 @@ try {
     "status" { npx prisma migrate status }
     "smoke" { node scripts/smoke-contracts.mjs }
     "migration-smoke" { node --experimental-strip-types --import ./scripts/hosted-module-loader.mjs scripts/smoke-migration.mjs }
+    "migration-e2e" {
+      $sessionSecret = aws ssm get-parameter --region $Region --name "/rive/dev/SESSION_SECRET" --with-decryption --query "Parameter.Value" --output text
+      $env:SESSION_SECRET = $sessionSecret
+      $env:E2E_USER_EMAIL = "migration-e2e-runner@example.invalid"
+      $env:MIGRATION_ENGINE_ENABLED = "true"
+      $env:PLAYWRIGHT_BASE_URL = "https://dev.rive.work"
+      npx playwright test tests/e2e/migration.spec.ts --workers=1
+    }
     "cleanup-smoke" { node scripts/cleanup-contract-smoke.mjs }
     "inspect-smoke" { node scripts/inspect-contract-smoke.mjs }
     "seed-portfolio" { node scripts/seed-portfolio-media.mjs --email=atzgg132@gmail.com --apply }
