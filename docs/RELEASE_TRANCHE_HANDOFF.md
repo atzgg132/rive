@@ -88,10 +88,10 @@ public `/p/[slug]`, Agreements (typed-name recorded acceptance;
 `CONTRACTS_ENABLED` is on), admin, funnel events, feedback widget, email
 outbox *code*.
 
-**Operator-controlled integrations:** Migration Engine v2 is deployed and its
-production activation was explicitly approved on 2026-08-31. Google Calendar
-on production and Zoho Books remain off. Do not flip either remaining flag
-until that integration is verified live.
+**Operator-controlled integrations:** Migration Engine v2 is live in
+production; its queue consumer and operator-managed flag were enabled on
+2026-08-31. Google Calendar on production and Zoho Books remain off. Do not
+flip either remaining flag until that integration is verified live.
 
 **Documented-only:** QuickBooks / Xero / FreshBooks / Stripe / bank,
 multi-seat/RBAC, commercial e-sign, data export as a product.
@@ -103,10 +103,11 @@ SQS/DLQ workers, leases, revision-safe analysis, ledger-backed partial-commit
 resume, paginated review, explicit unresolved dispositions, recovery/support
 UX, migration-intent auth routing, acquisition copy, and Admin Reliability
 metrics are implemented. The schema migration is additive and the flag is
-operator-managed with a default of false. The operator explicitly approved
-production activation on 2026-08-31 after the hosted smoke, deployed browser
-journey, and 11h37m clean dev soak, waiving the remainder of the default 48-hour
-gate for this launch only. Future migration changes retain the full gate.
+operator-managed with a default of false. Production activation completed on
+2026-08-31 after the operator explicitly approved the hosted smoke, deployed
+browser journey, and 11h37m clean dev soak, waiving the remainder of the
+default 48-hour gate for this launch only. Future migration changes retain the
+full gate.
 
 **Google Calendar:** search-before-create and unified OAuth state exist.
 `GOOGLE_CALENDAR_ENABLED` is true in SSM for `dev` only and false for

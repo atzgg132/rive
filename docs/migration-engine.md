@@ -1,11 +1,10 @@
 # Rive Migration Engine
 
 > **Rollout status (August 2026):** the acquisition-wedge implementation is
-> deployed to production. Product exposure remains controlled by the
-> operator-managed `MIGRATION_ENGINE_ENABLED` kill switch. The production
-> activation was explicitly approved on 2026-08-31 after the hosted smoke,
-> deployed browser journey, and 11h37m of a clean dev soak; see the rollout
-> exception below.
+> live in production. The production queue consumer and operator-managed
+> `MIGRATION_ENGINE_ENABLED` flag were enabled on 2026-08-31 after the hosted
+> smoke, deployed browser journey, and 11h37m of a clean dev soak; see the
+> rollout exception below. The flag remains the emergency kill switch.
 
 Bring an existing service business into Rive from the CSV and XLSX exports it
 already runs on, and reconstruct a connected workspace — clients, projects,
