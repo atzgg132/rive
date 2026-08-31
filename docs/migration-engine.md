@@ -1,9 +1,11 @@
 # Rive Migration Engine
 
 > **Rollout status (August 2026):** the acquisition-wedge implementation is
-> complete in code, but `MIGRATION_ENGINE_ENABLED` remains `false`. Do not use
-> the full migration promise in acquisition copy until the hosted smoke, dev
-> browser journey, and 48-hour soak described below have passed.
+> deployed to production. Product exposure remains controlled by the
+> operator-managed `MIGRATION_ENGINE_ENABLED` kill switch. The production
+> activation was explicitly approved on 2026-08-31 after the hosted smoke,
+> deployed browser journey, and 11h37m of a clean dev soak; see the rollout
+> exception below.
 
 Bring an existing service business into Rive from the CSV and XLSX exports it
 already runs on, and reconstruct a connected workspace — clients, projects,
@@ -362,3 +364,11 @@ Promotion order is fixed:
 Any integrity or tenant-isolation incident disables the flag immediately. A
 non-empty DLQ or an unrecovered-failure rate above 5% after 20 sessions pauses
 the dedicated acquisition CTA.
+
+The operator explicitly approved production activation on 2026-08-31 before
+the planned 48-hour soak completed. At approval, the observed dev window was
+11h37m with 23 sessions, 21 successful worker executions, one completed import,
+zero worker/import failures, zero stale jobs or expired leases, zero DLQ
+messages, zero reconciliation mismatches, and zero customer-value log matches.
+This recorded exception does not weaken the default 48-hour gate for future
+migration changes.
