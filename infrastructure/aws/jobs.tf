@@ -177,9 +177,10 @@ resource "aws_lambda_event_source_mapping" "migration" {
   for_each         = local.environments
   event_source_arn = aws_sqs_queue.migration[each.key].arn
   function_name    = aws_lambda_function.job_runner.arn
-  # Dev is the pre-production gate. Production consumption is enabled only in
-  # the dev -> main promotion that also deploys the worker endpoint there.
-  enabled                            = each.key == "dev"
+  # Both deployed environments run the same promoted worker endpoint. Product
+  # exposure remains independently controlled by the operator-managed
+  # MIGRATION_ENGINE_ENABLED parameter, so Terraform cannot silently expose it.
+  enabled                            = true
   batch_size                         = 1
   function_response_types            = ["ReportBatchItemFailures"]
   maximum_batching_window_in_seconds = 0

@@ -97,9 +97,10 @@ credentials or an outbound SMTP port.
 Terraform provisions `rive-<environment>-migration` and a matching dead-letter
 queue. Queue URLs are exposed through `MIGRATION_QUEUE_URL`. Jobs are retried
 five times before entering the DLQ, and CloudWatch raises an alarm when a
-dead-letter message appears. The shared Lambda consumes the dev queue only;
-the production event-source mapping remains disabled until the same worker
-endpoint has been promoted to production.
+dead-letter message appears. The shared Lambda consumes both queues now that
+the same worker endpoint has been promoted to production. Product exposure
+remains independently controlled by the operator-managed
+`MIGRATION_ENGINE_ENABLED` parameter.
 
 Migration analysis and commit run through the queue contract. PostgreSQL leases,
 input revisions, and the per-operation ledger make duplicate delivery safe.
