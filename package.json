@@ -86,6 +86,7 @@
     "minimatch": "10.2.6",
     "postcss": "$postcss",
     "sharp": "0.35.3",
-    "deepmerge-ts": "8.0.1"
+    "deepmerge-ts": "8.0.1",
+    "mysql2": "3.24.3"
   }
 }
