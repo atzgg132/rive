@@ -1,10 +1,10 @@
 "use client";
 
-import { Button, PageHeader } from "@/components/ui";
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, PageHeader } from "@/components/ui";
 
 import { useCallback, useEffect, useState } from "react";
 import { Check, Copy, Eye, ExternalLink, Globe2, Inbox, Layers, LayoutTemplate, BarChart3, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
-import { isPortfolioUnstarted, type PortfolioContent } from "@/utils/portfolio";
+import { isPortfolioUnstarted, type PortfolioContent, type PortfolioProject } from "@/utils/portfolio";
 import PortfolioAnalyticsPanel from "@/components/portfolio/PortfolioAnalyticsPanel";
 import PortfolioInquiriesPanel from "@/components/portfolio/PortfolioInquiriesPanel";
 import PortfolioLivePreview, { type PreviewDevice } from "@/components/portfolio/PortfolioLivePreview";
@@ -104,6 +104,7 @@ export default function PortfolioDashboardPage() {
   /* Publishing is the one action that puts someone in front of clients, so it
      asks first and says what is about to go public. */
   const [reviewingPublish, setReviewingPublish] = useState(false);
+  const [publicationPrompt, setPublicationPrompt] = useState<PortfolioProject | null>(null);
   /* One preview, opened from one place. The side pane is ambient; this is the
      deliberate look, and on a narrow window it is the only preview there is. */
   const [inspectingPreview, setInspectingPreview] = useState(false);
@@ -139,6 +140,22 @@ export default function PortfolioDashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const entryId = new URLSearchParams(window.location.search).get("entry");
+    if (!entryId) return;
+    let attempts = 0;
+    const focusEntry = () => {
+      const entry = Array.from(document.querySelectorAll<HTMLElement>("[data-portfolio-entry]"))
+        .find((element) => element.dataset.portfolioEntry === entryId);
+      if (entry) {
+        entry.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+        return;
+      }
+      if (attempts++ < 5) window.requestAnimationFrame(focusEntry);
+    };
+    window.requestAnimationFrame(focusEntry);
+  }, [content.projects.length, portfolio?.id]);
+
   /* Preview delivery lives in PortfolioLivePreview, which debounces it. This
      only decides whether the side-by-side pane exists at all. */
   useEffect(() => {
@@ -154,6 +171,30 @@ export default function PortfolioDashboardPage() {
     await navigator.clipboard.writeText(savedPublicUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
+  };
+
+  const requestVisibilityChange = (projectId: string, visibility: "public" | "private") => {
+    const project = content.projects.find((item) => item.id === projectId);
+    if (visibility === "public" && project?.visibility === "private") {
+      setPublicationPrompt(project);
+      return;
+    }
+    updateContent({ projects: content.projects.map((item) => item.id === projectId ? { ...item, visibility } : item) });
+  };
+
+  const confirmPublication = () => {
+    if (!publicationPrompt) return;
+    const nextContent: PortfolioContent = {
+      ...content,
+      projects: content.projects.map((item) => item.id === publicationPrompt.id ? { ...item, visibility: "public" } : item),
+    };
+    updateContent({ projects: nextContent.projects });
+    setPublicationPrompt(null);
+    void persist({
+      contentOverride: nextContent,
+      confirmedPublicProjectIds: [publicationPrompt.id],
+      successMessage: "Case study is now public",
+    });
   };
 
   if (loading) return <div className="flex min-h-80 items-center justify-center text-sm text-muted-foreground dark:text-slate-400">Loading portfolio studio...</div>;
@@ -276,6 +317,7 @@ export default function PortfolioDashboardPage() {
               content={content}
               onUpdateContent={updateContent}
               onUploadCover={handleImageUpload}
+              onVisibilityChange={requestVisibilityChange}
             />
           )}
           {editorSection === "practices" && (
@@ -359,6 +401,19 @@ export default function PortfolioDashboardPage() {
           onClose={() => setReviewingPublish(false)}
         />
       )}
+
+      <Dialog open={Boolean(publicationPrompt)} onOpenChange={(open) => { if (!open) setPublicationPrompt(null); }}>
+        <DialogContent>
+          <DialogTitle className="pr-8 text-xl font-extrabold">Show this case study publicly?</DialogTitle>
+          <DialogDescription className="mt-2 leading-6">
+            {publicationPrompt?.title?.trim() || "This work"} will be visible on your public portfolio. Rive will not publish the client, Agreement, pricing, invoice, or payment details from the Project.
+          </DialogDescription>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setPublicationPrompt(null)}>Keep private</Button>
+            <Button type="button" onClick={confirmPublication}>Make public</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

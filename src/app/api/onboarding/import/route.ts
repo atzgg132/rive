@@ -6,6 +6,7 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
+import { reconcileInvoiceNumberSequence } from "@/utils/invoiceNumber";
 import { createHash } from "node:crypto";
 
 type Row = Record<string, string>;
@@ -395,14 +396,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const invoiceSources = sources.filter((item) => item.entity === "invoices");
+    if (invoiceSources.length > 0) await reconcileInvoiceNumberSequence(transaction, session.userId);
     const existingInvoiceNumbers = new Set((await transaction.invoice.findMany({
       where: { userId: session.userId },
       select: { invoiceNumber: true },
     })).map((invoice) => invoice.invoiceNumber.toLowerCase()));
-    for (const source of sources.filter((item) => item.entity === "invoices")) {
+    for (const source of invoiceSources) {
       for (let index = 0; index < source.rows.length; index += 1) {
         const row = source.rows[index];
-        const invoiceNumber = value(row, ["invoice_number", "invoice_no", "number", "invoice_id"]) || `IMPORT-${Date.now()}-${index + 1}`;
+        const invoiceNumber = (value(row, ["invoice_number", "invoice_no", "number", "invoice_id"]) || `IMPORT-${importFileIds.get(source.name) || job.id}-${index + 1}`).slice(0, 120);
         if (existingInvoiceNumbers.has(invoiceNumber.toLowerCase())) {
           counts.skipped += 1;
           continue;
@@ -421,6 +424,7 @@ export async function POST(req: NextRequest) {
         const currency = value(row, ["currency", "currency_code"]).toUpperCase();
         const status = safeStatus(value(row, ["status"]), ["draft", "sent", "viewed", "paid", "overdue", "cancelled"], "draft");
         const issueDate = dateValue(value(row, ["issue_date", "invoice_date", "date"])) || new Date();
+        await reconcileInvoiceNumberSequence(transaction, session.userId, [invoiceNumber]);
         const invoice = await transaction.invoice.create({
           data: {
             dataOrigin: "imported",

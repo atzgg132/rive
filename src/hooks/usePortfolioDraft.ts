@@ -38,6 +38,7 @@ type PersistOptions = {
   contentOverride?: PortfolioContent;
   successMessage?: string;
   silent?: boolean;
+  confirmedPublicProjectIds?: string[];
 };
 
 function applyRecordToForm(
@@ -99,6 +100,7 @@ export function usePortfolioDraft() {
   const draftHydratedRef = useRef(false);
   const inFlightRef = useRef(false);
   const pendingPersistRef = useRef<PersistOptions | null>(null);
+  const confirmedPublicProjectIdsRef = useRef<string[]>([]);
   const persistRef = useRef<(options?: PersistOptions) => Promise<void>>(async () => undefined);
 
   useEffect(() => {
@@ -228,7 +230,13 @@ export function usePortfolioDraft() {
   const persist = useCallback(async (options: PersistOptions = {}) => {
     const current = portfolioRef.current;
     if (!current) return;
-    if (options.silent && !options.status && !dirtyRef.current) return;
+    if (options.silent && !options.status && !options.confirmedPublicProjectIds?.length && !dirtyRef.current) return;
+    if (options.confirmedPublicProjectIds?.length) {
+      confirmedPublicProjectIdsRef.current = Array.from(new Set([
+        ...confirmedPublicProjectIdsRef.current,
+        ...options.confirmedPublicProjectIds,
+      ]));
+    }
     if (inFlightRef.current) {
       const pending = pendingPersistRef.current;
       if (pending?.status === "published" && options.silent) return;
@@ -240,6 +248,10 @@ export function usePortfolioDraft() {
     const submittedEditVersion = editVersionRef.current;
     const submittedContent = options.contentOverride ?? contentRef.current;
     const explicitStatus = options.status;
+    const confirmedPublicProjectIds = Array.from(new Set([
+      ...confirmedPublicProjectIdsRef.current,
+      ...(options.confirmedPublicProjectIds || []),
+    ]));
     if (!conflictRef.current) {
       flushDraftSnapshot(options.contentOverride ? { content: options.contentOverride } : {});
     }
@@ -259,6 +271,7 @@ export function usePortfolioDraft() {
           savedSlug: current.slug,
           seo: seoRef.current,
           status: explicitStatus,
+          confirmedPublicProjectIds,
         })),
       });
       const data = await response.json().catch(() => ({}));
@@ -286,6 +299,7 @@ export function usePortfolioDraft() {
 
       if (!data.portfolio) throw new Error(data.message || "could not save portfolio");
       const saved = data.portfolio as PortfolioRecord;
+      confirmedPublicProjectIdsRef.current = [];
       setPortfolio(saved);
       portfolioRef.current = saved;
       if (shouldApplyServerSnapshot(submittedEditVersion, editVersionRef.current)) {

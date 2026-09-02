@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { calculateInvoice } from "@/utils/invoiceMath";
-import { nextInvoiceNumber } from "@/utils/invoiceNumber";
+import { nextInvoiceNumber, reconcileInvoiceNumberSequence } from "@/utils/invoiceNumber";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
 import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
@@ -226,6 +226,11 @@ export async function POST(req: NextRequest) {
 
     const invoice = await prisma.$transaction(async (tx) => {
       const invoiceNumber = requestedInvoiceNumber || await nextInvoiceNumber(tx, session.userId, invoiceProfile?.invoicePrefix || "INV", issueDate);
+      if (requestedInvoiceNumber) {
+        // Serialize explicit numbers with automatic allocation and advance the
+        // shared counter when the user supplied a generated-format number.
+        await reconcileInvoiceNumberSequence(tx, session.userId, [invoiceNumber]);
+      }
       const existing = await tx.invoice.findUnique({
         where: {
           unique_user_invoice_number: {
@@ -416,6 +421,11 @@ export async function PUT(req: NextRequest) {
 
     await prisma.$transaction(async (tx) => {
       if (invoiceNumber !== existingInvoice.invoiceNumber) {
+        // Keep edits to explicit/generated-format numbers in the same
+        // serialized sequence as creation and imports. The transaction will
+        // roll this reconciliation back if the optimistic update loses a
+        // race or the number is a duplicate.
+        await reconcileInvoiceNumberSequence(tx, session.userId, [invoiceNumber]);
         const existing = await tx.invoice.findUnique({
           where: {
             unique_user_invoice_number: {

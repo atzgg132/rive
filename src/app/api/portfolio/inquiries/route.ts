@@ -68,6 +68,9 @@ export async function GET(req: NextRequest) {
           createdAt: true,
           readAt: true,
           repliedAt: true,
+          convertedAt: true,
+          convertedProject: { select: { id: true, title: true } },
+          sourceTask: { select: { id: true, title: true } },
         },
       }),
       prisma.portfolioInquiry.count({ where }),
@@ -96,6 +99,11 @@ export async function GET(req: NextRequest) {
       createdAt: row.createdAt.toISOString(),
       readAt: row.readAt?.toISOString() ?? null,
       repliedAt: row.repliedAt?.toISOString() ?? null,
+      convertedAt: row.convertedAt?.toISOString() ?? null,
+      convertedProjectId: row.convertedProject?.id ?? null,
+      convertedProjectTitle: row.convertedProject?.title ?? null,
+      followUpTaskId: row.sourceTask?.id ?? null,
+      followUpTaskTitle: row.sourceTask?.title ?? null,
     }));
 
     return NextResponse.json(

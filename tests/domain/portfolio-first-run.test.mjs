@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { DEFAULT_PORTFOLIO_CONTENT, isPortfolioUnstarted, mergePortfolioContent } from "../../src/utils/portfolio.ts";
+import { DEFAULT_PORTFOLIO_CONTENT, isBlankPortfolioProject, isPortfolioProjectMeaningful, isPortfolioUnstarted, mergePortfolioContent } from "../../src/utils/portfolio.ts";
 
 /**
  * The first-run path appears only for someone who has not begun, and must get
@@ -13,6 +13,15 @@ import { DEFAULT_PORTFOLIO_CONTENT, isPortfolioUnstarted, mergePortfolioContent 
 test("a freshly provisioned portfolio counts as unstarted", () => {
   assert.equal(isPortfolioUnstarted(DEFAULT_PORTFOLIO_CONTENT), true);
   assert.equal(DEFAULT_PORTFOLIO_CONTENT.projects.length, 1, "the blank starter project is why this cannot count arrays");
+  assert.equal(DEFAULT_PORTFOLIO_CONTENT.projects[0].visibility, "private");
+});
+
+test("a starter project becomes meaningful only when it has visitor-facing content", () => {
+  const starter = DEFAULT_PORTFOLIO_CONTENT.projects[0];
+  assert.equal(isBlankPortfolioProject(starter), true);
+  assert.equal(isPortfolioProjectMeaningful({ ...starter, year: "2030" }), false, "the default year alone is not content");
+  assert.equal(isPortfolioProjectMeaningful({ ...starter, role: "Product designer" }), true);
+  assert.equal(isPortfolioProjectMeaningful({ ...starter, media: [{ id: "m1", kind: "image", url: "https://example.com/work.jpg", alt: "Work", caption: "" }] }), true);
 });
 
 test("a name alone is enough to count as begun", () => {

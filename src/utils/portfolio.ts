@@ -53,6 +53,31 @@ export type PortfolioProject = {
   practiceId?: string;
 };
 
+/** Whether a case-study row contains anything a visitor could meaningfully read. */
+export function isPortfolioProjectMeaningful(project: PortfolioProject): boolean {
+  const hasText = (value: unknown) => text(value).trim().length > 0;
+  return Boolean(
+    hasText(project.title)
+    || hasText(project.description)
+    || hasText(project.role)
+    || hasText(project.url)
+    || hasText(project.imageUrl)
+    || hasText(project.client)
+    || hasText(project.timeline)
+    || project.deliverables?.some(hasText)
+    || project.gallery?.some((item) => hasText(item.url) || hasText(item.alt) || hasText(item.caption))
+    || project.media?.some((item) => hasText(item.url) || hasText(item.alt) || hasText(item.caption))
+    || hasText(project.challenge)
+    || hasText(project.solution)
+    || hasText(project.outcome)
+    || project.tools?.some(hasText)
+  );
+}
+
+export function isBlankPortfolioProject(project: PortfolioProject): boolean {
+  return !isPortfolioProjectMeaningful(project);
+}
+
 export type PortfolioService = {
   id: string;
   title: string;
@@ -187,7 +212,7 @@ export const DEFAULT_PORTFOLIO_CONTENT: PortfolioContent = {
   contactEmail: "",
   social: [],
   projects: [
-    { id: "project-1", title: "", description: "", role: "", year: "2026", url: "", imageUrl: "", client: "", timeline: "", deliverables: [], gallery: [], media: [], visibility: "public", challenge: "", solution: "", outcome: "", tools: [] },
+    { id: "project-1", title: "", description: "", role: "", year: "2026", url: "", imageUrl: "", client: "", timeline: "", deliverables: [], gallery: [], media: [], visibility: "private", challenge: "", solution: "", outcome: "", tools: [] },
   ],
   services: [
     { id: "service-1", title: "", description: "" },
@@ -279,6 +304,98 @@ export function buildPrefilledPortfolioContent(user: PortfolioSeedData): Portfol
     projects: projects.length > 0 ? projects : DEFAULT_PORTFOLIO_CONTENT.projects,
     services: services.length > 0 ? services : DEFAULT_PORTFOLIO_CONTENT.services,
   };
+}
+
+export type ProjectProofSource = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  startDate: Date | null;
+  dueDate: Date | null;
+  completedAt: Date | null;
+  updatedAt: Date;
+  tags: string[];
+  client: { name: string; company: string | null } | null;
+  milestones: Array<{ title: string; completed: boolean; completedAt: Date | null }>;
+};
+
+/** The stable owner-facing Portfolio entry for a completed Project. */
+export function projectCaseStudyId(projectId: string): string {
+  return `project-${projectId}`;
+}
+
+export function isProjectProofEligible(project: Pick<ProjectProofSource, "status" | "milestones">): boolean {
+  return project.status === "completed" || project.milestones.some((milestone) => milestone.completed);
+}
+
+export function projectProofOffer(projectId: string) {
+  const caseStudyId = projectCaseStudyId(projectId);
+  return {
+    projectId,
+    caseStudyId,
+    href: `/portfolio?section=work&entry=${encodeURIComponent(caseStudyId)}`,
+    label: "Create or open case study draft",
+  };
+}
+
+function proofDateLabel(value: Date | null): string {
+  return value
+    ? new Intl.DateTimeFormat("en", { month: "short", year: "numeric", timeZone: "UTC" }).format(value)
+    : "";
+}
+
+/**
+ * Map operational work into conservative, private portfolio content. This
+ * function deliberately accepts only fields that are safe to show publicly;
+ * contact, Agreement, and financial records never enter the mapper.
+ */
+export function buildPortfolioCaseStudyFromProject(project: ProjectProofSource): PortfolioProject {
+  const completedMilestones = project.milestones.filter((milestone) => milestone.completed && milestone.title.trim());
+  const completionDate = project.completedAt || completedMilestones.map((milestone) => milestone.completedAt).filter((value): value is Date => Boolean(value)).sort((a, b) => b.getTime() - a.getTime())[0] || null;
+  const timelineStart = proofDateLabel(project.startDate);
+  const timelineEnd = proofDateLabel(completionDate || project.dueDate);
+  const timeline = timelineStart && timelineEnd
+    ? `${timelineStart} – ${timelineEnd}`
+    : timelineStart || timelineEnd;
+  const yearSource = completionDate || project.startDate || project.dueDate || project.updatedAt;
+  const client = project.client?.company?.trim() || project.client?.name?.trim() || "";
+  const caseStudyId = projectCaseStudyId(project.id);
+
+  return {
+    id: caseStudyId,
+    title: project.title.trim(),
+    description: project.description?.trim() || "",
+    role: "",
+    year: String(yearSource.getUTCFullYear()),
+    url: "",
+    imageUrl: "",
+    client,
+    timeline,
+    deliverables: completedMilestones.map((milestone) => milestone.title.trim()),
+    gallery: [],
+    media: [],
+    visibility: "private",
+    challenge: "",
+    solution: "",
+    outcome: "",
+    tools: project.tags.map((tag) => tag.trim()).filter(Boolean),
+  };
+}
+
+/** Fill only generated fields that the owner has not written yet. */
+export function mergeGeneratedPortfolioCaseStudy(existing: PortfolioProject, generated: PortfolioProject): PortfolioProject {
+  const merged: PortfolioProject = { ...generated, ...existing };
+  for (const field of ["title", "description", "year", "client", "timeline"] as const) {
+    if (!existing[field]?.trim()) merged[field] = generated[field] ?? "";
+  }
+  if (!existing.deliverables?.length) merged.deliverables = generated.deliverables;
+  if (!existing.tools?.length) merged.tools = generated.tools;
+  // Legacy portfolio projects omitted visibility and have historically been
+  // public. Preserve that omission, as well as an explicit public value; only
+  // an explicitly private matching entry should remain private.
+  merged.visibility = existing.visibility === "private" ? "private" : existing.visibility;
+  return merged;
 }
 
 export function normalizeSlug(value: string): string {

@@ -67,7 +67,7 @@ export function createStudioProject(): PortfolioProject {
     timeline: "",
     deliverables: [],
     gallery: [],
-    visibility: "public",
+    visibility: "private",
     challenge: "",
     solution: "",
     outcome: "",
@@ -163,6 +163,7 @@ export function buildPortfolioPersistBody(input: {
   savedSlug?: string;
   seo: PortfolioSeo;
   status?: "draft" | "published";
+  confirmedPublicProjectIds?: string[];
 }) {
   const body: {
     revision: number;
@@ -172,6 +173,7 @@ export function buildPortfolioPersistBody(input: {
     slug?: string;
     seo: PortfolioSeo;
     status?: "draft" | "published";
+    confirmedPublicProjectIds?: string[];
   } = {
     revision: input.revision,
     content: input.content,
@@ -186,6 +188,7 @@ export function buildPortfolioPersistBody(input: {
      cost them the URL, not the work. */
   if (input.savedSlug === undefined || input.slug !== input.savedSlug) body.slug = input.slug;
   if (input.status) body.status = input.status;
+  if (input.confirmedPublicProjectIds?.length) body.confirmedPublicProjectIds = input.confirmedPublicProjectIds;
   return body;
 }
 

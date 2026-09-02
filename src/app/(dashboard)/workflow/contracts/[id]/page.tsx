@@ -51,6 +51,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { localeForCurrency } from "@/lib/currency";
+import ContractWorkSetupCard from "@/components/contracts/ContractWorkSetupCard";
 
 type Section = { key: string; title: string; body: string; enabled: boolean; required?: boolean };
 type PaymentDraft = { label: string; amount: string; currency: string; triggerType: string; triggerDate: string; dueDays: string; milestoneId: string; invoiceDescription: string };
@@ -85,7 +86,7 @@ type Contract = {
   void_request_note: string | null;
   void_confirm_note: string | null;
   client: { id: string; name: string; email: string | null; company?: string | null; address?: string | null };
-  project: { id: string; title: string; description?: string | null; milestones?: Array<{ id: string; title: string; dueDate: string | null; completed: boolean }> } | null;
+  project: { id: string; title: string; description?: string | null; startDate?: string | null; dueDate?: string | null; milestones?: Array<{ id: string; title: string; dueDate: string | null; completed: boolean }> } | null;
   versions: Array<{ id: string; version: number; status: string; content: Content; content_hash: string; created_at: string; finalized_at: string | null; artifacts: Array<{ id: string }> }>;
   signers: Array<{ id: string; role: "client" | "owner"; name: string; email: string; status: string; invited_at: string | null; signed_at: string | null; signatures: Array<{ versionId: string; signedAt: string; consentTextVersion: string; providerEventId?: string | null }> }>;
   review_links: Array<{ id: string; type: string; versionId: string | null; expiresAt: string; revokedAt: string | null; createdAt: string }>;
@@ -104,6 +105,19 @@ type Contract = {
     milestone: { id: string; title: string; dueDate: string | null; completed: boolean } | null;
     occurrence: { id: string; status: string; eligible_at: string | null; drafted_at: string | null; invoice: { id: string; invoiceNumber: string; status: string; total: string } | null } | null;
   }>;
+  work_setup: {
+    id?: string;
+    status: string;
+    accepted_version_id: string | null;
+    preview_plan: {
+      project: { mode: "create" | "reuse"; projectId: string | null; title: string; description: string | null; startDate: string | null; dueDate: string | null };
+      milestones: Array<{ key: string; existingId: string | null; title: string; dueDate: string | null }>;
+      tasks: Array<{ key: string; title: string; dueDate: string | null; milestoneKey: string | null; milestoneId: string | null }>;
+    } | null;
+    preview_hash: string | null;
+    result_ids: { projectId?: string; milestoneIds?: string[]; taskIds?: string[] } | null;
+    error: string | null;
+  };
 };
 
 const statusMeta: Record<string, { label: string; description: string; badge: "default" | "secondary" | "outline" | "success" | "warning" | "destructive" }> = {
@@ -351,6 +365,8 @@ export default function ContractDetailPage() {
         onFinalize={() => void finalize()}
       />
 
+      {contract.status === "executed" ? <ContractWorkSetupCard contractId={contract.id} project={contract.project} acceptedContent={content} setup={contract.work_setup} onRefresh={() => load(true)} /> : null}
+
       {reviewUrl ? <LinkPanel label="Client review link — comments only, not an acceptance request" url={reviewUrl} onCopy={copy} /> : null}
       {clientSignUrl ? <LinkPanel label="Client acceptance link — send only to the named client" url={clientSignUrl} onCopy={copy} /> : null}
       {ownerSignUrl ? <LinkPanel label="Owner acceptance link — use after the client records acceptance" url={ownerSignUrl} onCopy={copy} /> : null}
@@ -467,6 +483,7 @@ function formatContractEventType(eventType: string): string {
     contract_declined: "Acceptance changes requested",
     contract_expired: "Acceptance request expired",
     contract_voided: "Agreement voided",
+    contract_project_generated: "Work setup created",
   };
   return labels[eventType] || eventType.replaceAll("_", " ");
 }
@@ -489,14 +506,15 @@ function NextActionCard({ contract, versionApproved, openComments, canReview, ca
     title = "A signer requested changes";
     description = contract.signers.some((signer) => signer.signatures.length) ? "Because an acceptance record already exists, void this record and create a replacement Agreement." : "Read the decline reason in the evidence timeline, revise the draft, and run review again.";
   } else if (contract.status === "executed") {
-    title = "Agreement accepted — review billing drafts";
-    description = "Eligible payment triggers create draft invoices only. Review each invoice before sending it to the client.";
+    const workReady = contract.work_setup.status === "succeeded";
+    title = workReady ? "Agreement accepted — review billing drafts" : "Agreement accepted — set up the work";
+    description = workReady ? "Eligible payment triggers create draft invoices only. Review each invoice before sending it to the client." : "Choose the linked Project and planning details before Rive activates the accepted billing plan.";
   } else if (contract.status === "void") {
     title = "This record is void";
     description = "Its immutable versions and evidence remain available. Create a replacement if the engagement continues.";
   }
 
-  return <Card className="border-primary/20 bg-primary/[0.035]"><CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><ArrowRight className="h-4 w-4" /></span><div><p className="text-xs font-bold uppercase tracking-wider text-primary">Next action</p><h2 className="mt-0.5 text-base font-extrabold">{title}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p></div></div><div className="flex flex-wrap gap-2 lg:justify-end">{canReview ? <><Button variant="outline" disabled={Boolean(busy)} onClick={() => void onAction("review", `/api/workflow/contracts/${contract.id}/review`, "POST", { sendEmail: false })}><Link2 className="h-4 w-4" /> Get review link</Button><Button variant="outline" disabled={Boolean(busy) || !contract.client.email} onClick={() => void onAction("review-email", `/api/workflow/contracts/${contract.id}/review`, "POST", { sendEmail: true })}><Send className="h-4 w-4" /> Email client</Button></> : null}{canFinalize ? <Button disabled={Boolean(busy)} onClick={onFinalize}><CheckCircle2 className="h-4 w-4" /> Finalize version</Button> : null}{contract.status === "ready_to_sign" ? <Button disabled={Boolean(busy)} onClick={() => void onAction("sign", `/api/workflow/contracts/${contract.id}/start-signing`)}><FileSignature className="h-4 w-4" /> Start recorded acceptance</Button> : null}{contract.status === "executed" ? <><Link href="/workflow/revenue" className={buttonVariants({ variant: "default" })}><CircleDollarSign className="h-4 w-4" /> Review invoices</Link><Button variant="outline" disabled={Boolean(busy)} onClick={() => void onAction("billing", `/api/workflow/contracts/${contract.id}/billing/run`)}><RefreshCw className="h-4 w-4" /> Check triggers</Button></> : null}{contract.status === "void" ? <Link className={buttonVariants({ variant: "default" })} href={`/workflow/contracts?new=1&clientId=${encodeURIComponent(contract.client.id)}${contract.project ? `&projectId=${encodeURIComponent(contract.project.id)}` : ""}`}><Plus className="h-4 w-4" /> Create replacement</Link> : null}</div></CardContent></Card>;
+  return <Card className="border-primary/20 bg-primary/[0.035]"><CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><ArrowRight className="h-4 w-4" /></span><div><p className="text-xs font-bold uppercase tracking-wider text-primary">Next action</p><h2 className="mt-0.5 text-base font-extrabold">{title}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p></div></div><div className="flex flex-wrap gap-2 lg:justify-end">{canReview ? <><Button variant="outline" disabled={Boolean(busy)} onClick={() => void onAction("review", `/api/workflow/contracts/${contract.id}/review`, "POST", { sendEmail: false })}><Link2 className="h-4 w-4" /> Get review link</Button><Button variant="outline" disabled={Boolean(busy) || !contract.client.email} onClick={() => void onAction("review-email", `/api/workflow/contracts/${contract.id}/review`, "POST", { sendEmail: true })}><Send className="h-4 w-4" /> Email client</Button></> : null}{canFinalize ? <Button disabled={Boolean(busy)} onClick={onFinalize}><CheckCircle2 className="h-4 w-4" /> Finalize version</Button> : null}{contract.status === "ready_to_sign" ? <Button disabled={Boolean(busy)} onClick={() => void onAction("sign", `/api/workflow/contracts/${contract.id}/start-signing`)}><FileSignature className="h-4 w-4" /> Start recorded acceptance</Button> : null}{contract.status === "executed" ? <>{contract.work_setup.status === "succeeded" ? <Link href="/workflow/revenue" className={buttonVariants({ variant: "default" })}><CircleDollarSign className="h-4 w-4" /> Review invoices</Link> : <Link href="#work-setup" className={buttonVariants({ variant: "default" })}><ArrowRight className="h-4 w-4" /> Set up the work</Link>}<Button variant="outline" disabled={Boolean(busy)} onClick={() => void onAction("billing", `/api/workflow/contracts/${contract.id}/billing/run`)}><RefreshCw className="h-4 w-4" /> Check triggers</Button></> : null}{contract.status === "void" ? <Link className={buttonVariants({ variant: "default" })} href={`/workflow/contracts?new=1&clientId=${encodeURIComponent(contract.client.id)}${contract.project ? `&projectId=${encodeURIComponent(contract.project.id)}` : ""}`}><Plus className="h-4 w-4" /> Create replacement</Link> : null}</div></CardContent></Card>;
 }
 
 function Editor({ contract, title, setTitle, currency, setCurrency, governingLaw, setGoverningLaw, jurisdiction, setJurisdiction, sections, setSections, payments, setPayments, saving, onSave }: { contract: Contract; title: string; setTitle: (value: string) => void; currency: string; setCurrency: (value: string) => void; governingLaw: string; setGoverningLaw: (value: string) => void; jurisdiction: string; setJurisdiction: (value: string) => void; sections: Section[]; setSections: React.Dispatch<React.SetStateAction<Section[]>>; payments: PaymentDraft[]; setPayments: React.Dispatch<React.SetStateAction<PaymentDraft[]>>; saving: boolean; onSave: () => void }) {
@@ -516,7 +534,7 @@ function Editor({ contract, title, setTitle, currency, setCurrency, governingLaw
 }
 
 function PaymentPlan({ contract, busy, runAction }: { contract: Contract; busy: string | null; runAction: (key: string, url: string, method?: string, body?: unknown, preserveEditor?: boolean) => Promise<Record<string, unknown> | null> }) {
-  return <section><h2 className="mb-2 text-sm font-bold">Payment plan</h2>{contract.payment_plan.length === 0 ? <p className="text-sm text-muted-foreground">No automatic invoice triggers. Billing remains manual.</p> : <div className="divide-y divide-border rounded-xl border border-border">{contract.payment_plan.map((item) => <div key={item.id} className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{item.label} · {item.currency} {Number(item.amount).toLocaleString(localeForCurrency(item.currency))}</p><p className="mt-0.5 text-xs text-muted-foreground">{formatTrigger(item)} · invoice due in {item.due_days} days</p>{item.occurrence?.invoice ? <Link href={`/workflow/revenue?invoiceId=${encodeURIComponent(item.occurrence.invoice.id)}`} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">{item.occurrence.invoice.invoiceNumber} · {item.occurrence.invoice.status}<ExternalLink className="h-3 w-3" /></Link> : item.occurrence?.status === "eligible" ? <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Eligible — run a billing check if the draft has not appeared.</p> : null}</div><div className="flex flex-wrap items-center gap-2">{item.milestone ? <Button size="sm" variant={item.milestone.completed ? "secondary" : "outline"} disabled={Boolean(busy) || contract.status !== "executed"} onClick={() => item.milestone && void runAction(`milestone-${item.milestone.id}`, `/api/workflow/milestones/${item.milestone.id}`, "PATCH", { completed: !item.milestone.completed })}>{item.milestone.completed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}{item.milestone.completed ? "Completed" : "Mark complete"}</Button> : null}<Badge variant={item.status === "draft_created" ? "success" : "outline"}>{item.status.replaceAll("_", " ")}</Badge></div></div>)}</div>}</section>;
+  return <section><h2 className="mb-2 text-sm font-bold">Payment plan</h2>{contract.payment_plan.length === 0 ? <p className="text-sm text-muted-foreground">No automatic invoice triggers. Billing remains manual.</p> : <div className="divide-y divide-border rounded-xl border border-border">{contract.payment_plan.map((item) => <div key={item.id} className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{item.label} · {item.currency} {Number(item.amount).toLocaleString(localeForCurrency(item.currency))}</p><p className="mt-0.5 text-xs text-muted-foreground">{formatTrigger(item)} · invoice due in {item.due_days} days</p>{item.occurrence?.invoice ? <Link href={`/workflow/revenue?invoiceId=${encodeURIComponent(item.occurrence.invoice.id)}`} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">{item.occurrence.invoice.invoiceNumber} · {item.occurrence.invoice.status}<ExternalLink className="h-3 w-3" /></Link> : item.occurrence?.status === "awaiting_work_setup" ? <p className="mt-1 text-xs text-primary">Waiting for work setup before this accepted trigger can draft an invoice.</p> : item.occurrence?.status === "eligible" ? <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Eligible — run a billing check if the draft has not appeared.</p> : null}</div><div className="flex flex-wrap items-center gap-2">{item.milestone ? <Button size="sm" variant={item.milestone.completed ? "secondary" : "outline"} disabled={Boolean(busy) || contract.status !== "executed"} onClick={() => item.milestone && void runAction(`milestone-${item.milestone.id}`, `/api/workflow/milestones/${item.milestone.id}`, "PATCH", { completed: !item.milestone.completed })}>{item.milestone.completed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}{item.milestone.completed ? "Completed" : "Mark complete"}</Button> : null}<Badge variant={item.status === "draft_created" ? "success" : "outline"}>{item.status.replaceAll("_", " ")}</Badge></div></div>)}</div>}</section>;
 }
 
 function LinkPanel({ label, url, onCopy }: { label: string; url: string; onCopy: (url: string) => void }) {

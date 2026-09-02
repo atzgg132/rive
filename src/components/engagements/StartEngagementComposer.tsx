@@ -18,16 +18,25 @@ import { toast } from "sonner";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 
 type ClientOption = { id: string; name: string; email?: string | null };
+export type StartEngagementInquiry = {
+  id: string;
+  name: string;
+  email: string;
+  projectType: string;
+  message: string;
+  convertedClient: { id: string; name: string; email: string | null };
+};
 type CreatedResult = {
-  records: { clientId: string; projectId: string; milestoneId: string; contractId?: string; invoiceId?: string };
-  nextAction: { kind: "agreement_review" | "invoice_review" | "milestone_plan"; href: string; label: string };
+  records: { clientId: string; projectId: string; milestoneId?: string; contractId?: string; invoiceId?: string };
+  nextAction: { kind: "agreement_review" | "invoice_review" | "milestone_plan" | "inquiry_project"; href: string; label: string };
 };
 
 type Props = {
-  entryPoint: "onboarding" | "workspace";
+  entryPoint: "onboarding" | "workspace" | "inquiry";
   currency: string;
   agreementsAvailable: boolean;
   clients?: ClientOption[];
+  inquiry?: StartEngagementInquiry;
   onCreated?: (result: CreatedResult) => void;
 };
 
@@ -43,18 +52,18 @@ function readSessionId(): string | null {
   return match ? decodeURIComponent(match[1] || "") : null;
 }
 
-export function StartEngagementComposer({ entryPoint, currency, agreementsAvailable, clients: suppliedClients, onCreated }: Props) {
+export function StartEngagementComposer({ entryPoint, currency, agreementsAvailable, clients: suppliedClients, inquiry, onCreated }: Props) {
   const router = useRouter();
   const [flowId] = useState(() => crypto.randomUUID());
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [loadingClients, setLoadingClients] = useState(suppliedClients === undefined);
+  const [loadingClients, setLoadingClients] = useState(suppliedClients === undefined && !inquiry);
   const [clients, setClients] = useState<ClientOption[]>(suppliedClients || []);
-  const [clientMode, setClientMode] = useState<"new" | "existing">("new");
-  const [clientId, setClientId] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [projectTitle, setProjectTitle] = useState("");
+  const [clientMode, setClientMode] = useState<"new" | "existing">(inquiry ? "existing" : "new");
+  const [clientId, setClientId] = useState(inquiry?.convertedClient.id || "");
+  const [clientName, setClientName] = useState(inquiry?.convertedClient.name || "");
+  const [clientEmail, setClientEmail] = useState(inquiry?.convertedClient.email || "");
+  const [projectTitle, setProjectTitle] = useState(inquiry?.projectType || "");
   const [scope, setScope] = useState("");
   const [milestoneTitle, setMilestoneTitle] = useState("");
   const [milestoneDueDate, setMilestoneDueDate] = useState("");
@@ -66,7 +75,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
   const started = useRef(false);
 
   const sessionId = useMemo(() => readSessionId(), []);
-  const selectedClient = clients.find((client) => client.id === clientId);
+  const selectedClient = clients.find((client) => client.id === clientId) || inquiry?.convertedClient;
   const currentStep = STEPS[step];
 
   function track(eventName: string, stepId?: string) {
@@ -102,7 +111,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
   }, [currentStep.id]);
 
   useEffect(() => {
-    if (suppliedClients !== undefined) return;
+    if (entryPoint === "inquiry" || suppliedClients !== undefined) return;
     let cancelled = false;
     void fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" })
       .then((response) => response.json())
@@ -116,12 +125,14 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
 
   function validateStep(): string | null {
     if (step === 0) {
+      if (inquiry && (clientMode !== "existing" || clientId !== inquiry.convertedClient.id)) return "The converted Client is locked to this enquiry.";
       if (clientMode === "existing" && !clientId) return "Choose an existing client.";
       if (clientMode === "new" && !clientName.trim()) return "Add the client name.";
       if (clientMode === "new" && clientEmail.trim() && !/^\S+@\S+\.\S+$/.test(clientEmail.trim())) return "Use a valid client email.";
     }
     if (step === 1) {
       if (!projectTitle.trim()) return "Add the project name.";
+      if (inquiry && !scope.trim()) return "Write the working scope before continuing.";
       if (!milestoneTitle.trim()) return "Add the first milestone.";
       if (!milestoneDueDate) return "Choose when the first milestone is due.";
     }
@@ -153,6 +164,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
           flowId,
           sessionId,
           entryPoint,
+          ...(entryPoint === "inquiry" && inquiry ? { sourceInquiryId: inquiry.id } : {}),
           client: clientMode === "existing"
             ? { mode: "existing", id: clientId }
             : { mode: "new", name: clientName, email: clientEmail },
@@ -202,20 +214,27 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
       <div className="p-5 sm:p-7">
         {step === 0 ? (
           <div className="space-y-5">
-            {clients.length > 0 ? (
+            {inquiry ? (
+              <div className="rounded-2xl border border-primary/20 bg-primary/[0.035] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">Converted Client</p>
+                <p className="mt-2 text-sm font-black text-foreground">{inquiry.convertedClient.name}</p>
+                {inquiry.convertedClient.email ? <p className="mt-1 text-xs text-muted-foreground">{inquiry.convertedClient.email}</p> : null}
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">This Client is locked to the enquiry. The relationship was chosen in the conversion step and cannot be changed here.</p>
+              </div>
+            ) : clients.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1" role="group" aria-label="Client source">
                 <Button type="button" variant={clientMode === "existing" ? "default" : "ghost"} onClick={() => setClientMode("existing")}>Existing client</Button>
                 <Button type="button" variant={clientMode === "new" ? "default" : "ghost"} onClick={() => setClientMode("new")}>New client</Button>
               </div>
             ) : null}
-            {clientMode === "existing" && clients.length > 0 ? (
+            {!inquiry && clientMode === "existing" && clients.length > 0 ? (
               <label className="block text-sm font-bold">Client<Select className="mt-2" value={clientId} onChange={(event) => setClientId(event.target.value)} disabled={loadingClients}><option value="">Choose a client</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</Select></label>
-            ) : (
+            ) : !inquiry ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-bold">Client name <span className="text-destructive">*</span><Input className="mt-2" autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} maxLength={160} placeholder="Northstar Labs" /></label>
                 <label className="text-sm font-bold">Client email <span className="font-medium text-muted-foreground">optional</span><Input className="mt-2" type="email" value={clientEmail} onChange={(event) => setClientEmail(event.target.value)} maxLength={320} placeholder="hello@northstar.example" /></label>
               </div>
-            )}
+            ) : null}
             <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
               <p className="font-bold text-foreground">Why start here?</p>
               <p className="mt-1 leading-6">The client becomes shared context for the project, Agreement, invoice, calendar, and future portfolio proof.</p>
@@ -225,8 +244,9 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
 
         {step === 1 ? (
           <div className="grid gap-4 sm:grid-cols-2">
+            {inquiry ? <div className="sm:col-span-2 rounded-2xl border border-border bg-muted/35 p-4"><p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">Visitor message · read-only</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{inquiry.message}</p></div> : null}
             <label className="text-sm font-bold sm:col-span-2">Project name <span className="text-destructive">*</span><Input className="mt-2" autoFocus value={projectTitle} onChange={(event) => setProjectTitle(event.target.value)} maxLength={180} placeholder="Website redesign" /></label>
-            <label className="text-sm font-bold sm:col-span-2">Scope summary <span className="font-medium text-muted-foreground">optional</span><Textarea className="mt-2 resize-none" rows={4} value={scope} onChange={(event) => setScope(event.target.value)} maxLength={20_000} placeholder="What will you deliver, and what does done look like?" /></label>
+            <label className="text-sm font-bold sm:col-span-2">Scope summary {inquiry ? <span className="text-destructive">*</span> : <span className="font-medium text-muted-foreground">optional</span>}<Textarea className="mt-2 resize-none" rows={4} value={scope} onChange={(event) => setScope(event.target.value)} maxLength={20_000} placeholder={inquiry ? "Write the scope you will own..." : "What will you deliver, and what does done look like?"} /></label>
             <label className="text-sm font-bold">First milestone <span className="text-destructive">*</span><Input className="mt-2" value={milestoneTitle} onChange={(event) => setMilestoneTitle(event.target.value)} maxLength={180} placeholder="Design approval" /></label>
                 <label className="text-sm font-bold">Milestone due date <span className="text-destructive">*</span><Input className="mt-2" type="date" value={milestoneDueDate} onChange={(event) => setMilestoneDueDate(event.target.value)} /></label>
             <div className="sm:col-span-2 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/[0.035] p-4 text-sm">

@@ -26,16 +26,17 @@ type Props = {
   onUploadCover: (file: File | undefined) => void;
   /** Move this project to a new position. Order is the order visitors read in. */
   onMove: (to: number) => void;
+  onVisibilityChange?: (visibility: "public" | "private") => void;
   dragHandleProps?: React.HTMLAttributes<HTMLSpanElement> & { draggable?: boolean };
 };
 
-export default function PortfolioProjectEditor({ project, index, total, practices = [], onChange, onDelete, onUploadCover, onMove, dragHandleProps }: Props) {
+export default function PortfolioProjectEditor({ project, index, total, practices = [], onChange, onDelete, onUploadCover, onMove, onVisibilityChange, dragHandleProps }: Props) {
   const media = project.media || [];
   const first = index === 0;
   const last = index === total - 1;
 
   return (
-    <article className="rounded-2xl border border-slate-200 p-5 dark:border-slate-700">
+    <article data-portfolio-entry={project.id} className="rounded-2xl border border-slate-200 p-5 dark:border-slate-700">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
           {/* Only the handle is draggable. Making the whole card draggable takes
@@ -129,7 +130,7 @@ export default function PortfolioProjectEditor({ project, index, total, practice
         <PortfolioMediaEditor media={media} onChange={(next) => onChange({ media: next })} />
       </details>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"><Input type="checkbox" checked={project.visibility !== "private"} onChange={(event) => onChange({ visibility: event.target.checked ? "public" : "private" })} /> Show on public portfolio</label><label className="flex min-w-56 flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 sm:max-w-xs"><span className={labelClass}>Project link <span className="font-normal normal-case tracking-normal text-slate-400">optional</span></span><Input type="url" value={project.url || ""} placeholder="https://example.com" onChange={(event) => onChange({ url: event.target.value })} /></label></div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-700"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"><Input type="checkbox" checked={project.visibility !== "private"} onChange={(event) => { const visibility = event.target.checked ? "public" : "private"; if (visibility === "public" && project.visibility === "private" && onVisibilityChange) onVisibilityChange(visibility); else onChange({ visibility }); }} /> Show on public portfolio</label><label className="flex min-w-56 flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 sm:max-w-xs"><span className={labelClass}>Project link <span className="font-normal normal-case tracking-normal text-slate-400">optional</span></span><Input type="url" value={project.url || ""} placeholder="https://example.com" onChange={(event) => onChange({ url: event.target.value })} /></label></div>
     </article>
   );
 }

@@ -35,6 +35,17 @@ const DETAIL_SELECT = {
   notificationStatus: true,
   notificationError: true,
   sourceProjectId: true,
+  sourceProjectTitle: true,
+  attributionSource: true,
+  attributionMedium: true,
+  attributionCampaign: true,
+  attributionLandingPage: true,
+  attributionReferral: true,
+  clientId: true,
+  client: { select: { id: true, name: true, email: true } },
+  convertedAt: true,
+  convertedProject: { select: { id: true, title: true } },
+  sourceTask: { select: { id: true, title: true } },
   referrer: true,
   deviceType: true,
   createdAt: true,
@@ -52,6 +63,17 @@ type DetailRow = {
   notificationStatus: string;
   notificationError: string | null;
   sourceProjectId: string | null;
+  sourceProjectTitle: string | null;
+  attributionSource: string | null;
+  attributionMedium: string | null;
+  attributionCampaign: string | null;
+  attributionLandingPage: string | null;
+  attributionReferral: string | null;
+  clientId: string | null;
+  client: { id: string; name: string; email: string | null } | null;
+  convertedAt: Date | null;
+  convertedProject: { id: string; title: string } | null;
+  sourceTask: { id: string; title: string } | null;
   referrer: string | null;
   deviceType: string | null;
   createdAt: Date;
@@ -80,12 +102,25 @@ function toDetail(row: DetailRow, projectTitle: string | null): PortfolioInquiry
     notificationStatus: row.notificationStatus as PortfolioInquiryNotificationStatus,
     notificationError: row.notificationError,
     sourceProjectId: row.sourceProjectId,
-    sourceProjectTitle: projectTitle,
+    sourceProjectTitle: row.sourceProjectTitle || projectTitle,
+    attribution: {
+      source: row.attributionSource,
+      medium: row.attributionMedium,
+      campaign: row.attributionCampaign,
+      landingPage: row.attributionLandingPage,
+      referral: row.attributionReferral,
+    },
     referrer: row.referrer,
     deviceType: row.deviceType,
     createdAt: row.createdAt.toISOString(),
     readAt: row.readAt?.toISOString() ?? null,
     repliedAt: row.repliedAt?.toISOString() ?? null,
+    convertedAt: row.convertedAt?.toISOString() ?? null,
+    convertedProjectId: row.convertedProject?.id ?? null,
+    convertedProjectTitle: row.convertedProject?.title ?? null,
+    followUpTaskId: row.sourceTask?.id ?? null,
+    followUpTaskTitle: row.sourceTask?.title ?? null,
+    convertedClient: row.client,
   };
 }
 

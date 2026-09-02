@@ -84,8 +84,11 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
         if (document.querySelector('[role="dialog"]')) return;
         /* Nor while the studio is in use. It is the one screen in the product
            people sit and work in for a stretch, and interrupting that to ask
-           how the product feels answers its own question. */
+           how the product feels answers its own question. The import wizard is
+           the same kind of focused stretch: a full-screen overlay there swallows
+           the click that finishes the import. */
         if (window.location.pathname.startsWith("/portfolio")) return;
+        if (window.location.pathname.startsWith("/migrate")) return;
 
         /* Checked before the prompt endpoint, which records an impression:
            inviting feedback that cannot be sent today wastes the invitation as

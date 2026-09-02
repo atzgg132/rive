@@ -26,13 +26,14 @@ async function getOwnedContract(userId: string, id: string) {
     where: { id, userId },
     include: {
       client: { select: { id: true, name: true, email: true, company: true, address: true } },
-      project: { select: { id: true, title: true, currency: true, description: true, milestones: { orderBy: { dueDate: "asc" }, take: 100, select: { id: true, title: true, dueDate: true, completed: true } } } },
+      project: { select: { id: true, title: true, currency: true, description: true, startDate: true, dueDate: true, milestones: { orderBy: { dueDate: "asc" }, take: 100, select: { id: true, title: true, dueDate: true, completed: true } } } },
       versions: { orderBy: { version: "desc" }, take: 50, include: { artifacts: { orderBy: { generatedAt: "desc" }, take: 5 } } },
       signers: { orderBy: { sequence: "asc" }, include: { signatures: { orderBy: { signedAt: "desc" }, take: 50, select: { id: true, versionId: true, signerRole: true, signerName: true, signerEmail: true, consentAccepted: true, consentTextVersion: true, signedAt: true, providerEventId: true } } } },
       reviewLinks: { orderBy: { createdAt: "desc" }, take: 50, select: { id: true, type: true, versionId: true, expiresAt: true, revokedAt: true, createdAt: true } },
       comments: { orderBy: { createdAt: "asc" }, take: 50, select: { id: true, versionId: true, authorRole: true, authorName: true, authorEmail: true, sectionKey: true, body: true, status: true, resolvedAt: true, createdAt: true } },
       events: { orderBy: { createdAt: "desc" }, take: 100, select: { id: true, versionId: true, eventType: true, metadata: true, createdAt: true } },
       paymentPlanItems: { orderBy: { sequence: "asc" }, take: 25, include: { milestone: { select: { id: true, title: true, dueDate: true, completed: true } }, occurrence: { include: { invoice: { select: { id: true, invoiceNumber: true, status: true, total: true } } } } } },
+      projectGenerationRecords: { orderBy: { createdAt: "desc" }, take: 5 },
     },
   });
 }
@@ -97,6 +98,26 @@ function mapContract(contract: NonNullable<Awaited<ReturnType<typeof getOwnedCon
       milestone: item.milestone,
       occurrence: item.occurrence ? { id: item.occurrence.id, status: item.occurrence.status, eligible_at: item.occurrence.eligibleAt, drafted_at: item.occurrence.draftedAt, invoice: item.occurrence.invoice ? { ...item.occurrence.invoice, total: item.occurrence.invoice.total.toString() } : null } : null,
     })),
+    work_setup: contract.projectGenerationRecords[0] ? {
+      id: contract.projectGenerationRecords[0].id,
+      status: contract.projectGenerationRecords[0].status,
+      accepted_version_id: contract.projectGenerationRecords[0].acceptedVersionId,
+      preview_plan: contract.projectGenerationRecords[0].previewPlan,
+      preview_hash: contract.projectGenerationRecords[0].previewHash,
+      result_ids: contract.projectGenerationRecords[0].resultIds,
+      error: contract.projectGenerationRecords[0].error,
+      previewed_at: contract.projectGenerationRecords[0].previewedAt,
+      started_at: contract.projectGenerationRecords[0].startedAt,
+      completed_at: contract.projectGenerationRecords[0].completedAt,
+      failed_at: contract.projectGenerationRecords[0].failedAt,
+    } : {
+      status: "not_started",
+      accepted_version_id: null,
+      preview_plan: null,
+      preview_hash: null,
+      result_ids: null,
+      error: null,
+    },
   };
 }
 

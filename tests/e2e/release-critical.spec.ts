@@ -228,15 +228,29 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       const createdPortfolio = created.portfolio as JsonObject;
       const slug = String(createdPortfolio.slug);
       const revision = Number(createdPortfolio.revision);
+      expect((createdPortfolio.content as JsonObject).projects).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: "project-1", visibility: "private" }),
+      ]));
 
       const draftPublicResponse = await request.get(`/api/public/portfolio/${slug}`);
       expect(draftPublicResponse.status()).toBe(404);
+
+      const missingConfirmationResponse = await request.patch("/api/portfolio", {
+        headers: auth,
+        data: { revision, content: portfolioContent() },
+      });
+      expect(missingConfirmationResponse.status()).toBe(409);
+      expect(await json(missingConfirmationResponse)).toEqual(expect.objectContaining({
+        code: "CASE_STUDY_PUBLICATION_CONFIRMATION_REQUIRED",
+        caseStudyIds: ["release-public-project"],
+      }));
 
       const savedResponse = await request.patch("/api/portfolio", {
         headers: auth,
         data: {
           revision,
           content: portfolioContent(),
+          confirmedPublicProjectIds: ["release-public-project"],
           status: "published",
           seo: { title: "Alpha RC portfolio", description: "Release candidate portfolio" },
         },
@@ -305,11 +319,11 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       const baseRevision = Number(createdPortfolio.revision);
       const first = request.patch("/api/portfolio", {
         headers: auth,
-        data: { revision: baseRevision, content: { ...portfolioContent(), name: "First draft" } },
+        data: { revision: baseRevision, content: { ...portfolioContent(), name: "First draft" }, confirmedPublicProjectIds: ["release-public-project"] },
       });
       const second = request.patch("/api/portfolio", {
         headers: auth,
-        data: { revision: baseRevision, content: { ...portfolioContent(), name: "Second draft" } },
+        data: { revision: baseRevision, content: { ...portfolioContent(), name: "Second draft" }, confirmedPublicProjectIds: ["release-public-project"] },
       });
       const responses = await Promise.all([first, second]);
       expect(responses.map((response) => response.status()).sort()).toEqual([200, 409]);
@@ -380,7 +394,7 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       content.projects[0]!.imageUrl = assetUrl;
       const savedResponse = await request.patch("/api/portfolio", {
         headers: ownerAuth,
-        data: { revision: Number(createdPortfolio.revision), content },
+        data: { revision: Number(createdPortfolio.revision), content, confirmedPublicProjectIds: ["release-public-project"] },
       });
       expect(savedResponse.status()).toBe(200);
       const saved = await json(savedResponse);
@@ -495,6 +509,55 @@ test.describe("release-critical persistence, isolation, and activation", () => {
     } finally {
       await deleteTestUser(owner.id);
       await deleteTestUser(other.id);
+    }
+  });
+
+  test("completed projects keep historical proof dates and emit only one concurrent transition", async ({ request }) => {
+    const user = await createTestUser("project-completion");
+    const auth = headers(tokenFor(user));
+    try {
+      const historical = await db.prisma.project.create({
+        data: { userId: user.id, title: "Historical completed project", status: "completed", priority: "medium", currency: "USD", tags: [], completedAt: null },
+      });
+      const edited = await request.put("/api/workflow/projects", {
+        headers: auth,
+        data: { id: historical.id, title: "Edited historical project" },
+      });
+      expect(edited.status()).toBe(200);
+      expect((await db.prisma.project.findUnique({ where: { id: historical.id }, select: { completedAt: true } }))?.completedAt).toBeNull();
+
+      const statusReplay = await request.patch("/api/workflow/projects/status", {
+        headers: auth,
+        data: { id: historical.id, status: "completed" },
+      });
+      expect(statusReplay.status()).toBe(200);
+      expect((await db.prisma.project.findUnique({ where: { id: historical.id }, select: { completedAt: true } }))?.completedAt).toBeNull();
+
+      const active = await db.prisma.project.create({
+        data: { userId: user.id, title: "Newly completed project", status: "active", priority: "medium", currency: "USD", tags: [] },
+      });
+      const completions = await Promise.all([
+        request.patch("/api/workflow/projects/status", { headers: auth, data: { id: active.id, status: "completed" } }),
+        request.patch("/api/workflow/projects/status", { headers: auth, data: { id: active.id, status: "completed" } }),
+      ]);
+      // Serialized completions are both 200 (second is an idempotent already-completed
+      // write). A lost race before the row lock still surfaces as 409.
+      expect([[200, 200], [200, 409]]).toContainEqual(completions.map((response) => response.status()).sort());
+      const saved = await db.prisma.project.findUnique({ where: { id: active.id }, select: { status: true, completedAt: true } });
+      expect(saved?.status).toBe("completed");
+      expect(saved?.completedAt).not.toBeNull();
+      expect(await db.prisma.productEvent.count({
+        where: { userId: user.id, eventName: "project_completed", entityId: active.id },
+      })).toBe(1);
+
+      const reopened = await request.patch("/api/workflow/projects/status", {
+        headers: auth,
+        data: { id: active.id, status: "active" },
+      });
+      expect(reopened.status()).toBe(200);
+      expect((await db.prisma.project.findUnique({ where: { id: active.id }, select: { completedAt: true } }))?.completedAt).toBeNull();
+    } finally {
+      await deleteTestUser(user.id);
     }
   });
 
@@ -652,6 +715,121 @@ test.describe("release-critical persistence, isolation, and activation", () => {
       expect(persisted).toMatchObject({ userId: user.id, clientId: client.id, projectId: project.id, currency: "EUR" });
       expect(persisted?.total.toString()).toBe("125");
       expect(contract.contractId).toBeTruthy();
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("manual invoice numbering skips historical collisions, reconciles explicit formats, and serializes concurrent drafts", async ({ request }) => {
+    const user = await createTestUser("invoice-numbering");
+    const auth = headers(tokenFor(user));
+    const invoicePayload = (overrides: Record<string, unknown> = {}) => ({
+      currency: "USD",
+      issue_date: "2026-09-02",
+      items: [{ description: "Invoice numbering coverage", quantity: 1, unit_price: 125 }],
+      ...overrides,
+    });
+    try {
+      await db.prisma.invoice.create({
+        data: {
+          userId: user.id,
+          invoiceNumber: "INV-2026-0001",
+          status: "draft",
+          currency: "USD",
+          subtotal: 125,
+          total: 125,
+          dataOrigin: "imported",
+          issueDate: new Date("2026-09-01T00:00:00.000Z"),
+        },
+      });
+
+      const first = await request.post("/api/workflow/invoices", { headers: auth, data: invoicePayload() });
+      expect(first.status()).toBe(201);
+      expect((await json(first)).invoice).toEqual(expect.objectContaining({ invoiceNumber: "INV-2026-0002" }));
+
+      const duplicate = await request.post("/api/workflow/invoices", {
+        headers: auth,
+        data: invoicePayload({ invoice_number: "INV-2026-0001" }),
+      });
+      expect(duplicate.status()).toBe(409);
+      expect((await json(duplicate)).message).toContain('Invoice number "INV-2026-0001" is already in use.');
+
+      const concurrent = await Promise.all([
+        request.post("/api/workflow/invoices", { headers: auth, data: invoicePayload() }),
+        request.post("/api/workflow/invoices", { headers: auth, data: invoicePayload() }),
+      ]);
+      expect(concurrent.map((response) => response.status()).sort()).toEqual([201, 201]);
+      const concurrentNumbers = (await Promise.all(concurrent.map(json))).map((body) => String((body.invoice as JsonObject).invoiceNumber)).sort();
+      expect(concurrentNumbers).toEqual(["INV-2026-0003", "INV-2026-0004"]);
+
+      await db.prisma.invoice.create({
+        data: {
+          userId: user.id,
+          invoiceNumber: "RIVE-2025-0099",
+          status: "draft",
+          currency: "USD",
+          subtotal: 125,
+          total: 125,
+          dataOrigin: "imported",
+          issueDate: new Date("2025-09-01T00:00:00.000Z"),
+        },
+      });
+      const failedExplicitRetry = await request.post("/api/workflow/invoices", {
+        headers: auth,
+        data: invoicePayload({ invoice_number: "RIVE-2025-0099" }),
+      });
+      expect(failedExplicitRetry.status()).toBe(409);
+      const afterFailedExplicit = await request.post("/api/workflow/invoices", { headers: auth, data: invoicePayload() });
+      expect(afterFailedExplicit.status()).toBe(201);
+      expect((await json(afterFailedExplicit)).invoice).toEqual(expect.objectContaining({ invoiceNumber: "INV-2026-0005" }));
+
+      const explicit = await request.post("/api/workflow/invoices", {
+        headers: auth,
+        data: invoicePayload({ invoice_number: "RIVE-2025-0042" }),
+      });
+      expect(explicit.status()).toBe(201);
+
+      const afterExplicit = await request.post("/api/workflow/invoices", { headers: auth, data: invoicePayload() });
+      expect(afterExplicit.status()).toBe(201);
+      expect((await json(afterExplicit)).invoice).toEqual(expect.objectContaining({ invoiceNumber: "INV-2026-0043" }));
+
+      const sequence = await db.prisma.invoiceNumberSequence.findUnique({ where: { userId: user.id }, select: { nextNumber: true } });
+      expect(sequence?.nextNumber).toBe(44);
+      expect(await db.prisma.invoice.count({ where: { userId: user.id } })).toBe(8);
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
+
+  test("onboarding invoice imports reconcile generated-format numbers before the next manual draft", async ({ request }) => {
+    const user = await createTestUser("invoice-import");
+    const auth = headers(tokenFor(user));
+    try {
+      const imported = await request.post("/api/onboarding/import", {
+        // Playwright supplies the multipart boundary; the shared API helper's
+        // JSON content type would make the server reject formData parsing.
+        headers: { Cookie: auth.Cookie },
+        multipart: {
+          mode: "commit",
+          source: "release-test",
+          files: {
+            name: "invoices-generated.csv",
+            mimeType: "text/csv",
+            buffer: Buffer.from("invoice_no,total,currency,issue_date\nINV-2026-0100,100,USD,2026-09-02\n", "utf8"),
+          },
+        },
+      });
+      expect(imported.status()).toBe(200);
+      expect((await json(imported)).report).toEqual(expect.objectContaining({ invoices: 1 }));
+
+      const next = await request.post("/api/workflow/invoices", {
+        headers: auth,
+        data: { currency: "USD", issue_date: "2026-09-02", items: [{ description: "After import", quantity: 1, unit_price: 50 }] },
+      });
+      expect(next.status()).toBe(201);
+      expect((await json(next)).invoice).toEqual(expect.objectContaining({ invoiceNumber: "INV-2026-0101" }));
+      const sequence = await db.prisma.invoiceNumberSequence.findUnique({ where: { userId: user.id }, select: { nextNumber: true } });
+      expect(sequence?.nextNumber).toBe(102);
     } finally {
       await deleteTestUser(user.id);
     }

@@ -4,6 +4,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { projectProofOffer } from "@/utils/portfolio";
 import { PROJECT_PRIORITY_SET, PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
 import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
@@ -11,6 +12,12 @@ import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagina
 // status this endpoint would reject.
 const PROJECT_STATUSES = PROJECT_STATUS_SET;
 const PROJECT_PRIORITIES = PROJECT_PRIORITY_SET;
+
+class ProjectConflictError extends Error {
+  constructor() {
+    super("PROJECT_CONFLICT");
+  }
+}
 
 // Every ordering ends in a unique column so a row cannot be skipped or repeated
 // across pages when two records share a sort value.
@@ -338,6 +345,7 @@ export async function POST(req: NextRequest) {
           title: cleanTitle,
           description: cleanText(description, 20_000) || null,
           status: cleanStatus,
+          completedAt: cleanStatus === "completed" ? new Date() : null,
           priority: cleanPriority,
           startDate: parsedStartDate,
           dueDate: parsedDueDate,
@@ -490,23 +498,38 @@ export async function PUT(req: NextRequest) {
     }
     if (tags !== undefined && !Array.isArray(tags)) return NextResponse.json({ success: false, message: "Project tags must be a list." }, { status: 400 });
     const nextTags = Array.isArray(tags) ? tags.map((tag) => cleanText(tag, 60)).filter(Boolean).slice(0, 25) : existing.tags;
+    const completionTransition = existing.status !== "completed" && nextStatus === "completed";
+    const nextCompletedAt = completionTransition
+      ? existing.completedAt || new Date()
+      : nextStatus === "completed"
+        ? existing.completedAt
+        : null;
 
     const project = await prisma.$transaction(async (tx) => {
-      const proj = await tx.project.update({
-        where: { id: cleanId },
+      const updated = await tx.project.updateMany({
+        where: {
+          id: cleanId,
+          userId: session.userId,
+          status: existing.status,
+          updatedAt: existing.updatedAt,
+        },
         data: {
           clientId: targetClientId,
           title: nextTitle,
           description: description !== undefined ? cleanText(description, 20_000) || null : existing.description,
           status: nextStatus,
+          completedAt: nextCompletedAt,
           priority: nextPriority,
           startDate: nextStartDate,
           dueDate: nextDueDate,
           budget: nextBudget,
           currency: nextCurrency,
           tags: nextTags,
-        }
+        },
       });
+      if (updated.count !== 1) throw new ProjectConflictError();
+      const proj = await tx.project.findUnique({ where: { id: cleanId } });
+      if (!proj) throw new ProjectConflictError();
 
       if (replacementMilestones) {
         await tx.milestone.deleteMany({ where: { projectId: cleanId } });
@@ -517,12 +540,28 @@ export async function PUT(req: NextRequest) {
       return proj;
     });
 
+    if (completionTransition) {
+      await recordProductEvent({
+        userId: session.userId,
+        eventName: PRODUCT_EVENTS.projectCompleted,
+        module: "projects",
+        entityType: "project",
+        entityId: project.id,
+        dataOrigin: "user",
+        dedupeKey: `project_completed:${project.id}:${project.completedAt?.toISOString() || "unknown"}`,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: "Project updated successfully.",
-      project
+      project,
+      ...(completionTransition ? { proof_offer: projectProofOffer(project.id) } : {}),
     }, { status: 200 });
   } catch (error: unknown) {
+    if (error instanceof ProjectConflictError) {
+      return NextResponse.json({ success: false, message: "This project changed while it was being edited. Reload and try again." }, { status: 409 });
+    }
     console.error("Project update error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

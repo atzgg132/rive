@@ -35,6 +35,33 @@ test("accepts a complete submission and normalizes what it stores", () => {
   assert.equal(result.value.sourceProjectId, null);
 });
 
+test("normalizes inquiry attribution without storing control characters or external landing URLs", () => {
+  const result = validateInquirySubmission({
+    ...valid,
+    attribution: {
+      source: "  linkedin\u0000 ",
+      medium: " social\npaid ",
+      campaign: "launch",
+      landingPage: "https://evil.example/collect",
+      referral: " partner\treferral ",
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value.attribution, {
+    source: "linkedin",
+    medium: "social paid",
+    campaign: "launch",
+    landingPage: null,
+    referral: "partner referral",
+  });
+
+  assert.equal(validateInquirySubmission({
+    ...valid,
+    attribution: { landingPage: "//evil.example/collect" },
+  }).value.attribution.landingPage, null, "protocol-relative URLs are not internal landing paths");
+});
+
 test("a filled honeypot is reported distinctly from a validation failure", () => {
   const result = validateInquirySubmission({ ...valid, website: "http://spam.example" });
 

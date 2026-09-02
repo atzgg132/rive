@@ -154,13 +154,31 @@ async function gotoReview(page: Page) {
 
 test.describe("migration", () => {
   test.setTimeout(120_000);
+  /* Same uninvited full-screen prompt that studio already stubs. A long import
+     finishes after the 4.5s delay, so the overlay intercepts "Go to Overview". */
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/feedback/prompt**", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, available: false, prompt: null }) }),
+    );
+  });
   test.skip(!process.env.E2E_USER_EMAIL, "Set E2E_USER_EMAIL to run migration tests.");
   test.skip(
     process.env.MIGRATION_ENGINE_ENABLED?.toLowerCase() !== "true",
     "Set MIGRATION_ENGINE_ENABLED=true to run migration tests.",
   );
 
+  test("public /migrate-to-rive landing page renders with live acquisition copy and working CTA", async ({ page }) => {
+    await page.goto("/migrate-to-rive", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Bring your existing business into Rive." })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Upload CSV or XLSX exports for clients, projects, invoices, and expenses.")).toBeVisible();
+
+    const cta = page.getByRole("link", { name: "Start with my existing data" });
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute("href", "/register?goal=migrate&next=%2Fmigrate");
+  });
+
   test("imports multiple files end to end and lands on a populated workspace", async ({ context, page, baseURL }) => {
+    test.setTimeout(180_000);
     await authenticate(context, baseURL!);
     await page.goto("/migrate", { waitUntil: "domcontentloaded" });
     // First load on a cold dev server compiles routes on demand; the app shell
@@ -199,11 +217,40 @@ test.describe("migration", () => {
     expect((await commit).status()).toBeLessThan(400);
 
     await expect(page.getByRole("heading", { name: "Your workspace is ready" })).toBeVisible({ timeout: 60_000 });
-    await page.getByRole("link", { name: "Go to Overview" }).click();
+    await page.getByRole("link", { name: "Go to Overview" }).click({ noWaitAfter: true });
     // The dashboard is the shell's Overview link; wait for it rather than
     // racing the client-side transition against the URL alone.
-    await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible({ timeout: 15_000 });
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible();
+
+    await expect(page.getByText("Acme Technologies Pvt Ltd").first()).toBeVisible({ timeout: 15_000 });
+
+    await page.goto("/workflow/clients", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Clients" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Acme Technologies Pvt Ltd").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Globex Corporation").first()).toBeVisible();
+    await expect(page.getByText("Initech Design Studio").first()).toBeVisible();
+
+    await page.goto("/workflow/projects", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Website redesign" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Brand refresh" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Mobile app" })).toBeVisible();
+
+    await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Revenue & invoices" })).toBeVisible({ timeout: 15_000 });
+    // Overdue invoices also appear in the attention queue, so match the table
+    // number control rather than any substring of INV-00x.
+    const invoiceTable = page.locator("table");
+    await expect(invoiceTable.getByRole("button", { name: "INV-001", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(invoiceTable.getByRole("button", { name: "INV-002", exact: true })).toBeVisible();
+    await expect(invoiceTable.getByRole("button", { name: "INV-003", exact: true })).toBeVisible();
+
+    await page.goto("/workflow/expenses", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Expenses" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Figma").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Adobe Creative Cloud").first()).toBeVisible();
+    await expect(page.getByText("IndiGo").first()).toBeVisible();
   });
 
   test("asks about an unknown currency and applies the answer to every row", async ({ context, page, baseURL }) => {

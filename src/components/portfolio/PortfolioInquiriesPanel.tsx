@@ -5,8 +5,10 @@ import {
   Archive,
   ArrowLeft,
   Ban,
+  BriefcaseBusiness,
   Check,
   CornerUpLeft,
+  ExternalLink,
   Inbox,
   Mail,
   MailOpen,
@@ -21,6 +23,7 @@ import type {
   PortfolioInquiryStatus,
   PortfolioInquirySummary,
 } from "@/utils/portfolioInquiries";
+import PortfolioInquiryConversionDialog from "@/components/portfolio/PortfolioInquiryConversionDialog";
 
 /**
  * The enquiry inbox.
@@ -77,6 +80,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
   const [selected, setSelected] = useState<PortfolioInquiryDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState("");
+  const [conversionOpen, setConversionOpen] = useState(false);
 
   // Debounced so typing does not fire a request per keystroke.
   useEffect(() => {
@@ -255,6 +259,14 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
             <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{selected.message}</p>
           </div>
 
+          {selected.convertedAt ? (
+              <div className="border-t border-emerald-200 bg-emerald-50/70 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/20 sm:p-6">
+              <div className="flex items-start gap-3"><BriefcaseBusiness className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /><div className="min-w-0"><p className="text-sm font-bold text-emerald-950 dark:text-emerald-100">This enquiry is connected to your workspace.</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">{selected.convertedClient ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/clients/${encodeURIComponent(selected.convertedClient.id)}`}>{selected.convertedClient.name}<ExternalLink className="h-3 w-3" /></a> : null}{selected.convertedProjectId ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/projects/${encodeURIComponent(selected.convertedProjectId)}?from=inquiry&inquiryId=${encodeURIComponent(selected.id)}`}>{selected.convertedProjectTitle || "Open Project"}<ExternalLink className="h-3 w-3" /></a> : null}{selected.followUpTaskId ? <a className="inline-flex items-center gap-1 underline" href={selected.convertedProjectId ? `/workflow/projects/${encodeURIComponent(selected.convertedProjectId)}?from=inquiry&inquiryId=${encodeURIComponent(selected.id)}#follow-up-task-${encodeURIComponent(selected.followUpTaskId)}` : "/calendar#planning-queue"}>Follow-up Task<ExternalLink className="h-3 w-3" /></a> : null}{!selected.convertedProjectId ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/start-engagement?inquiryId=${encodeURIComponent(selected.id)}`}>Start the engagement<ExternalLink className="h-3 w-3" /></a> : null}</div>{selected.followUpTaskTitle ? <p className="mt-2 text-xs text-emerald-800/80 dark:text-emerald-200/80">{selected.followUpTaskTitle} · unscheduled</p> : null}</div></div>
+            </div>
+          ) : (
+            <div className="border-t border-border bg-muted/20 p-5 sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-foreground">Ready to follow up?</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Convert this prospect into one Client and one unscheduled follow-up Task. Start Engagement will create the Project when you are ready.</p></div><Button type="button" onClick={() => setConversionOpen(true)} disabled={selected.status === "spam"}><BriefcaseBusiness className="h-3.5 w-3.5" /> Convert to work</Button></div></div>
+          )}
+
           <footer className="flex flex-wrap gap-2 border-t border-border p-5 sm:p-6">
             <a
               href={mailtoHref}
@@ -312,6 +324,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
             )}
           </footer>
         </article>
+        <PortfolioInquiryConversionDialog key={selected.id} inquiry={selected} open={conversionOpen} onOpenChange={setConversionOpen} onConverted={async () => { await openInquiry(selected.id); await load(); }} />
       </div>
     );
   }
@@ -391,11 +404,12 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                   >
                     <div className="flex w-full min-w-0 flex-col gap-1.5">
                       <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
                           <span className={`truncate text-sm ${inquiry.status === "new" ? "font-black text-foreground" : "font-bold text-foreground"}`}>
                             {inquiry.name}
                           </span>
-                          <Badge variant={badge.variant}>{badge.label}</Badge>
+                            <Badge variant={badge.variant}>{badge.label}</Badge>
+                            {inquiry.convertedAt && <Badge variant="success">Converted</Badge>}
                           {inquiry.notificationStatus === "failed" && <Badge variant="warning">Email not delivered</Badge>}
                         </span>
                         <span className="shrink-0 text-xs text-muted-foreground">{formatWhen(inquiry.createdAt)}</span>

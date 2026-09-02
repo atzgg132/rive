@@ -12,9 +12,10 @@ type Props = {
   content: PortfolioContent;
   onUpdateContent: (update: Partial<PortfolioContent>) => void;
   onUploadCover: (projectId: string, file: File | undefined) => void;
+  onVisibilityChange?: (projectId: string, visibility: "public" | "private") => void;
 };
 
-export default function StudioWorkSection({ content, onUpdateContent, onUploadCover }: Props) {
+export default function StudioWorkSection({ content, onUpdateContent, onUploadCover, onVisibilityChange }: Props) {
   /* Drag state lives here because the list owns the order. The editor cards only
      report where a drag started and where it was dropped. */
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -71,6 +72,7 @@ export default function StudioWorkSection({ content, onUpdateContent, onUploadCo
                 onChange={(projectUpdate) => onUpdateContent({ projects: content.projects.map((item) => item.id === project.id ? { ...item, ...projectUpdate } : item) })}
                 onDelete={() => onUpdateContent({ projects: content.projects.filter((item) => item.id !== project.id) })}
                 onUploadCover={(file) => { void onUploadCover(project.id, file); }}
+                onVisibilityChange={(visibility) => onVisibilityChange?.(project.id, visibility)}
                 onMove={(to) => move(index, to)}
                 dragHandleProps={{
                   draggable: true,

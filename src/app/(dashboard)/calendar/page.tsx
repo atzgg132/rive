@@ -614,7 +614,7 @@ export default function CalendarPage() {
           </div>
         </aside>
 
-        <main className="min-w-0 p-3 sm:p-5 lg:p-6">
+        <main id="planning-queue" className="min-w-0 p-3 sm:p-5 lg:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1">
               <Button onClick={() => moveCursor(-1)} aria-label="Previous date range" className="rounded-lg p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-800"><ChevronLeft className="h-4 w-4" /></Button>

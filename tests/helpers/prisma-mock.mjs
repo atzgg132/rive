@@ -42,6 +42,7 @@ class MockDecimal {
 export const Prisma = {
   Decimal: MockDecimal,
   PrismaClientKnownRequestError,
+  sql: (strings, ...values) => ({ strings, values }),
   JsonNull: null,
   InputJsonObject: Object,
   InputJsonValue: Object,
@@ -105,6 +106,7 @@ export function createPrismaMock() {
     client: [],
     project: [],
     invoice: [],
+    invoiceNumberSequence: [],
     expense: [],
     migrationEvent: [],
     user: [],
@@ -290,6 +292,14 @@ export function createPrismaMock() {
         return { count: list.length };
       },
     },
+    invoiceNumberSequence: {
+      async update({ where, data }) {
+        const sequence = db.invoiceNumberSequence.find((row) => row.userId === where.userId);
+        if (!sequence) throw new Error(`invoiceNumberSequence ${where.userId} not found`);
+        applyUpdate(sequence, data);
+        return { ...sequence };
+      },
+    },
     invoiceEvent: {
       async create({ data }) {
         const created = row("invoiceEvent", { ...data });
@@ -397,6 +407,21 @@ export function createPrismaMock() {
         return { count: list.length };
       },
     },
+  };
+
+  api.$executeRaw = async (query) => {
+    const values = query?.values || [];
+    const userId = values[1];
+    if (typeof userId === "string" && !db.invoiceNumberSequence.some((row) => row.userId === userId)) {
+      db.invoiceNumberSequence.push(row("invoiceNumberSequence", { userId, prefix: "INV", nextNumber: 1 }));
+    }
+    return 1;
+  };
+  api.$queryRaw = async (query) => {
+    const values = query?.values || [];
+    const userId = values[0];
+    const sequence = db.invoiceNumberSequence.find((row) => row.userId === userId);
+    return sequence ? [{ next_number: sequence.nextNumber, prefix: sequence.prefix }] : [];
   };
 
   api.$transaction = async (callback) => {

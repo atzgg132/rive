@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { mergePortfolioContent, normalizeSlug, validatePortfolioContent, validatePortfolioForPublish, validatePortfolioTheme } from "@/utils/portfolio";
+import { isBlankPortfolioProject, isPortfolioProjectMeaningful, mergePortfolioContent, normalizeSlug, validatePortfolioContent, validatePortfolioForPublish, validatePortfolioTheme } from "@/utils/portfolio";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
@@ -73,9 +73,43 @@ export async function PATCH(req: NextRequest) {
       const contentError = validatePortfolioContent(body.content);
       if (contentError) return NextResponse.json({ success: false, message: contentError }, { status: 400 });
       const mergedContent = mergePortfolioContent(body.content);
-      data.content = mergedContent;
-      contentForStatus = mergedContent;
-      syncedProfileImage = mergedContent.profileImageUrl;
+      const previousContent = mergePortfolioContent(current.content);
+      const previousProjects = new Map(previousContent.projects.map((project) => [project.id, project]));
+      // Older payloads may omit visibility. New rows must still be private by
+      // default; an explicit public value remains subject to the confirmation
+      // checks below.
+      const mergedContentForSave = {
+        ...mergedContent,
+        projects: mergedContent.projects.map((project) => (
+          project.visibility === undefined && !previousProjects.has(project.id)
+            ? { ...project, visibility: "private" as const }
+            : project
+        )),
+      };
+      const newlyPublicProjectIds = mergedContentForSave.projects
+        .filter((project) => {
+          if (project.visibility === "private") return false;
+          const previous = previousProjects.get(project.id);
+          if (!previous) return isPortfolioProjectMeaningful(project);
+          return previous.visibility === "private"
+            || (isBlankPortfolioProject(previous) && isPortfolioProjectMeaningful(project));
+        })
+        .map((project) => project.id);
+      const confirmations = Array.isArray(body.confirmedPublicProjectIds)
+        ? new Set(body.confirmedPublicProjectIds.filter((value: unknown): value is string => typeof value === "string"))
+        : new Set<string>();
+      const missingConfirmations = newlyPublicProjectIds.filter((projectId) => !confirmations.has(projectId));
+      if (missingConfirmations.length > 0) {
+        return NextResponse.json({
+          success: false,
+          code: "CASE_STUDY_PUBLICATION_CONFIRMATION_REQUIRED",
+          caseStudyIds: missingConfirmations,
+          message: "Confirm that this case study should be shown on your public portfolio before publishing it.",
+        }, { status: 409 });
+      }
+      data.content = mergedContentForSave;
+      contentForStatus = mergedContentForSave;
+      syncedProfileImage = mergedContentForSave.profileImageUrl;
     }
     if (body.theme !== undefined) {
       const themeError = validatePortfolioTheme(body.theme);
