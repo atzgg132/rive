@@ -154,6 +154,13 @@ async function gotoReview(page: Page) {
 
 test.describe("migration", () => {
   test.setTimeout(120_000);
+  /* Same uninvited full-screen prompt that studio already stubs. A long import
+     finishes after the 4.5s delay, so the overlay intercepts "Go to Overview". */
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/feedback/prompt**", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, available: false, prompt: null }) }),
+    );
+  });
   test.skip(!process.env.E2E_USER_EMAIL, "Set E2E_USER_EMAIL to run migration tests.");
   test.skip(
     process.env.MIGRATION_ENGINE_ENABLED?.toLowerCase() !== "true",
