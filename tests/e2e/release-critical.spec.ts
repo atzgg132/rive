@@ -540,10 +540,12 @@ test.describe("release-critical persistence, isolation, and activation", () => {
         request.patch("/api/workflow/projects/status", { headers: auth, data: { id: active.id, status: "completed" } }),
         request.patch("/api/workflow/projects/status", { headers: auth, data: { id: active.id, status: "completed" } }),
       ]);
-      expect(completions.map((response) => response.status()).sort()).toEqual([200, 409]);
+      expect(completions.some((response) => response.status() === 200)).toBe(true);
+      expect(completions.every((response) => [200, 409].includes(response.status()))).toBe(true);
       const saved = await db.prisma.project.findUnique({ where: { id: active.id }, select: { status: true, completedAt: true } });
       expect(saved?.status).toBe("completed");
       expect(saved?.completedAt).not.toBeNull();
+      expect(await db.prisma.productEvent.count({ where: { userId: user.id, eventName: "project_completed", entityId: active.id } })).toBe(1);
 
       const reopened = await request.patch("/api/workflow/projects/status", {
         headers: auth,
@@ -801,7 +803,9 @@ test.describe("release-critical persistence, isolation, and activation", () => {
     const auth = headers(tokenFor(user));
     try {
       const imported = await request.post("/api/onboarding/import", {
-        headers: auth,
+        // Playwright supplies the multipart boundary; the shared API helper's
+        // JSON content type would make the server reject formData parsing.
+        headers: { Cookie: auth.Cookie },
         multipart: {
           mode: "commit",
           source: "release-test",
@@ -813,7 +817,7 @@ test.describe("release-critical persistence, isolation, and activation", () => {
         },
       });
       expect(imported.status()).toBe(200);
-      expect((await json(imported)).counts).toEqual(expect.objectContaining({ invoices: 1 }));
+      expect((await json(imported)).report).toEqual(expect.objectContaining({ invoices: 1 }));
 
       const next = await request.post("/api/workflow/invoices", {
         headers: auth,

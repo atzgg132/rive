@@ -140,7 +140,12 @@ test.describe("portfolio media and practices", () => {
 
       const saved = await request.patch("/api/portfolio", {
         headers: auth,
-        data: { revision: Number(portfolio.revision), content: mediaContent(), status: "published" },
+        data: {
+          revision: Number(portfolio.revision),
+          content: mediaContent(),
+          confirmedPublicProjectIds: ["public-bake"],
+          status: "published",
+        },
       });
       expect(saved.status()).toBe(200);
 
@@ -197,7 +202,13 @@ test.describe("portfolio media and practices", () => {
       });
       const saved = await request.patch("/api/portfolio", {
         headers: auth,
-        data: { revision: Number(portfolio.revision), content, templateKey: "visual-studio", status: "published" },
+        data: {
+          revision: Number(portfolio.revision),
+          content,
+          confirmedPublicProjectIds: ["clickable-study"],
+          templateKey: "visual-studio",
+          status: "published",
+        },
       });
       expect(saved.status()).toBe(200);
 
