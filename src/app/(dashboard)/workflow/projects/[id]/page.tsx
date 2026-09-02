@@ -14,6 +14,7 @@ import {
   FileSignature,
   ExternalLink,
   CircleSlash2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, buttonVariants } from "@/components/ui";
@@ -23,8 +24,9 @@ import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext"
 type ProjectInvoice = { id: string; invoiceNumber: string; issueDate: string; total: number | string; currency: string; status: string };
 type ProjectClient = { id: string; name: string; company: string | null; avatarColor: string };
 type ProjectMilestone = { id: string; title: string; dueDate: string | null; completed: boolean; completedAt: string | null };
+type ProjectTask = { id: string; title: string; status: string; dueDate: string | null; sourceInquiryId: string | null };
 type ProjectContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string };
-type ProjectDetails = { id: string; title: string; status: string; createdAt: string; budget: string | null; currency: string; dueDate: string | null; tags: string[]; description: string | null; contractCoverage: "undecided" | "rive" | "external" | "none"; externalContractLabel: string | null; externalContractUrl: string | null; contractDecisionAt: string | null; related_counts?: { invoices: number; milestones: number; contracts: number }; client: ProjectClient | null; invoices: ProjectInvoice[]; milestones: ProjectMilestone[]; contracts: ProjectContract[] };
+type ProjectDetails = { id: string; title: string; status: string; createdAt: string; budget: string | null; currency: string; dueDate: string | null; tags: string[]; description: string | null; contractCoverage: "undecided" | "rive" | "external" | "none"; externalContractLabel: string | null; externalContractUrl: string | null; contractDecisionAt: string | null; proof_offer: { projectId: string; caseStudyId: string; href: string; label: string } | null; related_counts?: { invoices: number; milestones: number; contracts: number }; client: ProjectClient | null; invoices: ProjectInvoice[]; milestones: ProjectMilestone[]; tasks: ProjectTask[]; contracts: ProjectContract[] };
 
 export default function ProjectProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { displayCurrency, format, formatConverted } = useCurrency();
@@ -38,6 +40,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
   const [externalLabel, setExternalLabel] = useState("Agreement handled outside Rive");
   const [externalUrl, setExternalUrl] = useState("");
   const [createdFromEngagement, setCreatedFromEngagement] = useState(false);
+  const [createdFromInquiry, setCreatedFromInquiry] = useState(false);
 
   useEffect(() => {
     async function loadProject() {
@@ -53,6 +56,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               const milestoneId = query.get("milestoneId");
               if (milestoneId) window.setTimeout(() => document.getElementById(`milestone-${milestoneId}`)?.focus(), 0);
             }
+            if (query.get("from") === "inquiry") setCreatedFromInquiry(true);
           } else {
             toast.error(data.message);
           }
@@ -153,6 +157,12 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
           <p className="mt-1 text-xs">Plan the milestone below; its due date is already available to Calendar.</p>
         </div>
       )}
+      {createdFromInquiry && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+          <p className="font-bold">This Project came from a portfolio enquiry.</p>
+          <p className="mt-1 text-xs leading-5">The visitor message stays with the enquiry. Your follow-up Task is ready below; write the working scope here.</p>
+        </div>
+      )}
       {/* Header Breadcrumbs */}
       <div>
         <Link href="/workflow/projects" className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary mb-4 transition-colors">
@@ -171,6 +181,13 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
           </span>
         </div>
       </div>
+
+      {project.proof_offer ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></span><div><p className="text-sm font-bold">Turn this completed work into proof</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Create or open a private case study draft. Nothing becomes public until you confirm it.</p></div></div>
+          <Link href={project.proof_offer.href} className="inline-flex shrink-0 items-center justify-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90">{project.proof_offer.label}</Link>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -253,6 +270,13 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">Scope is saved with this project. The Agreement decision remains open; this brief is not a legal contract.</p>
             ) : null}
           </div>
+
+          {project.tasks?.length > 0 ? (
+            <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2 mb-4"><Clock className="h-5 w-5 text-blue-600" /> Follow-up Tasks</h3>
+              <div className="flex flex-col gap-2">{project.tasks.map((task) => <div id={`follow-up-task-${task.id}`} key={task.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 dark:border-slate-700"><div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground dark:text-slate-200">{task.title}</p><p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{task.status.replaceAll("_", " ")} · {task.dueDate ? `Due ${formatDate(task.dueDate)}` : "Unscheduled"}</p></div><span className="shrink-0 rounded-full border border-primary/20 px-2 py-1 text-[10px] font-bold uppercase text-primary">From enquiry</span></div>)}</div>
+            </div>
+          ) : null}
 
           {/* Milestones */}
           <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">

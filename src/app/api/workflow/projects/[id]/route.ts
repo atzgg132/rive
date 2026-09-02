@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { isProjectProofEligible, projectProofOffer } from "@/utils/portfolio";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,6 +36,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           orderBy: [{ dueDate: "asc" }, { id: "asc" }],
           take: 50,
         },
+        tasks: {
+          where: { sourceInquiryId: { not: null } },
+          orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+          take: 20,
+          select: { id: true, title: true, status: true, dueDate: true, sourceInquiryId: true },
+        },
         contracts: {
           orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
           take: 10,
@@ -65,6 +72,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       project: {
         ...project,
         related_counts: { invoices: invoiceCount, milestones: milestoneCount, contracts: contractCount },
+        proof_offer: isProjectProofEligible(project) ? projectProofOffer(project.id) : null,
       },
     });
   } catch (error: unknown) {

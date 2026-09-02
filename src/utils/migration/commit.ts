@@ -7,6 +7,7 @@ import { PROJECT_PRIORITY_SET, PROJECT_STATUS_SET, INVOICE_STATUS_SET, EXPENSE_C
 import type { ImportPlan, MigrationEntity } from "@/lib/migration/types";
 import { MIGRATION_EVENTS, recordMigrationEvent } from "@/utils/migration/analytics";
 import { phaseFor } from "@/utils/migration/session";
+import { reconcileInvoiceNumberSequence } from "@/utils/invoiceNumber";
 
 /**
  * Commit execution.
@@ -547,21 +548,23 @@ async function createEntity(
         const subtotal = money(values, "subtotal") || total;
         const issueDate = isoToDate(values.issueDate) || new Date();
         const status = enumOf(values, "status", INVOICE_STATUS_SET, "draft");
-          const invoice = await transaction.invoice.create({
-            data: {
-              dataOrigin: "imported",
+        const invoiceNumber = str(values, "invoiceNumber", 80) || `IMPORT-${record.sourceKey}`;
+        await reconcileInvoiceNumberSequence(transaction, userId, [invoiceNumber]);
+        const invoice = await transaction.invoice.create({
+          data: {
+            dataOrigin: "imported",
             userId,
             clientId: relationshipTarget(record, "clientId", resolution),
             projectId: relationshipTarget(record, "projectId", resolution),
-            invoiceNumber: str(values, "invoiceNumber", 80) || `IMPORT-${record.sourceKey}`,
+            invoiceNumber,
             status,
             currency: currencyOf(values, fallbackCurrency),
             subtotal,
             taxRate: money(values, "taxRate") || new Prisma.Decimal(0),
-             taxAmount: money(values, "taxAmount") || new Prisma.Decimal(0),
-             total,
-             amountPaid: status === "paid" ? total : new Prisma.Decimal(0),
-             issueDate,
+            taxAmount: money(values, "taxAmount") || new Prisma.Decimal(0),
+            total,
+            amountPaid: status === "paid" ? total : new Prisma.Decimal(0),
+            issueDate,
             dueDate: isoToDate(values.dueDate),
             // A paid invoice with no payment date falls back to its issue date;
             // the user was warned about this during review.
@@ -583,9 +586,9 @@ async function createEntity(
 
       case "expenses": {
         const amount = money(values, "amount");
-          const expense = await transaction.expense.create({
-            data: {
-              dataOrigin: "imported",
+        const expense = await transaction.expense.create({
+          data: {
+            dataOrigin: "imported",
             userId,
             projectId: relationshipTarget(record, "projectId", resolution),
             description: str(values, "description", 500) || "Imported expense",

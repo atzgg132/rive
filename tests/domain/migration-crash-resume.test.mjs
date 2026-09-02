@@ -180,7 +180,7 @@ function seed(db) {
   // already-applied ledger entries.
   for (let i = 0; i < INVOICE_COUNT; i += 1) {
     records.push(
-      rec("invoices", `invoices-i${i}`, null, `Invoice ${i}`, "draft", CLIENT_COUNT + PROJECT_COUNT + 1 + i, {
+      rec("invoices", `invoices-i${i}`, null, `INV-2026-${String(1000 + i).padStart(4, "0")}`, "draft", CLIENT_COUNT + PROJECT_COUNT + 1 + i, {
         resolvedRelationships: {
           clientId: { groupKey: "g0", existingId: null },
           projectId: { groupKey: "projects-p0", existingId: null },
@@ -237,6 +237,7 @@ test("a commit that crashes mid-batch can be resumed without duplicating any rec
   assert.equal(prisma.__db.client.length, CLIENT_COUNT, "clients exist exactly once");
   assert.equal(prisma.__db.project.length, PROJECT_COUNT, "projects exist exactly once");
   assert.equal(prisma.__db.invoice.length, INVOICE_COUNT, "invoices exist exactly once");
+  assert.equal(prisma.__db.invoiceNumberSequence[0]?.nextNumber, 1005, "migration invoices advance the shared number sequence");
 
   const clientNames = new Set(prisma.__db.client.map((c) => c.name));
   assert.equal(clientNames.size, CLIENT_COUNT, "client names are unique");

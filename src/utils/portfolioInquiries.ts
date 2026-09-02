@@ -43,7 +43,44 @@ export type InquirySubmission = {
   projectType: string;
   message: string;
   sourceProjectId: string | null;
+  attribution: InquiryAttribution;
 };
+
+export type InquiryAttribution = {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  landingPage: string | null;
+  referral: string | null;
+};
+
+function cleanAttribution(value: unknown, max: number): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value
+    .replace(/[\u0000-\u001f\u007f]/g, (character) => /\s/.test(character) ? " " : "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+  return normalized || null;
+}
+
+function cleanLandingPage(value: unknown): string | null {
+  const normalized = cleanAttribution(value, 500);
+  return normalized?.startsWith("/") && !normalized.startsWith("//") ? normalized : null;
+}
+
+function parseInquiryAttribution(input: Record<string, unknown>): InquiryAttribution {
+  const raw = input.attribution && typeof input.attribution === "object" && !Array.isArray(input.attribution)
+    ? input.attribution as Record<string, unknown>
+    : {};
+  return {
+    source: cleanAttribution(raw.source, 120),
+    medium: cleanAttribution(raw.medium, 120),
+    campaign: cleanAttribution(raw.campaign, 160),
+    landingPage: cleanLandingPage(raw.landingPage),
+    referral: cleanAttribution(raw.referral, 160),
+  };
+}
 
 export type InquiryValidation =
   | { ok: true; value: InquirySubmission }
@@ -95,6 +132,7 @@ export function validateInquirySubmission(body: unknown): InquiryValidation {
       // resolves to no project later, which is also what happens after a
       // project is deleted.
       sourceProjectId: sourceProjectId && sourceProjectId.length <= 120 ? sourceProjectId : null,
+      attribution: parseInquiryAttribution(input),
     },
   };
 }
@@ -218,6 +256,11 @@ export type PortfolioInquirySummary = {
   createdAt: string;
   readAt: string | null;
   repliedAt: string | null;
+  convertedAt: string | null;
+  convertedProjectId: string | null;
+  convertedProjectTitle: string | null;
+  followUpTaskId: string | null;
+  followUpTaskTitle: string | null;
 };
 
 export type PortfolioInquiryDetail = PortfolioInquirySummary & {
@@ -225,8 +268,10 @@ export type PortfolioInquiryDetail = PortfolioInquirySummary & {
   notificationError: string | null;
   sourceProjectId: string | null;
   sourceProjectTitle: string | null;
+  attribution: InquiryAttribution;
   referrer: string | null;
   deviceType: string | null;
+  convertedClient: { id: string; name: string; email: string | null } | null;
 };
 
 export const INQUIRY_EXCERPT_LENGTH = 180;

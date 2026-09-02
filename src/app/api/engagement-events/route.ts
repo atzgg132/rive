@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const eventName = clean(body?.eventName, 80);
   const flowId = clean(body?.flowId, 80);
-  const entryPoint = body?.entryPoint === "onboarding" ? "onboarding" : body?.entryPoint === "workspace" ? "workspace" : "";
+  const entryPoint = body?.entryPoint === "onboarding" ? "onboarding" : body?.entryPoint === "workspace" ? "workspace" : body?.entryPoint === "inquiry" ? "inquiry" : "";
   const step = clean(body?.step, 20);
   if (!ALLOWED_EVENTS.has(eventName) || !/^[a-zA-Z0-9_-]{16,80}$/.test(flowId) || !entryPoint) {
     return NextResponse.json({ success: false }, { status: 400 });
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     sessionId: clean(body?.sessionId, 100) || null,
     eventName,
     module: "engagements",
-    source: "engagement_flow",
+    source: entryPoint === "inquiry" ? "portfolio_inquiry" : "engagement_flow",
     requestId: flowId,
     properties: {
       entryPoint,

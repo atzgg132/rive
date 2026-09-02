@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
+import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { projectProofOffer } from "@/utils/portfolio";
+
+class ProjectConflictError extends Error {
+  constructor() {
+    super("PROJECT_CONFLICT");
+  }
+}
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -29,17 +37,45 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Not found or unauthorized." }, { status: 404 });
     }
 
-    const project = await prisma.project.update({
-      where: { id },
-      data: { status }
+    const completionTransition = existing.status !== "completed" && status === "completed";
+    const completedAt = completionTransition
+      ? existing.completedAt || new Date()
+      : status === "completed"
+        ? existing.completedAt
+        : null;
+    const project = await prisma.$transaction(async (tx) => {
+      const updated = await tx.project.updateMany({
+        where: { id, userId: session.userId, status: existing.status, updatedAt: existing.updatedAt },
+        data: { status, completedAt },
+      });
+      if (updated.count !== 1) throw new ProjectConflictError();
+      const saved = await tx.project.findUnique({ where: { id } });
+      if (!saved) throw new ProjectConflictError();
+      return saved;
     });
+
+    if (completionTransition) {
+      await recordProductEvent({
+        userId: session.userId,
+        eventName: PRODUCT_EVENTS.projectCompleted,
+        module: "projects",
+        entityType: "project",
+        entityId: project.id,
+        dataOrigin: "user",
+        dedupeKey: `project_completed:${project.id}:${project.completedAt?.toISOString() || "unknown"}`,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       message: "Project status updated successfully.",
-      project
+      project,
+      ...(completionTransition ? { proof_offer: projectProofOffer(project.id) } : {}),
     }, { status: 200 });
   } catch (error: unknown) {
+    if (error instanceof ProjectConflictError) {
+      return NextResponse.json({ success: false, message: "This project changed while its status was being updated. Reload and try again." }, { status: 409 });
+    }
     console.error("Project status update error:", error);
     return NextResponse.json({ success: false, message: "Internal server error." }, { status: 500 });
   }

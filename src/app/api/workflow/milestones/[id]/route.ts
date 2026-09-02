@@ -3,6 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { processContractBilling } from "@/utils/contractBilling";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { projectProofOffer } from "@/utils/portfolio";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!hasTitle && !hasDueDate && !hasCompleted) return NextResponse.json({ success: false, message: "No milestone changes were provided." }, { status: 400 });
     if (hasTitle && typeof body.title !== "string") return NextResponse.json({ success: false, message: "Milestone title must be text." }, { status: 400 });
     if (hasCompleted && typeof body.completed !== "boolean") return NextResponse.json({ success: false, message: "Milestone completion must be true or false." }, { status: 400 });
-    const milestone = await prisma.milestone.findFirst({ where: { id, project: { userId: session.userId } }, include: { project: { select: { id: true, title: true } } } });
+    const milestone = await prisma.milestone.findFirst({ where: { id, project: { userId: session.userId } }, include: { project: { select: { id: true, title: true, status: true } } } });
     if (!milestone) return NextResponse.json({ success: false, message: "Milestone not found." }, { status: 404 });
     const title = typeof body?.title === "string" ? body.title.trim().slice(0, 180) : milestone.title;
     if (!title) return NextResponse.json({ success: false, message: "Milestone title is required." }, { status: 400 });
@@ -50,21 +51,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (lockedOccurrence) return NextResponse.json({ success: false, message: "This completion already triggered invoice processing. Keep the milestone complete and correct the invoice separately if needed." }, { status: 409 });
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.milestone.update({ where: { id }, data: { title, dueDate, completed, completedAt: completed ? milestone.completedAt || new Date() : null } });
-      if (milestone.completed && !completed) {
+    const updateResult = await prisma.$transaction(async (tx) => {
+      const changed = await tx.milestone.updateMany({
+        where: { id, completed: milestone.completed },
+        data: { title, dueDate, completed, completedAt: completed ? milestone.completedAt || new Date() : null },
+      });
+      const result = await tx.milestone.findUnique({ where: { id } });
+      if (!result) throw new Error("Milestone disappeared while it was being updated.");
+      if (changed.count === 1 && milestone.completed && !completed) {
         await tx.contractBillingOccurrence.updateMany({
           where: { paymentPlanItem: { milestoneId: id }, invoiceId: null, status: { in: ["eligible", "pending"] } },
           data: { status: "pending", eligibleAt: null, lastError: null },
         });
       }
-      return result;
+      return { result, transitionedToComplete: changed.count === 1 && completed && !milestone.completed };
     });
     const billing = await processContractBilling({ userId: session.userId, limit: 100 }).catch((error) => ({ error: error instanceof Error ? error.message : "Billing check failed." }));
-    if (completed && !milestone.completed) {
+    if (updateResult.transitionedToComplete) {
       await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.milestoneCompleted, module: "projects", entityType: "milestone", entityId: id, dataOrigin: "user" });
     }
-    return NextResponse.json({ success: true, message: completed && !milestone.completed ? "Milestone completed. Any eligible contract invoice has been prepared as a draft for review." : "Milestone updated. Contract snapshots were not rewritten.", milestone: { id: updated.id, title: updated.title, due_date: updated.dueDate, completed: updated.completed, completed_at: updated.completedAt }, billing });
+    return NextResponse.json({
+      success: true,
+      message: updateResult.transitionedToComplete ? "Milestone completed. Any eligible contract invoice has been prepared as a draft for review." : "Milestone updated. Contract snapshots were not rewritten.",
+      milestone: { id: updateResult.result.id, title: updateResult.result.title, due_date: updateResult.result.dueDate, completed: updateResult.result.completed, completed_at: updateResult.result.completedAt },
+      billing,
+      ...(updateResult.transitionedToComplete ? { proof_offer: projectProofOffer(milestone.project.id) } : {}),
+    });
   } catch (error) {
     console.error("Milestone update error:", error);
     return NextResponse.json({ success: false, message: "Unable to update milestone." }, { status: 500 });

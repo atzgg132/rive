@@ -42,6 +42,10 @@ export const PRODUCT_EVENTS = {
   agreementDraftReviewed: "agreement_draft_reviewed",
   invoiceDraftReviewed: "invoice_draft_reviewed",
   milestoneCompleted: "milestone_completed",
+  agreementWorkCreated: "agreement_work_created",
+  projectCompleted: "project_completed",
+  portfolioCaseStudyDraftCreated: "portfolio_case_study_draft_created",
+  portfolioInquiryConverted: "portfolio_inquiry_converted",
 } as const;
 
 type CoreProductEventName = (typeof PRODUCT_EVENTS)[keyof typeof PRODUCT_EVENTS];
@@ -90,6 +94,10 @@ export const REAL_DATA_EVENT_NAMES = new Set<string>([
   PRODUCT_EVENTS.importCommitted,
   PRODUCT_EVENTS.portfolioPublished,
   PRODUCT_EVENTS.engagementCreated,
+  PRODUCT_EVENTS.agreementWorkCreated,
+  PRODUCT_EVENTS.projectCompleted,
+  PRODUCT_EVENTS.portfolioCaseStudyDraftCreated,
+  PRODUCT_EVENTS.portfolioInquiryConverted,
 ]);
 
 type ContractRequirement = "identity" | "module" | "entity" | "dataOrigin";
@@ -139,6 +147,10 @@ export const PRODUCT_EVENT_CONTRACTS: Record<ProductEventName, ProductEventContr
   agreement_draft_reviewed: { version: 1, requirements: entityEvent, description: "An owner deliberately saved or finalized an Agreement draft after review." },
   invoice_draft_reviewed: { version: 1, requirements: entityEvent, description: "An owner deliberately saved an existing invoice draft after review." },
   milestone_completed: { version: 1, requirements: entityEvent, description: "A user marked a project milestone complete." },
+  agreement_work_created: { version: 1, requirements: realDataEntityEvent, description: "Accepted Agreement work was created or connected." },
+  project_completed: { version: 1, requirements: realDataEntityEvent, description: "A Project reached completed status." },
+  portfolio_case_study_draft_created: { version: 1, requirements: realDataEntityEvent, description: "A private portfolio case-study draft was created or completed from work." },
+  portfolio_inquiry_converted: { version: 1, requirements: realDataEntityEvent, description: "A public portfolio inquiry was converted into an owner follow-up graph." },
   "activation.registered": { version: 1, requirements: identityAndModule, description: "The registered activation milestone was recorded." },
   "activation.onboarding_started": { version: 1, requirements: identityAndModule, description: "The onboarding activation milestone was recorded." },
   "activation.profile_substantially_completed": { version: 1, requirements: identityAndModule, description: "The profile activation milestone was recorded." },

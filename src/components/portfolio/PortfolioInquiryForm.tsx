@@ -23,8 +23,21 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
      boundary on every template that renders it. An unrecognised value is simply
      ignored by the server. */
   const sourceProjectIdRef = useRef("");
+  const attributionRef = useRef({ source: "direct", medium: "none", campaign: "", landingPage: "", referral: "" });
   useEffect(() => {
-    sourceProjectIdRef.current = new URLSearchParams(window.location.search).get("project")?.slice(0, 120) || "";
+    const params = new URLSearchParams(window.location.search);
+    sourceProjectIdRef.current = params.get("project")?.slice(0, 120) || "";
+    let externalReferrer = false;
+    if (document.referrer) {
+      try { externalReferrer = new URL(document.referrer).origin !== window.location.origin; } catch { /* Ignore malformed browser referrers. */ }
+    }
+    attributionRef.current = {
+      source: params.get("utm_source")?.slice(0, 120) || (externalReferrer ? "referral" : "direct"),
+      medium: params.get("utm_medium")?.slice(0, 120) || (externalReferrer ? "referral" : "none"),
+      campaign: params.get("utm_campaign")?.slice(0, 160) || "",
+      landingPage: window.location.pathname,
+      referral: params.get("ref")?.slice(0, 160) || params.get("referral")?.slice(0, 160) || "",
+    };
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -51,6 +64,7 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
           message: form.get("message"),
           website: form.get("website"),
           sourceProjectId: sourceProjectIdRef.current || undefined,
+          attribution: attributionRef.current,
         }),
       });
       const data = await response.json().catch(() => null);

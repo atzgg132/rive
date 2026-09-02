@@ -41,28 +41,28 @@ model PageView {
 }
 
 model User {
-  id                          String                 @id @default(uuid())
-  email                       String                 @unique
+  id                          String                    @id @default(uuid())
+  email                       String                    @unique
   name                        String?
-  avatarUrl                   String?                @map("avatar_url")
-  passwordHash                String                 @map("password_hash")
-  googleSubject               String?                @unique @map("google_subject")
-  sessionVersion              Int                    @default(0) @map("session_version")
-  plan                        String                 @default("free")
-  emailVerifiedAt             DateTime?              @map("email_verified_at")
-  emailVerificationRequiredAt DateTime?              @map("email_verification_required_at")
-  accountType                 String                 @default("customer") @map("account_type")
-  onboardingStatus            String                 @default("complete") @map("onboarding_status")
-  onboardingStep              Int                    @default(0) @map("onboarding_step")
-  businessType                String?                @map("business_type")
-  businessTypes               String[]               @default([]) @map("business_types")
+  avatarUrl                   String?                   @map("avatar_url")
+  passwordHash                String                    @map("password_hash")
+  googleSubject               String?                   @unique @map("google_subject")
+  sessionVersion              Int                       @default(0) @map("session_version")
+  plan                        String                    @default("free")
+  emailVerifiedAt             DateTime?                 @map("email_verified_at")
+  emailVerificationRequiredAt DateTime?                 @map("email_verification_required_at")
+  accountType                 String                    @default("customer") @map("account_type")
+  onboardingStatus            String                    @default("complete") @map("onboarding_status")
+  onboardingStep              Int                       @default(0) @map("onboarding_step")
+  businessType                String?                   @map("business_type")
+  businessTypes               String[]                  @default([]) @map("business_types")
   profession                  String?
-  currency                    String                 @default("USD")
-  displayCurrency             String                 @default("USD") @map("display_currency")
-  timeZone                    String                 @default("UTC") @map("time_zone")
-  onboardingData              Json?                  @map("onboarding_data")
-  createdAt                   DateTime               @default(now()) @map("created_at")
-  updatedAt                   DateTime               @updatedAt @map("updated_at")
+  currency                    String                    @default("USD")
+  displayCurrency             String                    @default("USD") @map("display_currency")
+  timeZone                    String                    @default("UTC") @map("time_zone")
+  onboardingData              Json?                     @map("onboarding_data")
+  createdAt                   DateTime                  @default(now()) @map("created_at")
+  updatedAt                   DateTime                  @updatedAt @map("updated_at")
   clients                     Client[]
   projects                    Project[]
   invoices                    Invoice[]
@@ -82,13 +82,14 @@ model User {
   syncRuns                    SyncRun[]
   auditEvents                 AuditEvent[]
   contracts                   Contract[]
-  contractSigners             ContractSigner[]       @relation("ContractSignerUser")
-  contractEvents              ContractEvent[]        @relation("ContractEventActor")
-  contractComments            ContractComment[]      @relation("ContractCommentAuthor")
+  contractSigners             ContractSigner[]          @relation("ContractSignerUser")
+  contractEvents              ContractEvent[]           @relation("ContractEventActor")
+  contractComments            ContractComment[]         @relation("ContractCommentAuthor")
   notifications               Notification[]
   migrationEvents             MigrationEvent[]
   pageViews                   PageView[]
   productEvents               ProductEvent[]
+  projectGenerationRecords    ProjectGenerationRecord[]
   feedback                    Feedback[]
   feedbackPromptStates        FeedbackPromptState[]
   attribution                 UserAttribution?
@@ -203,24 +204,24 @@ model InvoiceNumberSequence {
 }
 
 model ProductEvent {
-  id           String   @id @default(uuid())
-  userId       String?  @map("user_id")
-  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  anonymousId  String?  @map("anonymous_id")
-  sessionId    String?  @map("session_id")
-  eventName    String   @map("event_name")
-  eventVersion Int      @default(1) @map("event_version")
-  schemaVersion Int     @default(1) @map("schema_version")
-  occurredAt   DateTime @default(now()) @map("occurred_at")
-  environment  String   @default("local")
-  module       String?
-  entityType   String?  @map("entity_type")
-  entityId     String?  @map("entity_id")
-  dataOrigin   String?  @map("data_origin")
-  source       String?
-  requestId    String?  @map("request_id")
-  dedupeKey    String?  @unique @map("dedupe_key")
-  properties   Json?
+  id            String   @id @default(uuid())
+  userId        String?  @map("user_id")
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  anonymousId   String?  @map("anonymous_id")
+  sessionId     String?  @map("session_id")
+  eventName     String   @map("event_name")
+  eventVersion  Int      @default(1) @map("event_version")
+  schemaVersion Int      @default(1) @map("schema_version")
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+  environment   String   @default("local")
+  module        String?
+  entityType    String?  @map("entity_type")
+  entityId      String?  @map("entity_id")
+  dataOrigin    String?  @map("data_origin")
+  source        String?
+  requestId     String?  @map("request_id")
+  dedupeKey     String?  @unique @map("dedupe_key")
+  properties    Json?
 
   @@index([userId, occurredAt])
   @@index([anonymousId, occurredAt])
@@ -305,26 +306,27 @@ model EmailDelivery {
 }
 
 model Client {
-  id              String           @id @default(uuid())
-  userId          String           @map("user_id")
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name            String
-  email           String?
-  phone           String?
-  company         String?
-  website         String?
-  address         String?
-  avatarColor     String?          @map("avatar_color")
-  notes           String?
-  tags            String[]
-  status          String           @default("active")
-  dataOrigin      String?          @map("data_origin")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  projects        Project[]
-  invoices        Invoice[]
-  contracts       Contract[]
-  contractSigners ContractSigner[] @relation("ContractSignerClient")
+  id                 String             @id @default(uuid())
+  userId             String             @map("user_id")
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  email              String?
+  phone              String?
+  company            String?
+  website            String?
+  address            String?
+  avatarColor        String?            @map("avatar_color")
+  notes              String?
+  tags               String[]
+  status             String             @default("active")
+  dataOrigin         String?            @map("data_origin")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  projects           Project[]
+  invoices           Invoice[]
+  contracts          Contract[]
+  portfolioInquiries PortfolioInquiry[]
+  contractSigners    ContractSigner[]   @relation("ContractSignerClient")
 
   @@index([userId, createdAt])
   @@index([userId, status])
@@ -332,32 +334,36 @@ model Client {
 }
 
 model Project {
-  id                    String      @id @default(uuid())
-  userId                String      @map("user_id")
-  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId              String?     @map("client_id")
-  client                Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  id                    String                    @id @default(uuid())
+  userId                String                    @map("user_id")
+  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId              String?                   @map("client_id")
+  client                Client?                   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   title                 String
   description           String?
-  status                String      @default("active")
-  priority              String      @default("medium")
-  startDate             DateTime?   @map("start_date")
-  dueDate               DateTime?   @map("due_date")
-  budget                Decimal?    @db.Decimal(12, 2)
-  currency              String      @default("USD")
-  contractCoverage      String      @default("undecided") @map("contract_coverage")
-  externalContractLabel String?     @map("external_contract_label")
-  externalContractUrl   String?     @map("external_contract_url")
-  contractDecisionAt    DateTime?   @map("contract_decision_at")
-  dataOrigin            String?     @map("data_origin")
+  status                String                    @default("active")
+  priority              String                    @default("medium")
+  startDate             DateTime?                 @map("start_date")
+  dueDate               DateTime?                 @map("due_date")
+  completedAt           DateTime?                 @map("completed_at")
+  sourceInquiryId       String?                   @unique @map("source_inquiry_id")
+  sourceInquiry         PortfolioInquiry?         @relation("PortfolioInquiryProject", fields: [sourceInquiryId], references: [id], onDelete: SetNull)
+  budget                Decimal?                  @db.Decimal(12, 2)
+  currency              String                    @default("USD")
+  contractCoverage      String                    @default("undecided") @map("contract_coverage")
+  externalContractLabel String?                   @map("external_contract_label")
+  externalContractUrl   String?                   @map("external_contract_url")
+  contractDecisionAt    DateTime?                 @map("contract_decision_at")
+  dataOrigin            String?                   @map("data_origin")
   tags                  String[]
-  createdAt             DateTime    @default(now()) @map("created_at")
-  updatedAt             DateTime    @updatedAt @map("updated_at")
+  createdAt             DateTime                  @default(now()) @map("created_at")
+  updatedAt             DateTime                  @updatedAt @map("updated_at")
   milestones            Milestone[]
   tasks                 Task[]
   invoices              Invoice[]
   expenses              Expense[]
   contracts             Contract[]
+  generationRecords     ProjectGenerationRecord[]
 
   @@index([userId, createdAt])
   @@index([userId, status, dueDate])
@@ -383,29 +389,32 @@ model Milestone {
 }
 
 model Task {
-  id               String     @id @default(uuid())
-  userId           String     @map("user_id")
-  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId        String?    @map("project_id")
-  project          Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  milestoneId      String?    @map("milestone_id")
-  milestone        Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  id               String            @id @default(uuid())
+  userId           String            @map("user_id")
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId        String?           @map("project_id")
+  project          Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestoneId      String?           @map("milestone_id")
+  milestone        Milestone?        @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   title            String
   description      String?
-  status           String     @default("todo")
-  priority         String     @default("medium")
-  dueDate          DateTime?  @map("due_date")
-  scheduledStartAt DateTime?  @map("scheduled_start_at")
-  scheduledEndAt   DateTime?  @map("scheduled_end_at")
-  timeZone         String?    @map("time_zone")
-  estimatedMinutes Int?       @map("estimated_minutes")
-  billable         Boolean    @default(false)
-  completedAt      DateTime?  @map("completed_at")
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
+  status           String            @default("todo")
+  priority         String            @default("medium")
+  dueDate          DateTime?         @map("due_date")
+  scheduledStartAt DateTime?         @map("scheduled_start_at")
+  scheduledEndAt   DateTime?         @map("scheduled_end_at")
+  timeZone         String?           @map("time_zone")
+  estimatedMinutes Int?              @map("estimated_minutes")
+  billable         Boolean           @default(false)
+  completedAt      DateTime?         @map("completed_at")
+  sourceInquiryId  String?           @unique @map("source_inquiry_id")
+  sourceInquiry    PortfolioInquiry? @relation("PortfolioInquiryTask", fields: [sourceInquiryId], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
 
   @@index([userId, status, dueDate])
   @@index([projectId])
+  @@index([sourceInquiryId])
   @@map("tasks")
 }
 
@@ -702,54 +711,54 @@ model Expense {
 }
 
 model ImportJob {
-  id              String               @id @default(uuid())
-  userId          String               @map("user_id")
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  source          String               @default("generic_csv")
-  sourceLabel     String?              @map("source_label")
-  status          String               @default("uploaded")
-  phase           String               @default("analysis")
-  mode            String               @default("migration")
+  id                   String               @id @default(uuid())
+  userId               String               @map("user_id")
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source               String               @default("generic_csv")
+  sourceLabel          String?              @map("source_label")
+  status               String               @default("uploaded")
+  phase                String               @default("analysis")
+  mode                 String               @default("migration")
   // 1 = the original onboarding importer, 2 = the migration engine. Both write
   // here so migration history stays continuous across the rollout.
-  engineVersion   Int                  @default(1) @map("engine_version")
+  engineVersion        Int                  @default(1) @map("engine_version")
   // Hash of the plan the user last previewed. Commit must quote it back.
-  planHash        String?              @map("plan_hash")
-  planVersion     Int                  @default(0) @map("plan_version")
-  plan            Json?
+  planHash             String?              @map("plan_hash")
+  planVersion          Int                  @default(0) @map("plan_version")
+  plan                 Json?
   // Every upload, mapping edit, or review decision increments the input
   // revision. An asynchronous analysis may only publish a plan for the
   // revision it claimed, so a slow worker can never overwrite a newer choice.
-  inputRevision   Int                  @default(0) @map("input_revision")
+  inputRevision        Int                  @default(0) @map("input_revision")
   // Currency chosen for this migration when a source does not state one.
-  defaultCurrency String?              @map("default_currency")
-  totalRows       Int                  @default(0) @map("total_rows")
-  processedRows   Int                  @default(0) @map("processed_rows")
-  createdRecords  Int                  @default(0) @map("created_records")
-  updatedRecords  Int                  @default(0) @map("updated_records")
-  skippedRecords  Int                  @default(0) @map("skipped_records")
-  unresolvedCount Int                  @default(0) @map("unresolved_count")
-  progressCompleted Int                @default(0) @map("progress_completed")
-  progressTotal   Int                  @default(0) @map("progress_total")
-  failurePhase    String?              @map("failure_phase")
-  failureCode     String?              @map("failure_code")
-  lastHeartbeatAt DateTime?            @map("last_heartbeat_at")
-  attemptCount    Int                  @default(0) @map("attempt_count")
-  workerLeaseId   String?              @map("worker_lease_id")
-  workerLeaseExpiresAt DateTime?        @map("worker_lease_expires_at")
-  supportRequestedAt DateTime?          @map("support_requested_at")
-  summary         Json?
-  error           String?
-  startedAt       DateTime?            @map("started_at")
-  completedAt     DateTime?            @map("completed_at")
-  rolledBackAt    DateTime?            @map("rolled_back_at")
-  createdAt       DateTime             @default(now()) @map("created_at")
-  updatedAt       DateTime             @updatedAt @map("updated_at")
-  files           ImportFile[]
-  records         ImportedRecord[]
-  issues          ImportIssue[]
-  stagedRecords   MigrationRecord[]
-  operations      MigrationOperation[]
+  defaultCurrency      String?              @map("default_currency")
+  totalRows            Int                  @default(0) @map("total_rows")
+  processedRows        Int                  @default(0) @map("processed_rows")
+  createdRecords       Int                  @default(0) @map("created_records")
+  updatedRecords       Int                  @default(0) @map("updated_records")
+  skippedRecords       Int                  @default(0) @map("skipped_records")
+  unresolvedCount      Int                  @default(0) @map("unresolved_count")
+  progressCompleted    Int                  @default(0) @map("progress_completed")
+  progressTotal        Int                  @default(0) @map("progress_total")
+  failurePhase         String?              @map("failure_phase")
+  failureCode          String?              @map("failure_code")
+  lastHeartbeatAt      DateTime?            @map("last_heartbeat_at")
+  attemptCount         Int                  @default(0) @map("attempt_count")
+  workerLeaseId        String?              @map("worker_lease_id")
+  workerLeaseExpiresAt DateTime?            @map("worker_lease_expires_at")
+  supportRequestedAt   DateTime?            @map("support_requested_at")
+  summary              Json?
+  error                String?
+  startedAt            DateTime?            @map("started_at")
+  completedAt          DateTime?            @map("completed_at")
+  rolledBackAt         DateTime?            @map("rolled_back_at")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+  files                ImportFile[]
+  records              ImportedRecord[]
+  issues               ImportIssue[]
+  stagedRecords        MigrationRecord[]
+  operations           MigrationOperation[]
 
   @@index([userId, createdAt])
   @@index([userId, status, createdAt])
@@ -757,13 +766,13 @@ model ImportJob {
 }
 
 model ImportFile {
-  id          String            @id @default(uuid())
-  importJobId String            @map("import_job_id")
-  importJob   ImportJob         @relation(fields: [importJobId], references: [id], onDelete: Cascade)
-  name        String
-  mimeType    String            @map("mime_type")
-  sizeBytes   Int               @map("size_bytes")
-  checksum    String
+  id           String            @id @default(uuid())
+  importJobId  String            @map("import_job_id")
+  importJob    ImportJob         @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  name         String
+  mimeType     String            @map("mime_type")
+  sizeBytes    Int               @map("size_bytes")
+  checksum     String
   // Original uploads live privately in object storage for a bounded recovery
   // window. Existing inline/legacy sources have no object key and are already
   // considered verified.
@@ -772,35 +781,35 @@ model ImportFile {
   uploadedAt   DateTime?         @map("uploaded_at")
   expiresAt    DateTime?         @map("expires_at")
   uploadError  String?           @map("upload_error")
-  entity      String
-  rowCount    Int               @map("row_count")
-  headers     Json
-  sample      Json?
-  mapping     Json?
+  entity       String
+  rowCount     Int               @map("row_count")
+  headers      Json
+  sample       Json?
+  mapping      Json?
   // Stable identity for one table within an upload: `<checksum>:<sheet>`. It
   // seeds every sourceKey, so re-uploading identical bytes reproduces the same
   // keys and the commit stays idempotent.
-  sourceId    String?           @map("source_id")
-  sheetName   String?           @map("sheet_name")
-  encoding    String?
-  delimiter   String?
-  headerRow   Int               @default(0) @map("header_row")
+  sourceId     String?           @map("source_id")
+  sheetName    String?           @map("sheet_name")
+  encoding     String?
+  delimiter    String?
+  headerRow    Int               @default(0) @map("header_row")
   // The parsed grid, kept so the pipeline can be re-run after the user changes
   // a classification or a column mapping. Staged records alone are not enough:
   // a source the engine could not classify has no records yet, and that is
   // exactly the case the user is about to resolve.
-  rows        Json?
+  rows         Json?
   // Full column profile: types, null/unique ratios, detected formats.
-  profile     Json?
-  confidence  Float?
-  reason      String?
+  profile      Json?
+  confidence   Float?
+  reason       String?
   // The user's own decisions for this source: chosen record type, manual
   // column mappings, confirmed date formats. Replayed on every re-analysis.
-  overrides   Json?
-  createdAt   DateTime          @default(now()) @map("created_at")
-  records     ImportedRecord[]
-  issues      ImportIssue[]
-  staged      MigrationRecord[]
+  overrides    Json?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  records      ImportedRecord[]
+  issues       ImportIssue[]
+  staged       MigrationRecord[]
 
   @@unique([importJobId, sourceId])
   @@index([importJobId])
@@ -1041,12 +1050,12 @@ model AuditEvent {
 }
 
 model Portfolio {
-  id          String          @id @default(uuid())
-  userId      String          @unique @map("user_id")
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  slug        String          @unique
-  status      String          @default("draft")
-  templateKey String          @default("minimal-pro") @map("template_key")
+  id          String             @id @default(uuid())
+  userId      String             @unique @map("user_id")
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug        String             @unique
+  status      String             @default("draft")
+  templateKey String             @default("minimal-pro") @map("template_key")
   content     Json
   theme       Json
   seo         Json?
@@ -1113,80 +1122,93 @@ model PortfolioView {
 /// the lead outright and the owner had no inbox to work from. The record is now
 /// the primary artifact and the notification is a queued side effect.
 model PortfolioInquiry {
-  id                 String    @id @default(uuid())
-  portfolioId        String    @map("portfolio_id")
-  portfolio          Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  id                     String    @id @default(uuid())
+  portfolioId            String    @map("portfolio_id")
+  portfolio              Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   /// Denormalized owner. Every owner-facing query filters on it, so tenant
   /// scoping never needs a join through Portfolio.
-  userId             String    @map("user_id")
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                 String    @map("user_id")
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Case study the visitor was reading when they wrote in, when known. A
   /// content identifier like PortfolioView.projectId, so it survives deletion.
-  sourceProjectId    String?   @map("source_project_id")
-  name               String
-  email              String
-  projectType        String    @map("project_type")
-  message            String
+  sourceProjectId        String?   @map("source_project_id")
+  sourceProjectTitle     String?   @map("source_project_title")
+  clientId               String?   @map("client_id")
+  client                 Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name                   String
+  email                  String
+  projectType            String    @map("project_type")
+  message                String
+  attributionSource      String?   @map("attribution_source")
+  attributionMedium      String?   @map("attribution_medium")
+  attributionCampaign    String?   @map("attribution_campaign")
+  attributionLandingPage String?   @map("attribution_landing_page")
+  attributionReferral    String?   @map("attribution_referral")
   /// new -> read -> replied, with archived and spam as terminal shelves.
-  status             String    @default("new")
+  status                 String    @default("new")
   /// queued -> sent, or failed once the outbox exhausts its retries.
-  notificationStatus String    @default("queued") @map("notification_status")
-  notificationError  String?   @map("notification_error")
+  notificationStatus     String    @default("queued") @map("notification_status")
+  notificationError      String?   @map("notification_error")
   /// Correlates to the EmailOutbox job. Not a foreign key: outbox rows are
   /// operational and prunable, while the inquiry is kept.
-  outboxId           String?   @map("outbox_id")
+  outboxId               String?   @map("outbox_id")
   /// Salted hash only. Raw addresses are never stored.
-  visitorHash        String?   @map("visitor_hash")
-  referrer           String?
-  deviceType         String?   @map("device_type")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
-  readAt             DateTime? @map("read_at")
-  repliedAt          DateTime? @map("replied_at")
-  archivedAt         DateTime? @map("archived_at")
+  visitorHash            String?   @map("visitor_hash")
+  referrer               String?
+  deviceType             String?   @map("device_type")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  readAt                 DateTime? @map("read_at")
+  repliedAt              DateTime? @map("replied_at")
+  archivedAt             DateTime? @map("archived_at")
+  convertedAt            DateTime? @map("converted_at")
+  sourceTask             Task?     @relation("PortfolioInquiryTask")
+  convertedProject       Project?  @relation("PortfolioInquiryProject")
 
   @@index([userId, createdAt])
   @@index([userId, status, createdAt])
   @@index([portfolioId, createdAt])
   @@index([portfolioId, sourceProjectId, createdAt])
+  @@index([userId, clientId, createdAt])
   @@index([outboxId])
   @@map("portfolio_inquiries")
 }
 
 model Contract {
-  id                  String                      @id @default(uuid())
-  userId              String                      @map("user_id")
-  user                User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId            String                      @map("client_id")
-  client              Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  projectId           String?                     @map("project_id")
-  project             Project?                    @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  title               String
-  status              String                      @default("draft")
-  provider            String                      @default("local")
-  providerEnvelopeId  String?                     @map("provider_envelope_id")
-  governingLaw        String                      @default("India") @map("governing_law")
-  jurisdiction        String?
-  currency            String                      @default("USD")
-  reviewExpiresAt     DateTime?                   @map("review_expires_at")
-  finalizedAt         DateTime?                   @map("finalized_at")
-  executedAt          DateTime?                   @map("executed_at")
-  voidedAt            DateTime?                   @map("voided_at")
-  voidRequestedAt     DateTime?                   @map("void_requested_at")
-  voidRequestedByRole String?                     @map("void_requested_by_role")
-  voidRequestNote     String?                     @map("void_request_note")
-  voidConfirmNote     String?                     @map("void_confirm_note")
-  createdAt           DateTime                    @default(now()) @map("created_at")
-  updatedAt           DateTime                    @updatedAt @map("updated_at")
-  versions            ContractVersion[]
-  signers             ContractSigner[]
-  reviewLinks         ContractReviewLink[]
-  comments            ContractComment[]
-  events              ContractEvent[]
-  artifacts           ContractArtifact[]
-  paymentPlanItems    ContractPaymentPlanItem[]
-  billingOccurrences  ContractBillingOccurrence[]
-  contractSignatures  ContractSignature[]
+  id                       String                      @id @default(uuid())
+  userId                   String                      @map("user_id")
+  user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId                 String                      @map("client_id")
+  client                   Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  projectId                String?                     @map("project_id")
+  project                  Project?                    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title                    String
+  status                   String                      @default("draft")
+  provider                 String                      @default("local")
+  providerEnvelopeId       String?                     @map("provider_envelope_id")
+  governingLaw             String                      @default("India") @map("governing_law")
+  jurisdiction             String?
+  currency                 String                      @default("USD")
+  reviewExpiresAt          DateTime?                   @map("review_expires_at")
+  finalizedAt              DateTime?                   @map("finalized_at")
+  executedAt               DateTime?                   @map("executed_at")
+  voidedAt                 DateTime?                   @map("voided_at")
+  voidRequestedAt          DateTime?                   @map("void_requested_at")
+  voidRequestedByRole      String?                     @map("void_requested_by_role")
+  voidRequestNote          String?                     @map("void_request_note")
+  voidConfirmNote          String?                     @map("void_confirm_note")
+  createdAt                DateTime                    @default(now()) @map("created_at")
+  updatedAt                DateTime                    @updatedAt @map("updated_at")
+  versions                 ContractVersion[]
+  signers                  ContractSigner[]
+  reviewLinks              ContractReviewLink[]
+  comments                 ContractComment[]
+  events                   ContractEvent[]
+  artifacts                ContractArtifact[]
+  paymentPlanItems         ContractPaymentPlanItem[]
+  billingOccurrences       ContractBillingOccurrence[]
+  contractSignatures       ContractSignature[]
+  projectGenerationRecords ProjectGenerationRecord[]
 
   @@index([userId, status, updatedAt])
   @@index([clientId, status])
@@ -1195,20 +1217,21 @@ model Contract {
 }
 
 model ContractVersion {
-  id              String               @id @default(uuid())
-  contractId      String               @map("contract_id")
-  contract        Contract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  version         Int
-  status          String               @default("draft")
-  content         Json
-  contentHash     String               @map("content_hash")
-  createdByUserId String               @map("created_by_user_id")
-  createdAt       DateTime             @default(now()) @map("created_at")
-  finalizedAt     DateTime?            @map("finalized_at")
-  signatures      ContractSignature[]
-  artifacts       ContractArtifact[]
-  comments        ContractComment[]
-  reviewLinks     ContractReviewLink[]
+  id                       String                    @id @default(uuid())
+  contractId               String                    @map("contract_id")
+  contract                 Contract                  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  version                  Int
+  status                   String                    @default("draft")
+  content                  Json
+  contentHash              String                    @map("content_hash")
+  createdByUserId          String                    @map("created_by_user_id")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  finalizedAt              DateTime?                 @map("finalized_at")
+  signatures               ContractSignature[]
+  artifacts                ContractArtifact[]
+  comments                 ContractComment[]
+  reviewLinks              ContractReviewLink[]
+  projectGenerationRecords ProjectGenerationRecord[]
 
   @@unique([contractId, version])
   @@index([contractId, status])
@@ -1396,6 +1419,36 @@ model ContractBillingOccurrence {
 
   @@index([contractId, status, eligibleAt])
   @@map("contract_billing_occurrences")
+}
+
+model ProjectGenerationRecord {
+  id                 String          @id @default(uuid())
+  userId             String          @map("user_id")
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contractId         String          @map("contract_id")
+  contract           Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  acceptedVersionId  String          @map("accepted_version_id")
+  acceptedVersion    ContractVersion @relation(fields: [acceptedVersionId], references: [id], onDelete: Cascade)
+  status             String          @default("pending")
+  previewPlan        Json?           @map("preview_plan")
+  previewHash        String?         @map("preview_hash")
+  idempotencyKeyHash String?         @map("idempotency_key_hash")
+  resultIds          Json?           @map("result_ids")
+  error              String?
+  previewedAt        DateTime?       @map("previewed_at")
+  startedAt          DateTime?       @map("started_at")
+  completedAt        DateTime?       @map("completed_at")
+  failedAt           DateTime?       @map("failed_at")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  projectId          String?         @map("project_id")
+  project            Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@unique([contractId, acceptedVersionId], name: "project_generation_contract_version_key")
+  @@index([userId, status, updatedAt])
+  @@index([contractId, status])
+  @@index([projectId])
+  @@map("project_generation_records")
 }
 
 model InvoiceDelivery {

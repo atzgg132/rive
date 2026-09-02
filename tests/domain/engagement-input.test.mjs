@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EngagementInputError, parseStartEngagementInput } from "../../src/utils/engagements.ts";
+import { EngagementInputError, parseInquiryConversionInput, parseStartEngagementInput } from "../../src/utils/engagements.ts";
 
 const base = {
   flowId: "flow_1234567890abcdef",
@@ -45,5 +45,44 @@ test("rejects ambiguous client commands", () => {
   assert.throws(
     () => parseStartEngagementInput({ ...base, client: { mode: "existing", id: "", name: "Acme" } }),
     (error) => error instanceof EngagementInputError && error.code === "missing_client",
+  );
+});
+
+test("inquiry conversion requires an explicit client choice and preserves the read-only source boundary", () => {
+  const parsed = parseInquiryConversionInput({
+    client: { mode: "new", name: "  Jane Smith  ", email: "JANE@EXAMPLE.COM" },
+  });
+
+  assert.deepEqual(parsed, {
+    client: { mode: "new", name: "Jane Smith", email: "jane@example.com" },
+  });
+  assert.throws(
+    () => parseInquiryConversionInput({ client: { mode: "existing", id: "" } }),
+    (error) => error instanceof EngagementInputError && error.code === "missing_client",
+  );
+});
+
+test("inquiry engagement input requires a source and keeps the converted client explicit", () => {
+  const parsed = parseStartEngagementInput({
+    ...base,
+    entryPoint: "inquiry",
+    sourceInquiryId: "inquiry_123",
+    client: { mode: "existing", id: "client_123" },
+  });
+  assert.equal(parsed.entryPoint, "inquiry");
+  assert.equal(parsed.sourceInquiryId, "inquiry_123");
+  assert.throws(
+    () => parseStartEngagementInput({
+      ...base,
+      entryPoint: "inquiry",
+      sourceInquiryId: "inquiry_123",
+      client: { mode: "existing", id: "client_123" },
+      project: { ...base.project, scope: "  " },
+    }),
+    (error) => error instanceof EngagementInputError && error.code === "missing_project_scope",
+  );
+  assert.throws(
+    () => parseStartEngagementInput({ ...base, entryPoint: "inquiry" }),
+    (error) => error instanceof EngagementInputError && error.code === "missing_source_inquiry",
   );
 });

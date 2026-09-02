@@ -22,7 +22,6 @@ import {
 } from "@/utils/contracts";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { createNotification } from "@/utils/contracts";
-import { processContractBilling } from "@/utils/contractBilling";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
@@ -193,8 +192,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const planItems = await tx.contractPaymentPlanItem.findMany({ where: { contractId: link!.contractId }, orderBy: { sequence: "asc" }, take: 25 });
       for (const item of planItems) {
         await tx.contractPaymentPlanItem.update({ where: { id: item.id }, data: { status: "active" } });
-        await tx.contractBillingOccurrence.create({ data: { contractId: link!.contractId, paymentPlanItemId: item.id, status: item.triggerType === "on_signing" ? "eligible" : "pending", eligibleAt: item.triggerType === "on_signing" ? executedAt : null } });
+        const acceptedTriggerDate = item.triggerType === "on_signing"
+          ? executedAt
+          : ["fixed_date", "milestone_due"].includes(item.triggerType)
+            ? item.triggerDate
+            : null;
+        await tx.contractBillingOccurrence.create({
+          data: {
+            contractId: link!.contractId,
+            paymentPlanItemId: item.id,
+            status: "awaiting_work_setup",
+            eligibleAt: acceptedTriggerDate,
+          },
+        });
       }
+      await tx.projectGenerationRecord.create({
+        data: {
+          userId: link!.contract.userId,
+          contractId: link!.contractId,
+          acceptedVersionId: link!.version!.id,
+          status: "pending",
+        },
+      });
       await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, eventType: "contract_executed", metadata: { executedAt: executedAt.toISOString(), signedBy: "client_and_owner" } } });
        const allSignatures = await tx.contractSignature.findMany({ where: { contractId: link!.contractId, versionId: link!.version!.id }, orderBy: { signedAt: "asc" }, take: 10, select: { id: true, signerRole: true, signerName: true, signerEmail: true, signatureType: true, consentAccepted: true, consentTextVersion: true, ipHash: true, userAgentHash: true, providerEventId: true, signedAt: true } });
        const evidence = {
@@ -247,8 +266,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       if (executed) {
         await recordActivationEvent(executed.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { contractId: executed.id, workflow: "contract_executed" });
         await recordProductEvent({ userId: executed.userId, eventName: PRODUCT_EVENTS.agreementAccepted, module: "agreements", entityType: "contract", entityId: executed.id, source: "public_acceptance", dedupeKey: `agreement_accepted:${executed.id}` });
-        await processContractBilling({ userId: executed.userId, contractId: executed.id, limit: 100 }).catch((billingError) => console.error("Immediate contract billing check failed:", billingError));
-        await createNotification({ userId: executed.userId, type: "contract_executed", title: "Agreement accepted", message: `${executed.title} has both parties’ acceptance recorded.`, href: `/workflow/contracts/${executed.id}` }).catch(() => undefined);
+        await createNotification({ userId: executed.userId, type: "contract_work_setup", title: "Agreement accepted — set up the work", message: `${executed.title} has both parties’ acceptance recorded. Set up the work when you’re ready.`, href: `/workflow/contracts/${executed.id}` }).catch(() => undefined);
         if (getEmailProvider() !== "disabled") {
           for (const jobId of completion.executedMailJobIds) {
             await processEmailOutbox({ jobId }).catch((mailError) => console.error("Immediate executed Agreement mail attempt failed:", mailError));
