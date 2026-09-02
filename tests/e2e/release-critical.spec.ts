@@ -540,12 +540,15 @@ test.describe("release-critical persistence, isolation, and activation", () => {
         request.patch("/api/workflow/projects/status", { headers: auth, data: { id: active.id, status: "completed" } }),
         request.patch("/api/workflow/projects/status", { headers: auth, data: { id: active.id, status: "completed" } }),
       ]);
-      expect(completions.some((response) => response.status() === 200)).toBe(true);
-      expect(completions.every((response) => [200, 409].includes(response.status()))).toBe(true);
+      // Serialized completions are both 200 (second is an idempotent already-completed
+      // write). A lost race before the row lock still surfaces as 409.
+      expect([[200, 200], [200, 409]]).toContainEqual(completions.map((response) => response.status()).sort());
       const saved = await db.prisma.project.findUnique({ where: { id: active.id }, select: { status: true, completedAt: true } });
       expect(saved?.status).toBe("completed");
       expect(saved?.completedAt).not.toBeNull();
-      expect(await db.prisma.productEvent.count({ where: { userId: user.id, eventName: "project_completed", entityId: active.id } })).toBe(1);
+      expect(await db.prisma.productEvent.count({
+        where: { userId: user.id, eventName: "project_completed", entityId: active.id },
+      })).toBe(1);
 
       const reopened = await request.patch("/api/workflow/projects/status", {
         headers: auth,

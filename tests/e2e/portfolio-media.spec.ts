@@ -113,6 +113,10 @@ function mediaContent(extra: Partial<Record<string, unknown>> = {}) {
   };
 }
 
+function confirmedPublicProjectIds(content: { projects: Array<{ id: string; visibility?: string }> }) {
+  return content.projects.filter((project) => project.visibility === "public").map((project) => project.id);
+}
+
 test.describe("portfolio media and practices", () => {
   test.skip(!dbChecksEnabled, "Requires DATABASE_URL with a migrated test database.");
   test.setTimeout(90_000);
@@ -137,13 +141,14 @@ test.describe("portfolio media and practices", () => {
       const created = await json(await request.post("/api/portfolio", { headers: auth, data: {} }));
       const portfolio = created.portfolio as JsonObject;
       const slug = String(portfolio.slug);
+      const content = mediaContent();
 
       const saved = await request.patch("/api/portfolio", {
         headers: auth,
         data: {
           revision: Number(portfolio.revision),
-          content: mediaContent(),
-          confirmedPublicProjectIds: ["public-bake"],
+          content,
+          confirmedPublicProjectIds: confirmedPublicProjectIds(content),
           status: "published",
         },
       });
@@ -205,7 +210,7 @@ test.describe("portfolio media and practices", () => {
         data: {
           revision: Number(portfolio.revision),
           content,
-          confirmedPublicProjectIds: ["clickable-study"],
+          confirmedPublicProjectIds: confirmedPublicProjectIds(content),
           templateKey: "visual-studio",
           status: "published",
         },
