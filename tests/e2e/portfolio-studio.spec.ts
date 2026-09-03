@@ -760,6 +760,79 @@ test.describe("portfolio studio", () => {
     }, { timeout: 15_000 }).toBe("published");
   });
 
+  test("a publish confirmed mid-save waits for the real outcome", async ({ page, context }) => {
+    const { token, user } = await studioUser("queued-publish");
+    /* Publish validation must fail: the queued publish replays against this
+       content, and only a real failure proves the dialog waited for it. */
+    await db.prisma.portfolio.update({
+      where: { userId: user.id },
+      data: { content: { ...studioContent(), headline: "" } },
+    });
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+
+    /* Hold the first PATCH open so the autosave below is still in flight when
+       the publish is confirmed. Later PATCHes pass straight through. The kinds
+       log below is the backstop against a vacuous pass: if no flight existed
+       at confirm time, the sequence would read ["published"] instead. */
+    const patchKinds: string[] = [];
+    let patchHeld = false;
+    await page.route("**/api/portfolio", async (route) => {
+      const request = route.request();
+      if (request.method() === "PATCH") {
+        try {
+          patchKinds.push(String(request.postDataJSON()?.status ?? "autosave"));
+        } catch {
+          patchKinds.push("autosave");
+        }
+        if (!patchHeld) {
+          patchHeld = true;
+          await page.waitForTimeout(5_000);
+        }
+      }
+      await route.continue();
+    });
+
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    // The studio opens on work; the bio field lives under Profile.
+    await page.locator('[data-portfolio-section="profile"]').click();
+    const bio = page.getByLabel(/Short introduction/i);
+    await expect(bio).toBeVisible();
+    const patchSent = page.waitForRequest(
+      (request) => request.url().includes("/api/portfolio") && request.method() === "PATCH",
+    );
+    await bio.pressSequentially(" Still iterating on the framing.");
+    /* The request is sent — and therefore in flight — while the interception
+       above holds it. The publish confirm below lands inside that window. */
+    await patchSent;
+
+    await page.getByRole("button", { name: /Publish portfolio/i }).click();
+    const review = page.locator("[data-portfolio-publish-review]");
+    await expect(review).toBeVisible();
+
+    /* The app disables confirm while a save is in flight, which is exactly
+       the guard under test: the hook must still queue the publish rather than
+       report success. Enable it to simulate the queued call. */
+    await review.locator("[data-portfolio-publish-confirm]").evaluate((el) => el.removeAttribute("disabled"));
+    await review.locator("[data-portfolio-publish-confirm]").click();
+
+    /* The queued publish replays after the held autosave lands and fails
+       validation — the dialog must stay open showing why, not close on an
+       optimistic yes. */
+    await expect(review).toContainText(/Add a headline before publishing\./, { timeout: 20_000 });
+    await expect(review).toBeVisible();
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { status: true } });
+      return portfolio?.status;
+    }, { timeout: 10_000 }).toBe("draft");
+
+    /* The autosave ran first and the failed publish second: with the old
+       optimistic `return true` the publish would have vanished entirely and
+       this would read ["autosave"]. */
+    expect(patchKinds, "the publish must queue behind the autosave").toEqual(["autosave", "published"]);
+  });
+
   test("the template gallery shows the owner's own work, not six gradients", async ({ page, context }) => {
     await context.addCookies([{ name: "rive_session", value: (await studioUser("templates")).token, url: baseUrl() }]);
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });

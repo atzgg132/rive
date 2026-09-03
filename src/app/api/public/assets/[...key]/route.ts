@@ -53,13 +53,17 @@ export async function GET(
      the key exists. */
   const ownerId = assetOwnerId(key);
   const session = await getSessionUser(request).catch(() => null);
+  const isOwner = Boolean(ownerId && session?.userId === ownerId);
   /* Success responses vary by cookie (owner preview vs public), so only
      published portfolios are shared-cacheable. Owner-only draft views stay
      private no matter what. */
   let published = false;
   if (!ownerId || session?.userId !== ownerId) {
     const portfolio = ownerId
-      ? await prisma.portfolio.findUnique({ where: { userId: ownerId }, select: { status: true } }).catch(() => null)
+      ? await prisma.portfolio.findUnique({ where: { userId: ownerId }, select: { status: true } }).catch((error) => {
+          console.error("Asset portfolio lookup failed:", error);
+          return null;
+        })
       : null;
     published = Boolean(portfolio && isPortfolioPublished(portfolio.status));
     if (!published) {
@@ -116,7 +120,11 @@ export async function GET(
     // Emitting an empty value for either is not a valid header and upsets
     // intermediaries; a chunked response without them is well-defined.
     const headers = new Headers({
-      "Cache-Control": published ? "public, max-age=86400, stale-while-revalidate=604800" : "private, no-store",
+      "Cache-Control": published
+        ? "public, max-age=86400, stale-while-revalidate=604800"
+        : isOwner
+          ? "private, max-age=600"
+          : "private, no-store",
       "Vary": "Cookie",
       "Content-Type": contentType,
       "Content-Disposition": "inline",

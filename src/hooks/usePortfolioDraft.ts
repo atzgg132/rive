@@ -361,7 +361,7 @@ export function usePortfolioDraft() {
       pendingPersistRef.current = null;
       if (shouldReplayQueuedPersist(queued, conflictRef.current)) {
         const replay = queued as QueuedPersistOptions;
-        void persistRef.current(replay).then((ok) => replay.resolve?.(ok));
+        void persistRef.current(replay).then((ok) => replay.resolve?.(ok)).catch(() => replay.resolve?.(false));
       } else {
         queued?.resolve?.(false);
       }
