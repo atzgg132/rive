@@ -26,6 +26,8 @@ export default function PortfolioPublishReview({
   publicUrl,
   published,
   publishing,
+  error,
+  errorSection,
   onGoTo,
   onConfirm,
   onClose,
@@ -35,6 +37,9 @@ export default function PortfolioPublishReview({
   publicUrl: string;
   published: boolean;
   publishing: boolean;
+  /** The save rejection from the last confirm attempt, if it maps to a section. */
+  error?: string | null;
+  errorSection?: StudioSection | null;
   onGoTo: (section: StudioSection) => void;
   onConfirm: () => void;
   onClose: () => void;
@@ -113,6 +118,15 @@ export default function PortfolioPublishReview({
           <p className="mt-4 flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
             <Check className="h-4 w-4" /> Nothing outstanding.
           </p>
+        )}
+
+        {error && (
+          <div role="alert" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+            <span><strong>Could not publish.</strong> {error}</span>
+            {errorSection && (
+              <Button type="button" onClick={() => { onClose(); onGoTo(errorSection); }} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold">Fix this</Button>
+            )}
+          </div>
         )}
 
         <div className="mt-6 flex flex-wrap justify-end gap-2">

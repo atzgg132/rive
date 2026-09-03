@@ -8,6 +8,7 @@ import StudioProfileImageEditor from "@/components/portfolio/studio/StudioProfil
 type Props = {
   content: PortfolioContent;
   slug: string;
+  slugError?: string;
   templateKey: string;
   saving: boolean;
   onUpdateContent: (update: Partial<PortfolioContent>) => void;
@@ -19,6 +20,7 @@ type Props = {
 export default function StudioProfileSection({
   content,
   slug,
+  slugError,
   templateKey,
   saving,
   onUpdateContent,
@@ -44,7 +46,7 @@ export default function StudioProfileSection({
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-2"><span className={labelClass}>Display name</span><Input className={inputClass} value={content.name || ""} placeholder="Your name" onChange={(event) => onUpdateContent({ name: event.target.value })} /></label>
-        <label className="flex flex-col gap-2"><span className={labelClass}>Public URL</span><div className="flex items-center"><span className="rounded-l-xl border border-r-0 border-border bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800">/p/</span><Input className={`${inputClass} rounded-l-none`} value={slug} placeholder="your-name" onChange={(event) => onUpdateSlug(event.target.value)} /></div></label>
+        <label className="flex flex-col gap-2"><span className={labelClass}>Public URL</span><div className="flex items-center"><span className="rounded-l-xl border border-r-0 border-border bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800">/p/</span><Input className={`${inputClass} rounded-l-none`} value={slug} placeholder="your-name" onChange={(event) => onUpdateSlug(event.target.value)} aria-invalid={Boolean(slugError)} aria-describedby={slugError ? "portfolio-slug-help portfolio-slug-error" : "portfolio-slug-help"} /></div><span id="portfolio-slug-help" className="text-xs leading-4 text-slate-500 dark:text-slate-400">Live at /p/{slug || "your-name"} · lowercase letters, numbers, and dashes.</span>{slugError && <span id="portfolio-slug-error" role="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">{slugError}</span>}</label>
         {/* Above the headline here because it is above the headline there. The
             placeholder is the template's own line, so the field explains where
             that text on the live site is coming from just by existing. */}

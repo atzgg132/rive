@@ -18,6 +18,7 @@ import {
   PORTFOLIO_AUTOSAVE_DELAY_MS,
   buildPortfolioPersistBody,
   classifyLocalDraft,
+  coalescePersistQueue,
   contentFromRecord,
   isQuietPersistFailure,
   parsePortfolioDraftSnapshot,
@@ -40,6 +41,8 @@ type PersistOptions = {
   silent?: boolean;
   confirmedPublicProjectIds?: string[];
 };
+
+type QueuedPersistOptions = PersistOptions & { resolve?: (ok: boolean) => void };
 
 function applyRecordToForm(
   record: PortfolioRecord,
@@ -85,6 +88,7 @@ export function usePortfolioDraft() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [slugError, setSlugError] = useState("");
   const [conflictState, setConflictState] = useState(false);
   const [recoveryDraft, setRecoveryDraft] = useState<PortfolioDraftSnapshot | null>(null);
 
@@ -99,9 +103,9 @@ export function usePortfolioDraft() {
   const editVersionRef = useRef(0);
   const draftHydratedRef = useRef(false);
   const inFlightRef = useRef(false);
-  const pendingPersistRef = useRef<PersistOptions | null>(null);
+  const pendingPersistRef = useRef<QueuedPersistOptions | null>(null);
   const confirmedPublicProjectIdsRef = useRef<string[]>([]);
-  const persistRef = useRef<(options?: PersistOptions) => Promise<void>>(async () => undefined);
+  const persistRef = useRef<(options?: PersistOptions) => Promise<boolean>>(async () => false);
 
   useEffect(() => {
     contentRef.current = content;
@@ -165,6 +169,7 @@ export function usePortfolioDraft() {
   } = {}) => {
     setLoading(true);
     setLoadError("");
+    setSlugError("");
     setSaveError("");
     try {
       let response = await fetch("/api/portfolio");
@@ -227,10 +232,10 @@ export function usePortfolioDraft() {
     }
   }, [applySnapshot, markDirty]);
 
-  const persist = useCallback(async (options: PersistOptions = {}) => {
+  const persist = useCallback(async (options: PersistOptions = {}): Promise<boolean> => {
     const current = portfolioRef.current;
-    if (!current) return;
-    if (options.silent && !options.status && !options.confirmedPublicProjectIds?.length && !dirtyRef.current) return;
+    if (!current) return false;
+    if (options.silent && !options.status && !options.confirmedPublicProjectIds?.length && !dirtyRef.current) return true;
     if (options.confirmedPublicProjectIds?.length) {
       confirmedPublicProjectIdsRef.current = Array.from(new Set([
         ...confirmedPublicProjectIdsRef.current,
@@ -238,10 +243,20 @@ export function usePortfolioDraft() {
       ]));
     }
     if (inFlightRef.current) {
-      const pending = pendingPersistRef.current;
-      if (pending?.status === "published" && options.silent) return;
-      pendingPersistRef.current = options;
-      return;
+      /* A queued save resolves from the replay, never optimistically: the
+         caller that asked to publish must see the real outcome. */
+      const decision = coalescePersistQueue({
+        inFlight: true,
+        queuedStatus: pendingPersistRef.current?.status,
+        silent: options.silent,
+      });
+      if (decision === "drop-redundant-autosave") return true;
+      return new Promise<boolean>((resolve) => {
+        /* A newer request supersedes whatever was waiting: the old waiter is
+           told it never ran rather than left hanging. */
+        pendingPersistRef.current?.resolve?.(false);
+        pendingPersistRef.current = { ...options, resolve };
+      });
     }
 
     inFlightRef.current = true;
@@ -280,11 +295,15 @@ export function usePortfolioDraft() {
           const alreadyConflicting = conflictRef.current;
           setConflictState(true);
           conflictRef.current = true;
+          pendingPersistRef.current?.resolve?.(false);
           pendingPersistRef.current = null;
           if (!alreadyConflicting) flushDraftSnapshot();
           throw new Error("This portfolio changed in another tab. Reload the latest version or keep your local draft.");
         }
-        if (response.status === 409) {
+        /* Other 409s — the revision conflict above, the case-study
+           confirmation — must not touch the slug field. Only a taken URL
+           reverts it, matched on the code the route sends. */
+        if (response.status === 409 && data.code === "PORTFOLIO_SLUG_TAKEN") {
           /* The URL was refused, not the revision. Put the field back to the
              one the server holds so the next autosave stops carrying a value
              that will be refused again — otherwise a single unavailable URL
@@ -292,6 +311,7 @@ export function usePortfolioDraft() {
              ever stored. The message still tells them the URL did not stick. */
           setSlug(current.slug);
           slugRef.current = current.slug;
+          setSlugError(data.message || "That public URL is already taken.");
         }
         setConflictState(false);
         throw new Error(data.message || "could not save portfolio");
@@ -323,6 +343,8 @@ export function usePortfolioDraft() {
       if (!options.silent) {
         toast.success(options.successMessage || (explicitStatus === "published" ? "portfolio published" : "portfolio saved"));
       }
+      setSlugError("");
+      return true;
     } catch (error) {
       const quiet = options.silent && isQuietPersistFailure(error, navigator.onLine);
       if (!quiet) {
@@ -331,13 +353,17 @@ export function usePortfolioDraft() {
           toast.error(error instanceof Error ? error.message : "could not save portfolio");
         }
       }
+      return false;
     } finally {
       inFlightRef.current = false;
       setSaving(false);
       const queued = pendingPersistRef.current;
       pendingPersistRef.current = null;
       if (shouldReplayQueuedPersist(queued, conflictRef.current)) {
-        void persistRef.current(queued as PersistOptions);
+        const replay = queued as QueuedPersistOptions;
+        void persistRef.current(replay).then((ok) => replay.resolve?.(ok));
+      } else {
+        queued?.resolve?.(false);
       }
     }
   }, [flushDraftSnapshot]);
@@ -398,6 +424,7 @@ export function usePortfolioDraft() {
   const updateSlug = (value: string) => {
     const nextSlug = normalizeSlug(value);
     slugRef.current = nextSlug;
+    setSlugError("");
     setSlug(nextSlug);
     markDirty({ slug: nextSlug });
   };
@@ -538,6 +565,7 @@ export function usePortfolioDraft() {
     saving,
     dirty,
     saveError,
+    slugError,
     conflictState,
     loadPortfolio,
     persist,

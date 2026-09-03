@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
-import { ChevronDown, ChevronUp, GripVertical, Image as ImageIcon, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical, Image as ImageIcon, ImageOff, Trash2, Upload } from "lucide-react";
 import PortfolioMediaEditor from "@/components/portfolio/PortfolioMediaEditor";
 import type { PortfolioPractice, PortfolioProject } from "@/utils/portfolio";
 
@@ -27,10 +28,19 @@ type Props = {
   /** Move this project to a new position. Order is the order visitors read in. */
   onMove: (to: number) => void;
   onVisibilityChange?: (visibility: "public" | "private") => void;
+  /** When true, the trash control has been armed and the confirm strip shows. */
+  deleteConfirmArmed?: boolean;
+  /** First click: arm the confirm strip instead of deleting. */
+  onDeleteRequest?: () => void;
+  /** Dismiss the confirm strip without deleting. */
+  onCancelDelete?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLSpanElement> & { draggable?: boolean };
 };
 
-export default function PortfolioProjectEditor({ project, index, total, practices = [], onChange, onDelete, onUploadCover, onMove, onVisibilityChange, dragHandleProps }: Props) {
+export default function PortfolioProjectEditor({ project, index, total, practices = [], onChange, onDelete, onUploadCover, onMove, onVisibilityChange, dragHandleProps, deleteConfirmArmed, onDeleteRequest, onCancelDelete }: Props) {
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
+  /* Derived, not reset in an effect: a new URL stops matching on its own. */
+  const coverFailed = failedCoverUrl !== null && failedCoverUrl === (project.imageUrl || "");
   const media = project.media || [];
   const first = index === 0;
   const last = index === total - 1;
@@ -71,10 +81,19 @@ export default function PortfolioProjectEditor({ project, index, total, practice
               <Button type="button" disabled={last} title="Move later" aria-label={`Move ${project.title.trim() || `project ${index + 1}`} later`} onClick={() => onMove(index + 1)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 dark:hover:bg-slate-800"><ChevronDown className="h-4 w-4" /></Button>
             </>
           )}
-          <Button type="button" title="Remove project" onClick={onDelete} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /></Button>
+          <Button type="button" title="Remove project" aria-label={deleteConfirmArmed ? "Confirm removal" : "Remove project"} onClick={deleteConfirmArmed ? onDelete : (onDeleteRequest ?? onDelete)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
 
+      {deleteConfirmArmed && (
+        <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+          <span><strong>Remove {project.title.trim() || `project ${index + 1}`}?</strong> Its text, cover, and media leave the portfolio.</span>
+          <span className="flex gap-2">
+            <Button type="button" onClick={onCancelDelete} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold">Keep</Button>
+            <Button type="button" onClick={onDelete} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800">Remove project</Button>
+          </span>
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-2"><span className={labelClass}>Project title <span className="text-blue-600">Required</span></span><Input className={inputClass} value={project.title || ""} placeholder="e.g. A calmer checkout for Acme" onChange={(event) => onChange({ title: event.target.value })} /></label>
         <label className="flex flex-col gap-2"><span className={labelClass}>Your role <span className="text-blue-600">Required</span></span><Input className={inputClass} value={project.role || ""} placeholder="e.g. Product designer" onChange={(event) => onChange({ role: event.target.value })} /></label>
@@ -94,17 +113,21 @@ export default function PortfolioProjectEditor({ project, index, total, practice
         <div className="mb-3"><p className="text-sm font-bold text-foreground dark:text-white">Cover image</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">This is the main image shown on your selected-work card. The gallery below is for additional screenshots.</p></div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-blue-300 bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300"><Upload className="h-3.5 w-3.5" /> {project.imageUrl ? "Replace cover" : "Upload cover"}<Input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(event) => { onUploadCover(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
-          {!isUploadedImage(project.imageUrl || "") && <Input className={inputClass} value={project.imageUrl || ""} placeholder="Or paste an image URL" onChange={(event) => onChange({ imageUrl: event.target.value })} />}
+          {(coverFailed || !isUploadedImage(project.imageUrl || "")) && <Input className={inputClass} value={project.imageUrl || ""} placeholder="Or paste an image URL" onChange={(event) => onChange({ imageUrl: event.target.value })} />}
           {project.imageUrl && <Button type="button" onClick={() => onChange({ imageUrl: "" })} className="shrink-0 rounded-xl border border-border px-3 py-2.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">Remove</Button>}
         </div>
         {project.imageUrl && (
           <div data-project-cover-preview className="mt-3 flex max-w-sm items-center gap-3 rounded-xl border border-border bg-background p-2 dark:border-slate-700">
             <div className="grid h-12 w-16 min-h-0 min-w-0 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
-              <img src={project.imageUrl} alt="" className="h-full w-full object-cover" />
+              {coverFailed ? (
+                <ImageOff aria-hidden className="h-5 w-5 text-red-400" />
+              ) : (
+                <img src={project.imageUrl} alt="" onError={() => setFailedCoverUrl(project.imageUrl || "")} className="h-full w-full object-cover" />
+              )}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-foreground dark:text-white">Cover image ready</p>
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><ImageIcon className="h-3 w-3 shrink-0" /> Small preview · shown on the project card</p>
+              {coverFailed ? <p role="alert" className="text-xs font-bold leading-5 text-red-600 dark:text-red-400">Cover image could not be loaded. Check the URL and try again.</p> : <p className="truncate text-xs font-bold text-foreground dark:text-white">Cover image ready</p>}
+              {!coverFailed && <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><ImageIcon className="h-3 w-3 shrink-0" /> Small preview · shown on the project card</p>}
             </div>
           </div>
         )}

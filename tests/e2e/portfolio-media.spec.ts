@@ -428,9 +428,34 @@ test.describe("portfolio media and practices", () => {
       await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: mp4, ContentType: "video/mp4" }));
       await request.post("/api/uploads/commit", { headers: auth, data: { key } });
 
+      // Assets follow the portfolio: published serves, draft hides from the
+      // public, and the owner still previews drafts.
+      const created = await json(await request.post("/api/portfolio", { headers: auth, data: {} }));
+      const portfolio = created.portfolio as JsonObject;
+      const content = mediaContent();
+      const saved = await request.patch("/api/portfolio", {
+        headers: auth,
+        data: {
+          revision: Number(portfolio.revision),
+          content,
+          confirmedPublicProjectIds: confirmedPublicProjectIds(content),
+          status: "published",
+        },
+      });
+      expect(saved.status()).toBe(200);
+
       const response = await request.get(String(presigned.assetUrl), { maxRedirects: 0 });
       expect(response.status()).toBe(302);
       expect(response.headers().location).toContain(bucket);
+
+      const current = (await json(await request.get("/api/portfolio", { headers: auth }))).portfolio as JsonObject;
+      const unpublished = await request.patch("/api/portfolio", {
+        headers: auth,
+        data: { revision: Number(current.revision), status: "draft" },
+      });
+      expect(unpublished.status()).toBe(200);
+      expect((await request.get(String(presigned.assetUrl), { maxRedirects: 0 })).status()).toBe(404);
+      expect((await request.get(String(presigned.assetUrl), { headers: auth, maxRedirects: 0 })).status()).toBe(302);
 
       // An unknown extension is never addressable, whatever the path looks like.
       expect((await request.get("/api/public/assets/portfolio/x/y.exe")).status()).toBe(404);

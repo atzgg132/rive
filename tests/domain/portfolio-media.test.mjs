@@ -15,6 +15,7 @@ import {
 } from "../../src/utils/portfolio.ts";
 import {
   MANAGED_ASSET_KEY,
+  assetOwnerId,
   MANAGED_IMAGE_URL,
   MANAGED_MEDIA_URL,
   PORTFOLIO_MEDIA_LIMITS,
@@ -539,4 +540,16 @@ test("cover resolution never reaches for audio or documents", () => {
   const doc = { id: "m-doc", kind: "document", url: "/api/public/assets/portfolio/a/e.pdf", alt: "", caption: "" };
   assert.equal(resolveProjectCoverImage(project({ media: [audio, doc] })), "");
   assert.equal(resolveProjectPlayableCover(project({ media: [audio, doc] })), undefined);
+});
+test("assetOwnerId reads the owning user out of a managed key", () => {
+  assert.equal(assetOwnerId("portfolio/user-123/550e8400-e29b-41d4-a716-446655440000.jpg"), "user-123");
+  assert.equal(assetOwnerId("portfolio/abc/def.mp4"), "abc");
+});
+
+test("assetOwnerId rejects anything that is not an owned managed key", () => {
+  assert.equal(assetOwnerId(""), null);
+  assert.equal(assetOwnerId("portfolio//file.jpg"), null);
+  assert.equal(assetOwnerId("other/user-123/file.jpg"), null);
+  assert.equal(assetOwnerId("portfolio/only-two"), null);
+  assert.equal(assetOwnerId("portfolio/a/b/c.jpg"), null);
 });
