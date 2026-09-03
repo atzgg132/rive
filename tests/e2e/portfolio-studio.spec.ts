@@ -813,7 +813,15 @@ test.describe("portfolio studio", () => {
        above holds it. The publish confirm below lands inside that window. */
     await patchSent;
 
-    await page.getByRole("button", { name: /Publish portfolio/i }).click();
+    /* Toolbar Publish is disabled while saving. A normal click waits the
+       flight out and never queues; bypass disabled so confirm sees it. */
+    await page.locator("[data-guide-target='portfolio-publish']").evaluate((el: HTMLElement) => {
+      el.removeAttribute("disabled");
+      el.removeAttribute("data-disabled");
+      el.removeAttribute("aria-disabled");
+      (el as HTMLButtonElement).disabled = false;
+      el.click();
+    });
     const review = page.locator("[data-portfolio-publish-review]");
     await expect(review).toBeVisible();
 
@@ -824,8 +832,13 @@ test.describe("portfolio studio", () => {
     /* Disabled means a save is in flight right now: without this assertion a
        slow run could confirm after the flight and pass without ever queueing. */
     await expect(confirm).toBeDisabled();
-    await confirm.evaluate((el) => el.removeAttribute("disabled"));
-    await confirm.click();
+    await confirm.evaluate((el: HTMLElement) => {
+      el.removeAttribute("disabled");
+      el.removeAttribute("data-disabled");
+      el.removeAttribute("aria-disabled");
+      (el as HTMLButtonElement).disabled = false;
+      el.click();
+    });
     releaseAutosave();
 
     /* The queued publish replays after the held autosave lands and fails
