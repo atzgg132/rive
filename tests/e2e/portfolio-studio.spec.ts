@@ -812,33 +812,24 @@ test.describe("portfolio studio", () => {
     /* The request is sent — and therefore in flight — while the interception
        above holds it. The publish confirm below lands inside that window. */
     await patchSent;
+    await expect(page.getByText("Saving…")).toBeVisible();
 
-    /* Toolbar Publish is disabled while saving. A normal click waits the
-       flight out and never queues; bypass disabled so confirm sees it. */
-    await page.locator("[data-guide-target='portfolio-publish']").evaluate((el: HTMLElement) => {
-      el.removeAttribute("disabled");
-      el.removeAttribute("data-disabled");
-      el.removeAttribute("aria-disabled");
-      (el as HTMLButtonElement).disabled = false;
-      el.click();
-    });
+    /* Publish used to be disabled while saving. Base UI's click handler still
+       sees the React `disabled` prop after stripping the DOM attribute, so a
+       native click never opened the review. Opening the review is not a save,
+       so the toolbar stays enabled and this is a real click. */
+    await page.locator("[data-guide-target='portfolio-publish']").click();
     const review = page.locator("[data-portfolio-publish-review]");
     await expect(review).toBeVisible();
 
-    /* The app disables confirm while a save is in flight, which is exactly
-       the guard under test: the hook must still queue the publish rather than
-       report success. Enable it to simulate the queued call. */
+    /* Confirm stays enabled during autosave (publishing is confirm-in-flight,
+       not any save). Clicking it now is the path the persist queue exists for. */
     const confirm = review.locator("[data-portfolio-publish-confirm]");
-    /* Disabled means a save is in flight right now: without this assertion a
-       slow run could confirm after the flight and pass without ever queueing. */
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
     await expect(confirm).toBeDisabled();
-    await confirm.evaluate((el: HTMLElement) => {
-      el.removeAttribute("disabled");
-      el.removeAttribute("data-disabled");
-      el.removeAttribute("aria-disabled");
-      (el as HTMLButtonElement).disabled = false;
-      el.click();
-    });
+    await expect(confirm).toContainText(/Publishing/);
+
     releaseAutosave();
 
     /* The queued publish replays after the held autosave lands and fails

@@ -117,6 +117,11 @@ export default function PortfolioDashboardPage() {
      asks first and says what is about to go public. */
   const [reviewingPublish, setReviewingPublish] = useState(false);
   const [publishAttempted, setPublishAttempted] = useState(false);
+  /* Confirm-in-flight only. Autosave also sets `saving`, and tying the review
+     to that made "Publish" and confirm unclickable for the whole flight — the
+     persist queue could never run from the UI, and the dialog labelled an
+     autosave as "Publishing…". */
+  const [publishing, setPublishing] = useState(false);
   const [publicationPrompt, setPublicationPrompt] = useState<PortfolioProject | null>(null);
   /* One preview, opened from one place. The side pane is ambient; this is the
      deliberate look, and on a narrow window it is the only preview there is. */
@@ -257,7 +262,7 @@ export default function PortfolioDashboardPage() {
         {/* Save status first, then the preview door — only where the preview
             is not already on screen: beside a visible pane with its own Inspect control, two doors. */}
         <span aria-live="polite" className="mr-auto text-xs font-semibold text-slate-500 dark:text-slate-400">{saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved"}</span>{!sidePreviewVisible && <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button>}
-        <Button data-guide-target="portfolio-publish" variant="default" onClick={openPublishReview} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
+        <Button data-guide-target="portfolio-publish" variant="default" onClick={openPublishReview} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
       {portfolio.status !== "published" && readiness.score < 100 && !unstarted && (
@@ -428,12 +433,26 @@ export default function PortfolioDashboardPage() {
           content={content}
           publicUrl={savedPublicUrl || (typeof window !== "undefined" ? `${window.location.origin}/p/${slug}` : `/p/${slug}`)}
           published={portfolio.status === "published"}
-          publishing={saving}
+          publishing={publishing}
           error={publishAttempted ? saveError : null}
           errorSection={publishAttempted ? saveErrorSection : null}
           onGoTo={goToSection}
-          onConfirm={() => { void persist({ status: "published" }).then((saved) => { if (saved) { setReviewingPublish(false); setPublishAttempted(false); } else { setPublishAttempted(true); } }); }}
-          onClose={() => { setReviewingPublish(false); setPublishAttempted(false); }}
+          onConfirm={() => {
+            setPublishing(true);
+            void persist({ status: "published" })
+              .then((saved) => {
+                if (saved) {
+                  setReviewingPublish(false);
+                  setPublishAttempted(false);
+                } else {
+                  setPublishAttempted(true);
+                }
+              })
+              .finally(() => {
+                setPublishing(false);
+              });
+          }}
+          onClose={() => { setReviewingPublish(false); setPublishAttempted(false); setPublishing(false); }}
         />
       )}
 
