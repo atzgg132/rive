@@ -772,8 +772,9 @@ test.describe("portfolio studio", () => {
 
     /* Hold the first PATCH open so the autosave below is still in flight when
        the publish is confirmed. Later PATCHes pass straight through. The kinds
-       log below is the backstop against a vacuous pass: if no flight existed
-       at confirm time, the sequence would read ["published"] instead. */
+       log records the order they went out, which proves the window was real —
+       it says nothing about how the dialog behaved. What catches an optimistic
+       `return true` is the review still being open further down. */
     const patchKinds: string[] = [];
     let releaseAutosave: () => void = () => undefined;
     const autosaveGate = new Promise<void>((resolve) => {
@@ -842,9 +843,11 @@ test.describe("portfolio studio", () => {
       return portfolio?.status;
     }, { timeout: 10_000 }).toBe("draft");
 
-    /* The autosave ran first and the failed publish second: with the old
-       optimistic `return true` the publish would have vanished entirely and
-       this would read ["autosave"]. */
+    /* Order, not outcome. The publish went out after the held autosave, so it
+       queued rather than racing it. The old optimistic `return true` queued the
+       replay too, so this sequence was identical under it — this assertion
+       cannot catch that regression on its own. The review assertions above are
+       what fail when the dialog closes on a publish that never happened. */
     expect(patchKinds, "the publish must queue behind the autosave").toEqual(["autosave", "published"]);
   });
 
