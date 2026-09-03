@@ -796,8 +796,9 @@ test.describe("portfolio studio", () => {
     await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
 
     // The studio opens on work; the bio field lives under Profile.
-    await page.locator('[data-portfolio-section="profile"]').click();
-    const bio = page.getByLabel(/Short introduction/i);
+    await page.getByRole("button", { name: /^Profile/i }).click();
+    await expect(page.getByRole("heading", { name: "Basic profile" })).toBeVisible();
+    const bio = page.getByLabel(/^About$/i);
     await expect(bio).toBeVisible();
     const patchSent = page.waitForRequest(
       (request) => request.url().includes("/api/portfolio") && request.method() === "PATCH",
