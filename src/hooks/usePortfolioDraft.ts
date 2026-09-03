@@ -251,8 +251,12 @@ export function usePortfolioDraft() {
         silent: options.silent,
       });
       if (decision === "drop-redundant-autosave") return true;
-      /* NEGATIVE CONTROL — do not ship: pretends a merely-queued save ran. */
-      return true;
+      return new Promise<boolean>((resolve) => {
+        /* A newer request supersedes whatever was waiting: the old waiter is
+           told it never ran rather than left hanging. */
+        pendingPersistRef.current?.resolve?.(false);
+        pendingPersistRef.current = { ...options, resolve };
+      });
     }
 
     inFlightRef.current = true;

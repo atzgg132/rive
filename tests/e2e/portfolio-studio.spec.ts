@@ -775,19 +775,25 @@ test.describe("portfolio studio", () => {
        log below is the backstop against a vacuous pass: if no flight existed
        at confirm time, the sequence would read ["published"] instead. */
     const patchKinds: string[] = [];
+    let releaseAutosave: () => void = () => undefined;
+    const autosaveGate = new Promise<void>((resolve) => {
+      releaseAutosave = resolve;
+    });
     let patchHeld = false;
     await page.route("**/api/portfolio", async (route) => {
       const request = route.request();
-      if (request.method() === "PATCH") {
-        try {
-          patchKinds.push(String(request.postDataJSON()?.status ?? "autosave"));
-        } catch {
-          patchKinds.push("autosave");
-        }
-        if (!patchHeld) {
-          patchHeld = true;
-          await page.waitForTimeout(5_000);
-        }
+      if (request.method() !== "PATCH") return route.continue();
+      try {
+        patchKinds.push(String(request.postDataJSON()?.status ?? "autosave"));
+      } catch {
+        patchKinds.push("autosave");
+      }
+      if (!patchHeld) {
+        patchHeld = true;
+        /* The flight cannot complete until the test releases it after the
+           confirm click, so the publish provably queues behind it. The
+           timeout is a backstop against hanging the suite, not the window. */
+        await Promise.race([autosaveGate, page.waitForTimeout(30_000)]);
       }
       await route.continue();
     });
@@ -814,8 +820,13 @@ test.describe("portfolio studio", () => {
     /* The app disables confirm while a save is in flight, which is exactly
        the guard under test: the hook must still queue the publish rather than
        report success. Enable it to simulate the queued call. */
-    await review.locator("[data-portfolio-publish-confirm]").evaluate((el) => el.removeAttribute("disabled"));
-    await review.locator("[data-portfolio-publish-confirm]").click();
+    const confirm = review.locator("[data-portfolio-publish-confirm]");
+    /* Disabled means a save is in flight right now: without this assertion a
+       slow run could confirm after the flight and pass without ever queueing. */
+    await expect(confirm).toBeDisabled();
+    await confirm.evaluate((el) => el.removeAttribute("disabled"));
+    await confirm.click();
+    releaseAutosave();
 
     /* The queued publish replays after the held autosave lands and fails
        validation — the dialog must stay open showing why, not close on an
