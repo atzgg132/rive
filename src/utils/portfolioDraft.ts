@@ -46,6 +46,22 @@ export function portfolioDraftStorageKey(portfolioId: string) {
   return `rive:portfolio-draft:${portfolioId}`;
 }
 
+export type PersistQueueDecision = "proceed" | "queue" | "drop-redundant-autosave";
+
+/* A save that arrives while another is in flight must not report success it
+   did not earn. It queues behind the flight and resolves from the replay —
+   so publish-confirm sees the real outcome — and only a silent autosave
+   already covered by a queued publish is dropped. */
+export function coalescePersistQueue(input: {
+  inFlight: boolean;
+  queuedStatus?: string;
+  silent?: boolean;
+}): PersistQueueDecision {
+  if (!input.inFlight) return "proceed";
+  if (input.queuedStatus === "published" && input.silent) return "drop-redundant-autosave";
+  return "queue";
+}
+
 export function shouldReplayQueuedPersist(queued: unknown, conflict: boolean): boolean {
   return Boolean(queued) && !conflict;
 }
@@ -195,6 +211,20 @@ export function buildPortfolioPersistBody(input: {
 export function isQuietPersistFailure(error: unknown, online: boolean) {
   if (!online) return true;
   return error instanceof TypeError;
+}
+
+export type PortfolioStudioSection = "profile" | "work" | "practices" | "services" | "proof" | "design";
+
+/* Publish and URL rejections name the missing field, not the editor section
+   that fixes it. This maps the server message to the studio section holding
+   that field, so the save banner can offer one jump instead of a dead end. */
+export function portfolioPublishErrorSection(message: string): PortfolioStudioSection | null {
+  if (!message) return null;
+  if (message.includes("already taken") || message.includes("valid public URL")) return "profile";
+  if (message.includes("display name") || message.includes("headline") || message.includes("short introduction") || message.includes("contact email")) return "profile";
+  if (message.includes("practice")) return "practices";
+  if (message.includes("case study should be shown")) return "work";
+  return null;
 }
 
 export function snapshotFromDraft(input: {

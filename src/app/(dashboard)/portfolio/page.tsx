@@ -19,6 +19,16 @@ import StudioTestimonialsSection from "@/components/portfolio/studio/StudioTesti
 import StudioWorkSection from "@/components/portfolio/studio/StudioWorkSection";
 import { FirstVisitNote } from "@/components/dashboard/ActivationCard";
 import { usePortfolioDraft } from "@/hooks/usePortfolioDraft";
+import { portfolioPublishErrorSection, type PortfolioStudioSection } from "@/utils/portfolioDraft";
+
+const STUDIO_SECTION_LABELS: Record<PortfolioStudioSection, string> = {
+  profile: "Profile",
+  work: "Selected work",
+  practices: "Practices",
+  services: "Services",
+  proof: "Testimonials",
+  design: "Appearance",
+};
 
 function getPortfolioReadiness(content: PortfolioContent, seo: { title: string; description: string }, status: string) {
   const publicProjects = content.projects.filter((project) => project.visibility !== "private");
@@ -46,7 +56,9 @@ export default function PortfolioDashboardPage() {
     loading,
     loadError,
     saving,
+    dirty,
     saveError,
+    slugError,
     conflictState,
     loadPortfolio,
     persist,
@@ -104,6 +116,12 @@ export default function PortfolioDashboardPage() {
   /* Publishing is the one action that puts someone in front of clients, so it
      asks first and says what is about to go public. */
   const [reviewingPublish, setReviewingPublish] = useState(false);
+  const [publishAttempted, setPublishAttempted] = useState(false);
+  /* Confirm-in-flight only. Autosave also sets `saving`, and tying the review
+     to that made "Publish" and confirm unclickable for the whole flight — the
+     persist queue could never run from the UI, and the dialog labelled an
+     autosave as "Publishing…". */
+  const [publishing, setPublishing] = useState(false);
   const [publicationPrompt, setPublicationPrompt] = useState<PortfolioProject | null>(null);
   /* One preview, opened from one place. The side pane is ambient; this is the
      deliberate look, and on a narrow window it is the only preview there is. */
@@ -123,6 +141,7 @@ export default function PortfolioDashboardPage() {
   /* Most portfolios arrive prefilled from the account, so this is the rarer
      case: nothing typed, nothing tracked, nothing to build on. */
   const unstarted = isPortfolioUnstarted(content);
+  const saveErrorSection = portfolioPublishErrorSection(saveError);
 
   /* The unread count is loaded up front so the tab can carry a badge without
      the owner having to open it first. A failure here is silent: an absent
@@ -165,6 +184,24 @@ export default function PortfolioDashboardPage() {
     query.addEventListener("change", sync);
     return () => query.removeEventListener("change", sync);
   }, []);
+
+  /* Autosave covers most exits, but a navigation in the second before it fires
+     would still drop the edit. The browser's own guard is the backstop, and it
+     only arms while there is something unsaved. */
+  useEffect(() => {
+    if (!dirty) return;
+    const guard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirty]);
+
+  const openPublishReview = () => {
+    setPublishAttempted(false);
+    setReviewingPublish(true);
+  };
 
   const copyUrl = async () => {
     if (!savedPublicUrl) return;
@@ -222,10 +259,10 @@ export default function PortfolioDashboardPage() {
       />
 
       <div data-portfolio-sticky-actions className="sticky -top-3 z-20 flex min-h-12 flex-wrap items-center justify-end gap-2 border-y border-border bg-background px-1 py-2 sm:-top-4 sm:px-2 md:-top-6 xl:-top-8">
-        {/* Only where the preview is not already on screen. Beside a visible pane
-            that carries its own Inspect control, this would be the same door twice. */}
-        {!sidePreviewVisible && <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button>}
-        <Button data-guide-target="portfolio-publish" variant="default" onClick={() => setReviewingPublish(true)} disabled={saving} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
+        {/* Save status first, then the preview door — only where the preview
+            is not already on screen: beside a visible pane with its own Inspect control, two doors. */}
+        <span aria-live="polite" className="mr-auto text-xs font-semibold text-slate-500 dark:text-slate-400">{saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved"}</span>{!sidePreviewVisible && <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button>}
+        <Button data-guide-target="portfolio-publish" variant="default" onClick={openPublishReview} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
       {portfolio.status !== "published" && readiness.score < 100 && !unstarted && (
@@ -254,7 +291,7 @@ export default function PortfolioDashboardPage() {
         <div className="flex max-w-full flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span className={`h-2 w-2 rounded-full ${portfolio?.status === "published" ? "bg-emerald-500" : "bg-amber-500"}`} /> {portfolio?.status === "published" ? "Published" : "Draft — publish when you are ready"}{savedPublicUrl && <><span className="hidden truncate sm:inline">· {savedPublicUrl}</span><Button onClick={copyUrl} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Copy live portfolio URL" aria-label="Copy live portfolio URL">{copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}</Button></>}</div>
       </div>
 
-      {saveError && <div data-portfolio-save-alert role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Keep my draft</Button></div> : <Button onClick={() => void persist()} disabled={saving} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button>}</div>}
+      {saveError && <div data-portfolio-save-alert role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Keep my draft</Button></div> : <>{saveErrorSection && <Button onClick={() => goToSection(saveErrorSection)} className="rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-800 dark:border-blue-800 dark:text-blue-100">Go to {STUDIO_SECTION_LABELS[saveErrorSection]}</Button>}<Button onClick={() => void persist()} disabled={saving} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button></>}</div>}
 
       {/* Above the shell, not inside a panel: what to do next is true of the
           whole portfolio, not of whichever section happens to be open. An
@@ -262,7 +299,7 @@ export default function PortfolioDashboardPage() {
           lists of what to do next is worse than either one alone. */}
       {tab === "edit" && (unstarted
         ? <PortfolioFirstRun onGoTo={goToSection} />
-        : <PortfolioNextSteps steps={steps} onGoTo={goToSection} onPublish={() => setReviewingPublish(true)} />)}
+        : <PortfolioNextSteps steps={steps} onGoTo={goToSection} onPublish={openPublishReview} />)}
 
       {tab === "edit" && <div className="grid min-h-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_26rem]">
       {/* self-start, not the grid default of stretch. The preview column is a
@@ -280,12 +317,12 @@ export default function PortfolioDashboardPage() {
                 is a genuine differentiator, but its label says plainly who it is
                 for so the majority with one discipline can skip it. */}
             {([
-              { key: "work", label: "Selected work", sub: `${content.projects.length} projects`, icon: FolderKanban },
-              { key: "profile", label: "Profile", sub: "Identity and contact", icon: UserRound },
-              { key: "practices", label: "Practices", sub: content.practices.length > 0 ? `${content.practices.length} practices` : "Two disciplines?", icon: Layers },
-              { key: "services", label: "Services", sub: `${content.services.length} services`, icon: BriefcaseBusiness },
-              { key: "proof", label: "Testimonials", sub: `${content.testimonials.length} added`, icon: Sparkles },
-              { key: "design", label: "Appearance", sub: "Theme and visibility", icon: Settings2 },
+              { key: "work", label: STUDIO_SECTION_LABELS.work, sub: `${content.projects.length} projects`, icon: FolderKanban },
+              { key: "profile", label: STUDIO_SECTION_LABELS.profile, sub: "Identity and contact", icon: UserRound },
+              { key: "practices", label: STUDIO_SECTION_LABELS.practices, sub: content.practices.length > 0 ? `${content.practices.length} practices` : "Two disciplines?", icon: Layers },
+              { key: "services", label: STUDIO_SECTION_LABELS.services, sub: `${content.services.length} services`, icon: BriefcaseBusiness },
+              { key: "proof", label: STUDIO_SECTION_LABELS.proof, sub: `${content.testimonials.length} added`, icon: Sparkles },
+              { key: "design", label: STUDIO_SECTION_LABELS.design, sub: "Theme and visibility", icon: Settings2 },
             ] as const).map(({ key, label, sub, icon: Icon }) => (
               <Button data-guide-target={key === "profile" ? "portfolio-profile" : key === "work" ? "portfolio-project" : undefined} data-portfolio-section={key} key={key} onClick={() => setEditorSection(key)} className={`grid min-h-14 w-full grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${editorSection === key ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-blue-300 dark:ring-slate-700" : "text-slate-600 hover:bg-white/70 dark:text-slate-400 dark:hover:bg-slate-800/70"}`}>
                 <Icon className="h-4 w-4 justify-self-center" />
@@ -304,6 +341,7 @@ export default function PortfolioDashboardPage() {
             <StudioProfileSection
               content={content}
               slug={slug}
+              slugError={slugError}
               templateKey={templateKey}
               saving={saving}
               onUpdateContent={updateContent}
@@ -395,10 +433,26 @@ export default function PortfolioDashboardPage() {
           content={content}
           publicUrl={savedPublicUrl || (typeof window !== "undefined" ? `${window.location.origin}/p/${slug}` : `/p/${slug}`)}
           published={portfolio.status === "published"}
-          publishing={saving}
+          publishing={publishing}
+          error={publishAttempted ? saveError : null}
+          errorSection={publishAttempted ? saveErrorSection : null}
           onGoTo={goToSection}
-          onConfirm={() => { setReviewingPublish(false); void persist({ status: "published" }); }}
-          onClose={() => setReviewingPublish(false)}
+          onConfirm={() => {
+            setPublishing(true);
+            void persist({ status: "published" })
+              .then((saved) => {
+                if (saved) {
+                  setReviewingPublish(false);
+                  setPublishAttempted(false);
+                } else {
+                  setPublishAttempted(true);
+                }
+              })
+              .finally(() => {
+                setPublishing(false);
+              });
+          }}
+          onClose={() => { setReviewingPublish(false); setPublishAttempted(false); setPublishing(false); }}
         />
       )}
 

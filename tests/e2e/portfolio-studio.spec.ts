@@ -760,6 +760,97 @@ test.describe("portfolio studio", () => {
     }, { timeout: 15_000 }).toBe("published");
   });
 
+  test("a publish confirmed mid-save waits for the real outcome", async ({ page, context }) => {
+    const { token, user } = await studioUser("queued-publish");
+    /* Publish validation must fail: the queued publish replays against this
+       content, and only a real failure proves the dialog waited for it. */
+    await db.prisma.portfolio.update({
+      where: { userId: user.id },
+      data: { content: { ...studioContent(), headline: "" } },
+    });
+    await context.addCookies([{ name: "rive_session", value: token, url: baseUrl() }]);
+
+    /* Hold the first PATCH open so the autosave below is still in flight when
+       the publish is confirmed. Later PATCHes pass straight through. The kinds
+       log records the order they went out, which proves the window was real —
+       it says nothing about how the dialog behaved. What catches an optimistic
+       `return true` is the review still being open further down. */
+    const patchKinds: string[] = [];
+    let releaseAutosave: () => void = () => undefined;
+    const autosaveGate = new Promise<void>((resolve) => {
+      releaseAutosave = resolve;
+    });
+    let patchHeld = false;
+    await page.route("**/api/portfolio", async (route) => {
+      const request = route.request();
+      if (request.method() !== "PATCH") return route.continue();
+      try {
+        patchKinds.push(String(request.postDataJSON()?.status ?? "autosave"));
+      } catch {
+        patchKinds.push("autosave");
+      }
+      if (!patchHeld) {
+        patchHeld = true;
+        /* The flight cannot complete until the test releases it after the
+           confirm click, so the publish provably queues behind it. The
+           timeout is a backstop against hanging the suite, not the window. */
+        await Promise.race([autosaveGate, page.waitForTimeout(30_000)]);
+      }
+      await route.continue();
+    });
+
+    await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Portfolio Studio" })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: /^Profile/i }).click();
+    await expect(page.getByRole("heading", { name: "Basic profile" })).toBeVisible();
+    const bio = page.getByPlaceholder(/Tell people what you do, who you help/i);
+    await expect(bio).toBeVisible();
+    const patchSent = page.waitForRequest(
+      (request) => request.url().includes("/api/portfolio") && request.method() === "PATCH",
+    );
+    await bio.pressSequentially(" Still iterating on the framing.");
+    /* The request is sent — and therefore in flight — while the interception
+       above holds it. The publish confirm below lands inside that window. */
+    await patchSent;
+    await expect(page.getByText("Saving…")).toBeVisible();
+
+    /* Publish used to be disabled while saving. Base UI's click handler still
+       sees the React `disabled` prop after stripping the DOM attribute, so a
+       native click never opened the review. Opening the review is not a save,
+       so the toolbar stays enabled and this is a real click. */
+    await page.locator("[data-guide-target='portfolio-publish']").click();
+    const review = page.locator("[data-portfolio-publish-review]");
+    await expect(review).toBeVisible();
+
+    /* Confirm stays enabled during autosave (publishing is confirm-in-flight,
+       not any save). Clicking it now is the path the persist queue exists for. */
+    const confirm = review.locator("[data-portfolio-publish-confirm]");
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+    await expect(confirm).toBeDisabled();
+    await expect(confirm).toContainText(/Publishing/);
+
+    releaseAutosave();
+
+    /* The queued publish replays after the held autosave lands and fails
+       validation — the dialog must stay open showing why, not close on an
+       optimistic yes. */
+    await expect(review).toContainText(/Add a headline before publishing\./, { timeout: 20_000 });
+    await expect(review).toBeVisible();
+    await expect.poll(async () => {
+      const portfolio = await db.prisma.portfolio.findUnique({ where: { userId: user.id }, select: { status: true } });
+      return portfolio?.status;
+    }, { timeout: 10_000 }).toBe("draft");
+
+    /* Order, not outcome. The publish went out after the held autosave, so it
+       queued rather than racing it. The old optimistic `return true` queued the
+       replay too, so this sequence was identical under it — this assertion
+       cannot catch that regression on its own. The review assertions above are
+       what fail when the dialog closes on a publish that never happened. */
+    expect(patchKinds, "the publish must queue behind the autosave").toEqual(["autosave", "published"]);
+  });
+
   test("the template gallery shows the owner's own work, not six gradients", async ({ page, context }) => {
     await context.addCookies([{ name: "rive_session", value: (await studioUser("templates")).token, url: baseUrl() }]);
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });

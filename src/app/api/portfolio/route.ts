@@ -122,7 +122,7 @@ export async function PATCH(req: NextRequest) {
       const slug = normalizeSlug(String(body.slug));
       if (!slug) return NextResponse.json({ success: false, message: "Choose a valid public URL." }, { status: 400 });
       const collision = await prisma.portfolio.findFirst({ where: { slug, NOT: { userId: session.userId } } });
-      if (collision) return NextResponse.json({ success: false, message: "That public URL is already taken." }, { status: 409 });
+      if (collision) return NextResponse.json({ success: false, code: "PORTFOLIO_SLUG_TAKEN", message: "That public URL is already taken." }, { status: 409 });
       data.slug = slug;
     }
     if (body.status === "published" || body.status === "draft") {

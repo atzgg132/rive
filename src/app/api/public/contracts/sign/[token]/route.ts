@@ -24,6 +24,7 @@ import { durableRateLimit } from "@/utils/durableRateLimit";
 import { createNotification } from "@/utils/contracts";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { ensureAcceptedAgreementWorkSetup } from "@/utils/projectGeneration";
 
 async function resolveLink(token: string) {
   return prisma.contractReviewLink.findUnique({
@@ -137,7 +138,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     }
     const typedName = typeof body?.typedName === "string" ? body.typedName.trim().slice(0, 180) : "";
     if (!typedName) return NextResponse.json({ success: false, message: "Type your full name to record acceptance." }, { status: 400 });
-    if (typedName.toLocaleLowerCase() !== link!.signer!.name.trim().toLocaleLowerCase()) return NextResponse.json({ success: false, message: "The typed name must match the named party. Ask the sender to correct the party details if needed." }, { status: 400 });
+    if (typedName.toLocaleLowerCase() !== link!.signer!.name.trim().toLocaleLowerCase()) {
+      return NextResponse.json({
+        success: false,
+        message: `The typed name must match the named party exactly (ignore capitalization): “${link!.signer!.name}”. Ask the sender to edit the Agreement and save a new version if that party name is wrong.`,
+      }, { status: 400 });
+    }
     if (body?.consentAccepted !== true) return NextResponse.json({ success: false, message: "You must confirm the recorded-acceptance consent before continuing." }, { status: 400 });
     const artifactToken = createAccessToken();
 
@@ -189,31 +195,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const executedAt = new Date();
       const executed = await transitionContractStatus(tx, { where: { id: link!.contractId }, from: "signing", to: "executed", data: { executedAt, reviewExpiresAt: null } });
       if (executed !== 1) throw new Error("This Agreement was changed or voided before final acceptance was recorded.");
-      const planItems = await tx.contractPaymentPlanItem.findMany({ where: { contractId: link!.contractId }, orderBy: { sequence: "asc" }, take: 25 });
-      for (const item of planItems) {
-        await tx.contractPaymentPlanItem.update({ where: { id: item.id }, data: { status: "active" } });
-        const acceptedTriggerDate = item.triggerType === "on_signing"
-          ? executedAt
-          : ["fixed_date", "milestone_due"].includes(item.triggerType)
-            ? item.triggerDate
-            : null;
-        await tx.contractBillingOccurrence.create({
-          data: {
-            contractId: link!.contractId,
-            paymentPlanItemId: item.id,
-            status: "awaiting_work_setup",
-            eligibleAt: acceptedTriggerDate,
-          },
-        });
-      }
-      await tx.projectGenerationRecord.create({
-        data: {
-          userId: link!.contract.userId,
-          contractId: link!.contractId,
-          acceptedVersionId: link!.version!.id,
-          status: "pending",
-        },
-      });
       await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, eventType: "contract_executed", metadata: { executedAt: executedAt.toISOString(), signedBy: "client_and_owner" } } });
        const allSignatures = await tx.contractSignature.findMany({ where: { contractId: link!.contractId, versionId: link!.version!.id }, orderBy: { signedAt: "asc" }, take: 10, select: { id: true, signerRole: true, signerName: true, signerEmail: true, signatureType: true, consentAccepted: true, consentTextVersion: true, ipHash: true, userAgentHash: true, providerEventId: true, signedAt: true } });
        const evidence = {
@@ -261,6 +242,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       };
     }
 
+    if (completion.completed) {
+      await ensureAcceptedAgreementWorkSetup(prisma, {
+        userId: link!.contract.userId,
+        contractId: link!.contractId,
+        acceptedVersionId: link!.version!.id,
+      }).catch((error) => {
+        console.error("Post-acceptance work-setup backfill failed:", error);
+      });
+    }
     if (completion.completed && completion.artifactToken) {
       const executed = await prisma.contract.findUnique({ where: { id: link!.contractId }, include: { client: { select: { name: true, email: true } } } });
       if (executed) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { INQUIRY_FIELD_LIMITS } from "@/utils/portfolioInquiries";
 import { ArrowUpRight, Check, Loader2, Mail } from "lucide-react";
 
 type Props = {
@@ -16,6 +17,8 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [messageLength, setMessageLength] = useState(0);
+  const messageMax = INQUIRY_FIELD_LIMITS.message.max;
   /* A case study links here with ?project=<id>, so the owner can see which work
      prompted the message. Held in a ref because nothing renders from it — it is
      read once, at submit. Taken from the URL directly rather than through
@@ -71,6 +74,7 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
       if (!response.ok) throw new Error(data?.message || "Your enquiry could not be sent.");
       setSent(true);
       formElement.reset();
+      setMessageLength(0);
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Your enquiry could not be sent.");
     } finally {
@@ -86,7 +90,7 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
         </span>
         <h3 className="mt-5 text-xl font-black text-white">Your enquiry is on its way.</h3>
         <p className="mt-2 text-sm leading-6 text-white/75">You can expect a reply directly at the email address you provided.</p>
-        <button type="button" onClick={() => setSent(false)} className="mt-5 text-xs font-extrabold text-white underline underline-offset-4">
+        <button type="button" onClick={() => { setSent(false); setMessageLength(0); }} className="mt-5 text-xs font-extrabold text-white underline underline-offset-4">
           Send another message
         </button>
       </div>
@@ -110,8 +114,9 @@ export default function PortfolioInquiryForm({ portfolioSlug, contactEmail, prev
         </label>
         <label className="grid gap-1.5 sm:col-span-2">
           <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/70">A little about the project</span>
-          <textarea name="message" required minLength={10} maxLength={5000} rows={4} className={`${fieldClass} resize-y`} placeholder="Share the goal, rough scope, timeline, or anything useful to know." />
+          <textarea name="message" required minLength={INQUIRY_FIELD_LIMITS.message.min} maxLength={messageMax} rows={4} onChange={(event) => setMessageLength(event.target.value.length)} aria-describedby="inquiry-message-count" className={`${fieldClass} resize-y`} placeholder="Share the goal, rough scope, timeline, or anything useful to know." />
         </label>
+        <p id="inquiry-message-count" className="text-right text-[10px] font-semibold tabular-nums text-white/55 sm:col-span-2">{messageLength}/{messageMax}</p>
         <label className="hidden" aria-hidden="true">
           Website
           <input name="website" tabIndex={-1} autoComplete="off" />

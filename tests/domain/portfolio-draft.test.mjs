@@ -4,8 +4,10 @@ import test from "node:test";
 import {
   buildPortfolioPersistBody,
   classifyLocalDraft,
+  coalescePersistQueue,
   isQuietPersistFailure,
   parsePortfolioDraftSnapshot,
+  portfolioPublishErrorSection,
   shouldApplyServerSnapshot,
 } from "../../src/utils/portfolioDraft.ts";
 
@@ -115,4 +117,36 @@ test("a changed public URL is still sent, so it can be claimed or rejected", () 
 
 test("without a known saved slug the URL is sent, preserving old behaviour", () => {
   assert.equal(persistBody("agnik", undefined).slug, "agnik");
+});
+test("publish rejections map to the studio section holding the missing field", () => {
+  assert.equal(portfolioPublishErrorSection("Add your display name before publishing."), "profile");
+  assert.equal(portfolioPublishErrorSection("Add a headline before publishing."), "profile");
+  assert.equal(portfolioPublishErrorSection("Add a short introduction before publishing."), "profile");
+  assert.equal(portfolioPublishErrorSection("Add a contact email before publishing."), "profile");
+  assert.equal(portfolioPublishErrorSection("That public URL is already taken."), "profile");
+  assert.equal(portfolioPublishErrorSection("Choose a valid public URL."), "profile");
+  assert.equal(portfolioPublishErrorSection("Name every practice, or remove the empty one, before publishing."), "practices");
+  assert.equal(portfolioPublishErrorSection("Confirm that this case study should be shown on your public portfolio before publishing it."), "work");
+});
+
+test("unrelated save failures offer no section jump", () => {
+  assert.equal(portfolioPublishErrorSection(""), null);
+  assert.equal(portfolioPublishErrorSection("This portfolio changed in another tab. Reload before saving."), null);
+  assert.equal(portfolioPublishErrorSection("could not save portfolio"), null);
+});
+test("a save with nothing in flight runs immediately", () => {
+  assert.equal(coalescePersistQueue({ inFlight: false }), "proceed");
+});
+
+test("a save that arrives mid-flight queues behind it instead of reporting success", () => {
+  assert.equal(coalescePersistQueue({ inFlight: true }), "queue");
+  assert.equal(coalescePersistQueue({ inFlight: true, queuedStatus: "published" }), "queue");
+  assert.equal(coalescePersistQueue({ inFlight: true, silent: true }), "queue");
+});
+
+test("a silent autosave covered by a queued publish is dropped", () => {
+  assert.equal(
+    coalescePersistQueue({ inFlight: true, queuedStatus: "published", silent: true }),
+    "drop-redundant-autosave",
+  );
 });

@@ -109,6 +109,15 @@ export function keyExtension(key: string): string {
   return key.split(".").at(-1)?.toLowerCase() || "";
 }
 
+/* Keys embed their owner: `portfolio/{userId}/{file}.{ext}`. The public
+   assets route uses this to find the owner's portfolio without trusting any
+   other part of the path. */
+export function assetOwnerId(key: string): string | null {
+  const segments = key.split("/");
+  if (segments.length !== 3 || segments[0] !== "portfolio" || !segments[1]) return null;
+  return segments[1];
+}
+
 /** Images and documents stream through the app and cache well. Video and audio
  *  are redirected to storage so range requests, seeking, and egress bypass us.
  *

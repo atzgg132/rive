@@ -19,7 +19,8 @@ import type { PortfolioContent } from "@/utils/portfolio";
  * list feeling like six equal obligations.
  */
 
-export type StudioSection = "profile" | "work" | "practices" | "services" | "proof" | "design";
+import type { PortfolioStudioSection } from "@/utils/portfolioDraft";
+export type StudioSection = PortfolioStudioSection;
 
 export type PortfolioStep = {
   id: string;
