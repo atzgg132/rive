@@ -61,10 +61,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     const ownerName = contract.user.name || contract.user.email;
     if (clientSigner.name.trim() !== contract.client.name.trim() || clientSigner.email.trim().toLowerCase() !== contract.client.email.trim().toLowerCase()) {
-      return NextResponse.json({ success: false, message: "The client details changed after this draft was created. Save a new Agreement version before finalizing." }, { status: 409 });
+      return NextResponse.json({
+        success: false,
+        message: `The client on this draft is snapshotted as “${clientSigner.name} <${clientSigner.email}>”, but the live client is now “${contract.client.name} <${contract.client.email || "missing email"}”. Edit the Agreement and save a new version before finalizing.`,
+      }, { status: 409 });
     }
     if (ownerSigner.name.trim() !== ownerName.trim() || ownerSigner.email.trim().toLowerCase() !== contract.user.email.trim().toLowerCase()) {
-      return NextResponse.json({ success: false, message: "The owner details changed after this draft was created. Save a new Agreement version before finalizing." }, { status: 409 });
+      return NextResponse.json({
+        success: false,
+        message: `The owner on this draft is snapshotted as “${ownerSigner.name} <${ownerSigner.email}>”, but the live owner is now “${ownerName} <${contract.user.email}>”. Edit the Agreement and save a new version before finalizing.`,
+      }, { status: 409 });
     }
 
     if (contract.status === "expired" && contract.providerEnvelopeId) {

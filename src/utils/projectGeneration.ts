@@ -158,8 +158,127 @@ function assertPlanKey(value: string, label: string): string {
 export async function getOwnedProjectGeneration(userId: string, contractId: string): Promise<OwnedProjectGeneration | null> {
   return prisma.projectGenerationRecord.findFirst({
     where: { userId, contractId, contract: { userId, status: "executed" } },
+    orderBy: { createdAt: "desc" },
     include: generationInclude,
   });
+}
+
+export function acceptedWorkSetupBillingPark(
+  executedAt: Date,
+  item: { triggerType: string; triggerDate: Date | null },
+): { status: "awaiting_work_setup"; eligibleAt: Date | null } {
+  const eligibleAt = item.triggerType === "on_signing"
+    ? executedAt
+    : ["fixed_date", "milestone_due"].includes(item.triggerType)
+      ? item.triggerDate
+      : null;
+  return { status: "awaiting_work_setup", eligibleAt };
+}
+
+type WorkSetupPersistenceClient = Prisma.TransactionClient | typeof prisma;
+
+export async function persistAcceptedAgreementWorkSetup(
+  client: WorkSetupPersistenceClient,
+  params: { userId: string; contractId: string; acceptedVersionId?: string | null },
+): Promise<{ generationId: string; createdGeneration: boolean; parkedOccurrenceCount: number }> {
+  const contract = await client.contract.findFirst({
+    where: { id: params.contractId, userId: params.userId },
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+      executedAt: true,
+      paymentPlanItems: { orderBy: { sequence: "asc" }, select: { id: true, triggerType: true, triggerDate: true } },
+      versions: { orderBy: { version: "desc" }, take: 1, select: { id: true } },
+    },
+  });
+  if (!contract || contract.status !== "executed") {
+    throw new WorkSetupError("Accepted Agreement work setup was not found.", "generation_not_found", 404);
+  }
+
+  const acceptedVersionId = params.acceptedVersionId || contract.versions[0]?.id;
+  if (!acceptedVersionId) {
+    throw new WorkSetupError("Accepted Agreement version not found.", "accepted_version_not_found", 409);
+  }
+
+  let createdGeneration = false;
+  let generation = await client.projectGenerationRecord.findFirst({
+    where: { userId: params.userId, contractId: contract.id },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, acceptedVersionId: true },
+  });
+  if (!generation) {
+    try {
+      generation = await client.projectGenerationRecord.create({
+        data: {
+          userId: params.userId,
+          contractId: contract.id,
+          acceptedVersionId,
+          status: "pending",
+        },
+        select: { id: true, acceptedVersionId: true },
+      });
+      createdGeneration = true;
+    } catch (error) {
+      const uniqueConflict = Boolean(error && typeof error === "object" && "code" in error && error.code === "P2002");
+      if (!uniqueConflict) throw error;
+      generation = await client.projectGenerationRecord.findFirst({
+        where: { userId: params.userId, contractId: contract.id },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, acceptedVersionId: true },
+      });
+      if (!generation) throw error;
+    }
+  }
+  if (!generation) {
+    throw new WorkSetupError("Accepted Agreement work setup was not found.", "generation_not_found", 404);
+  }
+
+  const existingOccurrences = await client.contractBillingOccurrence.findMany({
+    where: { contractId: contract.id },
+    select: { paymentPlanItemId: true, status: true },
+  });
+  const existingItemIds = new Set(existingOccurrences.map((occurrence) => occurrence.paymentPlanItemId));
+  const executedAt = contract.executedAt || new Date();
+  const missingParks = contract.paymentPlanItems
+    .filter((item) => !existingItemIds.has(item.id))
+    .map((item) => ({
+      contractId: contract.id,
+      paymentPlanItemId: item.id,
+      ...acceptedWorkSetupBillingPark(executedAt, item),
+    }));
+  let parkedOccurrenceCount = 0;
+  if (missingParks.length > 0) {
+    const created = await client.contractBillingOccurrence.createMany({
+      data: missingParks,
+      skipDuplicates: true,
+    });
+    parkedOccurrenceCount = created.count;
+  }
+
+  await client.contractPaymentPlanItem.updateMany({
+    where: { contractId: contract.id, status: "planned" },
+    data: { status: "active" },
+  });
+
+  return { generationId: generation.id, createdGeneration, parkedOccurrenceCount };
+}
+
+export async function ensureAcceptedAgreementWorkSetup(
+  client: WorkSetupPersistenceClient,
+  params: { userId: string; contractId: string; acceptedVersionId?: string | null },
+): Promise<{ generationId: string; createdGeneration: boolean; parkedOccurrenceCount: number }> {
+  if ("$transaction" in client && typeof client.$transaction === "function") {
+    return client.$transaction((tx) => persistAcceptedAgreementWorkSetup(tx, params));
+  }
+  return persistAcceptedAgreementWorkSetup(client, params);
+}
+
+async function requireOwnedProjectGeneration(userId: string, contractId: string): Promise<OwnedProjectGeneration> {
+  await ensureAcceptedAgreementWorkSetup(prisma, { userId, contractId });
+  const generation = await getOwnedProjectGeneration(userId, contractId);
+  if (!generation) throw new WorkSetupError("Accepted Agreement work setup was not found.", "generation_not_found", 404);
+  return generation;
 }
 
 export function normalizeWorkSetupPlan(generation: OwnedProjectGeneration, rawPlan: unknown): WorkSetupPlan {
@@ -314,8 +433,7 @@ function resultIdsFromJson(value: Prisma.JsonValue | null): WorkSetupResultIds |
 }
 
 export async function saveWorkSetupPreview(userId: string, contractId: string, rawPlan: unknown) {
-  const generation = await getOwnedProjectGeneration(userId, contractId);
-  if (!generation) throw new WorkSetupError("Accepted Agreement work setup was not found.", "generation_not_found", 404);
+  const generation = await requireOwnedProjectGeneration(userId, contractId);
   if (generation.status === "succeeded") {
     const saved = resultIdsFromJson(generation.resultIds);
     return { generation, plan: generation.previewPlan, hash: generation.previewHash, resultIds: saved, replayed: true };
@@ -378,8 +496,7 @@ export async function confirmWorkSetup(
   previewHash: string,
   idempotencyKey: string,
 ): Promise<{ generation: OwnedProjectGeneration; resultIds: WorkSetupResultIds; replayed: boolean }> {
-  const generation = await getOwnedProjectGeneration(userId, contractId);
-  if (!generation) throw new WorkSetupError("Accepted Agreement work setup was not found.", "generation_not_found", 404);
+  const generation = await requireOwnedProjectGeneration(userId, contractId);
   if (!previewHash || generation.previewHash !== previewHash) {
     throw new WorkSetupError("This work setup preview is stale. Preview it again before confirming.", "stale_preview", 409);
   }

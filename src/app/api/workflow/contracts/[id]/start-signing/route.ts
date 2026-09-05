@@ -37,10 +37,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const ownerSigner = contract.signers.find((signer) => signer.role === "owner");
     const ownerName = contract.user.name || contract.user.email;
     if (contract.signers.length !== 2 || !clientSigner || !ownerSigner || clientSigner.name.trim() !== contract.client.name.trim() || clientSigner.email.trim().toLowerCase() !== contract.client.email.trim().toLowerCase()) {
-      return NextResponse.json({ success: false, message: "The client details changed after this Agreement version was created. Edit and save a new version before starting recorded acceptance." }, { status: 409 });
+      return NextResponse.json({
+        success: false,
+        message: `The client on this finalized version is snapshotted as “${clientSigner?.name || "missing"} <${clientSigner?.email || "missing"}>”, but the live client is now “${contract.client.name} <${contract.client.email || "missing email"}”. Edit the draft and save a new version before starting recorded acceptance.`,
+      }, { status: 409 });
     }
     if (ownerSigner.name.trim() !== ownerName.trim() || ownerSigner.email.trim().toLowerCase() !== contract.user.email.trim().toLowerCase()) {
-      return NextResponse.json({ success: false, message: "The owner details changed after this Agreement version was created. Edit and save a new version before starting recorded acceptance." }, { status: 409 });
+      return NextResponse.json({
+        success: false,
+        message: `The owner on this finalized version is snapshotted as “${ownerSigner.name} <${ownerSigner.email}>”, but the live owner is now “${ownerName} <${contract.user.email}>”. Edit the draft and save a new version before starting recorded acceptance.`,
+      }, { status: 409 });
     }
 
     const claimed = await transitionContractStatus(prisma, { where: { id, userId: session.userId }, from: "ready_to_sign", to: "starting" });
@@ -84,6 +90,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await prisma.$transaction(async (tx) => {
         const started = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: "starting", to: "signing", data: { provider: envelope.provider, providerEnvelopeId: envelope.providerEnvelopeId, reviewExpiresAt: expiresAt } });
         if (started !== 1) throw new Error("Recorded acceptance was cancelled or changed while the provider was preparing the request.");
+        await tx.contractReviewLink.updateMany({
+          where: { contractId: id, signerId: { in: [clientSigner.id, ownerSigner.id] }, type: "sign", revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
         await tx.contractReviewLink.createMany({
           data: [
             { contractId: id, versionId: version.id, signerId: clientSigner.id, tokenHash: clientTokenHash, type: "sign", expiresAt },
