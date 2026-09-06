@@ -140,6 +140,25 @@ test("log in from the marketing header stays on the page", async ({ page }) => {
   await expect(page).not.toHaveURL(/\/login/);
 });
 
+test("the dashboard shell loads Outfit after login, not only the fallback stack", async ({ page }) => {
+  await mockSession(page, "complete");
+  await page.goto("/dashboard", { waitUntil: "load" });
+  await expect(page.locator("[data-dashboard-shell]")).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => document.fonts.ready);
+  const loaded = await page.evaluate(async () => {
+    await document.fonts.load('16px "Outfit"');
+    await document.fonts.load('600 12px "JetBrains Mono"');
+    return {
+      family: getComputedStyle(document.body).fontFamily,
+      outfit: document.fonts.check('16px "Outfit"'),
+      mono: document.fonts.check('600 12px "JetBrains Mono"'),
+    };
+  });
+  expect(loaded.family).toContain("Outfit");
+  expect(loaded.outfit, "Outfit did not load; dashboard is on the fallback face").toBe(true);
+  expect(loaded.mono, "JetBrains Mono did not load").toBe(true);
+});
+
 test("an off-origin next path is ignored", async ({ page }) => {
   await mockSession(page, "complete");
   await page.route("**/api/auth/login**", async (route) => {
