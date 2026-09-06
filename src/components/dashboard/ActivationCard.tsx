@@ -41,8 +41,8 @@ export function ActivationCard({ plan, firstRun = false, engagementFlowEnabled =
   const recommended = engagementFlowEnabled && (plan.counts.clients === 0 || plan.counts.projects === 0)
     ? {
         id: "start_engagement",
-        label: "Start a client engagement",
-        description: "Create the client, work, first deadline, and optional billing draft together.",
+        label: "New client work",
+        description: "Create the client, work, and optional billing draft together.",
         href: "/workflow/start-engagement",
       }
     : plan.recommendedAction;

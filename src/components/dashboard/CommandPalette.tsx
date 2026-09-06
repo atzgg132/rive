@@ -185,7 +185,7 @@ export default function CommandPalette({
                   onSelect={() => runCommand(() => router.push("/workflow/start-engagement"))}
                   className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 aria-selected:bg-blue-50 aria-selected:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:aria-selected:bg-blue-900/30"
                 >
-                  <PlusCircle className="h-4 w-4" /> Start a client engagement
+                  <PlusCircle className="h-4 w-4" /> New client work
                 </Command.Item>
               )}
               <Command.Item

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { calculateInvoice } from "@/utils/invoiceMath";
 import { nextInvoiceNumber, reconcileInvoiceNumberSequence } from "@/utils/invoiceNumber";
-import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { PRODUCT_EVENTS, analyticsEnvironment, recordProductEvent } from "@/utils/productEvents";
 import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
 import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
 
@@ -54,6 +55,115 @@ function parsePercentage(value: unknown, fallback: string | number = 0): string 
 
 function parseTaxRate(value: unknown, fallback: string | number = 0): string | "invalid" {
   return parsePercentage(value, fallback);
+}
+
+const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
+const IDEMPOTENCY_DEDUPE_PREFIX = "invoice-create";
+
+class IdempotentReplayNeeded extends Error {
+  readonly userId: string;
+  readonly dedupeKey: string;
+  readonly fingerprint: string;
+
+  constructor(userId: string, dedupeKey: string, fingerprint: string) {
+    super("idempotent-invoice-replay");
+    this.userId = userId;
+    this.dedupeKey = dedupeKey;
+    this.fingerprint = fingerprint;
+  }
+}
+
+function readIdempotencyKey(req: NextRequest, body: Record<string, unknown>): string | null {
+  const header = req.headers.get("idempotency-key");
+  const raw = (typeof header === "string" && header.trim()) || (typeof body.idempotency_key === "string" ? body.idempotency_key : "");
+  const key = raw.trim().slice(0, IDEMPOTENCY_KEY_MAX_LENGTH);
+  return key || null;
+}
+
+function idempotencyDedupeKey(userId: string, key: string): string {
+  return `${IDEMPOTENCY_DEDUPE_PREFIX}:${userId}:${key}`;
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) return "null";
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+    return `{${entries.map(([entryKey, entryValue]) => `${JSON.stringify(entryKey)}:${stableStringify(entryValue)}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+function canonicalDecimalText(value: string): string {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(parsed) : value;
+}
+
+function rawIntentText(value: unknown): string | null {
+  return typeof value === "string" ? value.trim() || null : null;
+}
+
+// Fingerprint the client's stated intent, never server defaults: a retry that
+// omits issue_date must match even though each attempt stamps a different
+// default time, while any changed line item, rate, date, or number conflicts.
+function fingerprintInvoiceRequest(input: {
+  clientId: string | null;
+  projectId: string | null;
+  requestedInvoiceNumber: string;
+  items: Array<{ description: string; quantity: string; unitPrice: string }>;
+  currency: string | null;
+  taxRate: string;
+  discountRate: string;
+  issueDate: string | null;
+  dueDate: string | null;
+  notes: string | null;
+}): string {
+  return crypto.createHash("sha256").update(stableStringify({
+    clientId: input.clientId,
+    projectId: input.projectId,
+    requestedInvoiceNumber: input.requestedInvoiceNumber,
+    items: input.items.map((item) => ({
+      description: item.description,
+      quantity: canonicalDecimalText(item.quantity),
+      unitPrice: canonicalDecimalText(item.unitPrice),
+    })),
+    currency: input.currency,
+    taxRate: input.taxRate,
+    discountRate: input.discountRate,
+    issueDate: input.issueDate,
+    dueDate: input.dueDate,
+    notes: input.notes,
+  })).digest("hex");
+}
+
+async function replayIdempotentInvoice(userId: string, dedupeKey: string, fingerprint: string) {
+  const guard = await prisma.productEvent.findUnique({ where: { dedupeKey } });
+  const properties = guard?.properties as { requestFingerprint?: unknown } | null;
+  if (!guard || guard.userId !== userId || properties?.requestFingerprint !== fingerprint) {
+    return NextResponse.json(
+      { success: false, message: "This Idempotency-Key was already used for a different invoice. Use a new key for new content." },
+      { status: 409 },
+    );
+  }
+  if (!guard.entityId) {
+    return NextResponse.json(
+      { success: false, message: "This invoice request is still being processed. Retry with the same Idempotency-Key." },
+      { status: 409 },
+    );
+  }
+  const invoice = await prisma.invoice.findUnique({ where: { id: guard.entityId } });
+  if (!invoice || invoice.userId !== userId) {
+    return NextResponse.json(
+      { success: false, message: "The original invoice for this Idempotency-Key is unavailable." },
+      { status: 409 },
+    );
+  }
+  return NextResponse.json(
+    { success: true, message: "Invoice was already created for this request.", invoice, replayed: true },
+    { status: 200 },
+  );
 }
 
 // GET /api/workflow/invoices
@@ -184,6 +294,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     if (!isRecord(body)) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
 
+    const idempotencyKey = readIdempotencyKey(req, body);
+    const dedupeKey = idempotencyKey ? idempotencyDedupeKey(session.userId, idempotencyKey) : null;
+
     const requestedInvoiceNumber = cleanText(body.invoice_number, INVOICE_NUMBER_MAX_LENGTH);
 
     let computedItems: ReturnType<typeof normalizeItems>;
@@ -224,7 +337,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Invalid invoice amounts." }, { status: 400 });
     }
 
+    const fingerprint = dedupeKey ? fingerprintInvoiceRequest({
+      clientId,
+      projectId,
+      requestedInvoiceNumber,
+      items: computedItems.map((item) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice })),
+      currency: rawIntentText(body.currency)?.toUpperCase() || null,
+      taxRate: String(taxRate),
+      discountRate: String(discountRate),
+      issueDate: rawIntentText(body.issue_date),
+      dueDate: rawIntentText(body.due_date),
+      notes: cleanText(body.notes, 10_000) || null,
+    }) : null;
+    if (dedupeKey && fingerprint) {
+      const prior = await prisma.productEvent.findUnique({ where: { dedupeKey } });
+      if (prior) return replayIdempotentInvoice(session.userId, dedupeKey, fingerprint);
+    }
+
     const invoice = await prisma.$transaction(async (tx) => {
+      if (dedupeKey && fingerprint) {
+        // Claim the key before allocating a number: the unique dedupe key
+        // serializes concurrent retries, and the guard row doubles as the
+        // invoice-created analytics event so replay emits no duplicate.
+        try {
+          await tx.productEvent.create({
+            data: {
+              userId: session.userId,
+              eventName: PRODUCT_EVENTS.invoiceCreated,
+              module: "invoices",
+              entityType: "invoice",
+              dataOrigin: "user",
+              environment: analyticsEnvironment(),
+              requestId: idempotencyKey,
+              dedupeKey,
+              properties: { requestFingerprint: fingerprint, idempotencyKey },
+            },
+          });
+        } catch (error) {
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            throw new IdempotentReplayNeeded(session.userId, dedupeKey, fingerprint);
+          }
+          throw error;
+        }
+      }
       const invoiceNumber = requestedInvoiceNumber || await nextInvoiceNumber(tx, session.userId, invoiceProfile?.invoicePrefix || "INV", issueDate);
       if (requestedInvoiceNumber) {
         // Serialize explicit numbers with automatic allocation and advance the
@@ -278,9 +433,21 @@ export async function POST(req: NextRequest) {
         data: lineItems
       });
 
+      if (dedupeKey && fingerprint) {
+        await tx.productEvent.update({
+          where: { dedupeKey },
+          data: {
+            entityId: inv.id,
+            properties: { requestFingerprint: fingerprint, idempotencyKey, invoiceId: inv.id, invoiceNumber },
+          },
+        });
+      }
+
       return inv;
     });
-    await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.invoiceCreated, module: "invoices", entityType: "invoice", entityId: invoice.id, dataOrigin: "user" });
+    if (!dedupeKey) {
+      await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.invoiceCreated, module: "invoices", entityType: "invoice", entityId: invoice.id, dataOrigin: "user" });
+    }
 
     return NextResponse.json({
       success: true,
@@ -288,6 +455,9 @@ export async function POST(req: NextRequest) {
       invoice
     }, { status: 201 });
   } catch (error: unknown) {
+    if (error instanceof IdempotentReplayNeeded) {
+      return replayIdempotentInvoice(error.userId, error.dedupeKey, error.fingerprint);
+    }
     console.error("Invoice create error:", error);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ success: false, message: "That invoice number is already in use." }, { status: 409 });

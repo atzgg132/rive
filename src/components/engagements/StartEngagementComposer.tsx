@@ -52,25 +52,82 @@ function readSessionId(): string | null {
   return match ? decodeURIComponent(match[1] || "") : null;
 }
 
+type EngagementDraft = {
+  flowId: string;
+  step: number;
+  clientMode: "new" | "existing";
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  projectTitle: string;
+  scope: string;
+  projectDeadline: string;
+  milestoneTitle: string;
+  milestoneDueDate: string;
+  scopeMode: "project" | "agreement";
+  includeInvoice: boolean;
+  invoiceAmount: string;
+  invoiceDueDate: string;
+};
+
+function engagementDraftKey(entryPoint: string, inquiryId: string | null): string {
+  return `rive:start-engagement-draft:${entryPoint}:${inquiryId || "none"}`;
+}
+
+function loadEngagementDraft(key: string): EngagementDraft | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<EngagementDraft>;
+    if (!parsed || typeof parsed !== "object" || typeof parsed.flowId !== "string" || !parsed.flowId) return null;
+    const text = (value: unknown): string => (typeof value === "string" ? value : "");
+    return {
+      flowId: parsed.flowId,
+      step: typeof parsed.step === "number" && parsed.step >= 0 && parsed.step <= 2 ? Math.floor(parsed.step) : 0,
+      clientMode: parsed.clientMode === "existing" ? "existing" : "new",
+      clientId: text(parsed.clientId),
+      clientName: text(parsed.clientName),
+      clientEmail: text(parsed.clientEmail),
+      projectTitle: text(parsed.projectTitle),
+      scope: text(parsed.scope),
+      projectDeadline: text(parsed.projectDeadline),
+      milestoneTitle: text(parsed.milestoneTitle),
+      milestoneDueDate: text(parsed.milestoneDueDate),
+      scopeMode: parsed.scopeMode === "agreement" ? "agreement" : "project",
+      includeInvoice: parsed.includeInvoice === true,
+      invoiceAmount: text(parsed.invoiceAmount),
+      invoiceDueDate: text(parsed.invoiceDueDate),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function StartEngagementComposer({ entryPoint, currency, agreementsAvailable, clients: suppliedClients, inquiry, onCreated }: Props) {
   const router = useRouter();
-  const [flowId] = useState(() => crypto.randomUUID());
-  const [step, setStep] = useState(0);
+  const storageKey = engagementDraftKey(entryPoint, inquiry?.id || null);
+  const [savedDraft] = useState<EngagementDraft | null>(() => loadEngagementDraft(engagementDraftKey(entryPoint, inquiry?.id || null)));
+  // The flow ID survives reloads for the same draft so a retried submission
+  // replays the same engagement instead of creating a duplicate.
+  const [flowId] = useState(() => savedDraft?.flowId || crypto.randomUUID());
+  const [step, setStep] = useState(savedDraft?.step || 0);
   const [saving, setSaving] = useState(false);
   const [loadingClients, setLoadingClients] = useState(suppliedClients === undefined && !inquiry);
   const [clients, setClients] = useState<ClientOption[]>(suppliedClients || []);
-  const [clientMode, setClientMode] = useState<"new" | "existing">(inquiry ? "existing" : "new");
-  const [clientId, setClientId] = useState(inquiry?.convertedClient.id || "");
-  const [clientName, setClientName] = useState(inquiry?.convertedClient.name || "");
-  const [clientEmail, setClientEmail] = useState(inquiry?.convertedClient.email || "");
-  const [projectTitle, setProjectTitle] = useState(inquiry?.projectType || "");
-  const [scope, setScope] = useState("");
-  const [milestoneTitle, setMilestoneTitle] = useState("");
-  const [milestoneDueDate, setMilestoneDueDate] = useState("");
-  const [scopeMode, setScopeMode] = useState<"project" | "agreement">("project");
-  const [includeInvoice, setIncludeInvoice] = useState(false);
-  const [invoiceAmount, setInvoiceAmount] = useState("");
-  const [invoiceDueDate, setInvoiceDueDate] = useState("");
+  const [clientMode, setClientMode] = useState<"new" | "existing">(savedDraft?.clientMode || (inquiry ? "existing" : "new"));
+  const [clientId, setClientId] = useState(savedDraft?.clientId || inquiry?.convertedClient.id || "");
+  const [clientName, setClientName] = useState(savedDraft?.clientName || inquiry?.convertedClient.name || "");
+  const [clientEmail, setClientEmail] = useState(savedDraft?.clientEmail || inquiry?.convertedClient.email || "");
+  const [projectTitle, setProjectTitle] = useState(savedDraft?.projectTitle || inquiry?.projectType || "");
+  const [scope, setScope] = useState(savedDraft?.scope || "");
+  const [projectDeadline, setProjectDeadline] = useState(savedDraft?.projectDeadline || "");
+  const [milestoneTitle, setMilestoneTitle] = useState(savedDraft?.milestoneTitle || "");
+  const [milestoneDueDate, setMilestoneDueDate] = useState(savedDraft?.milestoneDueDate || "");
+  const [scopeMode, setScopeMode] = useState<"project" | "agreement">(savedDraft?.scopeMode || "project");
+  const [includeInvoice, setIncludeInvoice] = useState(savedDraft?.includeInvoice || false);
+  const [invoiceAmount, setInvoiceAmount] = useState(savedDraft?.invoiceAmount || "");
+  const [invoiceDueDate, setInvoiceDueDate] = useState(savedDraft?.invoiceDueDate || "");
   const viewedSteps = useRef(new Set<string>());
   const started = useRef(false);
 
@@ -123,6 +180,15 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
     return () => { cancelled = true; };
   }, [entryPoint, suppliedClients]);
 
+  useEffect(() => {
+    try {
+      const draft: EngagementDraft = { flowId, step, clientMode, clientId, clientName, clientEmail, projectTitle, scope, projectDeadline, milestoneTitle, milestoneDueDate, scopeMode, includeInvoice, invoiceAmount, invoiceDueDate };
+      window.localStorage.setItem(storageKey, JSON.stringify(draft));
+    } catch {
+      // Private browsing or disabled storage: the form still works for this visit.
+    }
+  }, [storageKey, flowId, step, clientMode, clientId, clientName, clientEmail, projectTitle, scope, projectDeadline, milestoneTitle, milestoneDueDate, scopeMode, includeInvoice, invoiceAmount, invoiceDueDate]);
+
   function validateStep(): string | null {
     if (step === 0) {
       if (inquiry && (clientMode !== "existing" || clientId !== inquiry.convertedClient.id)) return "The converted Client is locked to this enquiry.";
@@ -133,8 +199,9 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
     if (step === 1) {
       if (!projectTitle.trim()) return "Add the project name.";
       if (inquiry && !scope.trim()) return "Write the working scope before continuing.";
-      if (!milestoneTitle.trim()) return "Add the first milestone.";
-      if (!milestoneDueDate) return "Choose when the first milestone is due.";
+      if (!milestoneTitle.trim() && milestoneDueDate) return "Give the milestone a title or clear its date.";
+      if (projectDeadline && Number.isNaN(Date.parse(projectDeadline))) return "Use a valid project deadline.";
+      if (milestoneDueDate && Number.isNaN(Date.parse(milestoneDueDate))) return "Use a valid milestone date.";
     }
     if (step === 2 && includeInvoice) {
       if (!(Number(invoiceAmount) > 0)) return "Add a positive invoice amount.";
@@ -168,8 +235,8 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
           client: clientMode === "existing"
             ? { mode: "existing", id: clientId }
             : { mode: "new", name: clientName, email: clientEmail },
-          project: { title: projectTitle, scope },
-          milestone: { title: milestoneTitle, dueDate: milestoneDueDate },
+          project: { title: projectTitle, scope, ...(projectDeadline ? { deadline: projectDeadline } : {}) },
+          milestone: milestoneTitle.trim() ? { title: milestoneTitle, ...(milestoneDueDate ? { dueDate: milestoneDueDate } : {}) } : null,
           scopeMode,
           ...(includeInvoice ? { invoice: { amount: invoiceAmount, dueDate: invoiceDueDate } } : {}),
         }),
@@ -178,6 +245,11 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
       if (!response.ok || !data?.success) throw new Error(data?.message || "The engagement could not be created.");
       const result = data as CreatedResult;
       toast.success("Engagement created. Your records are connected.");
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        // Storage already unavailable; nothing to clean up.
+      }
       if (onCreated) onCreated(result);
       else router.push(result.nextAction.href);
     } catch (error) {
@@ -193,7 +265,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">One connected workflow</p>
-            <h1 id="start-engagement-heading" className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Start a client engagement</h1>
+            <h1 id="start-engagement-heading" className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">New client work</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Add the relationship and the first real piece of work. Rive connects the records behind the scenes.</p>
           </div>
           <p className="shrink-0 text-xs font-bold text-muted-foreground">Step {step + 1} of {STEPS.length}</p>
@@ -247,11 +319,12 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
             {inquiry ? <div className="sm:col-span-2 rounded-2xl border border-border bg-muted/35 p-4"><p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">Visitor message · read-only</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{inquiry.message}</p></div> : null}
             <label className="text-sm font-bold sm:col-span-2">Project name <span className="text-destructive">*</span><Input className="mt-2" autoFocus value={projectTitle} onChange={(event) => setProjectTitle(event.target.value)} maxLength={180} placeholder="Website redesign" /></label>
             <label className="text-sm font-bold sm:col-span-2">Scope summary {inquiry ? <span className="text-destructive">*</span> : <span className="font-medium text-muted-foreground">optional</span>}<Textarea className="mt-2 resize-none" rows={4} value={scope} onChange={(event) => setScope(event.target.value)} maxLength={20_000} placeholder={inquiry ? "Write the scope you will own..." : "What will you deliver, and what does done look like?"} /></label>
-            <label className="text-sm font-bold">First milestone <span className="text-destructive">*</span><Input className="mt-2" value={milestoneTitle} onChange={(event) => setMilestoneTitle(event.target.value)} maxLength={180} placeholder="Design approval" /></label>
-                <label className="text-sm font-bold">Milestone due date <span className="text-destructive">*</span><Input className="mt-2" type="date" value={milestoneDueDate} onChange={(event) => setMilestoneDueDate(event.target.value)} /></label>
+            <label className="text-sm font-bold">Project deadline <span className="font-medium text-muted-foreground">optional</span><Input className="mt-2" type="date" value={projectDeadline} onChange={(event) => setProjectDeadline(event.target.value)} /></label>
+            <label className="text-sm font-bold">First milestone <span className="font-medium text-muted-foreground">optional</span><Input className="mt-2" value={milestoneTitle} onChange={(event) => setMilestoneTitle(event.target.value)} maxLength={180} placeholder="Design approval" /></label>
+                <label className="text-sm font-bold">Milestone due date <span className="font-medium text-muted-foreground">optional</span><Input className="mt-2" type="date" value={milestoneDueDate} onChange={(event) => setMilestoneDueDate(event.target.value)} /></label>
             <div className="sm:col-span-2 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/[0.035] p-4 text-sm">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <p className="leading-6 text-muted-foreground">The milestone date also becomes the project deadline, so it appears in the existing Calendar and attention views without a duplicate event.</p>
+              <p className="leading-6 text-muted-foreground">Dates are optional and independent. The project deadline flows into the Calendar and attention views; a milestone date stays with the milestone.</p>
             </div>
           </div>
         ) : null}
@@ -286,7 +359,8 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
               <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> {clientMode === "existing" ? selectedClient?.name || "Selected client" : clientName || "New client"}</li>
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> {projectTitle || "Project"}</li>
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> {milestoneTitle || "First milestone"}</li>
+                {milestoneTitle.trim() ? <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> {milestoneTitle.trim()}{milestoneDueDate ? ` · due ${milestoneDueDate}` : ""}</li> : null}
+                {projectDeadline ? <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Project deadline {projectDeadline}</li> : null}
                 {scopeMode === "agreement" ? <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Editable Agreement draft</li> : null}
                 {includeInvoice ? <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Draft invoice</li> : null}
               </ul>
@@ -299,7 +373,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
         {step > 0 ? <Button type="button" variant="ghost" disabled={saving} onClick={() => setStep((value) => value - 1)}><ArrowLeft className="h-4 w-4" /> Back</Button> : <span />}
         {step < 2
           ? <Button type="button" onClick={continueStep}>Continue <ArrowRight className="h-4 w-4" /></Button>
-          : <Button type="button" disabled={saving} onClick={() => void createEngagement()}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Start engagement</Button>}
+          : <Button type="button" disabled={saving} onClick={() => void createEngagement()}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} New client work</Button>}
       </div>
     </section>
   );
