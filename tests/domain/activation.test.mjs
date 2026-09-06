@@ -42,7 +42,10 @@ test("get-paid recommendation advances as real records appear", () => {
   const invoice = buildActivationPlan({ ...emptyWorkspace, goal: "get_paid", counts: { ...emptyWorkspace.counts, clients: 1, projects: 1, invoices: 1 } });
   const sent = buildActivationPlan({ ...emptyWorkspace, goal: "get_paid", counts: { ...emptyWorkspace.counts, clients: 1, projects: 1, invoices: 1 }, sentInvoiceCount: 1 });
 
-  assert.equal(client.recommendedAction?.id, "first_project");
+  // Invoice-first: a client alone is enough to recommend billing. A project
+  // stays discoverable but never gates the first invoice (D7/START-01).
+  assert.equal(client.recommendedAction?.id, "create_invoice");
+  assert.ok(client.secondaryActions.some((action) => action.id === "first_project"));
   assert.equal(project.recommendedAction?.id, "create_invoice");
   assert.equal(invoice.recommendedAction?.id, "send_invoice");
   assert.equal(sent.recommendedAction, null);
@@ -120,6 +123,18 @@ test("guide completion is factual, repeatable, and recoverable after workspace c
   });
   assert.deepEqual(normalized.organize.completedStepIds, ["client", "deadline"]);
   assert.equal(normalized.not_a_guide, undefined);
+});
+
+test("invoice-first guidance needs no project and import copy promises no rollback", () => {
+  const clientOnly = buildActivationPlan({ ...emptyWorkspace, goal: "get_paid", counts: { clients: 1, projects: 0, invoices: 0, expenses: 0 } });
+  assert.equal(clientOnly.recommendedAction?.id, "create_invoice");
+  assert.match(clientOnly.recommendedAction?.description || "", /no project/i);
+
+  const migrate = buildActivationPlan({ ...emptyWorkspace, goal: "migrate" });
+  const importWork = [migrate.recommendedAction, ...migrate.secondaryActions].find((action) => action?.id === "import_work");
+  assert.ok(importWork);
+  assert.doesNotMatch(importWork?.description || "", /rollback/i);
+  assert.match(importWork?.description || "", /preview/i);
 });
 
 test("calendar guide uses its own workspace facts across activation goals", () => {

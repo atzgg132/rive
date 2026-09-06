@@ -313,7 +313,8 @@ test.describe("goal-aware activation", () => {
     await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
     await expect(page.getByText("Start a client engagement").first()).toBeVisible();
     await expect(page.getByTestId("activation-card")).toBeVisible();
-    await expect(page.getByText("More tools")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Portfolio" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Calendar" }).first()).toBeVisible();
     await page.getByRole("button", { name: "Open Getting Started" }).click();
     await expect(page.getByTestId("getting-started-panel")).toBeVisible();
     await page.getByRole("link", { name: "Start a client engagement" }).last().click();
@@ -424,7 +425,7 @@ test.describe("goal-aware activation", () => {
     expect(state.guidanceDismissed).not.toBe(true);
   });
 
-  test("guidance dismissal persists and More tools keeps direct routes available", async ({ page }) => {
+  test("guidance dismissal persists and direct routes stay visible", async ({ page }) => {
     const state: MockState = { goal: "organize", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.route("**/api/guidance", async (route) => {
@@ -436,7 +437,7 @@ test.describe("goal-aware activation", () => {
       return route.continue();
     });
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "More tools" }).click();
+
     await expect(page.getByRole("link", { name: "Portfolio" })).toBeVisible();
     await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Portfolio Studio")).toBeVisible();

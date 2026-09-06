@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { mergePortfolioContent } from "@/utils/portfolio";
@@ -7,7 +8,106 @@ import { convertFromSnapshot, getExchangeRateSnapshot } from "@/utils/exchangeRa
 import { buildActivationPlan } from "@/lib/activation-plan";
 import { normalizeActivationGoal } from "@/lib/activation";
 import { normalizeGuideProgress } from "@/lib/guides";
-import { OPEN_STATUSES, collectedAmount, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
+import { ISSUED_STATUSES, OPEN_STATUSES, collectedAmount, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
+
+/* Cash-reporting helpers (MONEY-03). The overview trend is cash received, so
+   it buckets actual `InvoicePayment.amount` rows by `paidAt` in the owner's
+   calendar — never invoice totals by settlement date. Legacy collections that
+   exist only as `amountPaid` without receipt rows, and receipt totals that
+   exceed `amountPaid`, are reported explicitly instead of being netted. */
+const REPORT_PAGE_SIZE = 1_000;
+
+function reportTimeZoneFormatter(timeZone: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    calendar: "iso8601",
+    numberingSystem: "latn",
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function normalizeReportTimeZone(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "UTC";
+  try {
+    reportTimeZoneFormatter(value).format();
+    return value;
+  } catch {
+    return "UTC";
+  }
+}
+
+/** `YYYY-MM` for a timestamp in the reporting timezone. */
+function monthKeyInTimeZone(value: Date | string, timeZone: string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error("Invalid financial timestamp.");
+  const parts = Object.fromEntries(reportTimeZoneFormatter(timeZone).formatToParts(date).map((part) => [part.type, part.value]));
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}`;
+}
+
+const REPORT_MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Deterministic month label, independent of the server locale. */
+function reportingMonthLabel(month: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return month;
+  const index = Number(match[2]) - 1;
+  return index >= 0 && index < 12 ? `${REPORT_MONTH_NAMES[index]} ${match[1]}` : month;
+}
+
+function shiftReportMonth(month: string, offset: number): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Local midnight of a calendar day as an instant, resolved by iteration. */
+function reportDayToInstant(year: number, month: number, day: number, timeZone: string): Date {
+  const targetUtc = Date.UTC(year, month - 1, day);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    calendar: "iso8601",
+    numberingSystem: "latn",
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  let candidate = targetUtc;
+  for (let index = 0; index < 4; index += 1) {
+    const local = Object.fromEntries(formatter.formatToParts(new Date(candidate)).map((part) => [part.type, part.value]));
+    const localAsUtc = Date.UTC(
+      Number(local.year), Number(local.month) - 1, Number(local.day),
+      Number(local.hour), Number(local.minute), Number(local.second),
+    );
+    candidate += targetUtc - localAsUtc;
+  }
+  return new Date(candidate);
+}
+
+/** The current six-month window in the owner's calendar, with instant bounds. */
+function reportingWindow(now: Date, timeZone: string, monthCount = 6) {
+  const normalized = normalizeReportTimeZone(timeZone);
+  const currentMonth = monthKeyInTimeZone(now, normalized);
+  const firstMonth = shiftReportMonth(currentMonth, -(monthCount - 1));
+  const [startYear, startMonth] = firstMonth.split("-").map(Number);
+  const nextMonth = shiftReportMonth(currentMonth, 1);
+  const [endYear, endMonth] = nextMonth.split("-").map(Number);
+  const months = Array.from({ length: monthCount }, (_, index) => {
+    const month = shiftReportMonth(firstMonth, index);
+    return { month, label: reportingMonthLabel(month) };
+  });
+  return {
+    timeZone: normalized,
+    start: reportDayToInstant(startYear, startMonth, 1, normalized),
+    endExclusive: reportDayToInstant(endYear, endMonth, 1, normalized),
+    months,
+  };
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +118,7 @@ export async function GET(req: NextRequest) {
 
     const userId = session.userId;
     const [currencyOwner, exchangeRates] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { displayCurrency: true, name: true, profession: true, businessType: true, businessTypes: true, onboardingData: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { displayCurrency: true, timeZone: true, name: true, profession: true, businessType: true, businessTypes: true, onboardingData: true } }),
       getExchangeRateSnapshot(),
     ]);
     const displayCurrency = normalizeCurrency(currencyOwner?.displayCurrency);
@@ -35,6 +135,7 @@ export async function GET(req: NextRequest) {
     // Run aggregations in parallel
     const [
       invoicesAggregate,
+      paymentReconciliationByCurrency,
       activeProjectsCount,
       expensesAggregate,
       paidRevenueByClient,
@@ -49,6 +150,33 @@ export async function GET(req: NextRequest) {
         where: { userId },
         _sum: { total: true, amountPaid: true }
       }),
+      // Legacy collections recorded only as `amountPaid` without receipt rows,
+      // and receipt rows totalling more than `amountPaid`, are surfaced as
+      // explicit reconciliation gaps — never silently netted into the chart.
+      // One grouped query keeps this bounded regardless of invoice volume.
+      prisma.$queryRaw<Array<{ currency: string; collections_without_payment_date: Prisma.Decimal; payment_reconciliation_excess: Prisma.Decimal }>>(Prisma.sql`
+        SELECT i.currency,
+          COALESCE(SUM(CASE
+            WHEN i.status IN ('sent', 'viewed', 'overdue', 'partially_paid', 'paid')
+              AND i.amount_paid > COALESCE(p.payment_total, 0)
+            THEN i.amount_paid - COALESCE(p.payment_total, 0)
+            ELSE 0
+          END), 0) AS collections_without_payment_date,
+          COALESCE(SUM(CASE
+            WHEN i.status IN ('sent', 'viewed', 'overdue', 'partially_paid', 'paid')
+              AND COALESCE(p.payment_total, 0) > i.amount_paid
+            THEN COALESCE(p.payment_total, 0) - i.amount_paid
+            ELSE 0
+          END), 0) AS payment_reconciliation_excess
+        FROM invoices i
+        LEFT JOIN (
+          SELECT invoice_id, SUM(amount) AS payment_total
+          FROM invoice_payments
+          GROUP BY invoice_id
+        ) p ON p.invoice_id = i.id
+        WHERE i.user_id = ${userId}
+        GROUP BY i.currency
+      `),
       // Active Projects Count
       prisma.project.count({
         where: { userId, status: "active" }
@@ -59,13 +187,15 @@ export async function GET(req: NextRequest) {
         where: { userId },
         _sum: { amount: true }
       }),
-      // Aggregate paid invoice totals instead of loading every paid invoice
-      // into the dashboard request. Client display fields are fetched below
-      // only for the clients represented by these compact groups.
+      // Aggregate collected amounts for every issued invoice instead of
+      // loading every invoice into the dashboard request. Client display
+      // fields are fetched below only for the clients represented by these
+      // compact groups. Partially paid work counts at what is banked, so the
+      // ranking agrees with the collected tile above it.
       prisma.invoice.groupBy({
         by: ["clientId", "currency"],
-        where: { userId, status: "paid", clientId: { not: null } },
-        _sum: { total: true },
+        where: { userId, status: { in: [...ISSUED_STATUSES] }, clientId: { not: null } },
+        _sum: { total: true, amountPaid: true },
       }),
       // Recent clients
       prisma.client.findMany({
@@ -121,11 +251,15 @@ export async function GET(req: NextRequest) {
           select: { id: true, name: true, company: true, avatarColor: true },
         })
       : [];
-    const revenueByClient = new Map<string, Array<{ currency: string; total: number }>>();
+    const revenueByClient = new Map<string, Array<{ currency: string; total: number; amountPaid: number }>>();
     for (const row of paidRevenueByClient) {
       if (!row.clientId) continue;
       const entries = revenueByClient.get(row.clientId) || [];
-      entries.push({ currency: row.currency, total: Number(row._sum.total || 0) });
+      entries.push({
+        currency: row.currency,
+        total: Number(row._sum.total || 0),
+        amountPaid: Number(row._sum.amountPaid || 0),
+      });
       revenueByClient.set(row.clientId, entries);
     }
 
@@ -137,7 +271,10 @@ export async function GET(req: NextRequest) {
         name: client.name,
         company: client.company,
         avatar_color: client.avatarColor,
-        total_revenue: (revenueByClient.get(client.id) || []).reduce((sum, group) => sum + convertAmount(group.total, group.currency), 0).toString(),
+        total_revenue: (revenueByClient.get(client.id) || []).reduce(
+          (sum, group) => sum + convertAmount(collectedAmount(group.total, group.amountPaid), group.currency),
+          0,
+        ).toString(),
       }))
       .filter((c) => Number(c.total_revenue) > 0)
       .sort((a, b) => Number(b.total_revenue) - Number(a.total_revenue))
@@ -164,53 +301,65 @@ export async function GET(req: NextRequest) {
       .slice(0, 10)
       .map(({ type, title, created_at }) => ({ type, title, created_at }));
 
-    // Compute time-series data for charts (last 6 months)
+    // The overview trend is cash received. Invoice totals belong to the issue
+    // cohort; a settled 1,000 invoice may have 400 received in August and 600
+    // in September. Receipt rows are read by their paidAt timestamp and
+    // bucketed in the owner's calendar, so split-month collections — including
+    // partials recorded before settlement — land in their actual months.
     const chartNow = new Date();
-    const sixMonthsAgo = new Date(Date.UTC(chartNow.getUTCFullYear(), chartNow.getUTCMonth() - 5, 1));
-    
-    // Fetch recent 6 months data for charts
-    const [recent6mInvoices, recent6mExpenses] = await Promise.all([
-      prisma.invoice.findMany({
-        where: {
-          userId,
-          status: "paid",
-          OR: [
-            { paidDate: { gte: sixMonthsAgo } },
-            { paidDate: null, issueDate: { gte: sixMonthsAgo } },
-          ],
-        },
-        select: { total: true, currency: true, issueDate: true, paidDate: true }
-      }),
-      prisma.expense.findMany({
-        where: { userId, date: { gte: sixMonthsAgo } },
-        select: { amount: true, currency: true, date: true }
-      })
-    ]);
+    const reporting = reportingWindow(chartNow, currencyOwner?.timeZone || "UTC", 6);
+    const monthlyChartData: Record<string, { month: string, period: string, revenue: number, expenses: number }> = Object.fromEntries(
+      reporting.months.map(({ month, label }) => [month, { month: label, period: month, revenue: 0, expenses: 0 }]),
+    );
 
-    const monthlyChartData: Record<string, { month: string, period: string, revenue: number, expenses: number }> = {};
-    
-    // Initialize last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(Date.UTC(chartNow.getUTCFullYear(), chartNow.getUTCMonth() - i, 1));
-      const key = d.toISOString().slice(0, 7);
-      monthlyChartData[key] = {
-        month: d.toLocaleDateString(undefined, { month: "short", year: "numeric", timeZone: "UTC" }),
-        period: key,
-        revenue: 0,
-        expenses: 0,
-      };
+    // Bounded keyset walk: only the current page is ever held in memory.
+    let paymentCursor: string | undefined;
+    while (true) {
+      const paymentRows = await prisma.invoicePayment.findMany({
+        where: {
+          id: paymentCursor ? { gt: paymentCursor } : undefined,
+          paidAt: { gte: reporting.start, lt: reporting.endExclusive },
+          invoice: { userId, status: { in: [...ISSUED_STATUSES] } },
+        },
+        select: { id: true, amount: true, paidAt: true, invoice: { select: { currency: true } } },
+        orderBy: { id: "asc" },
+        take: REPORT_PAGE_SIZE,
+      });
+      for (const payment of paymentRows) {
+        const month = monthKeyInTimeZone(payment.paidAt, reporting.timeZone);
+        if (monthlyChartData[month]) {
+          monthlyChartData[month].revenue += convertAmount(Number(payment.amount), payment.invoice.currency);
+        }
+      }
+      if (paymentRows.length < REPORT_PAGE_SIZE) break;
+      const nextPaymentCursor = paymentRows[paymentRows.length - 1]?.id;
+      if (!nextPaymentCursor || nextPaymentCursor === paymentCursor) break;
+      paymentCursor = nextPaymentCursor;
     }
 
-    recent6mInvoices.forEach((inv) => {
-      const d = inv.paidDate || inv.issueDate;
-      const key = d.toISOString().slice(0, 7);
-      if (monthlyChartData[key]) monthlyChartData[key].revenue += convertAmount(Number(inv.total), inv.currency);
-    });
-
-    recent6mExpenses.forEach((exp) => {
-      const key = exp.date.toISOString().slice(0, 7);
-      if (monthlyChartData[key]) monthlyChartData[key].expenses += convertAmount(Number(exp.amount), exp.currency);
-    });
+    let expenseCursor: string | undefined;
+    while (true) {
+      const expenseRows = await prisma.expense.findMany({
+        where: {
+          id: expenseCursor ? { gt: expenseCursor } : undefined,
+          userId,
+          date: { gte: reporting.start, lt: reporting.endExclusive },
+        },
+        select: { id: true, amount: true, currency: true, date: true },
+        orderBy: { id: "asc" },
+        take: REPORT_PAGE_SIZE,
+      });
+      for (const expense of expenseRows) {
+        const month = monthKeyInTimeZone(expense.date, reporting.timeZone);
+        if (monthlyChartData[month]) {
+          monthlyChartData[month].expenses += convertAmount(Number(expense.amount), expense.currency);
+        }
+      }
+      if (expenseRows.length < REPORT_PAGE_SIZE) break;
+      const nextExpenseCursor = expenseRows[expenseRows.length - 1]?.id;
+      if (!nextExpenseCursor || nextExpenseCursor === expenseCursor) break;
+      expenseCursor = nextExpenseCursor;
+    }
 
     const now = new Date();
     const upcomingCutoff = new Date(now);
@@ -367,6 +516,11 @@ export async function GET(req: NextRequest) {
       (sum, group) => sum + convertAmount(outstandingAmount(Number(group._sum.total || 0), Number(group._sum.amountPaid || 0)), group.currency),
       0,
     );
+    const financialIntegrity = paymentReconciliationByCurrency.map((row) => ({
+      currency: row.currency.toUpperCase(),
+      collectionsWithoutPaymentDate: Number(row.collections_without_payment_date || 0),
+      paymentReconciliationExcess: Number(row.payment_reconciliation_excess || 0),
+    })).filter((row) => row.collectionsWithoutPaymentDate > 0 || row.paymentReconciliationExcess > 0);
 
     return NextResponse.json({
       success: true,
@@ -385,6 +539,15 @@ export async function GET(req: NextRequest) {
       topClients,
       recentActivity,
       chartData: Object.values(monthlyChartData),
+      chartDefinition: {
+        metric: "cash_received",
+        source: "InvoicePayment.amount",
+        dateField: "paidAt",
+        timeZone: reporting.timeZone,
+        startMonth: reporting.months[0]?.month || null,
+        endMonth: reporting.months.at(-1)?.month || null,
+      },
+      financialIntegrity,
       activation,
       profileReadiness,
       insights: {

@@ -68,6 +68,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!invoice) return NextResponse.json({ success: false, message: "Invoice not found." }, { status: 404 });
 
+    const owner = await prisma.user.findUnique({ where: { id: session.userId }, select: { timeZone: true } });
+    // Today's calendar date in the owner's timezone: the default Received-on
+    // for manual payment entry. An unknown zone falls back to UTC.
+    let receivedToday: string;
+    try {
+      const parts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-US", { calendar: "iso8601", numberingSystem: "latn", timeZone: owner?.timeZone || "UTC", year: "numeric", month: "2-digit", day: "2-digit" })
+          .formatToParts(new Date()).map((part) => [part.type, part.value]),
+      );
+      receivedToday = `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+    } catch {
+      receivedToday = new Date().toISOString().slice(0, 10);
+    }
     const total = Number(invoice.total);
     const amountPaid = Number(invoice.amountPaid);
     const contract = invoice.billingOccurrence?.contract || null;
@@ -91,6 +104,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         // Derived here rather than in the client so the panel, the table, and
         // the payment endpoint all agree on what is still owed.
         outstanding: Math.max(0, total - amountPaid).toFixed(2),
+        received_today: receivedToday,
         issue_date: invoice.issueDate,
         due_date: invoice.dueDate,
         paid_date: invoice.paidDate,

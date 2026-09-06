@@ -1,19 +1,65 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { isPortfolioPublished } from "@/utils/portfolio";
+import { getPublicPortfolioContent, isPortfolioPublished } from "@/utils/portfolio";
 import {
   MANAGED_ASSET_KEY,
   extensionContentType,
   extensionKind,
-  isProxiedAssetKind,
   keyExtension,
   assetOwnerId,
 } from "@/utils/portfolioMedia";
 
 export const dynamic = "force-dynamic";
+
+function assetUrlForKey(key: string): string {
+  return `/api/public/assets/${key.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/**
+ * Public object access follows the same intentional-visibility projection as
+ * the rendered portfolio. A published status alone is not enough: an owner
+ * can remove a media row while keeping the portfolio published, and that must
+ * unpublish the bytes too. Private source images and arbitrary stored fields
+ * never become public merely because they contain a managed-looking URL.
+ */
+function isPublicAssetReference(content: unknown, key: string): boolean {
+  const publicContent = getPublicPortfolioContent(content);
+  const assetUrl = assetUrlForKey(key);
+  if (publicContent.profileImageUrl === assetUrl) return true;
+  return publicContent.projects.some((project) => (
+    project.imageUrl === assetUrl
+    || project.gallery?.some((image) => image.url === assetUrl)
+    || project.media?.some((media) => media.url === assetUrl || media.posterUrl === assetUrl)
+  ));
+}
+
+function parseRangeHeader(value: string | null): string | null | false {
+  if (!value) return null;
+  const normalized = value.trim();
+  const match = /^bytes=(\d*)-(\d*)$/.exec(normalized);
+  if (!match || (!match[1] && !match[2])) return false;
+  if (match[1] && match[2] && BigInt(match[1]) > BigInt(match[2])) return false;
+  if (!match[1] && match[2] === "0") return false;
+  return normalized;
+}
+
+function rangeNotSatisfiableResponse() {
+  return new NextResponse(null, {
+    status: 416,
+    headers: { "Accept-Ranges": "bytes" },
+  });
+}
+
+function isRangeNotSatisfiable(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { name?: string; Code?: string; code?: string; $metadata?: { httpStatusCode?: number } };
+  return candidate.$metadata?.httpStatusCode === 416
+    || candidate.name === "InvalidRange"
+    || candidate.Code === "InvalidRange"
+    || candidate.code === "InvalidRange";
+}
 
 export async function GET(
   request: NextRequest,
@@ -43,98 +89,64 @@ export async function GET(
     return NextResponse.json({ message: "Asset not found." }, { status: 404 });
   }
 
-  /* Unpublishing must actually unpublish. Without this, every cover and file
-     stayed reachable by its URL forever: unpublishing hid the page but not
-     the bytes. The owner still previews drafts — the studio and
-     /portfolio-preview send the session cookie — but anyone else only sees
-     assets of a published portfolio. Pending uploads are unguessable UUIDs
-     known only to the uploader, so the published check is the whole gate.
-     Every refusal below keeps the same 404 shape so it never reveals whether
-     the key exists. */
+  /* Unpublishing — or removing a reference while published — must actually
+     unpublish the bytes. The owner still previews drafts (the studio sends
+     the session cookie), but anyone else needs both a published portfolio
+     AND a live reference in its public content. UUID secrecy is not an
+     authorization boundary. Every refusal keeps the same 404 shape so it
+     never reveals whether the key exists, and every refusal happens before
+     any storage read. */
   const ownerId = assetOwnerId(key);
   const session = await getSessionUser(request).catch(() => null);
-  const isOwner = Boolean(ownerId && session?.userId === ownerId);
-  /* Success responses vary by cookie (owner preview vs public), so only
-     published portfolios are shared-cacheable. Owner-only draft views stay
-     private no matter what. */
-  let published = false;
   if (!ownerId || session?.userId !== ownerId) {
     const portfolio = ownerId
-      ? await prisma.portfolio.findUnique({ where: { userId: ownerId }, select: { status: true } }).catch((error) => {
+      ? await prisma.portfolio.findUnique({ where: { userId: ownerId }, select: { status: true, content: true } }).catch((error) => {
           console.error("Asset portfolio lookup failed:", error);
           return null;
         })
       : null;
-    published = Boolean(portfolio && isPortfolioPublished(portfolio.status));
-    if (!published) {
+    const published = Boolean(portfolio && isPortfolioPublished(portfolio.status));
+    if (!published || !isPublicAssetReference(portfolio?.content, key)) {
       return NextResponse.json({ message: "Asset not found." }, { status: 404 });
     }
   }
+
+  const range = parseRangeHeader(request.headers.get("range"));
+  if (range === false) return rangeNotSatisfiableResponse();
 
   const client = new S3Client({ region });
 
-  /* Video, audio, and documents are redirected rather than proxied. Streaming
-     them through the app would mean no range requests — so no seeking, and a
-     player that stalls in browsers that require a 206 — while every byte also
-     consumed an application connection. Draft previews get a short-lived
-     signature instead, and their responses are never shared-cacheable —
-     see the gate above. Published media keeps the long-lived public caching. */
-  if (!isProxiedAssetKind(kind)) {
-    try {
-      const url = await getSignedUrl(
-        client,
-        new GetObjectCommand({
-          Bucket: bucket,
-          Key: key,
-          ResponseContentType: contentType,
-          ResponseContentDisposition: "inline",
-          ResponseCacheControl: published
-            ? "public, max-age=86400, stale-while-revalidate=604800"
-            : "private, no-store",
-        }),
-        // Kept at twice the redirect's cache lifetime. A cache that drops
-        // Age headers can serve a stored 302 for its full max-age again, so a
-        // signature that merely outlives one window is not enough.
-        /* Draft previews get a short signature: just long enough to load. */
-        { expiresIn: published ? 1800 : 60 },
-      );
-      return NextResponse.redirect(url, {
-        status: 302,
-        headers: {
-          "Cache-Control": published ? "public, max-age=600" : "private, no-store",
-          "Vary": "Cookie",
-          "X-Content-Type-Options": "nosniff",
-        },
-      });
-    } catch (error) {
-      console.error("Asset redirect failed:", error);
-      return NextResponse.json({ message: "Asset not found." }, { status: 404 });
-    }
-  }
-
   try {
-    const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    const result = await client.send(new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ...(range ? { Range: range } : {}),
+    }));
     if (!result.Body) throw new Error("Asset has no body.");
 
+    /* Every byte streams through the app with `private, no-store` so that
+       unpublishing or removing a reference takes effect on the very next
+       request — no browser or CDN copy can keep serving revoked bytes, and no
+       signed-URL lifetime outlives the reference. See the delivery report for
+       the caching/egress cost this trades away. */
     // Only send Content-Length and ETag when storage actually reported them.
     // Emitting an empty value for either is not a valid header and upsets
     // intermediaries; a chunked response without them is well-defined.
     const headers = new Headers({
-      "Cache-Control": published
-        ? "public, max-age=86400, stale-while-revalidate=604800"
-        : isOwner
-          ? "private, max-age=600"
-          : "private, no-store",
+      "Cache-Control": "private, no-store",
       "Vary": "Cookie",
       "Content-Type": contentType,
       "Content-Disposition": "inline",
       "X-Content-Type-Options": "nosniff",
+      "Accept-Ranges": result.AcceptRanges || "bytes",
     });
+    if (range && result.ContentRange) headers.set("Content-Range", result.ContentRange);
     if (typeof result.ContentLength === "number") headers.set("Content-Length", String(result.ContentLength));
     if (result.ETag) headers.set("ETag", result.ETag);
 
-    return new NextResponse(result.Body.transformToWebStream(), { headers });
+    return new NextResponse(result.Body.transformToWebStream(), { status: range ? 206 : 200, headers });
   } catch (error) {
+    if (range && isRangeNotSatisfiable(error)) return rangeNotSatisfiableResponse();
     console.error("Asset delivery failed:", error);
     return NextResponse.json({ message: "Asset not found." }, { status: 404 });
   }

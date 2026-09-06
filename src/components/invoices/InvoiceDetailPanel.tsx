@@ -38,6 +38,7 @@ export type InvoiceDetail = {
   total: string;
   amount_paid: string;
   outstanding: string;
+  received_today: string;
   issue_date: string | null;
   due_date: string | null;
   paid_date: string | null;
@@ -85,6 +86,7 @@ export default function InvoiceDetailPanel({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
+  const [paymentReceivedOn, setPaymentReceivedOn] = useState("");
 
   const load = async (signal?: AbortSignal) => {
     setLoading(true);
@@ -127,6 +129,15 @@ export default function InvoiceDetailPanel({
       toast.error("Enter a valid positive payment amount.");
       return;
     }
+    const receivedOn = paymentReceivedOn || invoice.received_today;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(receivedOn)) {
+      toast.error("Received on must be a valid calendar date.");
+      return;
+    }
+    if (receivedOn > invoice.received_today) {
+      toast.error("Received on cannot be in the future.");
+      return;
+    }
     if (Number(amount) > Number(invoice.outstanding)) {
       toast.error(`Payment cannot exceed the ${formatMoney(Number(invoice.outstanding), invoice.currency)} outstanding.`);
       return;
@@ -137,7 +148,7 @@ export default function InvoiceDetailPanel({
       const response = await fetch(`/api/workflow/invoices/${invoice.id}/payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": key },
-        body: JSON.stringify({ amount, method: "manual", reference: paymentReference || undefined, notes: paymentNotes || undefined }),
+        body: JSON.stringify({ amount, method: "manual", reference: paymentReference || undefined, notes: paymentNotes || undefined, receivedOn }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.message || "Payment could not be recorded.");
@@ -374,7 +385,7 @@ export default function InvoiceDetailPanel({
                           <div className="min-w-0">
                             <p className="font-semibold tabular-nums">{formatMoney(Number(payment.amount), invoice.currency)}</p>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {dateTimeLabel(payment.paid_at)} · {payment.method}
+                              {dateLabel(payment.paid_at)} · {payment.method}
                               {payment.reference ? ` · ${payment.reference}` : ""}
                             </p>
                           </div>
@@ -424,6 +435,8 @@ export default function InvoiceDetailPanel({
                       placeholder={invoice.outstanding}
                     />
                   </div>
+                  <label htmlFor="payment-received-on" className="text-xs font-bold">Received on</label>
+                  <Input id="payment-received-on" type="date" value={paymentReceivedOn || invoice.received_today} max={invoice.received_today} onChange={(event) => setPaymentReceivedOn(event.target.value)} aria-label="Payment received on" />
                   <Input value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Reference (optional)" maxLength={160} aria-label="Payment reference" />
                   <Textarea rows={2} value={paymentNotes} onChange={(event) => setPaymentNotes(event.target.value)} placeholder="Notes (optional)" aria-label="Payment notes" className="resize-none" />
                   <div className="flex justify-end gap-2">

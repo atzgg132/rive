@@ -23,7 +23,6 @@ import {
   FileSignature,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronDown,
   CircleHelp,
   Plus,
 } from "lucide-react";
@@ -35,7 +34,7 @@ import CommandPalette from "@/components/dashboard/CommandPalette";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
-import { ACTIVATION_GOAL_NAV_PATHS, type ActivationPlan } from "@/lib/activation";
+import { type ActivationPlan } from "@/lib/activation";
 import { GuidedExperience, openHelpFromMobileShell } from "@/components/dashboard/GuidedExperience";
 import FeedbackWidget from "@/components/FeedbackWidget";
 
@@ -69,7 +68,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activation, setActivation] = useState<ActivationPlan | null>(null);
-  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [isMac, setIsMac] = useState(true);
   const [notifications, setNotifications] = useState<WorkspaceNotification[]>([]);
 
@@ -200,14 +198,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: "/workflow/expenses", label: "Expenses", icon: Receipt },
     { href: "/portfolio", label: "Portfolio", icon: Globe2 },
   ];
-  const progressiveReveal = Boolean(activation && !activation.guidanceDismissed && activation.automaticGuidanceStatus !== "completed" && activation.activationStage !== "activated");
-  const goalPaths = activation ? ACTIVATION_GOAL_NAV_PATHS[activation.goal] : [];
-  const overviewLink = allNavLinks[0];
-  const prioritizedLinks = allNavLinks.filter((link) => goalPaths.includes(link.href));
-  const navLinks = progressiveReveal ? [overviewLink, ...prioritizedLinks] : allNavLinks;
-  const moreNavLinks = progressiveReveal ? allNavLinks.filter((link) => !navLinks.includes(link)) : [];
-  const moreToolsActive = moreNavLinks.some((link) => pathname === link.href || pathname.startsWith(link.href + "/"));
-  const moreToolsExpanded = moreToolsOpen || moreToolsActive;
+  // Workspace destinations are never hidden: guidance may recommend a next
+  // action, but every module stays visible across starting paths, refreshes,
+  // and completed guidance.
+  const navLinks = allNavLinks;
   const feedbackContext = pathname.startsWith("/workflow/invoices") || pathname.startsWith("/workflow/revenue")
     ? { promptKey: "invoice_workflow", module: "invoices", triggerEvent: "invoice_workflow_opened", label: "Invoice feedback" }
     : pathname.startsWith("/calendar")
@@ -266,22 +260,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <nav className="flex flex-col gap-1">
             {navLinks.map((link) => renderNavLink(link))}
-            {moreNavLinks.length > 0 && (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setMoreToolsOpen((value) => !value)}
-                  aria-expanded={moreToolsExpanded}
-                  title={sidebarCollapsed ? "More tools" : undefined}
-                  className={`min-h-11 justify-between rounded-xl px-3 py-2.5 text-sm font-medium ${moreToolsActive ? "bg-primary/[0.08] text-primary" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
-                >
-                  <span className="flex items-center gap-3"><span className="grid h-5 w-5 place-items-center text-base leading-none">…</span>{!sidebarCollapsed && <span>More tools</span>}</span>
-                  {!sidebarCollapsed && <ChevronDown className={`h-4 w-4 transition-transform ${moreToolsExpanded ? "rotate-180" : ""}`} />}
-                </Button>
-                {moreToolsExpanded && moreNavLinks.map((link) => renderNavLink(link))}
-              </>
-            )}
           </nav>
         </div>
 
@@ -436,21 +414,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </Button>
                 )}
                 {navLinks.map((link) => renderNavLink(link, true))}
-                {moreNavLinks.length > 0 && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setMoreToolsOpen((value) => !value)}
-                      aria-expanded={moreToolsExpanded}
-                      className={`mt-2 justify-between rounded-xl px-3 py-2.5 text-sm font-medium ${moreToolsActive ? "bg-accent text-primary" : "text-muted-foreground"}`}
-                    >
-                      <span>More tools</span>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${moreToolsExpanded ? "rotate-180" : ""}`} />
-                    </Button>
-                    {moreToolsExpanded && moreNavLinks.map((link) => renderNavLink(link, true))}
-                  </>
-                )}
               </nav>
 
               <div className="flex flex-col gap-4 border-t border-border dark:border-slate-800 pt-4 mt-auto">

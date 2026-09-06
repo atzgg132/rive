@@ -82,12 +82,12 @@ export function buildActivationPlan(input: ActivationPlanInput): ActivationPlan 
   const createProject = activationAction("first_project", "Create your first project", "Give active work a client, deadline and financial context.", "/workflow/projects?new=true");
   const addDeadline = activationAction("add_deadline", "Add a project deadline", "Deadlines flow into your calendar and next-action view.", "/workflow/projects");
   const connectCalendar = activationAction("connect_calendar", "Connect your calendar", "Keep project milestones and scheduled work visible together.", "/calendar");
-  const createInvoice = activationAction("create_invoice", "Create your first invoice", "Reuse the client, project and currency you already entered.", "/workflow/invoices/new");
+  const createInvoice = activationAction("create_invoice", "Create your first invoice", "Bill a client with real line items. No project, agreement, or deadline needed.", "/workflow/invoices/new");
   const sendInvoice = activationAction("send_invoice", "Review and send an invoice", "A sent invoice is the first step toward getting paid.", "/workflow/revenue");
   const addExpense = activationAction("add_expense", "Log your first expense", "Project-linked costs make profitability easier to understand.", "/workflow/expenses?new=true");
   const importHref = typeof input.migrationHref === "string" && input.migrationHref ? input.migrationHref : DEFAULT_IMPORT_HREF;
   const reviewHref = typeof input.migrationReviewHref === "string" && input.migrationReviewHref ? input.migrationReviewHref : importHref;
-  const importWork = activationAction("import_work", "Import your work", "Bring existing records across with a preview and rollback path.", importHref);
+  const importWork = activationAction("import_work", "Import your work", "Bring existing records across with a preview before anything is written.", importHref);
   const resolveImport = activationAction("resolve_import", "Resolve imported records", "Review unresolved relationships before relying on the totals.", reviewHref);
   const completeProfile = activationAction("complete_profile", "Complete your profile", "Your profile becomes the foundation for public proof of work.", "/portfolio");
   const selectProject = activationAction("select_project", "Select a project for your portfolio", "Choose real work that helps prospective clients understand you.", "/portfolio");
@@ -105,7 +105,13 @@ export function buildActivationPlan(input: ActivationPlanInput): ActivationPlan 
       else if (counts.projects === 0) recommendedAction = createProject;
       else if (counts.invoices === 0) recommendedAction = createInvoice;
       else if (input.sentInvoiceCount === 0) recommendedAction = sendInvoice;
-      secondaryCandidates = [createProject, createInvoice, addDeadline];
+      // Invoice-first: the shared project branch above also serves the
+      // organize goal, so get_paid re-resolves here. Once a client exists,
+      // the next useful step is a real invoice — a project stays a visible
+      // secondary option but never gates billing or sending.
+      if (counts.clients > 0 && counts.invoices === 0) recommendedAction = createInvoice;
+      else if (counts.clients > 0 && counts.invoices > 0 && input.sentInvoiceCount === 0) recommendedAction = sendInvoice;
+      secondaryCandidates = [createProject, sendInvoice, addDeadline];
       break;
     case "understand_finances":
       milestones = [

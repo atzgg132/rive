@@ -257,8 +257,8 @@ export default function OnboardingPage() {
   );
 
   async function saveProfile() {
-    if (!name.trim() || !profession.trim() || businessTypes.length === 0)
-      return toast.error("Add your name, what you do, and at least one work type.");
+    if (!name.trim())
+      return toast.error("Add your name to continue. Everything else on this step is optional.");
     setSaving(true);
     try {
       const response = await fetch("/api/onboarding", {
@@ -266,8 +266,8 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          profession,
-          businessTypes,
+          ...(profession.trim() ? { profession } : {}),
+          ...(businessTypes.length > 0 ? { businessTypes } : {}),
           currency,
           timeZone,
           avatarUrl,
@@ -524,7 +524,7 @@ export default function OnboardingPage() {
                   What kind of work do you run?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                  We inherited your name from signup and detected your regional defaults. Add what you do, then start with real work.
+                  We inherited your name from signup and detected your regional defaults. What you do and how you work only tune guidance — invoicing never waits on them.
                 </p>
               </div>
               <div className="mt-7 grid gap-4 sm:grid-cols-2">
@@ -534,7 +534,7 @@ export default function OnboardingPage() {
                   </div>
                   <label>
                     <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
-                      What do you do?
+                      What do you do? <span className="font-medium normal-case tracking-normal text-slate-400">optional</span>
                     </span>
                     <Input
                       value={profession}
@@ -579,7 +579,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mt-7">
                 <p className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
-                  How do you work? Choose all that apply.
+                  How do you work? Choose all that apply, or skip this.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                   {BUSINESS_TYPES.map((item) => {

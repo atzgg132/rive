@@ -15,8 +15,8 @@ export type StartEngagementInput = {
   client:
     | { mode: "existing"; id: string }
     | { mode: "new"; name: string; email: string | null };
-  project: { title: string; scope: string | null };
-  milestone: { title: string; dueDate: Date; dateOnly: string } | null;
+  project: { title: string; scope: string | null; deadline: { dueDate: Date; dateOnly: string } | null };
+  milestone: { title: string; dueDate: Date | null; dateOnly: string | null } | null;
   scopeMode: "project" | "agreement";
   invoice: { amount: number; dueDate: Date; dateOnly: string } | null;
   sourceInquiryId: string | null;
@@ -135,18 +135,30 @@ export function parseStartEngagementInput(value: unknown): StartEngagementInput 
   const projectTitle = clean(projectValue.title, 180);
   if (!projectTitle) throw new EngagementInputError("Project name is required.", "missing_project_name");
   const projectScope = clean(projectValue.scope, 20_000) || null;
+  // The project deadline is independent of any milestone date and optional:
+  // work can be created before dates are known.
+  const rawDeadline = projectValue.deadline;
+  const hasDeadline = !(rawDeadline === undefined || rawDeadline === null || (typeof rawDeadline === "string" && !rawDeadline.trim()));
+  let projectDeadline: StartEngagementInput["project"]["deadline"] = null;
+  if (hasDeadline) {
+    const deadline = dateOnly(rawDeadline, "Project deadline", "invalid_project_deadline");
+    projectDeadline = { dueDate: deadline.date, dateOnly: deadline.dateOnly };
+  }
   if (entryPoint === "inquiry" && !projectScope) {
     throw new EngagementInputError("Add your working scope before starting this enquiry engagement.", "missing_project_scope");
   }
 
-  const rawMilestone = body.milestone;
-  if (!rawMilestone || typeof rawMilestone !== "object" || Array.isArray(rawMilestone)) {
-    throw new EngagementInputError("First milestone details are required.", "invalid_milestone");
+  const rawMilestone = body.milestone === undefined ? null : body.milestone;
+  if (rawMilestone !== null && (typeof rawMilestone !== "object" || Array.isArray(rawMilestone))) {
+    throw new EngagementInputError("Milestone details are invalid.", "invalid_milestone");
   }
-  const milestoneValue = rawMilestone as Record<string, unknown>;
+  const milestoneValue = (rawMilestone || {}) as Record<string, unknown>;
   const milestoneTitle = clean(milestoneValue.title, 180);
-  if (!milestoneTitle) throw new EngagementInputError("First milestone is required.", "missing_milestone");
-  const milestoneDate = dateOnly(milestoneValue.dueDate, "Milestone due date", "invalid_milestone_due_date");
+  const rawMilestoneDate = milestoneValue.dueDate;
+  const hasMilestoneDate = !(rawMilestoneDate === undefined || rawMilestoneDate === null || (typeof rawMilestoneDate === "string" && !rawMilestoneDate.trim()));
+  if (!milestoneTitle && hasMilestoneDate) throw new EngagementInputError("Give the milestone a title or clear its date.", "missing_milestone");
+  const milestoneDate = hasMilestoneDate ? dateOnly(rawMilestoneDate, "Milestone due date", "invalid_milestone_due_date") : null;
+  const milestone = milestoneTitle ? { title: milestoneTitle, dueDate: milestoneDate?.date || null, dateOnly: milestoneDate?.dateOnly || null } : null;
 
   const scopeMode = body.scopeMode === "agreement" ? "agreement" : body.scopeMode === "project" ? "project" : null;
   if (!scopeMode) throw new EngagementInputError("Choose how to keep the scope.", "invalid_scope_mode");
@@ -173,8 +185,8 @@ export function parseStartEngagementInput(value: unknown): StartEngagementInput 
     entryPoint,
     sessionId: clean(body.sessionId, 100) || null,
     client,
-    project: { title: projectTitle, scope: projectScope },
-    milestone: { title: milestoneTitle, dueDate: milestoneDate.date, dateOnly: milestoneDate.dateOnly },
+    project: { title: projectTitle, scope: projectScope, deadline: projectDeadline },
+    milestone,
     scopeMode,
     invoice,
     sourceInquiryId,
@@ -281,8 +293,10 @@ function nextAction(input: StartEngagementInput, records: StartEngagementRecords
   }
   return {
     kind: "milestone_plan",
-    href: `/workflow/projects/${records.projectId}?from=engagement&milestoneId=${encodeURIComponent(records.milestoneId || "")}`,
-    label: `Plan ${input.milestone?.title || "milestone"}`,
+    href: records.milestoneId
+      ? `/workflow/projects/${records.projectId}?from=engagement&milestoneId=${encodeURIComponent(records.milestoneId)}`
+      : `/workflow/projects/${records.projectId}?from=engagement`,
+    label: input.milestone ? `Plan ${input.milestone.title}` : "Review the project",
   };
 }
 
@@ -309,7 +323,7 @@ async function readCommittedEngagement(
       project.sourceInquiryId !== input.sourceInquiryId ||
       project.tasks.length !== 1 ||
       project.tasks[0].sourceInquiryId !== input.sourceInquiryId ||
-      project.milestones.length !== 1
+      (input.milestone ? project.milestones.length !== 1 : false)
     ) {
       throw new EngagementInputError("The prior enquiry conversion is incomplete.", "idempotency_conflict", 409);
     }
@@ -318,20 +332,20 @@ async function readCommittedEngagement(
     }
     const contractId = project.contracts[0]?.id;
     const invoiceId = project.invoices[0]?.id;
-    if ((input.scopeMode === "agreement") !== Boolean(contractId) || Boolean(input.invoice) !== Boolean(invoiceId)) {
+    if ((input.scopeMode === "agreement") !== Boolean(contractId) || Boolean(input.invoice) !== Boolean(invoiceId) || Boolean(input.milestone) !== (project.milestones.length > 0)) {
       throw new EngagementInputError("This enquiry was already used for different engagement options.", "idempotency_conflict", 409);
     }
     const records: StartEngagementRecords = {
       clientId: project.clientId || "",
       projectId: project.id,
-      milestoneId: project.milestones[0].id,
+      ...(project.milestones[0] ? { milestoneId: project.milestones[0].id } : {}),
       taskId: project.tasks[0].id,
       ...(contractId ? { contractId } : {}),
       ...(invoiceId ? { invoiceId } : {}),
     };
     return { records, nextAction: nextAction(input, records), createdClient: false, replayed: true };
   }
-  if (project.milestones.length !== 1) throw new EngagementInputError("The prior engagement request is incomplete.", "idempotency_conflict", 409);
+  if (Boolean(input.milestone) !== (project.milestones.length > 0)) throw new EngagementInputError(input.milestone ? "The prior engagement request is incomplete." : "This flow ID was already used for different engagement options.", "idempotency_conflict", 409);
   if (input.client.mode === "existing" && project.clientId !== input.client.id) {
     throw new EngagementInputError("This flow ID was already used with another client.", "idempotency_conflict", 409);
   }
@@ -343,7 +357,7 @@ async function readCommittedEngagement(
   const records: StartEngagementRecords = {
     clientId: project.clientId || "",
     projectId: project.id,
-    milestoneId: project.milestones[0].id,
+    ...(project.milestones[0] ? { milestoneId: project.milestones[0].id } : {}),
     ...(contractId ? { contractId } : {}),
     ...(invoiceId ? { invoiceId } : {}),
   };
@@ -431,7 +445,7 @@ export async function createClientEngagement(userId: string, input: StartEngagem
           description: input.project.scope,
           status: "active",
           priority: "medium",
-          dueDate: input.milestone?.dueDate || null,
+          dueDate: input.project.deadline?.dueDate || null,
           currency,
           tags: [],
           dataOrigin: "user",

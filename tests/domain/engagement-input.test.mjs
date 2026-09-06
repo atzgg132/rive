@@ -62,6 +62,42 @@ test("inquiry conversion requires an explicit client choice and preserves the re
   );
 });
 
+test("engagement works without dates: milestone and deadline are independent and optional", () => {
+  const omitted = parseStartEngagementInput({ ...base, milestone: undefined });
+  assert.equal(omitted.milestone, null);
+  assert.equal(omitted.project.deadline, null);
+
+  const nulled = parseStartEngagementInput({ ...base, milestone: null });
+  assert.equal(nulled.milestone, null);
+
+  const undated = parseStartEngagementInput({ ...base, milestone: { title: "Kickoff" } });
+  assert.deepEqual(undated.milestone, { title: "Kickoff", dueDate: null, dateOnly: null });
+  assert.equal(undated.project.deadline, null);
+
+  const dated = parseStartEngagementInput({
+    ...base,
+    project: { ...base.project, deadline: "2026-10-01" },
+    milestone: { title: "Design approval", dueDate: "2026-09-15" },
+  });
+  assert.equal(dated.project.deadline?.dateOnly, "2026-10-01");
+  assert.equal(dated.milestone?.dateOnly, "2026-09-15");
+});
+
+test("engagement rejects a dated titleless milestone and a bad deadline", () => {
+  assert.throws(
+    () => parseStartEngagementInput({ ...base, milestone: { title: "  ", dueDate: "2026-09-15" } }),
+    (error) => error instanceof EngagementInputError && error.code === "missing_milestone",
+  );
+  assert.throws(
+    () => parseStartEngagementInput({ ...base, milestone: "not-an-object" }),
+    (error) => error instanceof EngagementInputError && error.code === "invalid_milestone",
+  );
+  assert.throws(
+    () => parseStartEngagementInput({ ...base, project: { ...base.project, deadline: "15/10/2026" } }),
+    (error) => error instanceof EngagementInputError && error.code === "invalid_project_deadline",
+  );
+});
+
 test("inquiry engagement input requires a source and keeps the converted client explicit", () => {
   const parsed = parseStartEngagementInput({
     ...base,
