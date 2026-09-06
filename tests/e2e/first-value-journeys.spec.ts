@@ -1,13 +1,10 @@
 /**
  * First-value browser journeys (W01/W04 acceptance: CH-02, CH-03, CH-07).
  *
- * Gated like release-critical: needs DATABASE_URL pointing at an isolated,
- * migrated database plus a running app (PLAYWRIGHT_BASE_URL). Skips otherwise.
- * Fixtures are uniquely labelled synthetics; nothing is deleted or reset.
- *
- * Run:
- *   PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 DATABASE_URL=... DATABASE_SSL=disable \
- *     SESSION_SECRET=... npx playwright test tests/e2e/first-value-journeys.spec.ts
+ * Same gate as release-critical: DATABASE_URL for a migrated database and a
+ * running app. Isolation is per unique owner, not a special database name —
+ * verify only has rive_test, and a rive_w00 name lock skipped the journeys
+ * there entirely.
  */
 import { loadEnvConfig } from "@next/env";
 import { expect, test, type BrowserContext } from "@playwright/test";
@@ -16,18 +13,33 @@ import { PrismaClient } from "@prisma/client";
 import { createHmac, randomBytes, scryptSync } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { checkServerIdentity } from "node:tls";
 import { Pool } from "pg";
 
 loadEnvConfig(process.cwd());
 
 const journeysEnabled = Boolean(process.env.DATABASE_URL);
 const sessionSecret = process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-local-development-session-secret";
-const EVIDENCE = join(process.cwd(), "..", "..", "Documents", "Codex", "2026-09-05", "do-x20", "evidence");
+const EVIDENCE = join(process.cwd(), "test-results", "first-value-journeys");
 
 function dbUrl(): string {
   const raw = process.env.DATABASE_URL || "";
-  if (!/rive_w00/.test(raw)) throw new Error("Journey specs must target the isolated rive_w00 database.");
+  if (!raw) throw new Error("Journey specs need DATABASE_URL.");
   return raw;
+}
+
+function sslConfig() {
+  const sslServerName = process.env.DATABASE_SSL_SERVERNAME || "";
+  return process.env.DATABASE_SSL === "disable" || process.env.DATABASE_URL?.includes("sslmode=disable")
+    ? false
+    : {
+        rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+        ...(sslServerName ? { checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) => checkServerIdentity(sslServerName, certificate) } : {}),
+      };
+}
+
+function journeyTag() {
+  return `j${Date.now().toString(36)}${randomBytes(3).toString("hex")}`;
 }
 
 function tokenFor(user: { id: string; email: string; plan: string; sessionVersion: number }): string {
@@ -48,8 +60,6 @@ async function authenticate(context: BrowserContext, user: { id: string; email: 
   }]);
 }
 
-const stamp = `j${Date.now().toString(36)}`;
-
 /** The feedback prompt pops up late on fresh workspaces and covers actions. */
 async function dismissFeedback(page: import("@playwright/test").Page) {
   const notNow = page.getByRole("button", { name: "Not now" });
@@ -66,7 +76,7 @@ function monthKey(d: Date): string {
 }
 
 test.describe("first-value journeys", () => {
-  test.skip(!journeysEnabled, "Requires DATABASE_URL with the isolated journey database.");
+  test.skip(!journeysEnabled, "Requires DATABASE_URL.");
   test.setTimeout(120_000);
 
   test.beforeAll(() => {
@@ -74,14 +84,15 @@ test.describe("first-value journeys", () => {
   });
 
   test("CH-02: fresh owner creates, reviews and issues a first invoice with no project", async ({ page, context, baseURL, request }) => {
-    const pool = new Pool({ connectionString: dbUrl(), ssl: false });
+    const stamp = journeyTag();
+    const pool = new Pool({ connectionString: dbUrl(), ssl: sslConfig() });
     const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
     try {
       const email = `ch02-${stamp}@example.invalid`;
       const user = await prisma.user.create({
         data: {
           email, passwordHash: `scrypt:${randomBytes(8).toString("hex")}:${scryptSync("journey-pass-1", "salt", 64).toString("hex")}`,
-          name: "CH02 Owner", currency: "USD", timeZone: "UTC",
+          name: "CH02 Owner", currency: "USD", timeZone: "UTC", plan: "free",
           emailVerifiedAt: new Date(), onboardingStatus: "complete", onboardingStep: 7,
         },
       });
@@ -160,14 +171,15 @@ test.describe("first-value journeys", () => {
   });
 
   test("CH-03: client work starts with no dates; milestone and deadline stay independent", async ({ page, context, baseURL, request }) => {
-    const pool = new Pool({ connectionString: dbUrl(), ssl: false });
+    const stamp = journeyTag();
+    const pool = new Pool({ connectionString: dbUrl(), ssl: sslConfig() });
     const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
     try {
       const email = `ch03-${stamp}@example.invalid`;
       const user = await prisma.user.create({
         data: {
           email, passwordHash: `scrypt:x:${scryptSync("journey-pass-1", "salt", 64).toString("hex")}`,
-          name: "CH03 Owner", currency: "USD", timeZone: "UTC",
+          name: "CH03 Owner", currency: "USD", timeZone: "UTC", plan: "free",
           emailVerifiedAt: new Date(), onboardingStatus: "complete", onboardingStep: 7,
         },
       });
@@ -237,14 +249,15 @@ test.describe("first-value journeys", () => {
   });
 
   test("CH-07: split-month receipts, retry and double submit keep one logical payment", async ({ page, context, baseURL, request }) => {
-    const pool = new Pool({ connectionString: dbUrl(), ssl: false });
+    const stamp = journeyTag();
+    const pool = new Pool({ connectionString: dbUrl(), ssl: sslConfig() });
     const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
     try {
       const email = `ch07-${stamp}@example.invalid`;
       const user = await prisma.user.create({
         data: {
           email, passwordHash: `scrypt:x:${scryptSync("journey-pass-1", "salt", 64).toString("hex")}`,
-          name: "CH07 Owner", currency: "USD", timeZone: "UTC",
+          name: "CH07 Owner", currency: "USD", timeZone: "UTC", plan: "free",
           emailVerifiedAt: new Date(), onboardingStatus: "complete", onboardingStep: 7,
         },
       });
