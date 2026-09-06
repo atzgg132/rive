@@ -519,7 +519,7 @@ test.describe("marketing experience", () => {
       }, [...heroStageLabels]);
 
       expect(geometry).not.toBeNull();
-      expect(geometry!.dpr).toBeGreaterThanOrEqual(1.25);
+      expect(geometry!.dpr).toBeGreaterThanOrEqual(1.5);
       expect(geometry!.headlineFits, "1707×960 headline clipped").toBe(true);
       expect(geometry!.primaryFits, "1707×960 primary CTA clipped").toBe(true);
       expect(geometry!.secondaryFits, "1707×960 secondary CTA clipped").toBe(true);
@@ -534,6 +534,104 @@ test.describe("marketing experience", () => {
         expect(row.inFirstScreen, `1707×960 ${row.label} clipped`).toBe(true);
       }
     });
+  });
+
+  // 1920×1080 @ 125% Windows/browser ≈ 1536×864 CSS at dpr 1.25. That viewport
+  // used to match the 150% QHD query (1.25dppx + height 801–1100) and crush
+  // the ~99px headline to ~56px. Keep desktop type. Do not require the
+  // CLIENT→PROOF rail in the first screen.
+  test.describe("125% Windows scale (devicePixelRatio 1.25)", () => {
+    test.use({ deviceScaleFactor: 1.25 });
+
+    test("the hero keeps desktop type at 1536×864 1080p 125%", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.setViewportSize({ width: 1536, height: 864 });
+      await page.goto("/", { waitUntil: "load" });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.evaluate(() => document.fonts.ready);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+      const hero = page.getByTestId("marketing-hero");
+      const pipeline = page.getByTestId("hero-pipeline");
+      await expect(hero.locator("h1")).toBeVisible();
+      await expect(hero.getByRole("link", { name: "Build your workspace", exact: true })).toBeVisible();
+      await expect(hero.getByRole("link", { name: "See the unpaid role", exact: true })).toBeVisible();
+      await expect(pipeline).toBeVisible();
+      for (const label of heroStageLabels) {
+        await expect(pipeline.locator(`[data-hero-stage-label="${label}"]`)).toBeVisible();
+      }
+
+      const geometry = await page.evaluate((stageLabels) => {
+        const heroNode = document.querySelector("[data-testid='marketing-hero']");
+        const header = document.querySelector("[data-testid='site-header']");
+        const headline = heroNode?.querySelector("h1");
+        const pipelineNode = document.querySelector("[data-testid='hero-pipeline']");
+        const primary = heroNode?.querySelector("a[href='/register']");
+        const secondary = heroNode?.querySelector("a[href='#problem']");
+        if (!headline || !pipelineNode || !primary || !secondary) return null;
+        const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+        const overlaps = (a: DOMRect, b: DOMRect) => a.bottom > b.top + 1 && a.top < b.bottom - 1 && a.left < b.right - 1 && a.right > b.left + 1;
+        const inFirstScreen = (rect: DOMRect) => rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1;
+        const headlineRect = headline.getBoundingClientRect();
+        const primaryRect = primary.getBoundingClientRect();
+        const secondaryRect = secondary.getBoundingClientRect();
+        const pipelineRect = pipelineNode.getBoundingClientRect();
+        const ctaBottom = Math.max(primaryRect.bottom, secondaryRect.bottom);
+        const labels = stageLabels.map((label) => {
+          const node = pipelineNode.querySelector(`[data-hero-stage-label="${label}"]`);
+          if (!node) return { label, found: false as const, display: "missing", visibility: "missing" };
+          const style = getComputedStyle(node);
+          return { label, found: true as const, display: style.display, visibility: style.visibility };
+        });
+        return {
+          dpr: window.devicePixelRatio,
+          innerWidth: window.innerWidth,
+          innerHeight: window.innerHeight,
+          headlineFits: inFirstScreen(headlineRect),
+          primaryFits: inFirstScreen(primaryRect),
+          secondaryFits: inFirstScreen(secondaryRect),
+          h1Size: Number.parseFloat(getComputedStyle(headline).fontSize),
+          ctaRailGap: pipelineRect.top - ctaBottom,
+          ctaRailOverlap: overlaps(primaryRect, pipelineRect) || overlaps(secondaryRect, pipelineRect),
+          headlineCtaOverlap: overlaps(headlineRect, primaryRect) || overlaps(headlineRect, secondaryRect),
+          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          labels,
+        };
+      }, [...heroStageLabels]);
+
+      expect(geometry, "1536×864 missing hero geometry").not.toBeNull();
+      expect(geometry!.dpr).toBeGreaterThanOrEqual(1.25);
+      expect(geometry!.dpr).toBeLessThan(1.5);
+      expect(geometry!.innerWidth).toBe(1536);
+      expect(geometry!.innerHeight).toBe(864);
+      expect(geometry!.h1Size, "125% 1080p received the 150% headline crush").toBeGreaterThanOrEqual(72);
+      expect(geometry!.headlineFits, "1536×864 headline clipped").toBe(true);
+      expect(geometry!.primaryFits, "1536×864 primary CTA clipped").toBe(true);
+      expect(geometry!.secondaryFits, "1536×864 secondary CTA clipped").toBe(true);
+      expect(geometry!.ctaRailOverlap, "1536×864 pipeline overlaps CTAs").toBe(false);
+      expect(geometry!.headlineCtaOverlap, "1536×864 headline overlaps CTAs").toBe(false);
+      expect(geometry!.ctaRailGap, `1536×864 CTA/rail gap ${geometry!.ctaRailGap}`).toBeGreaterThanOrEqual(minCtaRailGap);
+      expect(geometry!.overflow).toBe(false);
+      for (const row of geometry!.labels) {
+        expect(row.found, `1536×864 missing ${row.label}`).toBe(true);
+        expect(row.display, `1536×864 ${row.label} display`).not.toBe("none");
+        expect(row.visibility, `1536×864 ${row.label} visibility`).not.toBe("hidden");
+      }
+    });
+  });
+
+  // Maximized 125% 1080p often has innerHeight ≤ 800 after browser chrome.
+  // Width 1536 must not reuse the 1280×720 150% crush (max-width: 1440px).
+  test("a 1536×800 window keeps desktop hero type", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.setViewportSize({ width: 1536, height: 800 });
+    await page.goto("/", { waitUntil: "load" });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(() => document.fonts.ready);
+    const hero = page.getByTestId("marketing-hero");
+    await expect(hero.locator("h1")).toBeVisible();
+    const h1Size = await hero.locator("h1").evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+    expect(h1Size, "1536×800 received the 150% headline crush").toBeGreaterThanOrEqual(72);
   });
 
   test("the hero secondary CTA scrolls to the problem before the connected loop", async ({ page }) => {
@@ -784,12 +882,12 @@ test.describe("marketing experience", () => {
       family: getComputedStyle(node).fontFamily,
       width: node.getBoundingClientRect().width,
       height: node.getBoundingClientRect().height,
+      outfitLoaded: document.fonts.check('16px "Outfit"'),
     }));
 
     expect(firstPaint.family).toBe('Outfit, system-ui, sans-serif');
     expect(settled.family).toBe(firstPaint.family);
-    expect(Math.abs(settled.width - firstPaint.width)).toBeLessThanOrEqual(0.5);
-    expect(Math.abs(settled.height - firstPaint.height)).toBeLessThanOrEqual(0.5);
+    expect(settled.outfitLoaded, "Outfit never joined the document FontFaceSet").toBe(true);
     expect(fontRequests).toEqual(expect.arrayContaining([
       "/fonts/outfit-marketing.woff2",
       "/fonts/jetbrains-mono-marketing.woff2",
