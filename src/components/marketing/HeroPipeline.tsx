@@ -49,7 +49,7 @@ export function HeroPipeline() {
       <div className="relative">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-[10%] right-[10%] top-3 h-px bg-gradient-to-r from-blue-400/50 via-cyan-300/35 to-emerald-300/30 sm:top-4 [container-type:inline-size]"
+          className="pointer-events-none absolute left-[10%] right-[10%] top-3 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent sm:top-4 [container-type:inline-size]"
         >
           {!reducedMotion && autoAdvance ? (
             <div
@@ -57,9 +57,8 @@ export function HeroPipeline() {
               className="absolute top-0 h-full w-10"
               style={{
                 marginLeft: "-1.25rem",
-                background:
-                  "linear-gradient(90deg, transparent, rgb(125 211 252 / 0.9), transparent)",
-                filter: "drop-shadow(0 0 3px rgb(125 211 252 / 0.5))",
+                background: "linear-gradient(90deg, transparent, rgb(var(--primary) / 0.85), transparent)",
+                filter: "drop-shadow(0 0 3px rgb(var(--primary) / 0.35))",
                 opacity: wrapping ? 0 : 1,
                 transform: `translateX(${targetIndex * 25}cqi)`,
                 transition: wrapping
@@ -86,7 +85,7 @@ export function HeroPipeline() {
                 <span
                   className={`hero-stage-icon relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-lg ring-1 transition duration-300 ease-rive-out sm:h-8 sm:w-8 ${
                     selected
-                      ? "bg-primary/20 text-primary ring-primary/40 shadow-[0_0_18px_rgba(59,130,246,0.25)]"
+                      ? "bg-primary/15 text-primary ring-primary/30 shadow-[0_0_16px_rgba(var(--primary)_0.18)]"
                       : "bg-[var(--surface-raised)] text-muted-foreground ring-[var(--stroke-hairline)] group-hover:text-primary"
                   }`}
                 >
@@ -95,7 +94,7 @@ export function HeroPipeline() {
                 <span className="min-w-0 w-full">
                   <span
                     data-hero-stage-label={stage.label}
-                    className={`block max-w-full whitespace-nowrap font-mono text-xs font-bold uppercase leading-none tracking-[0.04em] sm:truncate sm:leading-normal sm:tracking-[0.16em] ${
+                    className={`block max-w-full whitespace-nowrap font-mono text-xs font-semibold uppercase leading-none tracking-[0.04em] sm:truncate sm:leading-normal sm:tracking-[0.14em] ${
                       selected ? "text-primary" : "text-muted-foreground"
                     }`}
                   >
@@ -103,7 +102,7 @@ export function HeroPipeline() {
                   </span>
                   <span
                     data-hero-stage-short={stage.short}
-                    className={`mt-0.5 hidden truncate text-[0.78rem] font-bold tracking-[-0.01em] sm:block ${
+                    className={`mt-0.5 hidden truncate text-[0.78rem] font-medium tracking-[-0.01em] sm:block ${
                       selected ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >

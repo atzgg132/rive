@@ -19,11 +19,11 @@ export type MarketingChapter = {
 
 export const homeContent = {
   hero: {
-    eyebrow: "OPEN BETA",
-    title: "Your business should not need you as middleware.",
-    body: "One workspace for the client, the work, the Agreement, the invoice, and the proof—so context moves without you rebuilding the story every morning.",
-    primaryCta: { label: "Build your workspace", href: "/register" },
-    secondaryCta: { label: "See the unpaid role", href: "#problem" },
+    eyebrow: "THE OPERATING SYSTEM FOR INDEPENDENT WORK",
+    title: "One workspace for every moving part.",
+    body: "For freelancers, studios, and small agencies managing 2–3+ clients. Rive connects clients, work, agreements, invoices, calendar, and proof — so you stop rebuilding the story every morning.",
+    primaryCta: { label: "Start your workspace", href: "/register" },
+    secondaryCta: { label: "See how it connects", href: "#product" },
     stages: [
       { id: "client", label: "CLIENT", short: "The relationship" },
       { id: "work", label: "WORK", short: "The delivery" },
@@ -34,15 +34,15 @@ export const homeContent = {
   },
   tax: {
     eyebrow: "THE WORK AROUND THE WORK",
-    title: "There is an unpaid role inside every independent business.",
-    body: "It remembers which promise became which task, which task should become an invoice, and which finished project should become proof. Today that role is you: copying context between tools that are each fine on their own.",
-    close: "Disconnection is the bug. Not your discipline.",
+    title: "Every morning, you rebuild your business from memory.",
+    body: "The client lives in one app. The deadline lives in another. The invoice is still unwritten. The promise is buried in a thread. And you are the only thing holding it all together.",
+    close: "That is not a discipline problem. It is an operating system problem.",
     duties: [
-      { label: "01", job: "Rebuild the client", gap: "Who is waiting is reconstructed from three apps." },
-      { label: "02", job: "Re-enter the scope", gap: "The promise lives in a thread. The board does not have it." },
-      { label: "03", job: "Invent the invoice", gap: "Billing starts when someone asks, from memory." },
-      { label: "04", job: "Hunt the date", gap: "The deadline sits in a calendar that has never heard of the Agreement." },
-      { label: "05", job: "Assemble the proof", gap: "The case study is a folder, after the work is already forgotten." },
+      { label: "01", job: "Find the client again", gap: "Their context is scattered across three apps." },
+      { label: "02", job: "Re-enter the scope", gap: "The promise lives in a thread. The board never saw it." },
+      { label: "03", job: "Invent the invoice", gap: "Billing starts when someone asks, pulled from memory." },
+      { label: "04", job: "Hunt the date", gap: "The deadline sits in a calendar that never met the Agreement." },
+      { label: "05", job: "Build the proof", gap: "The case study is a folder, created after the work is already forgotten." },
     ],
     visual: {
       kind: "disconnection" as const,
@@ -61,7 +61,7 @@ export const homeContent = {
     },
   },
   bento: [
-    { eyebrow: "CLIENT", title: "A relationship, not a row.", body: "Briefs, projects, Agreements, invoices, expenses, and activity stay attached to the person they belong to.", metric: "One context" },
+    { eyebrow: "CLIENT", title: "A relationship, not a row.", body: "Briefs, projects, agreements, invoices, expenses, and activity stay attached to the person they belong to.", metric: "One context" },
     { eyebrow: "WORK", title: "Delivery knows the promise.", body: "Projects and milestones carry dates, scope, cost, and client context forward without a second setup ritual.", metric: "No re-entry" },
     { eyebrow: "MONEY", title: "Billing remembers the work.", body: "Accepted terms can become draft invoices. Paid invoices and logged expenses become the financial view.", metric: "Contract to cash" },
     { eyebrow: "TIME", title: "Dates stop hiding in tabs.", body: "Project deadlines and tasks share one calendar, with a private Apple Calendar subscription feed.", metric: "One timeline" },
@@ -71,13 +71,13 @@ export const homeContent = {
   scrolly: {
     eyebrow: "WHAT CONNECTED FEELS LIKE",
     title: "Change one thing. Everything downstream already knows.",
-    body: "These are recognisable slices of the product—not an invented demo. Scroll through the same operating loop you use after signup.",
+    body: "The same operating loop you use after signup. Scroll through it once and the product explains itself.",
     chapters: [
       {
         id: "client-context",
         eyebrow: "01 / CLIENT",
-        title: "A client becomes working context.",
-        body: "The overview does not ask you to remember where attention belongs. Revenue, active work, deadlines, and recent movement arrive from the records underneath.",
+        title: "Every client arrives with context.",
+        body: "Revenue, active work, deadlines, and recent movement are already attached to the relationship. You do not have to reconstruct it from memory.",
         visual: {
           kind: "dashboard",
           props: {
@@ -95,8 +95,8 @@ export const homeContent = {
       {
         id: "agreement-context",
         eyebrow: "02 / AGREEMENT",
-        title: "Scope stops living in the scrollback.",
-        body: "The composer starts with the client and project it already knows. You review every clause and payment trigger before a draft is shared.",
+        title: "Scope stops living in the thread.",
+        body: "The agreement composer already knows the client, project, and terms. You review every clause and payment trigger before anything is shared.",
         visual: {
           kind: "contract",
           props: {
@@ -112,8 +112,8 @@ export const homeContent = {
       {
         id: "invoice-context",
         eyebrow: "03 / MONEY",
-        title: "The invoice already knows what came before.",
-        body: "Client, project, Agreement, line items, due date, and currency arrive together. Accepted terms can become a draft invoice. Native amounts stay intact, with a workspace display currency when money crossed borders. Sending and recording payment remain explicit actions.",
+        title: "The invoice writes itself from the work.",
+        body: "Client, project, agreement, line items, due date, and currency arrive together. Accepted terms become a draft invoice. Multi-currency stays honest. Sending and recording payment stay deliberate.",
         visual: {
           kind: "invoice",
           props: {
@@ -133,8 +133,8 @@ export const homeContent = {
       {
         id: "calendar-context",
         eyebrow: "04 / TIME",
-        title: "The deadline lives where the work lives.",
-        body: "Project milestones and tasks appear on one calendar. A private Apple Calendar feed carries Rive deadlines into the calendar you already check.",
+        title: "Deadlines live where the work lives.",
+        body: "Project milestones and tasks share one calendar. A private Apple Calendar feed carries Rive deadlines into the calendar you already open every day.",
         visual: {
           kind: "calendar",
           props: {
@@ -151,8 +151,8 @@ export const homeContent = {
       {
         id: "import-context",
         eyebrow: "05 / MOMENTUM",
-        title: "You already have the data.",
-        body: "Import clients, projects, invoices, and expenses from CSV or XLSX. Rive deduplicates, fuzzy-matches, rebuilds relationships, and asks when certainty runs out.",
+        title: "Bring the work you have already done.",
+        body: "Import clients, projects, invoices, and expenses from CSV or XLSX. Rive deduplicates, matches relationships, and pauses only when certainty runs out.",
         visual: {
           kind: "import",
           props: {
@@ -166,8 +166,8 @@ export const homeContent = {
       {
         id: "portfolio-context",
         eyebrow: "06 / PROOF",
-        title: "Delivery becomes the next introduction.",
-        body: "Select the work worth showing, publish it from Portfolio Studio, then see what prospective clients read and where enquiries begin.",
+        title: "Delivered work becomes your next introduction.",
+        body: "Select the work worth showing, publish it from Portfolio Studio, and watch what prospective clients read and where enquiries begin.",
         visual: {
           kind: "portfolio",
           props: {
@@ -184,10 +184,10 @@ export const homeContent = {
   remitNext: {
     eyebrow: "Remit",
     title: "The payout should follow the invoice.",
-    body: "Work is billed in the client's currency and lived in yours. Remit is the last hop of the operating loop: conversion you can see, destination you already know, payout from the same workspace as the invoice.",
+    body: "Work is billed in the client's currency and lived in yours. Remit is the last hop of the operating loop: conversion you can see, a destination you already know, payout from the same workspace as the invoice.",
     status: "In development",
     promises: [
-      { label: "Invoice to payout", sub: "The billed amount, the conversion, and the destination stay attached to the client and Agreement you already have." },
+      { label: "Invoice to payout", sub: "The billed amount, conversion, and destination stay attached to the client and agreement you already have." },
       { label: "The currencies you actually use", sub: "USD, EUR, INR, and a mixed client book — without a separate payments product." },
       { label: "Conversion you can inspect", sub: "Live ECB mid-market rates, so the number is in front of you before anyone commits." },
     ],
@@ -199,7 +199,7 @@ export const homeContent = {
     items: [
       { question: "Can I bring my existing data into Rive?", answer: "Yes. Import CSV or XLSX files for clients, projects, invoices, and expenses. Rive previews duplicates and relationships before anything is committed." },
       { question: "Is Rive open to everyone?", answer: "Yes. Rive is in open beta with open signup. You do not need an invitation, and access is free during beta." },
-      { question: "Does Rive send contracts for e-signature?", answer: "Rive supports an Agreement workflow from composer to review, recorded acceptance, and linked billing. You still review every version and deliberate send." },
+      { question: "Does Rive send contracts for e-signature?", answer: "Rive supports an agreement workflow from composer to review, recorded acceptance, and linked billing. You still review every version and send deliberately." },
       { question: "Which calendar integrations are live?", answer: "A private Apple Calendar subscription feed is live. Google Calendar is pending approval and is not presented as available." },
       { question: "Can Rive move money for me?", answer: "Not yet. Remit is in development. Today Rive records invoices, payments, expenses, and multi-currency context. Remit is how payouts will leave the workspace." },
       { question: "What happens to my data?", answer: "Your workspace data is yours. Rive does not sell it. We are building explicit export and portability into the product as the beta matures." },
@@ -207,9 +207,9 @@ export const homeContent = {
   },
   finalCta: {
     eyebrow: "OPEN BETA",
-    title: "Put the context back inside the work.",
-    body: "Start with one client, or bring the history you already have. The next useful action should begin with context—not another setup ceremony.",
-    primary: { label: "Create your Rive workspace", href: "/register" },
-    secondary: { label: "See the connected loop", href: "/#product" },
+    title: "Run your practice from one workspace.",
+    body: "Start with one client, or bring the history you already have. The next useful action should begin with context — not another setup ceremony.",
+    primary: { label: "Start your workspace", href: "/register" },
+    secondary: { label: "Explore the loop", href: "/#product" },
   },
 } as const;

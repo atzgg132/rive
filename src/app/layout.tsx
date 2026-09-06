@@ -8,9 +8,9 @@ import { deploymentOrigin } from "@/lib/siteMetadata";
 
 export const metadata: Metadata = {
   metadataBase: new URL(deploymentOrigin),
-  title: "Rive — Connected client, project, contract and financial operations",
+  title: "Rive — One workspace for every moving part",
   description:
-    "Rive is an all-in-one workspace for digital service businesses to manage clients, projects, contracts, revenue, invoices, expenses, calendars, imports, and portfolios.",
+    "The operating system for independent work. Rive connects clients, projects, agreements, invoices, expenses, calendar, imports, and portfolio proof in one workspace.",
   keywords: [
     "digital service business software",
     "project management",
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
     "business data import",
   ],
   openGraph: {
-    title: "Rive — Run your service business in one connected workspace",
+    title: "Rive — One workspace for every moving part",
     description:
-      "Clients, projects, contracts, revenue, expenses, calendars, imports, and your public portfolio—connected in one operating workspace.",
+      "The operating system for independent work. Connect clients, projects, agreements, invoices, expenses, calendar, imports, and portfolio proof in one workspace.",
     type: "website",
     url: "https://www.rive.work",
   },

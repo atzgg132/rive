@@ -10,7 +10,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_2fr] lg:gap-20">
           <div>
-            <Link href="/" prefetch={false} className="marketing-focus inline-flex rounded-lg" aria-label="Rive home"><RiveLogo height={38} animated /></Link>
+            <Link href="/" prefetch={false} className="marketing-focus inline-flex rounded-lg" aria-label="Rive home"><RiveLogo height={34} animated /></Link>
             <p className="mt-5 max-w-sm text-sm leading-7 text-muted-foreground">{footerCopy.description}</p>
             <p className="mt-6 inline-flex rounded-full border border-success/20 bg-success/10 px-3 py-1.5 font-mono text-[0.64rem] font-semibold uppercase tracking-[0.14em] text-success">{footerCopy.status}</p>
           </div>
@@ -21,7 +21,7 @@ export function SiteFooter() {
                 <ul className="mt-4 grid gap-3">
                   {group.items.map((item) => (
                     <li key={item.href}>
-                      <Link href={item.href} prefetch={false} className="marketing-focus inline-flex min-h-11 items-center gap-1 rounded text-sm font-semibold text-muted-foreground transition hover:text-primary">{item.label}{item.href.startsWith("mailto:") ? <ArrowUpRight className="h-3 w-3" /> : null}</Link>
+                      <Link href={item.href} prefetch={false} className="marketing-focus inline-flex min-h-11 items-center gap-1 rounded text-sm font-medium text-muted-foreground transition hover:text-foreground">{item.label}{item.href.startsWith("mailto:") ? <ArrowUpRight className="h-3 w-3" /> : null}</Link>
                     </li>
                   ))}
                 </ul>

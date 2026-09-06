@@ -1,6 +1,6 @@
 export const contactContent = {
   eyebrow: "ONE INBOX",
-  title: "Bring us the part of the work that refuses to stay connected.",
+  title: "Bring us the part of your practice that refuses to stay connected.",
   intro: "Questions, support, press, partnerships, or a workflow that keeps breaking. Give us the concrete version; it reaches the people building Rive.",
   asideTitle: "Write directly",
   asideBody: "For questions, support, press, or anything else that needs a human answer.",
@@ -13,7 +13,7 @@ export const contactContent = {
     subjectLabel: "Subject",
     subjects: ["General Inquiry", "Partnership", "Press", "Feedback", "Bug Report"],
     messageLabel: "Message",
-    messagePlaceholder: "Tell us what happened, what you expected, and where the context broke.",
+    messagePlaceholder: "Tell us what happened, what you expected, and where the loop broke.",
     submitLabel: "Send message",
     submittingLabel: "Sending…",
     successTitle: "Message received.",

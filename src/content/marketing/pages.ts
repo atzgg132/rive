@@ -67,7 +67,7 @@ export const aboutContent: MarketingPageContent = {
       cards: founders.map((founder) => ({ title: founder.name, meta: founder.role, body: founder.body })),
     },
   ],
-  cta: { headline: "Put the context back in the work.", label: "Build your workspace", href: "/register", note: "Open beta. No invitation required. Free during beta." },
+  cta: { headline: "Put the context back in the work.", label: "Start your workspace", href: "/register", note: "Open beta. No invitation required. Free during beta." },
 };
 
 export const roadmapContent: MarketingPageContent = {
