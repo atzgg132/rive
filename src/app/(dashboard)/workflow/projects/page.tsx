@@ -443,7 +443,7 @@ function ProjectsWorkspace() {
       <PageHeader
         title="Projects"
         description="Keep delivery moving with clear milestones, budgets, tasks, and deadlines."
-        actions={<Button data-guide-target="projects-create" onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button>}
+        actions={<div className="flex flex-wrap items-center gap-2">{engagementFlow ? <Button variant="secondary" onClick={() => router.push("/workflow/start-engagement")}><Plus /> New client work</Button> : null}<Button data-guide-target="projects-create" onClick={openCreate} aria-label="Create new project"><Plus /> Create project</Button></div>}
       />
 
       {/* Filter and Search */}
@@ -528,7 +528,7 @@ function ProjectsWorkspace() {
           why="A project gives Rive something meaningful to organize."
           next={clients.length === 0 ? "Add a client first, then create the project." : "Create the project you are working on now."}
           after="Its deadlines and budget can flow into Calendar and Revenue."
-          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Start engagement</Link> : clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
+          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">New client work</Link> : clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
         />
       ) : (<>
         <div className={`flex flex-col gap-6 transition-opacity ${loading ? "opacity-60" : "opacity-100"}`} aria-busy={loading}>

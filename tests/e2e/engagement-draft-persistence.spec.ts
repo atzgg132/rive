@@ -66,7 +66,7 @@ test("an engagement submits with no milestone and an independent deadline", asyn
   await page.getByRole("button", { name: "Continue" }).click();
 
   const createResponse = page.waitForResponse((response) => response.url().includes("/api/workflow/start-engagement") && response.request().method() === "POST");
-  await page.getByRole("main").getByRole("button", { name: "Start engagement" }).click();
+  await page.getByRole("main").getByRole("button", { name: "New client work" }).click();
   await expect((await createResponse).status()).toBe(201);
 
   const command = readCommand();

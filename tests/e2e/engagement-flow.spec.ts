@@ -26,7 +26,7 @@ test("creates an Agreement-and-invoice engagement from one three-step composer",
   const readCommand = await installMocks(page);
   await page.goto("/workflow/start-engagement", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByRole("heading", { name: "Start a client engagement" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New client work" })).toBeVisible();
   await page.getByLabel("Client name").fill("Northstar Labs");
   await page.getByLabel("Client email").fill("hello@northstar.example");
   await page.getByRole("button", { name: "Continue" }).click();
@@ -44,7 +44,7 @@ test("creates an Agreement-and-invoice engagement from one three-step composer",
   await expect(page.getByText("Editable Agreement draft", { exact: true })).toBeVisible();
   await expect(page.getByText("Draft invoice", { exact: true })).toBeVisible();
   const createResponse = page.waitForResponse((response) => response.url().includes("/api/workflow/start-engagement") && response.request().method() === "POST");
-  await page.getByRole("main").getByRole("button", { name: "Start engagement" }).click();
+  await page.getByRole("main").getByRole("button", { name: "New client work" }).click();
   await expect((await createResponse).status()).toBe(201);
 
   await expect(page).toHaveURL(/\/workflow\/contracts\/contract-1\?from=engagement/);

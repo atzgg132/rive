@@ -176,7 +176,7 @@ test.describe("first-value journeys", () => {
 
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto("/workflow/start-engagement");
-      await expect(page.getByRole("heading", { name: "Start a client engagement" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "New client work" })).toBeVisible();
       const clientName = `CH03 Studio ${stamp}`;
       await page.getByPlaceholder("Northstar Labs").fill(clientName);
       await page.getByPlaceholder("hello@northstar.example").fill(`ch03-${stamp}@example.invalid`);
@@ -197,7 +197,7 @@ test.describe("first-value journeys", () => {
 
       // Step 3: keep scope with the project, no invoice.
       await page.locator('section[aria-labelledby="start-engagement-heading"]')
-        .getByRole("button", { name: "Start engagement", exact: true }).click();
+        .getByRole("button", { name: "New client work", exact: true }).click();
       const created = await page.waitForResponse((r) => r.request().method() === "POST" && r.url().includes("/api/workflow/start-engagement"));
       expect(created.status()).toBe(201);
       const createdJson = await created.json();

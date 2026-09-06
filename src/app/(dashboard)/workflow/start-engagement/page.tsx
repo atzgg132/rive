@@ -41,7 +41,7 @@ export default function StartEngagementPage() {
   }, [inquiryId]);
 
   if (!engagementFlow) {
-    return <div className="workspace-page mx-auto max-w-xl rounded-2xl border border-border bg-card p-6"><h1 className="text-xl font-bold">Start engagement is not available here yet.</h1><p className="mt-2 text-sm text-muted-foreground">Use the existing client and project tools while this workflow is being rolled out.</p><Link href="/dashboard" className="mt-4 inline-flex text-sm font-bold text-primary hover:underline">Back to overview</Link></div>;
+    return <div className="workspace-page mx-auto max-w-xl rounded-2xl border border-border bg-card p-6"><h1 className="text-xl font-bold">New client work is not available here yet.</h1><p className="mt-2 text-sm text-muted-foreground">Use the existing client and project tools while this workflow is being rolled out.</p><Link href="/dashboard" className="mt-4 inline-flex text-sm font-bold text-primary hover:underline">Back to overview</Link></div>;
   }
   return (
     <div className="workspace-page mx-auto max-w-4xl animate-fade-in">

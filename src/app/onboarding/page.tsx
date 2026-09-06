@@ -763,9 +763,9 @@ export default function OnboardingPage() {
                     {
                       id: "quickstart" as const,
                       icon: Rocket,
-                      title: "Start a client engagement",
+                      title: "New client work",
                       detail:
-                        "Create the client, work, milestone, Agreement, and optional invoice as one connected flow.",
+                        "Create the client and work as one connected flow, with optional milestones, Agreement, and invoice.",
                       badge: "Recommended",
                     },
                     {

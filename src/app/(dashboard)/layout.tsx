@@ -297,8 +297,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {engagementFlowEnabled && (
               <Button
                 size="icon"
-                aria-label="Start a client engagement"
-                title="Start a client engagement"
+                aria-label="New client work"
+                title="New client work"
                 onClick={() => router.push("/workflow/start-engagement")}
               >
                 <Plus className="h-5 w-5" />
@@ -342,9 +342,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="flex items-center gap-3">
             {engagementFlowEnabled && (
-              <Button size="sm" className="gap-2 whitespace-nowrap" onClick={() => router.push("/workflow/start-engagement")}>
+              <Button variant="default" className="gap-2 whitespace-nowrap" onClick={() => router.push("/workflow/start-engagement")}>
                 <Plus className="h-4 w-4" />
-                Start engagement
+                New client work
               </Button>
             )}
             <CurrencySwitcher />
@@ -408,9 +408,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <nav className="flex flex-col gap-1 flex-1">
                 {engagementFlowEnabled && (
-                  <Button className="mb-3 w-full justify-start gap-2" onClick={() => { setMobileMenuOpen(false); router.push("/workflow/start-engagement"); }}>
+                  <Button variant="default" className="mb-3 w-full justify-start gap-2" onClick={() => { setMobileMenuOpen(false); router.push("/workflow/start-engagement"); }}>
                     <Plus className="h-4 w-4" />
-                    Start engagement
+                    New client work
                   </Button>
                 )}
                 {navLinks.map((link) => renderNavLink(link, true))}

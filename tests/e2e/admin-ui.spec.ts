@@ -127,7 +127,7 @@ test.describe("admin control room", () => {
     await page.getByRole("button", { name: "Funnel" }).click();
 
     await expect(page.getByRole("heading", { name: "Where users stop" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Start a client engagement" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "New client work" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Why they stop" })).toBeVisible();
     await expect(page.getByText("No primary goal")).toBeVisible();
     await expect(page.getByText("No client-linked project in 7 days")).toBeVisible();

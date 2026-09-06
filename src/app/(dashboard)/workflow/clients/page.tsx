@@ -4,6 +4,7 @@ import { Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Te
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Users,
   Plus,
@@ -46,6 +47,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  const router = useRouter();
   const { engagementFlow } = useFeatureAvailability();
   const { displayCurrency, convert, format } = useCurrency();
   const [clients, setClients] = useState<Client[]>([]);
@@ -236,7 +238,7 @@ export default function ClientsPage() {
       <PageHeader
         title="Clients"
         description="Keep contact details, projects, invoices, and relationship history together."
-        actions={<Button data-guide-target="clients-create" onClick={openCreate}><Plus /> Add client</Button>}
+        actions={<div className="flex flex-wrap items-center gap-2">{engagementFlow ? <Button variant="secondary" onClick={() => router.push("/workflow/start-engagement")}><Plus /> New client work</Button> : null}<Button data-guide-target="clients-create" onClick={openCreate}><Plus /> Add client</Button></div>}
       />
 
       {/* Filter bar */}
@@ -279,7 +281,7 @@ export default function ClientsPage() {
           why="This is the context Rive reuses across the rest of your workspace."
           next="Add one client you are actively working with."
           after="Your projects and invoices can reuse these details."
-          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Start engagement</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
+          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">New client work</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
         />
       ) : (<>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

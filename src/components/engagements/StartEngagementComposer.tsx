@@ -265,7 +265,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">One connected workflow</p>
-            <h1 id="start-engagement-heading" className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Start a client engagement</h1>
+            <h1 id="start-engagement-heading" className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">New client work</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Add the relationship and the first real piece of work. Rive connects the records behind the scenes.</p>
           </div>
           <p className="shrink-0 text-xs font-bold text-muted-foreground">Step {step + 1} of {STEPS.length}</p>
@@ -373,7 +373,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
         {step > 0 ? <Button type="button" variant="ghost" disabled={saving} onClick={() => setStep((value) => value - 1)}><ArrowLeft className="h-4 w-4" /> Back</Button> : <span />}
         {step < 2
           ? <Button type="button" onClick={continueStep}>Continue <ArrowRight className="h-4 w-4" /></Button>
-          : <Button type="button" disabled={saving} onClick={() => void createEngagement()}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Start engagement</Button>}
+          : <Button type="button" disabled={saving} onClick={() => void createEngagement()}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} New client work</Button>}
       </div>
     </section>
   );

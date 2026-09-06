@@ -311,13 +311,13 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
-    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
+    await expect(page.getByText("New client work").first()).toBeVisible();
     await expect(page.getByTestId("activation-card")).toBeVisible();
     await expect(page.getByRole("link", { name: "Portfolio" }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Calendar" }).first()).toBeVisible();
     await page.getByRole("button", { name: "Open Getting Started" }).click();
     await expect(page.getByTestId("getting-started-panel")).toBeVisible();
-    await page.getByRole("link", { name: "Start a client engagement" }).last().click();
+    await page.getByRole("link", { name: "New client work" }).last().click();
     await expect(page).toHaveURL(/\/workflow\/start-engagement/, { timeout: 15_000 });
   });
 
@@ -325,10 +325,10 @@ test.describe("goal-aware activation", () => {
     const state: MockState = { goal: "get_paid", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
+    await expect(page.getByText("New client work").first()).toBeVisible();
     state.counts.clients = 1;
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
+    await expect(page.getByText("New client work").first()).toBeVisible();
     state.counts.projects = 1;
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.getByText("Create your first invoice").first()).toBeVisible();
@@ -341,11 +341,11 @@ test.describe("goal-aware activation", () => {
     const state: MockState = { goal: "publish_portfolio", counts: { clients: 0, projects: 0, invoices: 0, expenses: 0 } };
     await installWorkspaceMocks(page, state);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
+    await expect(page.getByText("New client work").first()).toBeVisible();
     state.goal = "migrate";
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByText("Start a client engagement").first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Start a client engagement" }).first()).toHaveAttribute("href", "/workflow/start-engagement");
+    await expect(page.getByText("New client work").first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "New client work" }).first()).toHaveAttribute("href", "/workflow/start-engagement");
   });
 
   test("start-clean and incomplete onboarding remain resumable", async ({ page }) => {
@@ -388,14 +388,14 @@ test.describe("goal-aware activation", () => {
     await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Start with the fastest path to useful context." })).toBeVisible();
     await page.getByRole("button", { name: "Continue" }).click();
-    await expect(page.getByRole("heading", { name: "Start a client engagement" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "New client work" })).toBeVisible();
     await page.getByLabel("Client name").fill("Northstar Studio");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Project name").fill("Launch site");
     await page.getByLabel("First milestone").fill("Launch approval");
     await page.getByLabel("Milestone due date").fill("2026-09-15");
     await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByRole("button", { name: "Start engagement" }).click();
+    await page.getByRole("button", { name: "New client work" }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
     expect(state.onboardingStatus).toBe("complete");
   });
@@ -405,7 +405,7 @@ test.describe("goal-aware activation", () => {
     await installWorkspaceMocks(page, state);
     await installOnboardingMocks(page, state);
     await page.goto("/onboarding", { waitUntil: "domcontentloaded" });
-    const engagement = page.getByRole("button", { name: /Start a client engagement/ });
+    const engagement = page.getByRole("button", { name: /New client work/ });
     await expect(engagement).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: /Import my work/ }).click();
     await expect(page.getByRole("button", { name: /Import my work/ })).toHaveAttribute("aria-pressed", "true");
