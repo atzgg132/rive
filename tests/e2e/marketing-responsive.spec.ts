@@ -46,8 +46,8 @@ test("product questions and portfolio publication stack on mobile", async ({ pag
   await expect(page.getByRole("tab", { name: /What’s due/ })).toBeVisible();
   await page.getByRole("tab", { name: /What’s outstanding/ }).click();
   await expect(page.getByText(/does not currently collect or transfer funds/i)).toBeVisible();
-  await page.getByTestId("portfolio-publication").scrollIntoViewIfNeeded();
-  await expect(page.getByTestId("portfolio-publication")).toBeVisible();
+  await page.getByTestId("portfolio-showcase").scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("portfolio-showcase")).toBeVisible();
 });
 
 test("focused signup remains usable with the mobile keyboard viewport", async ({ page }) => {

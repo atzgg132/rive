@@ -198,8 +198,8 @@ async function prepareVisualPage(page: Page, theme: "light" | "dark", viewport =
 async function expectDesktopVisualInvariants(page: Page, theme: "light" | "dark") {
   const logo = page.locator('[aria-label="rive."]').first();
   await expect(logo).toBeVisible();
-  const colors = await logo.locator("span").evaluateAll((parts) => parts.map((part) => getComputedStyle(part).color));
-  expect(colors).toEqual(theme === "dark" ? ["rgb(248, 250, 252)", "rgb(96, 165, 250)"] : ["rgb(12, 30, 54)", "rgb(37, 99, 235)"]);
+  const fills = await logo.locator("path").evaluateAll((parts) => Array.from(new Set(parts.map((part) => getComputedStyle(part).fill))).sort());
+  expect(fills).toEqual(theme === "dark" ? ["rgb(248, 250, 252)", "rgb(96, 165, 250)"] : ["rgb(12, 30, 54)", "rgb(37, 99, 235)"]);
 
   const geometry = await page.evaluate(() => {
     const aside = document.querySelector("aside")?.getBoundingClientRect();
