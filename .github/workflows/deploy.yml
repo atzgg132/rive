@@ -78,6 +78,13 @@ jobs:
           PLAYWRIGHT_SERVER: production
           PLAYWRIGHT_WORKERS: 4
         run: npm run test:e2e
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results
+          retention-days: 7
       - run: npm audit --omit=dev
 
   deploy:
