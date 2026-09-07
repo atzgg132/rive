@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const routes = ["/", "/product/clients-projects", "/product/agreements-invoices", "/product/portfolio", "/pricing", "/migrate-to-rive", "/about", "/changelog", "/contact", "/cookies", "/privacy", "/roadmap", "/terms", "/login", "/register"] as const;
 
-for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 900 }, { width: 1440, height: 900 }]) {
+for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 900 }, { width: 1280, height: 720 }, { width: 1440, height: 900 }]) {
   test(`marketing routes avoid horizontal overflow at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     for (const route of routes) {
@@ -59,4 +59,19 @@ test("focused signup remains usable with the mobile keyboard viewport", async ({
   await expect(form.locator("input[name='email']")).toBeEditable();
   await form.locator("input[name='password']").scrollIntoViewIfNeeded();
   await expect(form.getByRole("button", { name: "Create free account" })).toBeVisible();
+});
+
+test("hero headline is not clipped on a scaled 1080p laptop", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/", { waitUntil: "load" });
+  const hero = page.getByTestId("marketing-hero");
+  const heading = hero.getByRole("heading", { name: /Multiple clients. One clear picture./i });
+  await expect(heading).toBeVisible();
+  const box = await heading.boundingBox();
+  expect(box?.y).toBeGreaterThanOrEqual(0);
+  const firstLine = heading.locator("span").first();
+  await expect(firstLine).toBeVisible();
+  const firstBox = await firstLine.boundingBox();
+  expect(firstBox?.y).toBeGreaterThanOrEqual(0);
+  await expect(hero.getByTestId("hero-client-stage")).toBeVisible();
 });

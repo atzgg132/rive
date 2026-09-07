@@ -1658,6 +1658,21 @@ section.edition-closing-section {
   .edition-question-visual { grid-column: 1 / -1; }
 }
 
+@media (max-width: 1536px) and (max-height: 864px) and (min-width: 768px) {
+  .edition-hero { min-height: auto; padding-top: 5.25rem; padding-bottom: 3rem; }
+  .edition-hero__grid { grid-template-columns: minmax(16rem, 1.1fr) minmax(22rem, .9fr); gap: 2rem; padding-block: 2rem; align-items: start; }
+  .edition-hero__copy h1 { font-size: clamp(3.2rem, 4vw, 4.8rem); line-height: 1.05; }
+  .edition-hero__copy h1 span:last-child { white-space: normal; }
+  .edition-hero__copy > p { font-size: 1rem; margin-top: 1.25rem; }
+  .edition-hero__actions { margin-top: 1.25rem; }
+  .edition-hero__copy .edition-assurance { margin-top: 1rem; }
+  .edition-hero-stage { padding-top: 0; }
+  .edition-hero-stage .workspace-preview { max-height: min(46vh, 22rem); }
+  .edition-hero-stage .workspace-preview__body { min-height: 15rem; }
+  .edition-hero-stage .workspace-preview .wp-activity li:nth-child(n+4),
+  .edition-hero-stage .workspace-preview .wp-people li:nth-child(n+4) { display: none; }
+}
+
 @media (max-width: 767px) {
   section.edition-hero,
   section.edition-product-section,
