@@ -113,9 +113,9 @@ test("theme switcher glides between all options, collapses, and persists the cho
   await expect(switcher.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(0px);");
   const marketingSurface = page.locator('[data-surface="marketing"]').first();
   await expect.poll(() => marketingSurface.evaluate((node) => getComputedStyle(node).backgroundColor))
-    .not.toBe("rgb(5, 7, 12)");
+    .not.toBe("rgb(8, 9, 14)");
   await expect.poll(() => marketingSurface.evaluate((node) => getComputedStyle(node).backgroundColor))
-    .toBe("rgb(243, 245, 250)");
+    .toBe("rgb(250, 249, 246)");
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("rive-color-theme")))
     .toBe("light");
   await expect(switcher.getByRole("radiogroup", { name: "Choose color theme" })).toBeHidden();
@@ -128,7 +128,7 @@ test("theme switcher glides between all options, collapses, and persists the cho
   await expect(switcher.getByTestId("theme-indicator")).toHaveAttribute("style", "transform: translateX(32px);");
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect.poll(() => marketingSurface.evaluate((node) => getComputedStyle(node).backgroundColor))
-    .toBe("rgb(5, 7, 12)");
+    .toBe("rgb(8, 9, 14)");
   await expect(switcher.getByRole("button", { name: "Theme: dark. Choose theme" })).toBeVisible();
 
   await switcher.getByRole("button", { name: "Theme: dark. Choose theme" }).click();
@@ -155,28 +155,22 @@ test("marketing page advertises current connections without a demo CTA", async (
   await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);
   await expect(page.locator("#import-context")).toBeVisible();
   await expect(page.locator("#import-context")).toContainText("CSV or XLSX");
-  await expect(page.getByRole("heading", { name: "Scope stops living in the scrollback." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Scope stops living in the thread." })).toBeVisible();
 });
 
 test("marketing homepage presents Remit as in development, not a live send flow", async ({ page }) => {
-  await page.route("**/api/rates", async (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({ success: true, data: { base: "USD", date: "2026-08-10", rates: { USD: 1, INR: 83, EUR: 0.9 } } }),
-  }));
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByRole("heading", { name: "The payout should follow the invoice." })).toBeVisible();
-  await expect(page.getByTestId("remit-next-status")).toHaveText("In development");
-  await expect(page.getByTestId("remit-send")).toBeVisible();
-  await expect(page.getByTestId("remit-send")).toBeEnabled();
-  await page.getByTestId("remit-send").click();
-  await expect(page.getByTestId("remit-receipt")).toBeVisible();
-  await expect(page.getByTestId("remit-receipt").getByRole("heading", { name: "Payout attached" })).toBeVisible();
+  /* Phase 1 dropped the homepage calculator. The remaining claim is that
+     money movement is not presented as live — FAQ is the honest surface. */
+  await expect(page.getByTestId("remit-send")).toHaveCount(0);
+  await expect(page.getByTestId("remit-receipt")).toHaveCount(0);
   await expect(page.getByText("Know the payout before you send it.")).toHaveCount(0);
   await expect(page.getByText("You send", { exact: true })).toHaveCount(0);
   await expect(page.getByText("They receive", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Can Rive move money for me?" })).toBeVisible();
+  await expect(page.getByText(/Not yet\. Remit is in development\./)).toBeVisible();
 });
 
 test("login password visibility control works", async ({ page }) => {
