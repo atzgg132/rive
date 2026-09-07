@@ -83,11 +83,13 @@ export default function PageViewTracker() {
     const anonymousId = ensureIdentityCookie(ANONYMOUS_COOKIE);
     const sessionId = ensureIdentityCookie(SESSION_COOKIE);
     const attribution = updateAttribution(pathname || "/");
+    const authView = new URLSearchParams(window.location.search).get("auth");
+    const trackedPath = authView === "register" ? "/register" : pathname;
     fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        path: pathname,
+        path: trackedPath,
         referrer: document.referrer || "",
         anonymousId,
         sessionId,

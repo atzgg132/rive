@@ -2,8 +2,8 @@ import { MarketingHome } from "@/components/marketing/MarketingHome";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata(
-  "Rive — Your business should not need you as middleware",
-  "Connect clients, projects, Agreements, invoices, expenses, calendars, imports, and portfolio proof in one operating workspace.",
+  "Rive — Multiple clients. One clear picture.",
+  "Manage clients, projects, agreements, invoices, and expenses in one workspace built for independent service businesses.",
   "/",
 );
 

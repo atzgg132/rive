@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import { MarketingHome } from "@/components/marketing/MarketingHome";
 
-export const metadata: Metadata = {
-  title: "Sign in — Rive",
-  robots: { index: false, follow: false },
-};
+export const metadata: Metadata = { title: "Log in — Rive", description: "Log in to your Rive workspace.", robots: { index: false, follow: false } };
 
 export default function LoginPage() {
-  return <MarketingHome />;
+  return <div className="edition-auth-route" aria-hidden="true" />;
 }

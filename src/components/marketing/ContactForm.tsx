@@ -20,7 +20,7 @@ type ContactFormCopy = {
   readonly fallbackError: string;
 };
 
-const fieldClassName = "marketing-focus min-h-12 w-full rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground hover:border-primary/25 focus:border-primary/50 focus:bg-[var(--surface-glass)]";
+const fieldClassName = "marketing-focus min-h-14 w-full border border-[var(--edition-line)] bg-[var(--edition-paper-bright)] px-4 text-base text-[var(--edition-ink)] outline-none transition placeholder:text-[var(--edition-muted)] hover:border-[var(--edition-blue)] focus:border-[var(--edition-blue)]";
 
 export function ContactForm({ copy }: { copy: ContactFormCopy }) {
   const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
@@ -67,27 +67,27 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
     <form onSubmit={handleSubmit} className="grid gap-5" noValidate={false}>
       <HoneypotField inputRef={websiteRef} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="grid gap-2 font-mono text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
           {copy.nameLabel}
           <input required name="name" autoComplete="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={fieldClassName} placeholder={copy.namePlaceholder} />
         </label>
-        <label className="grid gap-2 font-mono text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
           {copy.emailLabel}
           <input required name="email" type="email" autoComplete="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={fieldClassName} placeholder={copy.emailPlaceholder} />
         </label>
       </div>
-        <label className="grid gap-2 font-mono text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
         {copy.subjectLabel}
         <select name="subject" value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} className={fieldClassName}>
           {copy.subjects.map((subject) => <option key={subject} value={subject} className="bg-[var(--surface-raised)]">{subject}</option>)}
         </select>
       </label>
-        <label className="grid gap-2 font-mono text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
         {copy.messageLabel}
         <textarea required minLength={10} name="message" rows={7} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} className={`${fieldClassName} resize-y py-3`} placeholder={copy.messagePlaceholder} />
       </label>
       {status === "error" ? <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
-      <button type="submit" disabled={status === "loading"} className="marketing-focus inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 text-sm font-black text-white shadow-[0_14px_38px_rgba(37,99,235,0.24)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60">
+      <button type="submit" disabled={status === "loading"} className="marketing-focus inline-flex min-h-14 items-center justify-center gap-2 border border-[var(--edition-blue)] bg-[var(--edition-blue)] px-6 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[var(--edition-blue-dark)] disabled:translate-y-0 disabled:opacity-60">
         {status === "loading" ? <><Loader2 className="h-4 w-4 animate-spin" />{copy.submittingLabel}</> : <><Send className="h-4 w-4" />{copy.submitLabel}</>}
       </button>
     </form>

@@ -3,7 +3,7 @@ import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Rive cookie policy", "How Rive uses cookies and local storage.", "/cookies");
 
-const fontD = { fontFamily: "var(--font-display)" };
+const fontD = { fontFamily: "var(--edition-display)" };
 const font  = { fontFamily: "var(--font-body)" };
 
 const toc = [

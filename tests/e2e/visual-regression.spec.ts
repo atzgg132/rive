@@ -20,7 +20,7 @@ for (const viewport of [
     await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
     await page.setViewportSize(viewport);
     await page.goto("/", { waitUntil: "load" });
-    await expect(page.getByRole("heading", { name: /Your business should not need you as middleware/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Multiple clients. One clear picture./i })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveScreenshot(`marketing-home-${viewport.width}x${viewport.height}.png`, { fullPage: false });
   });
@@ -33,7 +33,7 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await page.goto("/", { waitUntil: "load" });
     await expect(page.locator("html")).toHaveClass(/dark/);
-    await expect(page.getByRole("heading", { name: /Your business should not need you as middleware/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Multiple clients. One clear picture./i })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveScreenshot(`marketing-home-dark-${viewport.width}x${viewport.height}.png`, { fullPage: false });
   });
@@ -198,8 +198,8 @@ async function prepareVisualPage(page: Page, theme: "light" | "dark", viewport =
 async function expectDesktopVisualInvariants(page: Page, theme: "light" | "dark") {
   const logo = page.locator('[aria-label="rive."]').first();
   await expect(logo).toBeVisible();
-  const colors = await logo.locator("span").evaluateAll((parts) => parts.map((part) => getComputedStyle(part).color));
-  expect(colors).toEqual(theme === "dark" ? ["rgb(248, 250, 252)", "rgb(96, 165, 250)"] : ["rgb(12, 30, 54)", "rgb(37, 99, 235)"]);
+  const fills = await logo.locator("path").evaluateAll((parts) => Array.from(new Set(parts.map((part) => getComputedStyle(part).fill))).sort());
+  expect(fills).toEqual(theme === "dark" ? ["rgb(248, 250, 252)", "rgb(96, 165, 250)"] : ["rgb(12, 30, 54)", "rgb(37, 99, 235)"]);
 
   const geometry = await page.evaluate(() => {
     const aside = document.querySelector("aside")?.getBoundingClientRect();

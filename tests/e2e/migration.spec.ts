@@ -169,10 +169,10 @@ test.describe("migration", () => {
 
   test("public /migrate-to-rive landing page renders with live acquisition copy and working CTA", async ({ page }) => {
     await page.goto("/migrate-to-rive", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Bring your existing business into Rive." })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Upload CSV or XLSX exports for clients, projects, invoices, and expenses.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bring your records. Review before you import." })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Import clients, projects, invoices, and expenses from CSV or XLSX.")).toBeVisible();
 
-    const cta = page.getByRole("link", { name: "Start with my existing data" });
+    const cta = page.getByRole("link", { name: "Start with existing records" });
     await expect(cta).toBeVisible();
     await expect(cta).toHaveAttribute("href", "/register?goal=migrate&next=%2Fmigrate");
   });

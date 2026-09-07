@@ -271,7 +271,7 @@ test.describe("goal-aware activation", () => {
     await page.getByLabel("Full name").fill("Activation Tester");
     await page.getByLabel("Email address").fill("activation@rive.test");
     await page.getByRole("textbox", { name: "Password" }).fill("activation-password");
-    const createAccountButton = page.locator("form").getByRole("button", { name: "Create Account" });
+    const createAccountButton = page.locator("form").getByRole("button", { name: "Create free account" });
     await expect(createAccountButton).toBeEnabled();
     await createAccountButton.click();
     await expect(page).toHaveURL(/\/register\?invite=test-invite$/, { timeout: 15_000 });

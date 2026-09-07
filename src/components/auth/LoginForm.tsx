@@ -106,25 +106,25 @@ export function LoginForm({
   if (verificationRequired) {
     return (
       <>
-        <BaseDialog.Title className="pr-10 text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
+        <BaseDialog.Title className="pr-10 text-[1.45rem] font-black tracking-[-0.02em] text-foreground">
           Verify your email to continue
         </BaseDialog.Title>
         <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
           We sent a link to <span className="font-medium text-foreground">{email}</span>. Open it, then sign in.
         </BaseDialog.Description>
         {notice ? (
-          <Alert variant="success" className="mb-5 mt-6 text-sm" data-testid="login-notice">
+          <Alert variant="success" className="mb-4 mt-5 text-sm" data-testid="login-notice">
             {notice}
           </Alert>
         ) : null}
         {error ? (
-          <Alert ref={alertRef} variant="destructive" tabIndex={-1} className="mb-5 mt-6 text-sm outline-none">
+          <Alert ref={alertRef} variant="destructive" tabIndex={-1} className="mb-4 mt-5 text-sm outline-none">
             {error}
           </Alert>
         ) : null}
         <button
           type="button"
-          className={`${authSubmitClassName} mt-6`}
+          className={`${authSubmitClassName} mt-5`}
           disabled={resending}
           onClick={() => void resendVerification()}
         >
@@ -139,7 +139,7 @@ export function LoginForm({
         </button>
         <button
           type="button"
-          className={`${authQuietButtonClassName} mt-4`}
+          className={`${authQuietButtonClassName} mt-3`}
           onClick={() => {
             setVerificationRequired(false);
             setNotice("");
@@ -155,21 +155,21 @@ export function LoginForm({
 
   return (
     <>
-      <BaseDialog.Title className="text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
-        Your context is still here.
+      <BaseDialog.Title className="pr-10 text-2xl font-black leading-tight tracking-[-0.02em] text-foreground">
+        Welcome back.
       </BaseDialog.Title>
       <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
-        Sign in to pick it up.
+        Log in to return to your Rive workspace.
       </BaseDialog.Description>
 
-      <div className="mt-8">
+      <div className="mt-6">
         {shownError ? (
-          <Alert ref={alertRef} variant="destructive" tabIndex={-1} className="mb-5 text-sm outline-none" data-testid="login-alert">
+          <Alert ref={alertRef} variant="destructive" tabIndex={-1} className="mb-4 text-sm outline-none" data-testid="login-alert">
             {shownError}
           </Alert>
         ) : null}
         <GoogleSignInButton nextPath={nextPath} />
-      <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-5" aria-busy={loading} data-testid="login-form" data-hydrated={hydrated ? "true" : "false"}>
+      <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-4" aria-busy={loading} data-testid="login-form" data-hydrated={hydrated ? "true" : "false"}>
         <FormField label="Email address" htmlFor="login-email">
           <Input
             id="login-email"
@@ -226,7 +226,7 @@ export function LoginForm({
       </form>
       </div>
 
-      <p className="mt-8 text-sm text-muted-foreground">
+      <p className="mt-6 text-sm text-muted-foreground">
         New here?{" "}
         <button type="button" className={authQuietButtonClassName} onClick={() => onRegister(email)}>
           Create a workspace

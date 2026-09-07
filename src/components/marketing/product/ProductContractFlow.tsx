@@ -14,7 +14,7 @@ export type ProductContractFlowProps = {
   clauses: string[];
 };
 
-const states = ["Draft", "Sent", "Signed"] as const;
+const states = ["Draft", "Shared", "Accepted"] as const;
 
 export function ProductContractFlow(props: ProductContractFlowProps) {
   const reduceMotion = useMarketingReducedMotion();
@@ -41,14 +41,14 @@ export function ProductContractFlow(props: ProductContractFlowProps) {
         <span
           key={state}
           className={`marketing-mock-in inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.56rem] font-bold ${
-            state === "Signed"
+            state === "Accepted"
               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : state === "Sent"
+              : state === "Shared"
                 ? "border-blue-200 bg-blue-50 text-blue-700"
                 : "border-slate-200 bg-white text-slate-600"
           }`}
         >
-          {state === "Signed" ? <Check className="h-3 w-3" /> : state === "Sent" ? <Send className="h-3 w-3" /> : <FileSignature className="h-3 w-3" />}
+          {state === "Accepted" ? <Check className="h-3 w-3" /> : state === "Shared" ? <Send className="h-3 w-3" /> : <FileSignature className="h-3 w-3" />}
           {state}
         </span>
       }

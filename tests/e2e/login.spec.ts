@@ -129,15 +129,33 @@ test("a completed operator follows a safe next path", async ({ page }) => {
   await expect(page).toHaveURL(/\/calendar/, { timeout: 15_000 });
 });
 
-test("log in from the marketing header stays on the page", async ({ page }) => {
+test("log in from the marketing header opens the focused auth overlay", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/", { waitUntil: "load" });
-  await page.getByTestId("site-header").locator("a[href='/login']").click();
+  await page.getByTestId("site-header").locator(".edition-login").click();
+  await expect(page).toHaveURL(/\?auth=login/);
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByTestId("login-submit")).toBeEnabled();
-  await expect(page.getByTestId("marketing-hero")).toBeVisible();
-  await expect(page).toHaveURL(/auth=login/);
-  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Welcome back." })).toBeVisible();
+});
+
+test("the dashboard shell loads Outfit after login, not only the fallback stack", async ({ page }) => {
+  await mockSession(page, "complete");
+  await page.goto("/dashboard", { waitUntil: "load" });
+  await expect(page.locator("[data-dashboard-shell]")).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => document.fonts.ready);
+  const loaded = await page.evaluate(async () => {
+    await document.fonts.load('16px "Outfit"');
+    await document.fonts.load('600 12px "JetBrains Mono"');
+    return {
+      family: getComputedStyle(document.body).fontFamily,
+      outfit: document.fonts.check('16px "Outfit"'),
+      mono: document.fonts.check('600 12px "JetBrains Mono"'),
+    };
+  });
+  expect(loaded.family).toContain("Outfit");
+  expect(loaded.outfit, "Outfit did not load; dashboard is on the fallback face").toBe(true);
+  expect(loaded.mono, "JetBrains Mono did not load").toBe(true);
 });
 
 test("an off-origin next path is ignored", async ({ page }) => {

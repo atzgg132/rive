@@ -116,7 +116,7 @@ test.describe("public form abuse controls", () => {
     await page.getByLabel("Full name").fill("Ada Lovelace");
     await page.getByLabel("Email address").fill("ada@example.invalid");
     await page.getByRole("textbox", { name: "Password" }).fill("a-real-password");
-    const createAccount = page.locator("form").getByRole("button", { name: "Create Account" });
+    const createAccount = page.locator("form").getByRole("button", { name: "Create free account" });
     await expect(createAccount).toBeEnabled();
     await createAccount.click();
 

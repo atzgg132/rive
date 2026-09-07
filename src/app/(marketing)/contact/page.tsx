@@ -1,29 +1,13 @@
-import { Mail } from "lucide-react";
+import { ArrowUpRight, Mail } from "lucide-react";
 import { ContactForm } from "@/components/marketing/ContactForm";
-import { GlassPanel, GlowingBadge } from "@/components/marketing/primitives";
-import { SectionShell } from "@/components/marketing/shells";
+import { EditorialLabel } from "@/components/marketing/primitives";
 import { contactContent } from "@/content/marketing/resources";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
-export const metadata = marketingMetadata("Contact Rive", "Bring Rive a question, support request, press inquiry, partnership, or broken operating handoff.", "/contact");
+export const metadata = marketingMetadata("Contact Rive", "Ask a product question, get help, or share feedback with the people building Rive.", "/contact");
 
 export default function ContactPage() {
   return (
-    <SectionShell className="pb-28 pt-36 sm:pt-44">
-      <div className="max-w-5xl">
-        <GlowingBadge>{contactContent.eyebrow}</GlowingBadge>
-        <h1 className="mt-7 text-balance text-5xl font-black leading-[0.98] tracking-[-0.055em] text-foreground sm:text-7xl">{contactContent.title}</h1>
-        <p className="mt-7 max-w-3xl text-lg leading-8 text-muted-foreground">{contactContent.intro}</p>
-      </div>
-      <div className="mt-14 grid gap-6 lg:grid-cols-[1.3fr_.7fr] lg:items-start">
-        <GlassPanel tier={3} className="p-6 sm:p-8"><ContactForm copy={contactContent.form} /></GlassPanel>
-        <GlassPanel tier={2} className="p-6 sm:p-8">
-          <span className="grid h-11 w-11 place-items-center rounded-xl border border-primary/15 bg-primary/10 text-primary"><Mail className="h-5 w-5" /></span>
-          <h2 className="mt-8 text-2xl font-black text-foreground">{contactContent.asideTitle}</h2>
-          <a className="marketing-focus mt-4 inline-block text-xl font-black text-primary hover:text-primary/80" href={`mailto:${contactContent.email}`}>{contactContent.email}</a>
-          <p className="mt-4 text-sm leading-7 text-muted-foreground">{contactContent.asideBody}</p>
-        </GlassPanel>
-      </div>
-    </SectionShell>
+    <section className="edition-contact-page"><div className="edition-container"><div className="edition-contact-heading"><EditorialLabel>{contactContent.eyebrow}</EditorialLabel><h1 className="edition-display">{contactContent.title}</h1><p>{contactContent.intro}</p></div><div className="edition-contact-grid"><div className="edition-contact-form"><ContactForm copy={contactContent.form} /></div><aside><Mail className="h-5 w-5" /><h2>{contactContent.asideTitle}</h2><a href={`mailto:${contactContent.email}`} className="marketing-focus">{contactContent.email}<ArrowUpRight className="h-4 w-4" /></a><p>{contactContent.asideBody}</p></aside></div></div></section>
   );
 }
