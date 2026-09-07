@@ -85,6 +85,16 @@ export function AuthOverlayProvider({ children }: { children: ReactNode }) {
   }, [pathname, syncFromLocation]);
 
   useEffect(() => {
+    const dedicated = Boolean(authViewFromPathname(window.location.pathname));
+    if (dedicated && view) {
+      document.body.setAttribute("data-auth-dedicated", "true");
+    } else {
+      document.body.removeAttribute("data-auth-dedicated");
+    }
+    return () => { document.body.removeAttribute("data-auth-dedicated"); };
+  }, [view]);
+
+  useEffect(() => {
     const onPop = () => syncFromLocation();
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -96,11 +106,17 @@ export function AuthOverlayProvider({ children }: { children: ReactNode }) {
     setView(nextView);
     const url = new URL(window.location.href);
     if (authViewFromPathname(url.pathname)) {
+      // Already on a dedicated auth route; switch the path in-place without a
+      // route transition so the overlay stays stable and animated.
       url.pathname = AUTH_PATHS[nextView];
       applyAuthSearch(url, nextView, merged, false);
     } else if (isMarketingSurface(url.pathname)) {
+      // Open as a modal over the current marketing page. Use the legacy query
+      // auth URL so the URL still communicates the intent and analytics keep
+      // working, without forcing a route change and layout flash.
       applyAuthSearch(url, nextView, merged, true);
     } else {
+      // App shell or other surface: navigate to the auth route.
       url.pathname = AUTH_PATHS[nextView];
       applyAuthSearch(url, nextView, merged, false);
       router.push(`${url.pathname}${url.search}${url.hash}`);

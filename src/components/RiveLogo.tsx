@@ -6,8 +6,8 @@ interface RiveLogoProps {
   animated?: boolean;
 }
 
-/** The source-owned Rive wordmark. Brand colors are explicit so link and
- * visited states can never recolor the logo. */
+/** The source-owned Rive wordmark, rendered as the brand SVG. Brand colors are
+ * explicit so link and visited states can never recolor the logo. */
 export function RiveLogo({
   className = "",
   color,
@@ -15,25 +15,32 @@ export function RiveLogo({
   height = 28,
   animated = false,
 }: RiveLogoProps) {
+  const width = height * (1884 / 743);
   return (
-    <span
-      aria-label="rive."
-      className={`inline-flex shrink-0 select-none items-baseline font-extrabold tracking-[-0.045em] ${animated ? "rive-logo-mark" : ""} ${className}`}
-      style={{
-        fontSize: `${height * 0.8}px`,
-        lineHeight: 1,
-        color: color ?? "rgb(var(--brand-wordmark))",
-        fontFamily: "var(--font-sans)",
-      }}
-    >
-      <span aria-hidden="true">rive</span>
-      <span
-        aria-hidden="true"
-        className={animated ? "rive-logo-dot" : undefined}
-        style={{ color: accentColor ?? "rgb(var(--brand-accent))", marginLeft: "0.06em" }}
+    <span className={`inline-flex shrink-0 select-none ${className}`} aria-label="rive.">
+      <svg
+        viewBox="0 0 1884 743"
+        width={width}
+        height={height}
+        className="shrink-0"
+        style={{ display: "block" }}
       >
-        .
-      </span>
+        <g
+          fill={color ?? "rgb(var(--brand-wordmark))"}
+          transform="translate(-51 732) scale(1 -1)"
+        >
+          <path d="M51 0L51 489L225 489L225 0ZM225 266L147 332Q176 415 224 457Q272 499 349 499Q384 499 409.5 490Q435 481 453 462L352 327Q344 336 329.5 341.5Q315 347 297 347Q263 347 244 326.5Q225 306 225 266Z" />
+          <path transform="translate(390 0)" d="M50 0L50 489L225 489L225 0ZM137 546Q98 546 72 572.5Q46 599 46 639Q46 678 72 705Q98 732 137 732Q178 732 203.5 705Q229 678 229 639Q229 599 203.5 572.5Q178 546 137 546Z" />
+          <path transform="translate(620 0)" d="M198 0L-1 489L185 489L312 77L241 77L367 489L551 489L352 0Z" />
+          <path transform="translate(1114 0)" d="M298 -11Q216 -11 153 21.5Q90 54 54 112Q18 170 18 245Q18 319 53 376.5Q88 434 148.5 467.5Q209 501 285 501Q359 501 416.5 469.5Q474 438 506.5 382.5Q539 327 539 256Q539 241 537.5 225.5Q536 210 531 190L100 188L100 300L462 303L384 254Q383 295 372 321.5Q361 348 340 362Q319 376 287 376Q254 376 230 360Q206 344 193 315Q180 286 180 245Q180 203 194 173.5Q208 144 234 129Q260 114 298 114Q334 114 361.5 126Q389 138 411 163L502 72Q466 31 414.5 10Q363 -11 298 -11Z" />
+        </g>
+        <path
+          className={animated ? "rive-logo-dot" : undefined}
+          fill={accentColor ?? "rgb(var(--brand-accent))"}
+          transform="translate(1683 732) scale(1 -1) translate(-51 0)"
+          d="M153 -11Q109 -11 81 18Q53 47 53 90Q53 133 81 162Q109 191 153 191Q196 191 224 162Q252 133 252 90Q252 47 224 18Q196 -11 153 -11Z"
+        />
+      </svg>
     </span>
   );
 }

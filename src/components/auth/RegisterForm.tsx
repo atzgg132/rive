@@ -95,15 +95,15 @@ export function RegisterForm({
   if (pendingEmail) {
     return (
       <>
-        <BaseDialog.Title className="pr-10 text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
+        <BaseDialog.Title className="pr-10 text-[1.45rem] font-black tracking-[-0.04em] text-foreground">
           Check your email
         </BaseDialog.Title>
         <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
           We sent a verification link to <span className="font-medium text-foreground">{pendingEmail}</span>. Verify it to open your workspace.
         </BaseDialog.Description>
-        {notice ? <Alert variant="success" className="mb-5 mt-6 text-sm">{notice}</Alert> : null}
-        {error ? <Alert variant="destructive" className="mb-5 mt-6 text-sm">{error}</Alert> : null}
-        <button type="button" className={`${authSubmitClassName} mt-6`} onClick={() => void resend()} disabled={resending}>
+        {notice ? <Alert variant="success" className="mb-4 mt-5 text-sm">{notice}</Alert> : null}
+        {error ? <Alert variant="destructive" className="mb-4 mt-5 text-sm">{error}</Alert> : null}
+        <button type="button" className={`${authSubmitClassName} mt-5`} onClick={() => void resend()} disabled={resending}>
           {resending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -120,7 +120,7 @@ export function RegisterForm({
             setNotice("");
             setError("");
           }}
-          className={`${authQuietButtonClassName} mt-4`}
+          className={`${authQuietButtonClassName} mt-3`}
         >
           Use a different email
         </button>
@@ -130,16 +130,16 @@ export function RegisterForm({
 
   return (
     <>
-      <BaseDialog.Title className="text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
-        Create your Rive workspace
+      <BaseDialog.Title className="pr-10 text-2xl font-black leading-tight tracking-[-0.02em] text-foreground">
+        Create your free account
       </BaseDialog.Title>
       <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
-        Free access during open beta. Start with the work that feels messiest today.
+        Free during beta. No credit card required.
       </BaseDialog.Description>
-      <div className="mt-8">
-        {error ? <Alert variant="destructive" className="mb-5 text-sm">{error}</Alert> : null}
+      <div className="mt-6">
+        {error ? <Alert variant="destructive" className="mb-4 text-sm">{error}</Alert> : null}
         <GoogleSignInButton nextPath={nextPath} />
-      <form method="post" onSubmit={handleRegister} className="flex flex-col gap-5" data-testid="register-form" data-hydrated={hydrated ? "true" : "false"} data-invite={inviteToken || undefined}>
+      <form method="post" onSubmit={handleRegister} className="flex flex-col gap-4" data-testid="register-form" data-hydrated={hydrated ? "true" : "false"} data-invite={inviteToken || undefined}>
         <HoneypotField inputRef={websiteRef} />
         <FormField label="Full name" htmlFor="register-name">
           <Input
@@ -193,19 +193,19 @@ export function RegisterForm({
           {" "}and{" "}
           <Link href="/privacy" className="font-medium text-foreground hover:text-primary hover:underline">Privacy Policy</Link>.
         </p>
-        <button type="submit" className={authSubmitClassName} disabled={loading}>
+        <button type="submit" className={`${authSubmitClassName} mt-1`} disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Creating workspace...
             </>
           ) : (
-            "Create Account"
+            "Create free account"
           )}
         </button>
       </form>
       </div>
-      <p className="mt-8 text-sm text-muted-foreground">
+      <p className="mt-6 text-sm text-muted-foreground">
         Already have an account?{" "}
         <button type="button" className={authQuietButtonClassName} onClick={() => onLogin(email)}>
           Log in

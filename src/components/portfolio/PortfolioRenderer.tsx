@@ -30,6 +30,8 @@ type Props = {
   activePracticeSlug?: string;
   /** Live preview only: swap the in-iframe practice view without leaving `/portfolio-preview`. */
   onSelectPractice?: (slug: string | undefined) => void;
+  /** Use an h2 for the headline when the preview is embedded inside another page that already owns the h1. */
+  headingLevel?: "h1" | "h2";
 };
 
 type TemplateProfile = {
@@ -363,7 +365,8 @@ function ServiceCard({ service, index }: { service: PortfolioService; index: num
   );
 }
 
-export default function PortfolioRenderer({ content, theme, templateKey, portfolioSlug, preview = false, activePracticeSlug, onSelectPractice }: Props) {
+export default function PortfolioRenderer({ content, theme, templateKey, portfolioSlug, preview = false, activePracticeSlug, onSelectPractice, headingLevel = "h1" }: Props) {
+  const Heading = headingLevel;
   const profile = TEMPLATE_PROFILES[templateKey] || TEMPLATE_PROFILES["minimal-pro"];
   const dark = theme.mode === "dark";
   const practices = getVisiblePractices(content);
@@ -467,9 +470,9 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                 </span>
               )}
             </div>
-            <h1 className={`max-w-5xl font-black leading-[0.94] tracking-[-0.065em] text-[var(--portfolio-ink)] ${profile.headlineClass}`}>
+            <Heading className={`max-w-5xl font-black leading-[0.94] tracking-[-0.065em] text-[var(--portfolio-ink)] ${profile.headlineClass}`}>
               {headline}
-            </h1>
+            </Heading>
             <p className="mt-7 max-w-2xl text-base leading-7 text-[var(--portfolio-muted)] sm:text-lg sm:leading-8">{intro}</p>
             <div className="mt-9 flex flex-wrap items-center gap-5">
               {visible("contact") && contactHref && (
@@ -537,7 +540,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
           </div>}
         </section>
 
-        <section className="border-y border-[var(--portfolio-border)] bg-[var(--portfolio-card)]">
+        <section className="portfolio-stats-bar border-y border-[var(--portfolio-border)] bg-[var(--portfolio-card)]">
           <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-[var(--portfolio-border)] px-5 sm:px-10 lg:grid-cols-4 lg:px-14">
             {[
               [String(publicProjects.length).padStart(2, "0"), publicProjects.length === 1 ? "Selected project" : "Selected projects"],
@@ -675,7 +678,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
         </div>
       </main>
 
-      <footer className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-10 text-xs text-[var(--portfolio-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-10 lg:px-14">
+      <footer className="portfolio-footer mx-auto flex max-w-7xl flex-col gap-5 px-5 py-10 text-xs text-[var(--portfolio-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-10 lg:px-14">
         <span>© {new Date().getFullYear()} {content.name}. Built with Rive.</span>
         <div className="flex flex-wrap gap-5">
           {content.social.map((social) => {

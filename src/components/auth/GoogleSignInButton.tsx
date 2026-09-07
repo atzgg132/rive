@@ -42,7 +42,7 @@ export function GoogleSignInButton({ nextPath = "" }: { nextPath?: string }) {
         <GoogleMark />
         Continue with Google
       </a>
-      <div className="my-5 flex items-center gap-3" aria-hidden="true">
+      <div className="my-4 flex items-center gap-3" aria-hidden="true">
         <span className="h-px flex-1 bg-[var(--stroke-hairline)]" />
         <span className="text-xs font-medium text-muted-foreground">or</span>
         <span className="h-px flex-1 bg-[var(--stroke-hairline)]" />

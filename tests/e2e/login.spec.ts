@@ -129,15 +129,14 @@ test("a completed operator follows a safe next path", async ({ page }) => {
   await expect(page).toHaveURL(/\/calendar/, { timeout: 15_000 });
 });
 
-test("log in from the marketing header stays on the page", async ({ page }) => {
+test("log in from the marketing header opens the focused auth overlay", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/", { waitUntil: "load" });
-  await page.getByTestId("site-header").locator("a[href='/login']").click();
+  await page.getByTestId("site-header").locator(".edition-login").click();
+  await expect(page).toHaveURL(/\?auth=login/);
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByTestId("login-submit")).toBeEnabled();
-  await expect(page.getByTestId("marketing-hero")).toBeVisible();
-  await expect(page).toHaveURL(/auth=login/);
-  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Welcome back." })).toBeVisible();
 });
 
 test("the dashboard shell loads Outfit after login, not only the fallback stack", async ({ page }) => {

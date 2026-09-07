@@ -47,19 +47,19 @@ export function ForgotPasswordForm({
 
   return (
     <>
-      <BaseDialog.Title className="pr-10 text-[1.65rem] font-black tracking-[-0.04em] text-foreground">
+      <BaseDialog.Title className="pr-10 text-[1.45rem] font-black tracking-[-0.02em] text-foreground">
         Reset your password
       </BaseDialog.Title>
       <BaseDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
         Enter the email on your account. We will send a secure, one-time link that expires in 60 minutes.
       </BaseDialog.Description>
       {message ? (
-        <Alert variant="success" className="mt-8 text-sm">
+        <Alert variant="success" className="mt-6 text-sm">
           <p>{message}</p>
           <p className="mt-2 text-xs">Check spam if it does not arrive within a few minutes.</p>
         </Alert>
       ) : (
-        <form method="post" onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+        <form method="post" onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           <HoneypotField inputRef={websiteRef} />
           {error ? <Alert variant="destructive" className="text-sm">{error}</Alert> : null}
           <FormField label="Email address" htmlFor="forgot-email">
@@ -91,7 +91,7 @@ export function ForgotPasswordForm({
           </button>
         </form>
       )}
-      <button type="button" className={`${authQuietButtonClassName} mt-8`} onClick={onLogin}>
+      <button type="button" className={`${authQuietButtonClassName} mt-6`} onClick={onLogin}>
         Back to login
       </button>
     </>

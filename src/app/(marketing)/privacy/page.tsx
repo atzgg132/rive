@@ -3,7 +3,7 @@ import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Rive privacy policy", "How Rive handles and protects personal and workspace data.", "/privacy");
 
-const fontD = { fontFamily: "var(--font-display)" };
+const fontD = { fontFamily: "var(--edition-display)" };
 const font  = { fontFamily: "var(--font-body)" };
 
 const toc = [
@@ -36,8 +36,8 @@ export default function PrivacyPage() {
             <div>
 
               <Section id="intro" title="1. Introduction">
-                <p>rive. (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains what data we collect, why we collect it, and how we handle it when you use our website and workspace.</p>
-                <p>By using rive. or creating an account, you agree to the practices described in this policy.</p>
+                <p>Rive (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your personal information. This Privacy Policy explains what data we collect, why we collect it, and how we handle it when you use our website and workspace.</p>
+                <p>By using Rive or creating an account, you agree to the practices described in this policy.</p>
               </Section>
 
               <Section id="collect" title="2. Information we collect">
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
                   <li><strong>Email addresses</strong> — When you create an account, use the workspace, or contact us.</li>
                   <li><strong>Usage analytics</strong> — Page views, session duration, and navigation patterns (aggregated, not personally linked).</li>
                   <li><strong>Browser and device information</strong> — Browser type, OS, screen resolution, for product compatibility purposes.</li>
-                  <li><strong>Cookies</strong> — See our <a href="/cookies" className="text-primary hover:underline">Cookie Policy</a> For details.</li>
+                  <li><strong>Cookies</strong> — See our <a href="/cookies" className="text-primary hover:underline">Cookie Policy</a> for details.</li>
                 </ul>
                 <p>We do not collect payment details, government IDs, or sensitive personal data at this stage.</p>
               </Section>
@@ -75,12 +75,12 @@ export default function PrivacyPage() {
               </Section>
 
               <Section id="children" title="7. Children's privacy">
-                <p>rive. is not directed at children under the age of 16. We do not knowingly collect personal information from anyone under 16. If you believe we have inadvertently collected data from a minor, please contact us immediately at <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a>.</p>
+                <p>Rive is not directed at children under the age of 16. We do not knowingly collect personal information from anyone under 16. If you believe we have inadvertently collected data from a minor, please contact us immediately at <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a>.</p>
               </Section>
 
               <Section id="changes" title="8. Changes to this policy">
                 <p>We may update this Privacy Policy from time to time. When we do, we will revise the &quot;last updated&quot; date at the top of this page. For significant changes, we will notify account holders through the Service or by email.</p>
-                <p>Your continued use of rive. after any changes constitutes acceptance of the updated policy.</p>
+                <p>Your continued use of Rive after any changes constitutes acceptance of the updated policy.</p>
               </Section>
 
               <Section id="contact" title="9. Contact us">

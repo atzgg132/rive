@@ -24,7 +24,7 @@ export default function VerifyEmailPage() {
       if (pendingEmail) setEmail(pendingEmail);
       if (!token) {
         setState("pending");
-        setMessage("Check your inbox for the verification link. You need to verify your email before entering Rive.");
+        setMessage("We sent a verification link to your email. Open it to verify your account and continue to Rive.");
         return;
       }
 
@@ -53,9 +53,9 @@ export default function VerifyEmailPage() {
   const resendHref = email ? `/register?email=${encodeURIComponent(email)}` : "/register";
   const title =
     state === "checking" ? "Checking your link"
-      : state === "success" ? "Email verified"
-        : state === "error" ? "Verification needs attention"
-          : "Check your email";
+      : state === "success" ? "Email verified."
+        : state === "error" ? "This link needs attention."
+          : "Check your email to finish signing up.";
 
   return (
     <>

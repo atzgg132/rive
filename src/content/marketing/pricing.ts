@@ -9,7 +9,6 @@ export const pricingContent = {
     "Clients, projects, milestones, and calendar",
     "Agreements, recorded acceptance, and invoices",
     "Revenue, expenses, margins, and multi-currency display",
-    "CSV and XLSX imports with relationship review",
     "Portfolio Studio, analytics, and inbound enquiries",
   ],
   footnote: "We will publish paid pricing before beta ends. Your data remains exportable, and a price change will never arrive as a surprise.",
