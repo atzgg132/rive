@@ -1658,21 +1658,6 @@ section.edition-closing-section {
   .edition-question-visual { grid-column: 1 / -1; }
 }
 
-@media (max-width: 1536px) and (max-height: 864px) and (min-width: 768px) {
-  .edition-hero { min-height: auto; padding-top: 5.25rem; padding-bottom: 3rem; }
-  .edition-hero__grid { grid-template-columns: minmax(16rem, 1.1fr) minmax(22rem, .9fr); gap: 2rem; padding-block: 2rem; align-items: start; }
-  .edition-hero__copy h1 { font-size: clamp(3.2rem, 4vw, 4.8rem); line-height: 1.05; }
-  .edition-hero__copy h1 span:last-child { white-space: normal; }
-  .edition-hero__copy > p { font-size: 1rem; margin-top: 1.25rem; }
-  .edition-hero__actions { margin-top: 1.25rem; }
-  .edition-hero__copy .edition-assurance { margin-top: 1rem; }
-  .edition-hero-stage { padding-top: 0; }
-  .edition-hero-stage .workspace-preview { max-height: min(46vh, 22rem); }
-  .edition-hero-stage .workspace-preview__body { min-height: 15rem; }
-  .edition-hero-stage .workspace-preview .wp-activity li:nth-child(n+4),
-  .edition-hero-stage .workspace-preview .wp-people li:nth-child(n+4) { display: none; }
-}
-
 @media (max-width: 767px) {
   section.edition-hero,
   section.edition-product-section,
@@ -2416,4 +2401,124 @@ body[data-auth-dedicated] .edition-footer { display: none; }
   .workspace-preview .wp-studio__shell { grid-template-columns: 1fr; }
   .workspace-preview .wp-studio__shell > nav { display: none; }
   .workspace-preview .wp-cal__day { min-height: 7.5rem; padding-inline: .25rem; }
+}
+
+/* Short-viewport/small-laptop adjustments: 1080p at 125-150% scaling and 1366x768.
+   Applies to desktop widths only; the 767px mobile media query stays in control below that. */
+@media (max-width: 1536px) and (max-height: 900px) and (min-width: 768px) {
+  html, body { scroll-snap-type: none; }
+
+  section.edition-hero,
+  section.edition-product-section,
+  section.edition-portfolio-section,
+  section.edition-start-section,
+  section.edition-pricing-section,
+  section.edition-faq-section,
+  section.edition-closing-section {
+    min-height: auto;
+    scroll-snap-align: none;
+  }
+
+  .edition-product-section,
+  .edition-portfolio-section,
+  .edition-start-section,
+  .edition-pricing-section,
+  .edition-faq-section,
+  .edition-closing-section {
+    align-items: start;
+    padding: clamp(2rem, 4svh, 4rem) 0;
+  }
+
+  section.edition-hero {
+    padding: 5.25rem 0 3rem;
+  }
+
+  .edition-hero__grid {
+    flex: none;
+    min-height: auto;
+    grid-template-columns: minmax(16rem, 1.1fr) minmax(22rem, .9fr);
+    gap: 2rem;
+    padding-block: 2rem;
+    align-items: start;
+  }
+
+  section.edition-hero .edition-hero__copy h1 {
+    font-size: clamp(3.2rem, min(4vw, 7svh), 4.8rem);
+    line-height: 1.15;
+  }
+
+  .edition-hero__copy h1 span:last-child { white-space: normal; }
+  .edition-hero__copy > p { font-size: 1rem; margin-top: 1.25rem; }
+  .edition-hero__actions { margin-top: 1.25rem; }
+  .edition-hero__copy .edition-assurance { margin-top: 1rem; }
+
+  .edition-hero-stage { padding-top: 0; }
+  .edition-hero-stage .workspace-preview { max-height: min(46vh, 22rem); }
+  .edition-hero-stage .workspace-preview__body { min-height: min(15rem, 35svh); }
+  .edition-hero-stage .workspace-preview .wp-activity li:nth-child(n+4),
+  .edition-hero-stage .workspace-preview .wp-people li:nth-child(n+4) { display: none; }
+
+  .edition-product-intro h2,
+  .edition-section-heading h2,
+  .edition-question-copy h3,
+  .edition-portfolio-headline h3,
+  .edition-pricing-grid h2,
+  .edition-faq-grid h2,
+  .edition-closing-section h2 {
+    white-space: normal;
+  }
+
+  .edition-product-intro h2,
+  .edition-section-heading h2,
+  .edition-closing-section h2 {
+    font-size: clamp(3rem, min(5vw, 7svh), 5rem);
+    line-height: 1.15;
+  }
+
+  .edition-question-copy h3 {
+    font-size: clamp(2.4rem, min(3.5vw, 6svh), 3.6rem);
+    line-height: 1.15;
+  }
+
+  .edition-portfolio-headline h3 {
+    font-size: clamp(3.2rem, min(5vw, 7svh), 5rem);
+    line-height: 1.15;
+  }
+
+  .edition-pricing-grid h2,
+  .edition-faq-grid h2 {
+    font-size: clamp(3rem, min(5.5vw, 7svh), 5rem);
+    line-height: 1.15;
+  }
+
+  .edition-price strong {
+    font-size: clamp(3.2rem, min(6vw, 8svh), 6rem);
+  }
+
+  .edition-steps h3 {
+    font-size: clamp(1.35rem, min(2.5vw, 3.5svh), 2rem);
+  }
+
+  .workspace-preview__body { min-height: min(25rem, 40svh); }
+  .edition-question-tabs button { min-height: min(4.5rem, 9svh); }
+  .edition-portfolio-headline { min-height: min(26rem, 50svh); }
+  .edition-portfolio-masthead { min-height: min(4.2rem, 9svh); }
+  .edition-steps li { min-height: min(7rem, 13svh); }
+  .edition-pricing-detail li { min-height: min(3.5rem, 7svh); }
+  .edition-faq-list summary { min-height: min(5.5rem, 11svh); }
+
+  .edition-question-stage {
+    grid-template-columns: minmax(12rem, .55fr) minmax(14rem, .65fr) minmax(18rem, .9fr);
+    gap: 1.5rem;
+    padding-top: 2rem;
+  }
+
+  .edition-pricing-grid,
+  .edition-faq-grid {
+    gap: 2rem;
+  }
+
+  .edition-portfolio-grid article > div {
+    height: min(14rem, 28svh);
+  }
 }
