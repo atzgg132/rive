@@ -20,7 +20,7 @@ for (const viewport of [
     await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
     await page.setViewportSize(viewport);
     await page.goto("/", { waitUntil: "load" });
-    await expect(page.getByRole("heading", { name: /One workspace for every moving part/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Your business should not need you as middleware/i })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveScreenshot(`marketing-home-${viewport.width}x${viewport.height}.png`, { fullPage: false });
   });
@@ -33,7 +33,7 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await page.goto("/", { waitUntil: "load" });
     await expect(page.locator("html")).toHaveClass(/dark/);
-    await expect(page.getByRole("heading", { name: /One workspace for every moving part/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Your business should not need you as middleware/i })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveScreenshot(`marketing-home-dark-${viewport.width}x${viewport.height}.png`, { fullPage: false });
   });

@@ -10,14 +10,14 @@ export type MarketingNavGroup = {
 };
 
 const productItems: MarketingNavItem[] = [
-  { label: "The connected loop", href: "/#product", description: "Client → Work → Agreement → Money → Proof" },
+  { label: "The connected loop", href: "/#product", description: "Client → Work → Money → Proof" },
   { label: "Agreements", href: "/#agreement-context", description: "Scope, review, acceptance, billing" },
   { label: "Bring your data", href: "/migrate-to-rive", description: "CSV and XLSX, previewed before import" },
   { label: "Portfolio", href: "/#portfolio-context", description: "Turn delivered work into proof" },
 ];
 
 const companyItems: MarketingNavItem[] = [
-  { label: "About", href: "/about", description: "Built by people who run small practices" },
+  { label: "About", href: "/about", description: "Built by people who do the work" },
   { label: "Changelog", href: "/changelog", description: "What has actually shipped" },
   { label: "Roadmap", href: "/roadmap", description: "What we are earning next" },
 ];
@@ -50,17 +50,17 @@ export const footerNav: MarketingNavGroup[] = [
 
 export const accountNav = {
   login: { label: "Log in", href: "/login" },
-  signup: { label: "Start your workspace", href: "/register" },
+  signup: { label: "Build your workspace", href: "/register" },
 } as const;
 
 export const footerCopy = {
-  description: "The operating system for independent work. Clients, projects, agreements, invoices, calendar, and proof — connected in one workspace.",
+  description: "The client, the work, the money, and the proof—connected in one operating workspace.",
   status: "Open beta · Open signup",
   copyright: "Rive. Your work stays yours.",
 } as const;
 
 export const marketingRouteMetadata = [
-  { path: "/", title: "Rive — One workspace for every moving part", description: "The operating system for independent work. Connect clients, projects, agreements, invoices, expenses, calendar, imports, and portfolio proof in one workspace.", priority: 1 },
+  { path: "/", title: "Rive — Your business should not need you as middleware", description: "Connect clients, projects, Agreements, invoices, expenses, calendars, imports, and portfolio proof in one operating workspace.", priority: 1 },
   { path: "/about", title: "About Rive — Built from the work itself", description: "Meet the team building a connected operating workspace for independent professionals and digital service businesses.", priority: 0.7 },
   { path: "/changelog", title: "Rive changelog — What has shipped", description: "A factual record of what is live in the Rive open beta.", priority: 0.65 },
   { path: "/contact", title: "Contact Rive", description: "Bring Rive a question, support request, press inquiry, partnership, or broken operating handoff.", priority: 0.6 },

@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 
 export function GlowingBadge({ children, pulse = false, className }: { children: ReactNode; pulse?: boolean; className?: string }) {
   return (
-    <span className={cn("relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-primary/20 bg-primary/[0.06] px-3 py-1.5 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-primary", className)}>
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-primary/[0.06] to-transparent" />
-      {pulse ? <span className="relative h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(37,99,235,0.7)] motion-safe:animate-pulse" /> : null}
+    <span className={cn("relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-primary", className)}>
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-cyan-300/[0.08] to-transparent" />
+      {pulse ? <span className="relative h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(96,165,250,0.9)] motion-safe:animate-pulse" /> : null}
       <span className="relative">{children}</span>
     </span>
   );
@@ -32,10 +32,6 @@ export function GradientText({ children, className }: { children: ReactNode; cla
   return <span className={cn("marketing-gradient-text", className)}>{children}</span>;
 }
 
-export function VignetteOverlay({ className }: { className?: string }) {
-  return <div className={cn("marketing-vignette pointer-events-none absolute inset-0", className)} aria-hidden="true" />;
-}
-
 export function HairlineDivider({ className }: { className?: string }) {
   return <div className={cn("h-px w-full bg-gradient-to-r from-transparent via-[var(--stroke-hairline)] to-transparent", className)} aria-hidden="true" />;
 }
@@ -44,9 +40,9 @@ export function GlassPanel({ children, tier = 2, className }: { children: ReactN
   const tiers = {
     1: "border-[var(--stroke-hairline)] bg-[var(--surface-raised)] shadow-[inset_0_1px_0_var(--stroke-highlight)]",
     2: "border-[var(--stroke-hairline)] bg-[var(--surface-raised)] shadow-[inset_0_1px_0_var(--stroke-highlight)]",
-    3: "border-primary/20 bg-gradient-to-br from-[var(--surface-raised)] to-primary/[0.02] shadow-[inset_0_1px_0_var(--stroke-highlight)]",
+    3: "border-primary/25 bg-[var(--surface-raised)] shadow-[inset_0_1px_0_var(--stroke-highlight)]",
   };
-  return <div className={cn("rounded-3xl border backdrop-blur-sm", tiers[tier], className)}>{children}</div>;
+  return <div className={cn("rounded-[1.6rem] border", tiers[tier], className)}>{children}</div>;
 }
 
 export function LogoMarquee({ items, label }: { items: readonly string[]; label: string }) {
@@ -83,9 +79,9 @@ export function MarketingButton({ href, children, variant = "primary", className
       href={href}
       prefetch={false}
       className={cn(
-        "marketing-focus inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold transition duration-200 ease-rive-out hover:-translate-y-0.5",
+        "marketing-focus inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-bold transition duration-200 ease-rive-out hover:-translate-y-0.5",
         variant === "primary"
-          ? "bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-[0_12px_34px_rgba(15,18,24,0.22)] hover:shadow-[0_16px_44px_rgba(15,18,24,0.28)] dark:bg-[var(--text-primary)] dark:text-[var(--bg-primary)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.45)]"
+          ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_12px_35px_rgba(37,99,235,0.24)] hover:shadow-[0_16px_44px_rgba(37,99,235,0.34)]"
           : "border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] text-foreground hover:border-primary/25 hover:bg-foreground/[0.07]",
         className,
       )}

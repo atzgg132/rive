@@ -85,15 +85,15 @@ export function SiteHeader() {
                   aria-controls={`nav-${group.label.toLowerCase()}`}
                   onClick={() => setOpenGroup(open ? null : group.label)}
                   onFocus={() => setOpenGroup(group.label)}
-                  className="marketing-focus flex items-center gap-1.5 rounded-lg px-3 py-2 text-[0.78rem] font-medium text-muted-foreground transition hover:text-foreground"
+                  className="marketing-focus flex items-center gap-1.5 rounded-lg px-3 py-2 text-[0.78rem] font-semibold text-muted-foreground transition hover:bg-[var(--surface-glass)] hover:text-foreground"
                 >
                   {group.label}<ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
                 </button>
                 {open ? (
-                  <div id={`nav-${group.label.toLowerCase()}`} className="absolute left-1/2 top-[calc(100%+0.75rem)] w-[22rem] -translate-x-1/2 rounded-2xl border border-[var(--stroke-hairline)] bg-[color-mix(in_srgb,var(--surface-raised)_92%,transparent)] p-2 shadow-overlay backdrop-blur-xl">
+                  <div id={`nav-${group.label.toLowerCase()}`} className="absolute left-1/2 top-[calc(100%+0.75rem)] w-[22rem] -translate-x-1/2 rounded-2xl border border-[var(--stroke-hairline)] bg-[color-mix(in_srgb,var(--surface-raised)_95%,transparent)] p-2 shadow-overlay backdrop-blur-2xl">
                     {group.items.map((item) => (
                       <Link key={item.href} href={item.href} prefetch={false} onClick={() => setOpenGroup(null)} className="marketing-focus block rounded-xl px-4 py-3 transition hover:bg-[var(--surface-glass)]">
-                        <span className="block text-sm font-semibold text-foreground">{item.label}</span>
+                        <span className="block text-sm font-bold text-foreground">{item.label}</span>
                         {item.description ? <span className="mt-1 block text-xs leading-5 text-muted-foreground">{item.description}</span> : null}
                       </Link>
                     ))}
@@ -103,7 +103,7 @@ export function SiteHeader() {
             );
           })}
           {marketingHeaderLinks.map((item) => {
-            const className = "marketing-focus rounded-lg px-3 py-2 text-[0.78rem] font-medium text-muted-foreground transition hover:text-foreground";
+            const className = "marketing-focus rounded-lg px-3 py-2 text-[0.78rem] font-semibold text-muted-foreground transition hover:bg-[var(--surface-glass)] hover:text-foreground";
             return (
               <span key={item.href} className="contents" onMouseEnter={() => setOpenGroup(null)}>
                 {item.href.includes("#") ? (
@@ -120,10 +120,10 @@ export function SiteHeader() {
           })}
         </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <div className="grid min-h-11 min-w-11 place-items-center">{themeToggleReady ? <ThemeToggle /> : null}</div>
-          <Link href={accountNav.login.href} prefetch={false} className="marketing-focus rounded-lg px-3 py-2 text-[0.78rem] font-medium text-muted-foreground transition hover:text-foreground">{accountNav.login.label}</Link>
-          <Link href={accountNav.signup.href} prefetch={false} className={`${signupCtaClassName}`}><SignupCtaLabel /></Link>
+          <Link href={accountNav.login.href} prefetch={false} className="marketing-focus rounded-lg px-3 py-2 text-[0.78rem] font-semibold text-muted-foreground hover:bg-[var(--surface-glass)] hover:text-foreground">{accountNav.login.label}</Link>
+          <Link href={accountNav.signup.href} prefetch={false} className={`${signupCtaClassName} px-4 py-2.5 text-[0.78rem]`}><SignupCtaLabel /></Link>
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
@@ -162,8 +162,8 @@ export function SiteHeader() {
             })}
           </div>
           <div className="sticky bottom-0 z-10 -mx-4 grid shrink-0 gap-2 border-t border-[var(--stroke-hairline)] bg-[var(--surface-void)] px-4 py-3 sm:-mx-8 sm:grid-cols-2 sm:px-8">
-            <Link href={accountNav.login.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--stroke-hairline)] px-4 text-center text-sm font-semibold text-foreground">{accountNav.login.label}</Link>
-            <Link href={accountNav.signup.href} prefetch={false} onClick={() => setMobileOpen(false)} className={`${signupCtaClassName} min-h-11 justify-center text-center text-sm`}><SignupCtaLabel /></Link>
+            <Link href={accountNav.login.href} prefetch={false} onClick={() => setMobileOpen(false)} className="marketing-focus inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--stroke-hairline)] px-4 text-center text-sm font-bold text-foreground">{accountNav.login.label}</Link>
+            <Link href={accountNav.signup.href} prefetch={false} onClick={() => setMobileOpen(false)} className={`${signupCtaClassName} min-h-11 px-4 py-3 text-center text-sm`}><SignupCtaLabel /></Link>
           </div>
         </nav>
       ) : null}
