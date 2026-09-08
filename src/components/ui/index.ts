@@ -9,6 +9,7 @@ export * from "@/components/ui/form-field";
 export * from "@/components/ui/input";
 export * from "@/components/ui/kicker";
 export * from "@/components/ui/metric-card";
+export * from "@/components/ui/menu";
 export * from "@/components/ui/page-header";
 export * from "@/components/ui/pagination";
 export * from "@/components/ui/select";

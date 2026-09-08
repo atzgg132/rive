@@ -4,8 +4,10 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import {
   convertWithUsdRates,
   formatMoney,
+  inferCurrencyFromBrowser,
   normalizeCurrency,
   type DisplayCurrency,
+  type DisplayCurrencySource,
   type UsdExchangeRates,
 } from "@/lib/currency";
 
@@ -16,10 +18,13 @@ interface CurrencyContextValue {
   ratesAsOf: string | null;
   ratesStatus: RatesStatus;
   saving: boolean;
+  displayCurrencySource: DisplayCurrencySource;
+  detectedCurrency: DisplayCurrency | null;
   convert: (amount: number, fromCurrency: string) => number | null;
   format: (amount: number, currency?: string) => string;
   formatConverted: (amount: number, fromCurrency: string) => string | null;
   setDisplayCurrency: (currency: DisplayCurrency) => Promise<void>;
+  applyDetectedCurrency: () => Promise<void>;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
@@ -27,15 +32,27 @@ const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 export function CurrencyProvider({
   children,
   initialCurrency,
+  initialSource,
 }: {
   children: React.ReactNode;
   initialCurrency?: string;
+  initialSource?: string;
 }) {
   const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrency>(() => normalizeCurrency(initialCurrency));
+  const [displayCurrencySource, setDisplayCurrencySource] = useState<DisplayCurrencySource>(() => (
+    initialSource === "user" || initialSource === "inferred" || initialSource === "legacy" ? initialSource : "legacy"
+  ));
+  const [detectedCurrency, setDetectedCurrency] = useState<DisplayCurrency | null>(null);
   const [rates, setRates] = useState<UsdExchangeRates | null>(null);
   const [ratesAsOf, setRatesAsOf] = useState<string | null>(null);
   const [ratesStatus, setRatesStatus] = useState<RatesStatus>("loading");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDetectedCurrency(inferCurrencyFromBrowser(navigator.language, timeZone));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,24 +84,32 @@ export function CurrencyProvider({
     return converted === null ? null : formatMoney(converted, displayCurrency);
   }, [convert, displayCurrency]);
 
-  const persistDisplayCurrency = useCallback(async (currency: DisplayCurrency) => {
+  const persistDisplayCurrency = useCallback(async (currency: DisplayCurrency, selection: "explicit" | "detected" = "explicit") => {
     setSaving(true);
     try {
       const response = await fetch("/api/preferences/currency", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayCurrency: currency }),
+        body: JSON.stringify({ displayCurrency: currency, selection }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.success) throw new Error(payload?.message || "Could not save display currency.");
       setDisplayCurrencyState(currency);
+      setDisplayCurrencySource(payload.displayCurrencySource === "inferred" ? "inferred" : "user");
     } finally {
       setSaving(false);
     }
   }, []);
 
+  const applyDetectedCurrency = useCallback(async () => {
+    if (!detectedCurrency || detectedCurrency === displayCurrency) return;
+    await persistDisplayCurrency(detectedCurrency, "detected");
+  }, [detectedCurrency, displayCurrency, persistDisplayCurrency]);
+
   const value = useMemo<CurrencyContextValue>(() => ({
     displayCurrency,
+    displayCurrencySource,
+    detectedCurrency,
     ratesAsOf,
     ratesStatus,
     saving,
@@ -92,7 +117,8 @@ export function CurrencyProvider({
     format,
     formatConverted,
     setDisplayCurrency: persistDisplayCurrency,
-  }), [convert, displayCurrency, format, formatConverted, persistDisplayCurrency, ratesAsOf, ratesStatus, saving]);
+    applyDetectedCurrency,
+  }), [applyDetectedCurrency, convert, detectedCurrency, displayCurrency, displayCurrencySource, format, formatConverted, persistDisplayCurrency, ratesAsOf, ratesStatus, saving]);
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }

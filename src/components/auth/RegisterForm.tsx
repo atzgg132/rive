@@ -55,6 +55,8 @@ export function RegisterForm({
           startedAt: startedAtRef.current,
           next: nextPath,
           goal,
+          browserLocale: typeof navigator !== "undefined" ? navigator.language : undefined,
+          browserTimeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));

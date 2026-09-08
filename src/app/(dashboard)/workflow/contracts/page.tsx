@@ -5,7 +5,7 @@ import {
   type ContractComposerClient,
   type ContractComposerProject,
 } from "@/components/contracts/ContractComposer";
-import { Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, PaginationControls, Select, StatusBadge } from "@/components/ui";
+import { AnchoredMenuSelect, Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, PaginationControls, StatusBadge } from "@/components/ui";
 import {
   AlertTriangle,
   ArrowRight,
@@ -287,9 +287,13 @@ function ContractsWorkspace() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Search Agreements, clients, projects…" aria-label="Search Agreements" />
         </div>
-        <Select value={filter} onChange={(event) => setFilter(event.target.value)} className="sm:w-44" aria-label="Filter Agreements by stage">
-          {filters.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </Select>
+        <AnchoredMenuSelect
+          label="Stage"
+          value={filter}
+          options={filters}
+          onChange={setFilter}
+          className="min-w-[11rem]"
+        />
       </div>
 
       {loading ? (

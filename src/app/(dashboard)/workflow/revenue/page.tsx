@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowUpRight, ChevronRight, Clock3, Download, FileText, MoreVertical, Plus, Search, Send, Trash2, WalletCards } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, Kicker, PageHeader, PaginationControls, Select, StatusBadge } from "@/components/ui";
-import DropdownPortal from "@/components/ui/DropdownPortal";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Button, Input, Kicker, PageHeader, PaginationControls, StatusBadge } from "@/components/ui";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { formatMoney } from "@/lib/currency";
@@ -46,6 +45,17 @@ type AgingRow = { currency: string; current: number; days30: number; days60: num
 type MonthlyRow = { month: string; currency: string; invoiced: number; collected: number };
 type AttentionRow = { id: string; invoiceNumber: string; currency: string; status: string; outstanding: number; dueDate: string | null; client: string | null; reason: string };
 
+const INVOICE_STATUS_OPTIONS = [
+  { value: "all", label: "All statuses" },
+  { value: "draft", label: "Drafts" },
+  { value: "sent", label: "Sent" },
+  { value: "viewed", label: "Viewed" },
+  { value: "overdue", label: "Overdue" },
+  { value: "partially_paid", label: "Partly paid" },
+  { value: "paid", label: "Paid" },
+  { value: "voided", label: "Voided" },
+] as const;
+
 function dateLabel(value: string | null): string {
   if (!value) return "No due date";
   return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -77,7 +87,6 @@ function RevenueWorkspace() {
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   // Read from the live query string rather than a useState initializer. The
   // initializer only ran on mount, so clicking an attention row — a client-side
   // navigation to this same route — changed the URL and nothing else.
@@ -308,8 +317,47 @@ function RevenueWorkspace() {
       </div>
 
       <section className="rounded-none border border-border bg-card">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><Kicker>Invoice workspace</Kicker><div className="mt-1 flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold">All invoices</h2>{clientFilter || projectFilter ? <Link href="/workflow/revenue" className="text-xs font-semibold text-primary hover:underline">Clear filter</Link> : null}</div></div><div className="flex flex-wrap gap-2"><label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search invoices, clients…" className="w-56 pl-9" aria-label="Search invoices" /></label><Select value={status} onChange={(event) => setStatus(event.target.value)} className="w-36"><option value="all">All statuses</option><option value="draft">Drafts</option><option value="sent">Sent</option><option value="viewed">Viewed</option><option value="overdue">Overdue</option><option value="partially_paid">Partly paid</option><option value="paid">Paid</option><option value="voided">Voided</option></Select></div></div>
-        {loading ? <div className="p-10 text-center text-sm text-muted-foreground">Loading invoices…</div> : !invoices.length ? <div className="p-10 text-center"><FileText className="mx-auto h-8 w-8 text-muted-foreground/50" /><p className="mt-3 font-semibold">No invoices match this view</p><p className="mt-1 text-sm text-muted-foreground">Create a draft in the invoice workspace to get started.</p><Link href="/workflow/invoices/new" className="mt-4 inline-flex"><Button className="gap-2" variant="default"><Plus className="h-4 w-4" /> Create invoice</Button></Link></div> : <div className="table-scroll-region"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-5 py-3">Invoice</th><th className="px-5 py-3">Client / project</th><th className="px-5 py-3">Due</th><th className="px-5 py-3 text-right">Amount due</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-border">{invoices.map((invoice) => <tr id={`invoice-${invoice.id}`} key={invoice.id} className="transition hover:bg-muted/20"><td className="px-5 py-4"><button type="button" onClick={() => setSelectedInvoice(invoice.id)} className="text-left font-mono font-semibold tabular-nums text-foreground transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{invoice.invoice_number}</button><p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">Issued {dateLabel(invoice.issue_date)}</p></td><td className="px-5 py-4"><p className="font-medium">{invoice.client_name || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{invoice.project_title || "General services"}</p></td><td className="px-5 py-4 font-mono tabular-nums text-muted-foreground">{dateLabel(invoice.due_date)}</td><td className="px-5 py-4 text-right"><p className="font-mono font-semibold tabular-nums">{formatConverted(Number(invoice.outstanding), invoice.currency) || `${invoice.currency} ${Number(invoice.outstanding).toFixed(2)}`}</p>{Number(invoice.amount_paid) > 0 ? <p className="mt-1 font-mono text-xs tabular-nums text-success">{formatConverted(Number(invoice.amount_paid), invoice.currency) || `${invoice.currency} ${Number(invoice.amount_paid).toFixed(2)}`} paid</p> : null}{invoice.currency !== displayCurrency ? <p className="mt-1 text-xs font-medium text-muted-foreground">Originally {formatMoney(Number(invoice.total), invoice.currency)}</p> : null}</td><td className="px-5 py-4"><StatusBadge kind="invoice" value={invoice.status} /></td><td className="relative px-5 py-4 text-right"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedInvoice(invoice.id)}>Open</Button><Button data-guide-target={canSendInvoice(invoice.status) ? "revenue-send" : undefined} variant="ghost" size="icon-sm" aria-label={`Actions for ${invoice.invoice_number}`} onClick={(event) => { setMenuRect(event.currentTarget.getBoundingClientRect()); setOpenMenu(openMenu === invoice.id ? null : invoice.id); }}><MoreVertical className="h-4 w-4" /></Button></div>{openMenu === invoice.id ? <DropdownPortal triggerRect={menuRect} onClose={() => setOpenMenu(null)}><div className="w-48 rounded-none border border-border bg-card p-1 shadow-overlay"><Button className="w-full justify-start gap-2" variant="ghost" onClick={() => { openPdf(invoice); setOpenMenu(null); }}><Download className="h-4 w-4" /> Download PDF</Button>{canSendInvoice(invoice.status) ? <Button className="w-full justify-start gap-2 text-info" variant="ghost" onClick={() => { setOpenMenu(null); void sendInvoice(invoice); }}><Send className="h-4 w-4" /> Send invoice</Button> : null}{invoice.status === "draft" && !invoice.contract_id ? <Button className="w-full justify-start gap-2 text-destructive" variant="ghost" onClick={() => { setOpenMenu(null); void deleteInvoice(invoice); }}><Trash2 className="h-4 w-4" /> Delete draft</Button> : null}</div></DropdownPortal> : null}</td></tr>)}</tbody></table></div>}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5">
+          <div>
+            <Kicker>Invoice workspace</Kicker>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-semibold">All invoices</h2>
+              {clientFilter || projectFilter ? <Link href="/workflow/revenue" className="text-xs font-semibold text-primary hover:underline">Clear filter</Link> : null}
+            </div>
+          </div>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <label className="relative flex-1 sm:flex-none">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search invoices, clients…" className="w-full pl-9 sm:w-56" aria-label="Search invoices" />
+            </label>
+            <AnchoredMenuSelect label="Status" value={status} options={INVOICE_STATUS_OPTIONS} onChange={setStatus} className="min-w-[11rem]" />
+          </div>
+        </div>
+        {loading ? <div className="p-10 text-center text-sm text-muted-foreground">Loading invoices…</div> : !invoices.length ? <div className="p-10 text-center"><FileText className="mx-auto h-8 w-8 text-muted-foreground/50" /><p className="mt-3 font-semibold">No invoices match this view</p><p className="mt-1 text-sm text-muted-foreground">Create a draft in the invoice workspace to get started.</p><Link href="/workflow/invoices/new" className="mt-4 inline-flex"><Button className="gap-2" variant="default"><Plus className="h-4 w-4" /> Create invoice</Button></Link></div> : <div className="table-scroll-region"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-5 py-3">Invoice</th><th className="px-5 py-3">Client / project</th><th className="px-5 py-3">Due</th><th className="px-5 py-3 text-right">Amount due</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-border">{invoices.map((invoice) => <tr id={`invoice-${invoice.id}`} key={invoice.id} className="transition hover:bg-muted/20"><td className="px-5 py-4"><button type="button" onClick={() => setSelectedInvoice(invoice.id)} className="text-left font-mono font-semibold tabular-nums text-foreground transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{invoice.invoice_number}</button><p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">Issued {dateLabel(invoice.issue_date)}</p></td><td className="px-5 py-4"><p className="font-medium">{invoice.client_name || "No client"}</p><p className="mt-1 text-xs text-muted-foreground">{invoice.project_title || "General services"}</p></td><td className="px-5 py-4 font-mono tabular-nums text-muted-foreground">{dateLabel(invoice.due_date)}</td><td className="px-5 py-4 text-right"><p className="font-mono font-semibold tabular-nums">{formatConverted(Number(invoice.outstanding), invoice.currency) || `${invoice.currency} ${Number(invoice.outstanding).toFixed(2)}`}</p>{Number(invoice.amount_paid) > 0 ? <p className="mt-1 font-mono text-xs tabular-nums text-success">{formatConverted(Number(invoice.amount_paid), invoice.currency) || `${invoice.currency} ${Number(invoice.amount_paid).toFixed(2)}`} paid</p> : null}{invoice.currency !== displayCurrency ? <p className="mt-1 text-xs font-medium text-muted-foreground">Originally {formatMoney(Number(invoice.total), invoice.currency)}</p> : null}</td><td className="px-5 py-4"><StatusBadge kind="invoice" value={invoice.status} /></td><td className="relative px-5 py-4 text-right"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedInvoice(invoice.id)}>Open</Button><AnchoredMenu
+  open={openMenu === invoice.id}
+  onOpenChange={(open) => setOpenMenu(open ? invoice.id : null)}
+  aria-label={"Actions for " + invoice.invoice_number}
+  trigger={
+    <Button data-guide-target={canSendInvoice(invoice.status) ? "revenue-send" : undefined} variant="ghost" size="icon-sm" aria-label={"Actions for " + invoice.invoice_number}>
+      <MoreVertical className="h-4 w-4" />
+    </Button>
+  }
+>
+  <AnchoredMenuItem onClick={() => { openPdf(invoice); setOpenMenu(null); }}>
+    <Download className="h-4 w-4" /> Download PDF
+  </AnchoredMenuItem>
+  {canSendInvoice(invoice.status) ? (
+    <AnchoredMenuItem className="text-info data-[highlighted]:bg-info/10 data-[highlighted]:text-info" onClick={() => { setOpenMenu(null); void sendInvoice(invoice); }}>
+      <Send className="h-4 w-4" /> Send invoice
+    </AnchoredMenuItem>
+  ) : null}
+  {invoice.status === "draft" && !invoice.contract_id ? (
+    <AnchoredMenuItem className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive" onClick={() => { setOpenMenu(null); void deleteInvoice(invoice); }}>
+      <Trash2 className="h-4 w-4" /> Delete draft
+    </AnchoredMenuItem>
+  ) : null}
+</AnchoredMenu>
+</div></td></tr>)}</tbody></table></div>}
         {pagination && pagination.total > 0 ? <PaginationControls pagination={pagination} loading={loading} label="invoices" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
       </section>
 

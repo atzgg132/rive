@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea } from "@/components/ui";
 import { statusTone } from "@/lib/status-tone";
 
 import React, { useState, useEffect } from "react";
@@ -14,7 +14,6 @@ import {
   Phone,
   Globe,
   Briefcase,
-  WalletCards,
   X,
   Loader2,
   Tag,
@@ -23,7 +22,6 @@ import {
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
-import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
@@ -47,6 +45,12 @@ interface Client {
   revenue_by_currency: Record<string, number>;
 }
 
+const CLIENT_STATUS_OPTIONS = [
+  { value: "all", label: "All clients" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+] as const;
+
 export default function ClientsPage() {
   const router = useRouter();
   const { engagementFlow } = useFeatureAvailability();
@@ -66,7 +70,6 @@ export default function ClientsPage() {
 
   // Dropdown state
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -255,17 +258,8 @@ export default function ClientsPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs font-medium text-muted-foreground">Status</span>
-          <Select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="sm:w-auto"
-          >
-            <option value="all">All clients</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </Select>
+        <div className="flex w-full items-center justify-end sm:w-auto">
+          <AnchoredMenuSelect label="Status" value={status} options={CLIENT_STATUS_OPTIONS} onChange={setStatus} className="min-w-[11rem]" />
         </div>
       </div>
 
@@ -291,43 +285,32 @@ export default function ClientsPage() {
 
               {/* Dropdown Actions */}
               <div className="absolute top-4 right-4 z-10">
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (openDropdownId === c.id) {
-                      setOpenDropdownId(null);
-                    } else {
-                      setDropdownRect(e.currentTarget.getBoundingClientRect());
-                      setOpenDropdownId(c.id);
-                    }
-                  }}
+                <AnchoredMenu
+                  open={openDropdownId === c.id}
+                  onOpenChange={(open) => setOpenDropdownId(open ? c.id : null)}
                   aria-label={`Actions for ${c.name}`}
-                  title={`Actions for ${c.name}`}
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground hover:text-foreground hover:bg-foreground/[.05]"
+                  trigger={
+                    <Button
+                      aria-label={`Actions for ${c.name}`}
+                      title={`Actions for ${c.name}`}
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:text-foreground hover:bg-foreground/[.05]"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  }
                 >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-
-                {openDropdownId === c.id && (
-                  <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
-                    <div className="w-36 bg-popover rounded-none shadow-overlay border border-border z-50 py-1 animate-panel-in">
-                      <Button
-                        onClick={(e) => { e.stopPropagation(); openEdit(c); setOpenDropdownId(null); }}
-                        className="w-full text-left px-3 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" /> Edit
-                      </Button>
-                      <Button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); setOpenDropdownId(null); }}
-                        className="w-full text-left px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete
-                      </Button>
-                    </div>
-                  </DropdownPortal>
-                )}
+                  <AnchoredMenuItem onClick={(e) => { e.stopPropagation(); openEdit(c); setOpenDropdownId(null); }}>
+                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </AnchoredMenuItem>
+                  <AnchoredMenuItem
+                    className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); setOpenDropdownId(null); }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </AnchoredMenuItem>
+                </AnchoredMenu>
               </div>
 
               <div>
@@ -392,9 +375,8 @@ export default function ClientsPage() {
                   <Briefcase className="h-3.5 w-3.5" />
                   <span>{c.project_count} projects</span>
                 </span>
-                <span className="flex items-center gap-1 text-success">
-                  <WalletCards className="h-3.5 w-3.5" />
-                  <span className="font-mono tabular-nums">{formatClientRevenue(c)} paid</span>
+                <span className="font-mono tabular-nums text-success">
+                  {formatClientRevenue(c)} paid
                 </span>
               </div>
             </div>

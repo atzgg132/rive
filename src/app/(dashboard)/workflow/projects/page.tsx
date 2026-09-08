@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Kicker, PageHeader, PaginationControls, Select, StatusBadge, Tabs, Textarea } from "@/components/ui";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Kicker, PageHeader, PaginationControls, Select, StatusBadge, Tabs, Textarea } from "@/components/ui";
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -24,7 +24,6 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
-import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { statusLabel, statusTone } from "@/lib/status-tone";
@@ -451,16 +450,8 @@ function ProjectsWorkspace() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <label htmlFor="projects-sort" className="text-xs font-medium text-muted-foreground">Sort</label>
-          <Select
-            id="projects-sort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="sm:w-auto"
-          >
-            {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </Select>
+        <div className="flex w-full items-center justify-end sm:w-auto">
+          <AnchoredMenuSelect id="projects-sort" label="Sort" value={sort} options={SORT_OPTIONS} onChange={setSort} className="min-w-[13rem]" />
         </div>
       </div>
 
@@ -515,7 +506,7 @@ function ProjectsWorkspace() {
                 </h2>
               ) : null}
               {section.items.map((project) => (
-                <ProjectRow
+                <ProjectCard
                   key={project.id}
                   project={project}
                   now={now}
@@ -761,7 +752,7 @@ function ProjectsWorkspace() {
   );
 }
 
-type ProjectRowProps = {
+type ProjectCardProps = {
   project: Project;
   now: Date;
   openDropdownId: string | null;
@@ -774,7 +765,7 @@ type ProjectRowProps = {
   handleDelete: (id: string, name: string) => void;
 };
 
-function ProjectRow({
+function ProjectCard({
   project,
   now,
   openDropdownId,
@@ -785,9 +776,8 @@ function ProjectRow({
   updateStatus,
   openEdit,
   handleDelete,
-}: ProjectRowProps) {
-  const [actionsRect, setActionsRect] = useState<DOMRect | null>(null);
-  const [statusRect, setStatusRect] = useState<DOMRect | null>(null);
+}: ProjectCardProps) {
+  const router = useRouter();
   const { agreements } = useFeatureAvailability();
   const { displayCurrency, format, formatConverted } = useCurrency();
 
@@ -799,11 +789,34 @@ function ProjectRow({
   const convertedBudget = budgetAmount === null ? null : formatConverted(budgetAmount, project.currency);
   const busy = pendingStatusId === project.id;
 
+  const contractHref = project.contract_coverage === "rive" && project.latest_contract
+    ? `/workflow/contracts/${project.latest_contract.id}`
+    : project.contract_coverage === "external"
+      ? project.external_contract_url
+    : project.contract_coverage === "undecided"
+      ? project.client_id
+        ? `/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client_id)}`
+        : `/workflow/projects/${project.id}`
+      : null;
+  const contractLabel = project.contract_coverage === "rive" && project.latest_contract
+    ? `Open Rive contract · ${project.latest_contract.status.replaceAll("_", " ")}`
+    : project.contract_coverage === "external"
+      ? "Contract handled elsewhere"
+      : project.contract_coverage === "none"
+        ? "No contract required"
+        : project.client_id ? "Create a contract" : "Review contract coverage";
+  const budgetLabel = budgetAmount === null
+    ? null
+    : convertedBudget || format(budgetAmount, project.currency);
+  const budgetDescription = budgetAmount !== null && project.currency !== displayCurrency && convertedBudget
+    ? `Displayed as ${budgetLabel}; originally ${format(budgetAmount, project.currency)}`
+    : budgetLabel;
+
   return (
-    <article className="group relative rounded-none border border-border bg-card py-4 pl-5 pr-4 transition-[border-color,box-shadow] hover:border-primary/25">
+    <article className="group relative rounded-none border border-border bg-card py-3 pl-5 pr-4 transition-[border-color,box-shadow] hover:border-primary/25">
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 rounded-none ${railClass}`} />
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/workflow/projects/${project.id}`} className="min-w-0">
@@ -811,109 +824,105 @@ function ProjectRow({
             </Link>
             <StatusBadge kind="priority" value={project.priority} className="shrink-0" />
           </div>
-          <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            {project.client_name ? (
-              <>
-                <User className="h-3.5 w-3.5 shrink-0 text-primary" />
-                <span className="shrink-0 font-semibold text-foreground">{project.client_name}</span>
-              </>
-            ) : (
-              <span className="shrink-0">No client linked</span>
-            )}
-            {project.description ? <span className="truncate">· {project.description}</span> : null}
-          </p>
+          {project.description ? (
+            <p className="mt-1 min-w-0 truncate text-xs text-muted-foreground" title={project.description}>{project.description}</p>
+          ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            aria-haspopup="menu"
-            aria-expanded={statusMenuId === project.id}
-            aria-label={`Change status of ${project.title}, currently ${statusLabel("project", project.status)}`}
-            className="gap-1 px-1.5 font-semibold"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (statusMenuId === project.id) {
-                setStatusMenuId(null);
-              } else {
-                setStatusRect(e.currentTarget.getBoundingClientRect());
-                setStatusMenuId(project.id);
-                setOpenDropdownId(null);
-              }
+        <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
+          <AnchoredMenu
+            open={statusMenuId === project.id}
+            onOpenChange={(open) => {
+              setStatusMenuId(open ? project.id : null);
+              if (open) setOpenDropdownId(null);
             }}
+            aria-label={`Status for ${project.title}`}
+            className="w-44"
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                aria-label={`Change status of ${project.title}, currently ${statusLabel("project", project.status)}`}
+                className="gap-1 px-1.5 font-semibold"
+              >
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                <StatusBadge kind="project" value={project.status} />
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            }
           >
-            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            <StatusBadge kind="project" value={project.status} />
-            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-          </Button>
+            {STATUS_VALUES.map((value) => (
+              <AnchoredMenuItem key={value} onClick={(e) => { e.stopPropagation(); updateStatus(project.id, value); }}>
+                <StatusBadge kind="project" value={value} />
+                {value === project.status ? <Check className="ml-auto h-3.5 w-3.5 text-primary" /> : null}
+              </AnchoredMenuItem>
+            ))}
+          </AnchoredMenu>
 
-          {statusMenuId === project.id && (
-            <DropdownPortal triggerRect={statusRect} onClose={() => setStatusMenuId(null)}>
-              <div role="menu" aria-label={`Status for ${project.title}`} className="w-44 rounded-none border border-border bg-card p-1 shadow-overlay animate-panel-in">
-                {STATUS_VALUES.map((value) => (
-                  <Button
-                    key={value}
-                    role="menuitem"
-                    variant="ghost"
-                    className="w-full justify-start gap-2 px-3 py-2 text-xs font-medium"
-                    onClick={(e) => { e.stopPropagation(); updateStatus(project.id, value); }}
-                  >
-                    <StatusBadge kind="project" value={value} />
-                    {value === project.status ? <Check className="ml-auto h-3.5 w-3.5 text-primary" /> : null}
-                  </Button>
-                ))}
-              </div>
-            </DropdownPortal>
-          )}
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
+          <AnchoredMenu
+            open={openDropdownId === project.id}
+            onOpenChange={(open) => {
+              setOpenDropdownId(open ? project.id : null);
+              if (open) setStatusMenuId(null);
+            }}
             aria-label={`Actions for ${project.title}`}
-            title={`Actions for ${project.title}`}
-            className="text-muted-foreground hover:bg-foreground/[.05] hover:text-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (openDropdownId === project.id) {
-                setOpenDropdownId(null);
-              } else {
-                setActionsRect(e.currentTarget.getBoundingClientRect());
-                setOpenDropdownId(project.id);
-                setStatusMenuId(null);
-              }
-            }}
+            className="w-52"
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Actions for ${project.title}`}
+                title={`Actions for ${project.title}`}
+                className="text-muted-foreground hover:bg-foreground/[.05] hover:text-foreground"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            }
           >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-
-          {openDropdownId === project.id && (
-            <DropdownPortal triggerRect={actionsRect} onClose={() => setOpenDropdownId(null)}>
-              <div className="w-36 rounded-none border border-border bg-card py-1 shadow-overlay animate-panel-in">
-                <Button
-                  data-guide-target={!project.due_date ? "projects-deadline" : undefined}
-                  onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <Edit2 className="h-3.5 w-3.5" /> Edit
-                </Button>
-                <Button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); setOpenDropdownId(null); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
-                </Button>
-              </div>
-            </DropdownPortal>
-          )}
+            <AnchoredMenuItem
+              data-guide-target={!project.due_date ? "projects-deadline" : undefined}
+              onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
+            >
+              <Edit2 className="h-3.5 w-3.5" /> Edit
+            </AnchoredMenuItem>
+            <AnchoredMenuItem
+              className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+              onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); setOpenDropdownId(null); }}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </AnchoredMenuItem>
+            {agreements ? (
+              <AnchoredMenuItem
+                className={project.contract_coverage === "undecided" ? "text-warning data-[highlighted]:bg-warning/10 data-[highlighted]:text-warning" : "text-muted-foreground"}
+                aria-disabled={!contractHref ? "true" : undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (contractHref) {
+                    if (project.contract_coverage === "external") window.open(contractHref, "_blank", "noopener,noreferrer");
+                    else router.push(contractHref);
+                  }
+                  setOpenDropdownId(null);
+                }}
+              >
+                {project.contract_coverage === "external" ? <ExternalLink className="h-3.5 w-3.5" /> : project.contract_coverage === "none" ? <CircleSlash2 className="h-3.5 w-3.5" /> : <FileSignature className="h-3.5 w-3.5" />}
+                <span className="truncate">{contractLabel}</span>
+              </AnchoredMenuItem>
+            ) : null}
+          </AnchoredMenu>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-3 text-xs">
-        <span className={`inline-flex items-center gap-1.5 font-semibold ${DELIVERY_ACCENT[delivery.bucket]}`}>
+      <div className="mt-3 grid grid-cols-1 gap-2 border-t border-border pt-2 text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2">
+        <span className="inline-flex min-w-[10rem] max-w-full items-center gap-1.5">
+          <User className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          <span className="min-w-0 truncate font-semibold text-foreground" title={project.client_name || "No client linked"}>
+            {project.client_name || "No client linked"}
+          </span>
+        </span>
+        <span className={`inline-flex min-w-[8rem] items-center gap-1.5 font-semibold ${DELIVERY_ACCENT[delivery.bucket]}`}>
           {delivery.tone === "overdue" ? <TriangleAlert className="h-3.5 w-3.5" /> : null}
           {delivery.label}
         </span>
@@ -933,55 +942,24 @@ function ProjectRow({
         ) : null}
 
         {project.milestone_count > 0 ? (
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex min-w-[9rem] items-center gap-2">
             <span aria-hidden="true" className="block h-1.5 w-20 overflow-hidden rounded-none bg-muted">
               <span className="block h-full rounded-none bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
             </span>
             <span className="font-medium text-muted-foreground">{project.completed_milestones}/{project.milestone_count} milestones</span>
           </span>
         ) : (
-          <span className="text-muted-foreground">No milestones</span>
+          <span className="min-w-[9rem] text-muted-foreground">No milestones</span>
         )}
 
         {budgetAmount !== null ? (
-          <span className="font-mono font-extrabold tabular-nums text-success">
-            {convertedBudget || format(budgetAmount, project.currency)}
+          <span className="min-w-[10rem] truncate font-mono font-extrabold tabular-nums text-success" title={budgetDescription || undefined} aria-label={budgetDescription || undefined}>
+            <span className="block truncate">{budgetLabel}</span>
             {project.currency !== displayCurrency && convertedBudget ? (
-              <span className="ml-1 font-medium text-muted-foreground">Originally {format(budgetAmount, project.currency)}</span>
+              <span className="block truncate text-[0.68rem] font-semibold text-muted-foreground" title={`Originally ${format(budgetAmount, project.currency)}`}>
+                Originally {format(budgetAmount, project.currency)}
+              </span>
             ) : null}
-          </span>
-        ) : null}
-
-        {agreements ? (
-          <span className="inline-flex items-center gap-1.5">
-            {project.contract_coverage === "rive" && project.latest_contract ? (
-              <>
-                <FileSignature className="h-3.5 w-3.5 shrink-0 text-success" />
-                <span className="font-semibold text-success">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span>
-                <Link href={`/workflow/contracts/${project.latest_contract.id}`} className="font-bold text-primary hover:underline">Open</Link>
-              </>
-            ) : project.contract_coverage === "external" ? (
-              <>
-                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="font-semibold text-muted-foreground">Contract handled elsewhere</span>
-              </>
-            ) : project.contract_coverage === "none" ? (
-              <>
-                <CircleSlash2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="font-semibold text-muted-foreground">No contract required</span>
-              </>
-            ) : (
-              <>
-                <FileSignature className="h-3.5 w-3.5 shrink-0 text-warning" />
-                <span className="font-semibold text-warning">Contract undecided</span>
-                <Link
-                  href={project.client_id ? `/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client_id)}` : `/workflow/projects/${project.id}`}
-                  className="font-bold text-primary hover:underline"
-                >
-                  {project.client_id ? "Create" : "Review"}
-                </Link>
-              </>
-            )}
           </span>
         ) : null}
       </div>

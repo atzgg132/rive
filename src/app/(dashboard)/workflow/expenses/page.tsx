@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select, StatusBadge } from "@/components/ui";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select, StatusBadge } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -14,7 +14,6 @@ import {
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
-import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
@@ -42,6 +41,17 @@ interface Project {
   currency?: string;
 }
 
+const EXPENSE_CATEGORY_OPTIONS = [
+  { value: "all", label: "All categories" },
+  { value: "software", label: "Software" },
+  { value: "hardware", label: "Hardware" },
+  { value: "travel", label: "Travel" },
+  { value: "meals", label: "Meals" },
+  { value: "office", label: "Office" },
+  { value: "contractor", label: "Contractor" },
+  { value: "other", label: "Other" },
+] as const;
+
 export default function ExpensesPage() {
   const { displayCurrency, convert, format, formatConverted, ratesAsOf, ratesStatus } = useCurrency();
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -60,7 +70,6 @@ export default function ExpensesPage() {
 
   // Dropdown state
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
 
   const [description, setDescription] = useState("");
   const [categoryInput, setCategoryInput] = useState("software");
@@ -290,22 +299,8 @@ export default function ExpensesPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs font-medium text-muted-foreground">Category</span>
-          <Select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="sm:w-auto"
-          >
-            <option value="all">All categories</option>
-            <option value="software">Software</option>
-            <option value="hardware">Hardware</option>
-            <option value="travel">Travel</option>
-            <option value="meals">Meals</option>
-            <option value="office">Office</option>
-            <option value="contractor">Contractor</option>
-            <option value="other">Other</option>
-          </Select>
+        <div className="flex w-full items-center justify-end sm:w-auto">
+          <AnchoredMenuSelect label="Category" value={category} options={EXPENSE_CATEGORY_OPTIONS} onChange={setCategory} className="min-w-[12rem]" />
         </div>
       </div>
 
@@ -360,43 +355,32 @@ export default function ExpensesPage() {
                       {exp.currency !== displayCurrency && <span className="mt-0.5 block text-xs font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
                     </td>
                     <td className="py-4 px-6 text-right relative">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (openDropdownId === exp.id) {
-                            setOpenDropdownId(null);
-                          } else {
-                            setDropdownRect(e.currentTarget.getBoundingClientRect());
-                            setOpenDropdownId(exp.id);
-                          }
-                        }}
+                      <AnchoredMenu
+                        open={openDropdownId === exp.id}
+                        onOpenChange={(open) => setOpenDropdownId(open ? exp.id : null)}
                         aria-label={`Actions for ${exp.description}`}
-                        title={`Actions for ${exp.description}`}
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground hover:bg-foreground/[.05] hover:text-foreground opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        trigger={
+                          <Button
+                            aria-label={`Actions for ${exp.description}`}
+                            title={`Actions for ${exp.description}`}
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-muted-foreground hover:bg-foreground/[.05] hover:text-foreground opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        }
                       >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-
-                      {openDropdownId === exp.id && (
-                        <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
-                          <div className="w-32 rounded-none border border-border bg-popover z-50 py-1 animate-panel-in text-left shadow-overlay">
-                            <Button
-                              onClick={() => { openEdit(exp); setOpenDropdownId(null); }}
-                              className="w-full text-left px-3 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-colors"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" /> Edit
-                            </Button>
-                            <Button
-                              onClick={() => { handleDelete(exp.id, exp.description); setOpenDropdownId(null); }}
-                              className="w-full text-left px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" /> Delete
-                            </Button>
-                          </div>
-                        </DropdownPortal>
-                      )}
+                        <AnchoredMenuItem onClick={() => { openEdit(exp); setOpenDropdownId(null); }}>
+                          <Edit2 className="h-3.5 w-3.5" /> Edit
+                        </AnchoredMenuItem>
+                        <AnchoredMenuItem
+                          className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+                          onClick={() => { handleDelete(exp.id, exp.description); setOpenDropdownId(null); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </AnchoredMenuItem>
+                      </AnchoredMenu>
                     </td>
                   </tr>
                 ))}
