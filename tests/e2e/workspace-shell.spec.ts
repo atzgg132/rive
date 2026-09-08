@@ -95,6 +95,31 @@ test("desktop sidebar keeps long identity values contained and persists the rail
   await expect(sidebar).toHaveAttribute("data-sidebar-collapsed", "true");
   await expect(sidebar.getByRole("link", { name: "Projects" })).toBeVisible();
   await expect(sidebar.getByRole("link", { name: "Projects" }).locator("span")).toHaveCount(0);
+  const collapsedRailGeometry = await sidebar.evaluate((element) => {
+    const header = element.querySelector<HTMLElement>("[data-sidebar-header]");
+    const logo = element.querySelector<SVGSVGElement>("[data-sidebar-header] [data-sidebar-logo] svg");
+    const toggle = element.querySelector<HTMLElement>("[data-sidebar-header] [data-sidebar-toggle]");
+    const headerBox = header?.getBoundingClientRect();
+    const logoBox = logo?.getBoundingClientRect();
+    const toggleBox = toggle?.getBoundingClientRect();
+    return {
+      headerHeight: headerBox?.height || 0,
+      logoWidth: logoBox?.width || 0,
+      logoHeight: logoBox?.height || 0,
+      logoCenter: logoBox ? logoBox.x + logoBox.width / 2 : 0,
+      toggleCenter: toggleBox ? toggleBox.x + toggleBox.width / 2 : 0,
+      toggleWidth: toggleBox?.width || 0,
+      toggleHeight: toggleBox?.height || 0,
+      logoToToggleGap: logoBox && toggleBox ? toggleBox.top - logoBox.bottom : 0,
+    };
+  });
+  expect(collapsedRailGeometry.headerHeight).toBeGreaterThanOrEqual(84);
+  expect(collapsedRailGeometry.logoHeight).toBeLessThanOrEqual(21);
+  expect(collapsedRailGeometry.logoWidth).toBeLessThan(60);
+  expect(collapsedRailGeometry.toggleWidth).toBeGreaterThanOrEqual(44);
+  expect(collapsedRailGeometry.toggleHeight).toBeGreaterThanOrEqual(44);
+  expect(collapsedRailGeometry.logoToToggleGap).toBeGreaterThanOrEqual(6);
+  expect(Math.abs(collapsedRailGeometry.logoCenter - collapsedRailGeometry.toggleCenter)).toBeLessThanOrEqual(1);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   const collapsedSidebar = page.locator("#dashboard-desktop-sidebar");

@@ -273,9 +273,9 @@ export default function DashboardSidebar({
         )}
       >
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className={cn("flex shrink-0 items-center border-b border-border", collapsed ? "min-h-20 flex-col justify-center gap-3 px-0" : "h-16 gap-3 px-4")}>
-            <Link href="/dashboard" className="flex min-w-0 shrink-0 items-center gap-2" aria-label="rive. overview" title="rive. overview">
-              <RiveLogo height={26} />
+          <div data-sidebar-header className={cn("flex shrink-0 items-center border-b border-border", collapsed ? "h-[84px] flex-col justify-center gap-2 px-0" : "h-16 gap-3 px-4")}>
+            <Link data-sidebar-logo href="/dashboard" className="flex min-w-0 shrink-0 items-center gap-2" aria-label="rive. overview" title="rive. overview">
+              <RiveLogo height={collapsed ? 20 : 26} />
             </Link>
             {!collapsed ? <div className="min-w-0 flex-1" /> : null}
             <Button
