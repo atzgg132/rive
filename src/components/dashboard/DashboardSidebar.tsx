@@ -142,7 +142,7 @@ function NavItems({
           <Link
             key={link.href}
             href={link.href}
-            aria-label={link.label}
+            aria-label={collapsed && !mobile ? link.label : undefined}
             title={link.label}
             onClick={onNavigate}
             className={cn(navLinkClassName(isActive), collapsed && !mobile && "justify-center px-0")}
