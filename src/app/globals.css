@@ -2405,6 +2405,31 @@ body[data-auth-dedicated] .edition-footer { display: none; }
   .workspace-preview .wp-cal__day { min-height: 7.5rem; padding-inline: .25rem; }
 }
 
+/* Compact workspace preview — essential data for small/short viewports. */
+
+.workspace-preview--full { display: block; }
+.workspace-preview--compact { display: none; }
+
+@media (max-width: 1100px), (max-width: 1536px) and (max-height: 900px) and (min-width: 768px) {
+  .workspace-preview--full { display: none; }
+  .workspace-preview--compact { display: block; }
+}
+
+.workspace-preview--compact .workspace-preview__body { min-height: auto; grid-template-columns: 1fr; }
+.workspace-preview--compact .workspace-preview__body > aside { display: none; }
+.workspace-preview--compact .workspace-preview__topbar > div > span { display: none; }
+.workspace-preview--compact .wp-actions .wp-btn-ghost { display: none; }
+
+.workspace-preview--compact .wp-metrics,
+.workspace-preview--compact .wp-client-grid,
+.workspace-preview--compact .wp-cal__week { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
+.workspace-preview--compact .wp-client-grid { gap: .55rem; margin-top: .7rem; }
+.workspace-preview--compact .wp-cal__week { margin-top: .6rem; }
+.workspace-preview--compact .wp-cal__day { min-height: 5.5rem; padding-inline: .3rem; }
+
+.workspace-preview--compact .wp-work { margin-top: .45rem; }
+.workspace-preview--compact .wp-work-add { margin-top: .45rem; }
+
 /* Short-viewport/small-laptop adjustments: 1080p at 125-150% scaling and 1366x768.
    Applies to desktop widths only; the 767px mobile media query stays in control below that. */
 @media (max-width: 1536px) and (max-height: 900px) and (min-width: 768px) {

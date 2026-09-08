@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { PortfolioPublication } from "@/components/marketing/WorkingEditionStage";
-import { WorkspacePreview, type WorkspacePreviewView } from "@/components/marketing/WorkspacePreview";
+import { type WorkspacePreviewView } from "@/components/marketing/WorkspacePreview";
+import { ResponsiveWorkspacePreview } from "@/components/marketing/ResponsiveWorkspacePreview";
 import { EditorialLabel, MarketingButton } from "@/components/marketing/primitives";
 
 export type ProductPageKind = "clients" | "agreements" | "portfolio";
@@ -62,7 +63,7 @@ function Visual({ kind, index }: { kind: ProductPageKind; index: number }) {
     agreements: ["agreements", "agreements", "revenue", "revenue"],
     portfolio: ["portfolio", "portfolio", "portfolio"],
   };
-  return <WorkspacePreview view={views[kind][index] ?? views[kind][0]} />;
+  return <ResponsiveWorkspacePreview view={views[kind][index] ?? views[kind][0]} />;
 }
 
 export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {

@@ -43,10 +43,11 @@ test.describe("working edition marketing experience", () => {
     await page.goto("/", { waitUntil: "load" });
     const stage = page.getByTestId("hero-client-stage");
     await expect(stage).toContainText("Inside Rive");
-    await expect(stage.locator('[data-workspace-preview]')).toBeVisible();
-    await expect(stage.getByText("Search workspace…")).toBeVisible();
-    await expect(stage.getByText("Revenue & invoices")).toBeVisible();
-    await expect(stage.getByText("Aster House", { exact: true })).toBeVisible();
+    const preview = stage.locator("[data-workspace-preview]:visible");
+    await expect(preview).toBeVisible();
+    await expect(preview.getByText("Search workspace…")).toBeVisible();
+    await expect(preview).toContainText("Revenue collected");
+    await expect(preview.getByText(/Aster House/)).toBeVisible();
     await expect(stage.getByText("rive.work", { exact: true })).toHaveCount(0);
   });
 
