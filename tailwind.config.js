@@ -13,8 +13,8 @@ module.exports = {
         mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
       },
       colors: {
-        border: "rgb(var(--border) / <alpha-value>)",
-        input: "rgb(var(--input) / <alpha-value>)",
+        border: "rgb(var(--border) / var(--border-alpha))",
+        input: "rgb(var(--input) / var(--input-alpha))",
         ring: "rgb(var(--ring) / <alpha-value>)",
         background: "rgb(var(--background) / <alpha-value>)",
         foreground: "rgb(var(--foreground) / <alpha-value>)",
@@ -54,19 +54,23 @@ module.exports = {
           DEFAULT: "rgb(var(--warning) / <alpha-value>)",
           foreground: "rgb(var(--warning-foreground) / <alpha-value>)",
         },
-        blue: {
-          primary: "#1D4ED8",
-          light: "#3B82F6",
-          soft: "#EFF6FF",
-          border: "#E2EAF4",
+        "primary-strong": {
+          DEFAULT: "rgb(var(--primary-strong) / <alpha-value>)",
+        },
+        info: "rgb(var(--info) / <alpha-value>)",
+        violet: {
+          DEFAULT: "rgb(var(--violet) / <alpha-value>)",
         },
       },
       borderRadius: {
         xl: "var(--radius)",
-        "2xl": "calc(var(--radius) + 0.25rem)",
+        "2xl": "var(--radius)",
+        lg: "var(--radius)",
+        md: "var(--radius)",
+        "3xl": "var(--radius)",
       },
       boxShadow: {
-        card: "var(--shadow-card)",
+        card: "none",
         overlay: "var(--shadow-overlay)",
       },
       backgroundImage: {
@@ -75,6 +79,10 @@ module.exports = {
         "grid-fade": "linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px)",
       },
       keyframes: {
+        "panel-in": {
+          from: { opacity: "0", transform: "translateY(6px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
         "border-spin": {
           to: { "--angle": "360deg" },
         },
@@ -91,6 +99,7 @@ module.exports = {
         },
       },
       animation: {
+        "panel-in": "panel-in 220ms var(--ease-out)",
         "border-spin": "border-spin 8s linear infinite",
         "glow-pulse": "glow-pulse 6s ease-in-out infinite",
         marquee: "marquee 28s linear infinite",

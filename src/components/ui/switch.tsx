@@ -14,14 +14,14 @@ export const Switch = React.forwardRef<HTMLElement, SwitchProps>(
     <BaseSwitch.Root
       ref={ref}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent bg-muted p-0.5 transition-colors duration-150 ease-out data-[checked]:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-border bg-muted p-0.5 transition-colors duration-150 ease-out data-[checked]:border-primary data-[checked]:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
     >
       <BaseSwitch.Thumb
         className={cn(
-          "pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform duration-150 ease-out data-[checked]:translate-x-5 dark:bg-slate-100",
+          "pointer-events-none block size-5 rounded-full bg-card transition-transform duration-150 ease-out data-[checked]:translate-x-5",
           thumbClassName,
         )}
       />

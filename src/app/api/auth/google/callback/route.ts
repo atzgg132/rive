@@ -12,6 +12,7 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
+import { inferCurrencyFromRequest, resolveDisplayCurrency } from "@/lib/currency";
 
 function loginError(req: NextRequest, code: string) {
   return NextResponse.redirect(new URL(`/login?google_error=${code}`, process.env.APP_URL || req.url));
@@ -84,6 +85,7 @@ export async function GET(req: NextRequest) {
         lastLandingPage: rawAttribution.lastLandingPage || rawAttribution.landingPage || "/login",
         referralSource: rawAttribution.referralSource,
       };
+      const displayCurrencyPreference = resolveDisplayCurrency({ detected: inferCurrencyFromRequest(req) || "USD" });
       user = await prisma.$transaction(async (tx) => {
         const created = await tx.user.create({
           data: {
@@ -98,6 +100,8 @@ export async function GET(req: NextRequest) {
             onboardingStep: 0,
             timeZone: "UTC",
             currency: "USD",
+            displayCurrency: displayCurrencyPreference.currency,
+            displayCurrencySource: displayCurrencyPreference.source,
             onboardingData: state.next === "/migrate" ? { goal: "migrate", startingPath: "import" } : undefined,
           },
           select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true },

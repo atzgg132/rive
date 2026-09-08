@@ -533,7 +533,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
         ref={helpPanelRef}
         id="help-guides-panel"
         tabIndex={-1}
-        className="fixed inset-x-3 bottom-3 z-[70] max-h-[min(40rem,calc(100vh-1.5rem))] w-auto overflow-y-auto rounded-2xl border border-border bg-popover p-4 text-popover-foreground shadow-overlay outline-none md:bottom-auto md:left-auto md:right-4 md:top-20 md:w-[min(25rem,calc(100vw-2rem))]"
+        className="fixed inset-x-3 bottom-3 z-[70] max-h-[min(40rem,calc(100vh-1.5rem))] w-auto overflow-y-auto rounded-none border border-border bg-popover p-4 text-popover-foreground shadow-overlay outline-none md:bottom-auto md:left-auto md:right-4 md:top-20 md:w-[min(25rem,calc(100vw-2rem))]"
         role="dialog"
         aria-modal="false"
         aria-labelledby="help-guides-title"
@@ -553,12 +553,12 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
           type="button"
           onClick={resumeGuide}
           aria-label={`Continue where you left off with ${getGuideCatalogItem(resumeGuideId).label}`}
-          className="mt-4 w-full rounded-2xl border border-primary/20 bg-primary/5 p-3 text-left transition hover:border-primary/35 hover:bg-primary/10"
+          className="mt-4 w-full rounded-none border border-primary/20 bg-primary/5 p-3 text-left transition hover:border-primary/[0.35] hover:bg-primary/10"
           data-testid="guide-resume"
         >
           <span className="flex items-start justify-between gap-3">
             <span className="flex min-w-0 items-start gap-2.5">
-              <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-none bg-primary text-primary-foreground">
                 <Sparkles className="h-3.5 w-3.5" />
               </span>
               <span className="min-w-0">
@@ -592,7 +592,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
                 onClick={() => startGuide(option.id)}
                 aria-label={`Start ${option.label}`}
                 data-testid={`guide-option-${option.id}`}
-                className="h-auto min-h-16 w-full items-start justify-start gap-3 whitespace-normal rounded-xl px-3 py-2.5 text-left hover:text-foreground"
+                className="h-auto min-h-16 w-full items-start justify-start gap-3 whitespace-normal rounded-none px-3 py-2.5 text-left hover:text-foreground"
               >
                 {optionSnapshot.status === "completed" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" /> : <Compass className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
                 <span className="min-w-0 flex-1">
@@ -615,7 +615,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
         <button
           type="button"
           onClick={() => startGuide("orientation")}
-          className="mt-4 flex w-full items-start gap-3 rounded-xl border border-border bg-muted/30 px-3 py-3 text-left transition hover:border-primary/25 hover:bg-muted/60"
+          className="mt-4 flex w-full items-start gap-3 rounded-none border border-border bg-muted/30 px-3 py-3 text-left transition hover:border-primary/25 hover:bg-muted/60"
           data-testid="guide-option-orientation"
         >
           <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -640,7 +640,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
         data-testid="guide-dock"
         data-guide-state={guideCollapsed ? "collapsed" : "expanded"}
         data-guide-phase={guideAnimating ? "collapsing" : guideCollapsed ? "collapsed" : "expanded"}
-        className={`pointer-events-auto fixed bottom-3 right-3 z-[65] max-h-[min(38rem,calc(100vh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-primary/20 bg-popover p-4 text-popover-foreground shadow-overlay outline-none transition-[opacity,transform] duration-[180ms] ease-out motion-reduce:transition-none md:bottom-4 md:right-4 ${guideCollapsed ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"}`}
+        className={`pointer-events-auto fixed bottom-3 right-3 z-[65] max-h-[min(38rem,calc(100vh-5rem))] w-[min(24rem,calc(100vw-1.5rem))] overflow-y-auto rounded-none border border-primary/20 bg-popover p-4 text-popover-foreground shadow-overlay outline-none transition-[opacity,transform] duration-[180ms] ease-out motion-reduce:transition-none md:bottom-4 md:right-4 ${guideCollapsed ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-primary">
@@ -658,7 +658,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
         </div>
 
         {!guidePlan && activeGuideId !== "orientation" ? (
-          <div className="mt-5 flex items-center gap-2 rounded-xl bg-muted/50 p-3 text-xs font-semibold text-muted-foreground" data-testid="guide-loading">
+          <div className="mt-5 flex items-center gap-2 rounded-none bg-muted/50 p-3 text-xs font-semibold text-muted-foreground" data-testid="guide-loading">
             <Loader2 className="h-4 w-4 animate-spin" />
             Looking at your workspace and choosing the step that still matters…
           </div>
@@ -682,31 +682,31 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
             <p id="guide-dock-description" className="mt-1.5 text-xs leading-5 text-muted-foreground">{guideIntro(guidePlan, activeMode, activeGuideId)}</p>
 
             {guideSnapshot.status === "needs_attention" && (
-              <div className="mt-3 flex items-start gap-2 rounded-xl bg-warning/10 px-3 py-2.5 text-xs font-semibold leading-5 text-warning" role="status">
+              <div className="mt-3 flex items-start gap-2 rounded-none bg-warning/10 px-3 py-2.5 text-xs font-semibold leading-5 text-warning" role="status">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>This guide was completed before, but the workspace changed. We brought back the step that needs attention.</span>
               </div>
             )}
             {currentStep && !guideFinished && (
-              <div className="mt-3 rounded-xl bg-accent px-3 py-2.5" data-testid="guide-next-step">
+              <div className="mt-3 rounded-none bg-accent px-3 py-2.5" data-testid="guide-next-step">
                 <p className="text-[11px] font-black uppercase tracking-[0.1em] text-primary">Step {Math.min(guideSnapshot.completed + 1, guideTotal)} of {guideTotal}</p>
                 <p className="mt-1 text-xs font-semibold leading-5 text-foreground">{currentStep.description}</p>
               </div>
             )}
             {activeGuideId === "orientation" && !guideFinished && (
-              <div className="mt-3 rounded-xl bg-accent px-3 py-2.5">
+              <div className="mt-3 rounded-none bg-accent px-3 py-2.5">
                 <p className="text-[11px] font-black uppercase tracking-[0.1em] text-primary">The connected story</p>
                 <p className="mt-1 text-xs font-semibold leading-5 text-foreground">Start with a real client when you are ready. Rive carries that context through the work, money, and proof.</p>
               </div>
             )}
             {guideFinished && !isReviewing && (
-              <div className="mt-3 flex items-start gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-xs font-bold leading-5 text-success" role="status">
+              <div className="mt-3 flex items-start gap-2 rounded-none bg-success/10 px-3 py-2.5 text-xs font-bold leading-5 text-success" role="status">
                 <Check className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>All required steps are true in your workspace. You can keep working or review any step again.</span>
               </div>
             )}
             {targetState === "missing" && currentAction && (
-              <div className="mt-3 flex items-start gap-2 rounded-xl border border-warning/25 bg-warning/5 px-3 py-2.5 text-xs leading-5 text-muted-foreground" data-testid="guide-target-recovery">
+              <div className="mt-3 flex items-start gap-2 rounded-none border border-warning/25 bg-warning/5 px-3 py-2.5 text-xs leading-5 text-muted-foreground" data-testid="guide-target-recovery">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <span>This step is not visible on this version of the page yet. The guide is still here — open the full step and continue from there.</span>
               </div>
@@ -726,7 +726,7 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
                     <button
                       type="button"
                       onClick={() => setSelectedStepId(step.id)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition ${selected ? "bg-primary/[0.08] text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
+                      className={`flex w-full items-center gap-2 rounded-none px-2 py-2 text-left text-xs transition ${selected ? "bg-primary/[0.08] text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
                     >
                       {complete ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <Circle className="h-4 w-4 shrink-0 text-muted-foreground/60" />}
                       <span className={complete ? "line-through decoration-success/40" : ""}>{step.label}</span>
@@ -742,13 +742,13 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
               </Button>
               <div className="flex items-center gap-2">
                 {guideFinished && !isReviewing ? (
-                  <Button type="button" size="sm" onClick={completeGuide} className="text-xs">Done</Button>
+                  <Button type="button" variant="default" size="sm" onClick={completeGuide} className="text-xs">Done</Button>
                 ) : isReviewing ? (
                   <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedStepId(null)} className="text-xs">Close review</Button>
                 ) : activeGuideId === "orientation" ? (
-                  <Button type="button" size="sm" onClick={completeGuide} className="text-xs">I understand <ArrowRight className="h-3.5 w-3.5" /></Button>
+                  <Button type="button" variant="default" size="sm" onClick={completeGuide} className="text-xs">I understand <ArrowRight className="h-3.5 w-3.5" /></Button>
                 ) : currentAction ? (
-                  <Button type="button" size="sm" onClick={openRecommendedStep} className="text-xs">{targetState === "missing" ? currentAction.label : "Open step"} <ArrowRight className="h-3.5 w-3.5" /></Button>
+                  <Button type="button" variant="default" size="sm" onClick={openRecommendedStep} className="text-xs">{targetState === "missing" ? currentAction.label : "Open step"} <ArrowRight className="h-3.5 w-3.5" /></Button>
                 ) : null}
               </div>
             </div>

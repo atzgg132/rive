@@ -19,3 +19,14 @@ Rive is a working tool for independent operators, not a marketing playground ins
 - Do not restyle the whole product to ship one feature.
 - Do not regenerate Playwright screenshot baselines locally.
 - If a visual change is intentional, say so in the spec or PR notes and call out `tests/e2e/visual-regression.spec.ts`.
+
+## Working Edition (app theme)
+
+Warm paper surfaces (`--background` 243 240 232 light / 9 17 31 dark ink),
+bright-paper `--card`, one hairline `border-border` instead of shadows (only
+floating layers keep `shadow-overlay`), radius 0 everywhere except
+pills/avatars/dots. Eyebrows are `<Kicker>` (uppercase 800, `.14em`, leading
+dot). Currency, invoice numbers, IDs, dates, and KPI values render in
+`font-mono tabular-nums`. The primary CTA may use the `inverse` button (ink
+fill). Status chips come only from `statusTone()` + `<StatusBadge>` — never
+inline color maps. Full token table: [`docs/ui-system.md`](docs/ui-system.md).

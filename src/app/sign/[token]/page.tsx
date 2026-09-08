@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Textarea } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Kicker, Textarea } from "@/components/ui";
 import { AlertTriangle, CheckCircle2, Download, FileSignature, Loader2, LockKeyhole, ShieldCheck, XCircle } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -142,7 +142,7 @@ export default function ContractSignPage() {
   };
 
   if (loading) return <Centered><Loader2 className="h-6 w-6 animate-spin text-primary" /><span>Loading acceptance page…</span></Centered>;
-  if (error || !data) return <Centered><AlertTriangle className="h-8 w-8 text-amber-500" /><h1 className="text-xl font-bold">Acceptance request closed</h1><p className="max-w-md text-center text-sm text-muted-foreground">{error || "Ask the sender to reissue it."}</p></Centered>;
+  if (error || !data) return <Centered><AlertTriangle className="h-8 w-8 text-warning" /><h1 className="text-xl font-bold">Acceptance request closed</h1><p className="max-w-md text-center text-sm text-muted-foreground">{error || "Ask the sender to reissue it."}</p></Centered>;
 
   const sections = (data.contract.content.sections || []).filter((section) => section.enabled);
   const waiting = data.mode === "waiting";
@@ -151,7 +151,7 @@ export default function ContractSignPage() {
   const jurisdiction = data.contract.content.jurisdiction ?? data.contract.jurisdiction;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-8">
+    <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-8">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <header className="flex items-center justify-between gap-3">
           <div className="text-2xl font-black tracking-tight">rive<span className="text-primary">.</span></div>
@@ -159,9 +159,9 @@ export default function ContractSignPage() {
         </header>
 
         <section>
-          <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{completed ? "Acceptance recorded" : waiting ? "Waiting for prior party" : "Acceptance requested"}</p><Badge variant="outline">Version {data.contract.version.number}</Badge></div>
+          <div className="flex flex-wrap items-center gap-2"><Kicker>{completed ? "Acceptance recorded" : waiting ? "Waiting for prior party" : "Acceptance requested"}</Kicker><Badge variant="outline">Version {data.contract.version.number}</Badge></div>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{data.contract.title}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">You are recording acceptance as <strong className="text-foreground dark:text-slate-200">{data.signer.role}</strong>: {data.signer.name} · {data.signer.email}</p>
+          <p className="mt-2 text-sm text-muted-foreground">You are recording acceptance as <strong className="text-foreground">{data.signer.role}</strong>: {data.signer.name} · {data.signer.email}</p>
           <p className="mt-1 text-xs text-muted-foreground">Governing law: {governingLaw}{jurisdiction ? ` · ${jurisdiction}` : ""}</p>
         </section>
 
@@ -180,7 +180,7 @@ export default function ContractSignPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               {data.contract.content.projectTitle ? (
-                <section className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <section className="rounded-none border border-primary/20 bg-primary/5 p-4">
                   <h2 className="text-sm font-bold">Project brief snapshot</h2>
                   <p className="mt-1 text-xs font-semibold text-primary">{data.contract.content.projectTitle}</p>
                   {data.contract.content.projectDescription ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{data.contract.content.projectDescription}</p> : null}
@@ -195,11 +195,11 @@ export default function ContractSignPage() {
               <section>
                 <h2 className="mb-2 text-sm font-bold">Payment plan</h2>
                 {data.contract.content.paymentPlan?.items?.length ? (
-                  <div className="divide-y divide-border rounded-xl border border-border">
+                  <div className="divide-y divide-border rounded-none border border-border">
                     {data.contract.content.paymentPlan.items.map((item, index) => (
                       <div key={`${item.label}-${index}`} className="grid gap-1 p-3 text-sm sm:grid-cols-[1fr_auto]">
                         <div><p className="font-semibold">{item.label}</p><p className="text-xs text-muted-foreground">{formatTrigger(item)} · invoice due in {item.dueDays} days</p></div>
-                        <p className="font-bold">{item.currency} {item.amount}</p>
+                        <p className="font-mono font-bold tabular-nums">{item.currency} {item.amount}</p>
                       </div>
                     ))}
                   </div>
@@ -215,9 +215,9 @@ export default function ContractSignPage() {
                 {completed ? (
                   <>
                     <Alert variant="success"><CheckCircle2 className="h-5 w-5" /><p className="text-sm">{data.contract.status === "executed" ? "Both parties have recorded acceptance." : "Your acceptance is recorded. The next party can continue."}</p></Alert>
-                    {downloadUrl && data.contract.status === "executed" ? <a href={downloadUrl} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground" download><Download className="h-4 w-4" /> Download accepted PDF</a> : null}
+                    {downloadUrl && data.contract.status === "executed" ? <a href={downloadUrl} className="inline-flex h-10 items-center justify-center gap-2 rounded-none bg-primary px-4 text-sm font-semibold text-primary-foreground" download><Download className="h-4 w-4" /> Download accepted PDF</a> : null}
                     {data.contract.status === "executed" ? (
-                      <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
+                      <Alert variant="warning">
                         {data.contract.void_requested_at ? (
                           data.contract.void_requested_by_role !== data.signer.role ? (
                             <>
@@ -243,7 +243,7 @@ export default function ContractSignPage() {
                             <Button size="sm" className="mt-2" disabled={voidBusy || voidNote.trim().length < 5} onClick={() => void submitVoid("request")}>Request void</Button>
                           </>
                         )}
-                      </div>
+                      </Alert>
                     ) : null}
                   </>
                 ) : waiting ? <p className="text-sm text-muted-foreground">The acceptance form unlocks after the prior party records acceptance.</p> : (
@@ -253,7 +253,7 @@ export default function ContractSignPage() {
                     <Button onClick={() => void sign()} disabled={signing || !typedName.trim() || !consent}>{signing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Record acceptance</Button>
                     <Button type="button" variant="ghost" className="text-destructive" onClick={() => setDeclineOpen((current) => !current)}><XCircle className="h-4 w-4" /> Request changes instead</Button>
                     {declineOpen ? (
-                      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+                      <div className="rounded-none border border-destructive/20 bg-destructive/5 p-3">
                         <label><span className="mb-1.5 block text-xs font-bold">What needs to change?</span><Textarea rows={3} value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} placeholder="Explain the issue so the sender can prepare a corrected version." maxLength={2_000} /></label>
                         <p className="mt-2 text-[11px] leading-4 text-muted-foreground">Requesting changes stops this acceptance request and notifies the sender. It does not mark the Agreement accepted.</p>
                         <Button type="button" variant="destructive" className="mt-3 w-full" disabled={declining || declineReason.trim().length < 5} onClick={() => void decline()}>{declining ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />} Request changes</Button>
@@ -281,5 +281,5 @@ function formatTrigger(item: { triggerType: string; triggerDate: string | null; 
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
-  return <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50 px-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100">{children}</main>;
+  return <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-6 text-foreground">{children}</main>;
 }

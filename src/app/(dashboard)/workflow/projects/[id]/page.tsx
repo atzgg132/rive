@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { 
+import {
   ArrowLeft,
   Calendar,
   DollarSign,
@@ -17,7 +17,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, buttonVariants } from "@/components/ui";
+import { Badge, Button, Input, Kicker, StatusBadge, buttonVariants } from "@/components/ui";
+import { statusTone, type StatusKind } from "@/lib/status-tone";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
@@ -27,6 +28,11 @@ type ProjectMilestone = { id: string; title: string; dueDate: string | null; com
 type ProjectTask = { id: string; title: string; status: string; dueDate: string | null; sourceInquiryId: string | null };
 type ProjectContract = { id: string; title: string; status: string; currency: string; executedAt: string | null; updatedAt: string };
 type ProjectDetails = { id: string; title: string; status: string; createdAt: string; budget: string | null; currency: string; dueDate: string | null; tags: string[]; description: string | null; contractCoverage: "undecided" | "rive" | "external" | "none"; externalContractLabel: string | null; externalContractUrl: string | null; contractDecisionAt: string | null; proof_offer: { projectId: string; caseStudyId: string; href: string; label: string } | null; related_counts?: { invoices: number; milestones: number; contracts: number }; client: ProjectClient | null; invoices: ProjectInvoice[]; milestones: ProjectMilestone[]; tasks: ProjectTask[]; contracts: ProjectContract[] };
+
+const chipTone = (kind: StatusKind, value: string) => {
+  const tone = statusTone(kind, value);
+  return tone === "primary" ? "default" : tone;
+};
 
 export default function ProjectProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { displayCurrency, format, formatConverted } = useCurrency();
@@ -118,16 +124,6 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
     return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
-  const getStatusDisplay = (status: string) => {
-    switch(status) {
-      case "planning": return { label: "Planning", classes: "bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border-border dark:border-slate-700" };
-      case "in_progress": return { label: "In Progress", classes: "bg-blue-50 text-blue-700 border-blue-100" };
-      case "completed": return { label: "Completed", classes: "bg-emerald-50 text-emerald-700 border-emerald-100" };
-      case "archived": return { label: "Archived", classes: "bg-red-50 text-red-700 border-red-100" };
-      default: return { label: status, classes: "bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700" };
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -139,26 +135,25 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
   if (!project) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <h2 className="text-xl font-bold text-foreground dark:text-white">Project not found</h2>
-        <Link href="/workflow/projects" className="text-blue-600 mt-2 hover:underline">Return to projects</Link>
+        <h2 className="text-xl font-bold text-foreground">Project not found</h2>
+        <Link href="/workflow/projects" className="text-primary mt-2 hover:underline">Return to projects</Link>
       </div>
     );
   }
 
-  const s = getStatusDisplay(project.status);
   const budgetAmount = project.budget === null ? null : Number(project.budget);
   const convertedBudget = budgetAmount === null ? null : formatConverted(budgetAmount, project.currency);
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in pb-12">
+    <div className="flex flex-col gap-8 animate-panel-in pb-12">
       {createdFromEngagement && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+        <div className="rounded-none border border-success/25 bg-success/10 p-4 text-sm text-foreground">
           <p className="font-bold">Your client, project, and first milestone are connected.</p>
           <p className="mt-1 text-xs">Plan the milestone below; its due date is already available to Calendar.</p>
         </div>
       )}
       {createdFromInquiry && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+        <div className="rounded-none border border-success/25 bg-success/10 p-4 text-sm text-foreground">
           <p className="font-bold">This Project came from a portfolio enquiry.</p>
           <p className="mt-1 text-xs leading-5">The visitor message stays with the enquiry. Your follow-up Task is ready below; write the working scope here.</p>
         </div>
@@ -171,82 +166,80 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-white sm:text-3xl">{project.title}</h1>
-            <p className="text-sm text-muted-foreground dark:text-slate-400 font-medium flex items-center gap-2 mt-1">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{project.title}</h1>
+            <p className="text-sm text-muted-foreground font-medium flex items-center gap-2 mt-1">
               <Calendar className="h-4 w-4" /> Started {formatDate(project.createdAt)}
             </p>
           </div>
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase ${s.classes}`}>
-            {s.label}
-          </span>
+          <StatusBadge kind="project" value={project.status} className="uppercase" />
         </div>
       </div>
 
       {project.proof_offer ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></span><div><p className="text-sm font-bold">Turn this completed work into proof</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Create or open a private case study draft. Nothing becomes public until you confirm it.</p></div></div>
-          <Link href={project.proof_offer.href} className="inline-flex shrink-0 items-center justify-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90">{project.proof_offer.label}</Link>
+        <div className="flex flex-col gap-3 rounded-none border border-primary/25 bg-primary/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-none bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></span><div><p className="text-sm font-bold">Turn this completed work into proof</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Create or open a private case study draft. Nothing becomes public until you confirm it.</p></div></div>
+          <Link href={project.proof_offer.href} className="inline-flex shrink-0 items-center justify-center rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90">{project.proof_offer.label}</Link>
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Left Column: Project Meta & Client Info */}
         <div className="flex flex-col gap-6 lg:col-span-1">
-          
+
           {/* Client Info Card */}
           {project.client ? (
-            <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
-              <h3 className="text-xs font-bold text-muted-foreground mb-4 uppercase tracking-wider">Client</h3>
+            <div className="bg-card p-6 rounded-none border border-border">
+              <Kicker tone="muted" dot={false} className="mb-4">Client</Kicker>
               <Link href={`/workflow/clients/${project.client.id}`} className="flex items-center gap-3 group">
-                <div 
-                  className="h-12 w-12 rounded-xl flex items-center justify-center text-white font-bold text-lg uppercase shadow-sm group-hover:scale-105 transition-transform"
+                <div
+                  className="h-12 w-12 rounded-full flex items-center justify-center text-primary-foreground font-bold text-lg uppercase group-hover:scale-105 transition-transform"
                   style={{ backgroundColor: project.client.avatarColor }}
                 >
                   {project.client.name.substring(0, 2)}
                 </div>
                 <div className="flex flex-col">
-              <h4 className="font-bold text-foreground dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{project.client.name}</h4>
-                  <span className="text-xs text-muted-foreground dark:text-slate-400">{project.client.company || "Private Client"}</span>
+              <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{project.client.name}</h4>
+                  <span className="text-xs text-muted-foreground">{project.client.company || "Private Client"}</span>
                 </div>
               </Link>
             </div>
           ) : (
-            <div className="glass bg-slate-50 dark:bg-slate-800/60 p-6 rounded-2xl border border-dashed border-border dark:border-slate-700 flex items-center justify-center text-muted-foreground dark:text-slate-400 text-sm">
+            <div className="bg-muted p-6 rounded-none border border-dashed border-border flex items-center justify-center text-muted-foreground text-sm">
               No client linked.
             </div>
           )}
 
           {/* Project Details */}
-          <div className="glass bg-gradient-to-br from-[#0C1E36] to-[#1a2f4c] p-6 rounded-2xl border border-[#0C1E36] text-white shadow-lg">
-            <h3 className="text-xs font-bold text-slate-300 mb-6 uppercase tracking-wider">Financial Overview</h3>
-            
+          <div className="inverse-block p-6 rounded-none border border-foreground">
+            <Kicker tone="muted" dot={false} className="mb-6 text-background/70">Financial Overview</Kicker>
+
             <div className="flex flex-col gap-5">
               <div>
-                <div className="text-xs text-slate-400 mb-1 flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Budget</div>
-                <div className="text-2xl font-bold text-emerald-400">{budgetAmount === null ? "Unspecified" : convertedBudget || formatCurrency(budgetAmount, project.currency)}</div>
-                {budgetAmount !== null && project.currency !== displayCurrency && convertedBudget && <div className="mt-1 text-xs font-medium text-slate-400">Originally {formatCurrency(budgetAmount, project.currency)}</div>}
+                <div className="text-xs text-background/60 mb-1 flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Budget</div>
+                <div className="text-2xl font-mono font-semibold tabular-nums text-background">{budgetAmount === null ? "Unspecified" : convertedBudget || formatCurrency(budgetAmount, project.currency)}</div>
+                {budgetAmount !== null && project.currency !== displayCurrency && convertedBudget && <div className="mt-1 text-xs font-medium font-mono tabular-nums text-background/60">Originally {formatCurrency(budgetAmount, project.currency)}</div>}
               </div>
-              
-              <div className="h-px bg-slate-700/50 w-full" />
+
+              <div className="h-px bg-background/20 w-full" />
 
               <div>
-                <div className="text-xs text-slate-400 mb-1 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Deadline</div>
-                <div className="text-lg font-semibold">{project.dueDate ? formatDate(project.dueDate) : "No deadline"}</div>
+                <div className="text-xs text-background/60 mb-1 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Deadline</div>
+                <div className="text-lg font-semibold font-mono tabular-nums">{project.dueDate ? formatDate(project.dueDate) : "No deadline"}</div>
               </div>
             </div>
           </div>
-          
+
           {/* Tags */}
           {project.tags && project.tags.length > 0 && (
-            <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
-              <h3 className="text-xs font-bold text-foreground dark:text-slate-200 mb-3 uppercase tracking-wider">Project Tags</h3>
+            <div className="bg-card p-6 rounded-none border border-border">
+              <Kicker tone="muted" dot={false} className="mb-3">Project Tags</Kicker>
               <div className="flex flex-wrap gap-2">
                 {project.tags.map((t: string, idx: number) => (
-                  <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1">
+                  <Badge key={idx} variant="info">
                     <Tag className="h-2.5 w-2.5" />
-                    <span>{t}</span>
-                  </span>
+                    {t}
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -255,46 +248,46 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
 
         {/* Right Column: Description & Billing */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          
+
           {/* Project Description */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
-            <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2 mb-4">
-              <FileText className="h-5 w-5 text-blue-600" /> Project Brief
+          <div className="bg-card p-6 rounded-none border border-border">
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
+              <FileText className="h-5 w-5 text-primary" /> Project Brief
             </h3>
             {project.description ? (
-              <p className="text-sm text-muted-foreground dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{project.description}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.description}</p>
             ) : (
-              <p className="text-sm text-slate-400 italic">No project description provided.</p>
+              <p className="text-sm text-muted-foreground italic">No project description provided.</p>
             )}
             {project.contractCoverage === "undecided" && project.description ? (
-              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">Scope is saved with this project. The Agreement decision remains open; this brief is not a legal contract.</p>
+              <p className="mt-4 rounded-none border border-warning/25 bg-warning/10 px-3 py-2 text-xs leading-5 text-foreground">Scope is saved with this project. The Agreement decision remains open; this brief is not a legal contract.</p>
             ) : null}
           </div>
 
           {project.tasks?.length > 0 ? (
-            <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
-              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2 mb-4"><Clock className="h-5 w-5 text-blue-600" /> Follow-up Tasks</h3>
-              <div className="flex flex-col gap-2">{project.tasks.map((task) => <div id={`follow-up-task-${task.id}`} key={task.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 dark:border-slate-700"><div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground dark:text-slate-200">{task.title}</p><p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{task.status.replaceAll("_", " ")} · {task.dueDate ? `Due ${formatDate(task.dueDate)}` : "Unscheduled"}</p></div><span className="shrink-0 rounded-full border border-primary/20 px-2 py-1 text-[10px] font-bold uppercase text-primary">From enquiry</span></div>)}</div>
+            <div className="bg-card p-6 rounded-none border border-border">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4"><Clock className="h-5 w-5 text-primary" /> Follow-up Tasks</h3>
+              <div className="flex flex-col gap-2">{project.tasks.map((task) => <div id={`follow-up-task-${task.id}`} key={task.id} className="flex items-center justify-between gap-3 rounded-none border border-border p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground">{task.title}</p><p className="mt-1 text-xs text-muted-foreground">{task.status.replaceAll("_", " ")} · {task.dueDate ? `Due ${formatDate(task.dueDate)}` : "Unscheduled"}</p></div><span className="shrink-0 rounded-full border border-primary/20 px-2 py-1 text-[10px] font-bold uppercase text-primary">From enquiry</span></div>)}</div>
             </div>
           ) : null}
 
           {/* Milestones */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+          <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-blue-600" /> Milestones
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-primary" /> Milestones
               </h3>
               <span className="text-xs text-muted-foreground">{project.milestones.filter((item) => item.completed).length}/{project.related_counts?.milestones ?? project.milestones.length} complete</span>
             </div>
             {project.milestones.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-muted-foreground dark:text-slate-400">No milestones recorded for this project.</div>
+              <div className="text-center py-8 border border-dashed border-border rounded-none bg-muted/40 text-sm text-muted-foreground">No milestones recorded for this project.</div>
             ) : (
               <div className="flex flex-col gap-3">
                 {project.milestones.map((milestone) => (
-                  <div id={`milestone-${milestone.id}`} tabIndex={-1} key={milestone.id} className="flex items-center justify-between gap-4 rounded-xl border border-border p-4 outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700">
+                  <div id={`milestone-${milestone.id}`} tabIndex={-1} key={milestone.id} className="flex items-center justify-between gap-4 rounded-none border border-border p-4 outline-none focus-visible:ring-2 focus-visible:ring-primary">
                     <div className="min-w-0">
-                      <p className={`truncate text-sm font-semibold ${milestone.completed ? "text-emerald-700 dark:text-emerald-300" : "text-foreground dark:text-slate-200"}`}>{milestone.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">Due {milestone.dueDate ? formatDate(milestone.dueDate) : "No due date"}</p>
+                      <p className={`truncate text-sm font-semibold ${milestone.completed ? "text-success" : "text-foreground"}`}>{milestone.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Due {milestone.dueDate ? formatDate(milestone.dueDate) : "No due date"}</p>
                     </div>
                     <Button size="sm" variant={milestone.completed ? "secondary" : "outline"} disabled={milestoneBusy === milestone.id} onClick={() => void updateMilestone(milestone)}>{milestoneBusy === milestone.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : milestone.completed ? "Completed" : "Mark complete"}</Button>
                   </div>
@@ -305,29 +298,29 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
 
           {agreements && <>
           {/* Linked Agreements */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+          <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2"><FileSignature className="h-5 w-5 text-blue-600" /> Agreements</h3>
-              <Link href={`/workflow/contracts?projectId=${encodeURIComponent(project.id)}`} className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">View all</Link>
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2"><FileSignature className="h-5 w-5 text-primary" /> Agreements</h3>
+              <Link href={`/workflow/contracts?projectId=${encodeURIComponent(project.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">View all</Link>
             </div>
             {project.contracts.length === 0 ? project.contractCoverage === "external" ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                <div className="flex items-start gap-3"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{project.externalContractLabel || "Agreement handled outside Rive"}</p><p className="mt-1 text-xs leading-5 text-emerald-800/80 dark:text-emerald-200/80">This project intentionally has no Rive Agreement. Milestones and invoices continue to work normally.</p>{project.externalContractUrl ? <a href={project.externalContractUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 underline dark:text-emerald-200">Open external record <ExternalLink className="h-3 w-3" /></a> : null}</div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div>
+              <div className="rounded-none border border-success/25 bg-success/10 p-4">
+                <div className="flex items-start gap-3"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-success" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-foreground">{project.externalContractLabel || "Agreement handled outside Rive"}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">This project intentionally has no Rive Agreement. Milestones and invoices continue to work normally.</p>{project.externalContractUrl ? <a href={project.externalContractUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-success underline">Open external record <ExternalLink className="h-3 w-3" /></a> : null}</div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div>
               </div>
             ) : project.contractCoverage === "none" ? (
-              <div className="rounded-xl border border-border bg-muted/40 p-4"><div className="flex items-start gap-3"><CircleSlash2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">No contract required</p><p className="mt-1 text-xs leading-5 text-muted-foreground">This is an intentional project decision, not a missing setup step.</p></div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div></div>
+              <div className="rounded-none border border-border bg-muted/40 p-4"><div className="flex items-start gap-3"><CircleSlash2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">No contract required</p><p className="mt-1 text-xs leading-5 text-muted-foreground">This is an intentional project decision, not a missing setup step.</p></div><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("undecided")}>Change</Button></div></div>
             ) : (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
-                <div className="flex items-start gap-3"><FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-amber-950 dark:text-amber-100">Agreement coverage is undecided</p><p className="mt-1 text-xs leading-5 text-amber-900/80 dark:text-amber-200/80">A Rive Agreement is optional, but record how this engagement is covered so it does not look accidentally incomplete.</p></div></div>
-                <div className="mt-4 flex flex-wrap gap-2">{project.client ? <Link className={buttonVariants({ variant: "default", size: "sm" })} href={`/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client.id)}`}><FileSignature className="h-3.5 w-3.5" /> Create Rive Agreement</Link> : <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">Link a client before creating a Rive Agreement.</p>}<Button size="sm" variant="outline" disabled={coverageBusy} onClick={() => setExternalFormOpen((current) => !current)}><ExternalLink className="h-3.5 w-3.5" /> Handled elsewhere</Button><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("none")}><CircleSlash2 className="h-3.5 w-3.5" /> Not needed</Button></div>
-                {externalFormOpen ? <div className="mt-3 grid gap-2 rounded-xl border border-amber-300/70 bg-white/60 p-3 dark:border-amber-800 dark:bg-slate-950/30"><p className="text-xs font-bold text-amber-950 dark:text-amber-100">External Agreement reference</p><Input value={externalLabel} onChange={(event) => setExternalLabel(event.target.value)} maxLength={180} placeholder="Client MSA in Drive" /><Input type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} placeholder="Optional https:// link" /><div className="flex justify-end"><Button size="sm" disabled={coverageBusy} onClick={() => void updateContractCoverage("external")}>{coverageBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />} Save reference</Button></div></div> : null}
+              <div className="rounded-none border border-warning/25 bg-warning/10 p-4">
+                <div className="flex items-start gap-3"><FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-warning" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-foreground">Agreement coverage is undecided</p><p className="mt-1 text-xs leading-5 text-muted-foreground">A Rive Agreement is optional, but record how this engagement is covered so it does not look accidentally incomplete.</p></div></div>
+                <div className="mt-4 flex flex-wrap gap-2">{project.client ? <Link className={buttonVariants({ variant: "default", size: "sm" })} href={`/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client.id)}`}><FileSignature className="h-3.5 w-3.5" /> Create Rive Agreement</Link> : <p className="text-xs font-semibold text-muted-foreground">Link a client before creating a Rive Agreement.</p>}<Button size="sm" variant="outline" disabled={coverageBusy} onClick={() => setExternalFormOpen((current) => !current)}><ExternalLink className="h-3.5 w-3.5" /> Handled elsewhere</Button><Button size="sm" variant="ghost" disabled={coverageBusy} onClick={() => void updateContractCoverage("none")}><CircleSlash2 className="h-3.5 w-3.5" /> Not needed</Button></div>
+                {externalFormOpen ? <div className="mt-3 grid gap-2 rounded-none border border-warning/25 bg-card p-3"><p className="text-xs font-bold text-foreground">External Agreement reference</p><Input value={externalLabel} onChange={(event) => setExternalLabel(event.target.value)} maxLength={180} placeholder="Client MSA in Drive" /><Input type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} placeholder="Optional https:// link" /><div className="flex justify-end"><Button size="sm" disabled={coverageBusy} onClick={() => void updateContractCoverage("external")}>{coverageBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />} Save reference</Button></div></div> : null}
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {project.contracts.map((item) => (
-                  <Link key={item.id} href={`/workflow/contracts/${item.id}`} className="flex items-center justify-between gap-4 rounded-xl border border-border dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all">
-                    <div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground dark:text-slate-200">{item.title}</p><p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{item.currency} · Updated {formatDate(item.updatedAt)}</p></div>
-                    <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
+                  <Link key={item.id} href={`/workflow/contracts/${item.id}`} className="flex items-center justify-between gap-4 rounded-none border border-border p-4 hover:border-primary transition-all">
+                    <div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.currency} · Updated {formatDate(item.updatedAt)}</p></div>
+                    <Badge variant={chipTone("contract", item.status)} dot className="shrink-0 uppercase">{item.status.replaceAll("_", " ")}</Badge>
                   </Link>
                 ))}
               </div>
@@ -337,47 +330,41 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
           </>}
 
           {/* Linked Invoices */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+          <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground dark:text-slate-200 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-emerald-600" /> Linked Invoices
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-success" /> Linked Invoices
               </h3>
-              <Link href={`/workflow/revenue?projectId=${encodeURIComponent(project.id)}`} className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+              <Link href={`/workflow/revenue?projectId=${encodeURIComponent(project.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>
             </div>
 
             {project.invoices && project.invoices.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-muted-foreground dark:text-slate-400">
+              <div className="text-center py-8 border border-dashed border-border rounded-none bg-muted/40 text-sm text-muted-foreground">
                 No invoices issued for this project yet.
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {project.invoices && project.invoices.map((inv) => (
-                  <div key={inv.id} className="flex items-center justify-between p-4 rounded-xl border border-border dark:border-slate-700 hover:border-blue-300 transition-all bg-white dark:bg-slate-800">
+                  <div key={inv.id} className="flex items-center justify-between p-4 rounded-none border border-border hover:border-primary transition-all bg-card">
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm text-foreground dark:text-slate-200">{inv.invoiceNumber}</span>
-                      <span className="text-xs text-muted-foreground dark:text-slate-400">Issued: {formatDate(inv.issueDate)}</span>
+                      <span className="font-bold text-sm font-mono tabular-nums text-foreground">{inv.invoiceNumber}</span>
+                      <span className="text-xs text-muted-foreground">Issued: {formatDate(inv.issueDate)}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-right font-extrabold text-sm text-foreground dark:text-slate-200">
-                        <span className="block">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
-                        {inv.currency !== displayCurrency && <span className="block text-xs font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
+                      <span className="text-right font-extrabold text-sm text-foreground">
+                        <span className="block font-mono tabular-nums">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
+                        {inv.currency !== displayCurrency && <span className="block text-xs font-medium font-mono tabular-nums text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
                       </span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border uppercase ${
-                         inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
-                         inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :
-                         "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"
-                      }`}>
-                        {inv.status}
-                      </span>
+                      <Badge variant={chipTone("invoice", inv.status)} dot className="uppercase">{inv.status}</Badge>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          
+
         </div>
       </div>
     </div>

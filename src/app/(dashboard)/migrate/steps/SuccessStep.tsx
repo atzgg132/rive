@@ -27,7 +27,7 @@ export default function SuccessStep({
     <Card>
       <CardContent className="space-y-6">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-success/25 bg-success/10 text-success">
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-none border border-success/25 bg-success/10 text-success">
             <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
@@ -43,7 +43,7 @@ export default function SuccessStep({
         {entries.length ? (
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {entries.map(([entity, count]) => (
-              <div key={entity} className="rounded-xl border border-border bg-background p-4">
+              <div key={entity} className="rounded-none border border-border bg-background p-4">
                 <dt className="text-xs font-medium text-muted-foreground">{ENTITY_LABELS[entity] || entity}</dt>
                 <dd className="mt-1 text-2xl font-extrabold leading-none tracking-tight text-foreground">{count}</dd>
               </div>

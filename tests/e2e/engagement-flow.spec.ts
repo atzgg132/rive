@@ -1,5 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 
+function captureBrowserErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 500) errors.push(`HTTP ${response.status()} ${response.url()}`);
+  });
+  return errors;
+}
+
 async function installMocks(page: Page) {
   let command: Record<string, unknown> | null = null;
   await page.route("**/api/**", async (route) => {
@@ -16,13 +28,49 @@ async function installMocks(page: Page) {
     if (url.pathname === "/api/activation") return json({ success: true, activation: null });
     if (url.pathname === "/api/notifications") return json({ success: true, notifications: [] });
     if (url.pathname === "/api/rates") return json({ success: true, data: { base: "USD", date: "2026-08-30", rates: { USD: 1 } } });
-    if (url.pathname === "/api/workflow/contracts/contract-1") return json({ success: false, message: "Mock handoff reached." }, 404);
+    if (url.pathname === "/api/workflow/dashboard") return json({
+      success: true,
+      stats: { totalPaid: 0, totalPending: 0, activeProjects: 0, totalExpenses: 0, netEarnings: 0 },
+      topClients: [], recentActivity: [], chartData: [], activation: null, insights: null,
+      currency: { displayCurrency: "USD", ratesAsOf: "2026-08-30", conversionAvailable: true },
+    });
+    if (url.pathname === "/api/workflow/contracts/contract-1") return json({
+      success: true,
+      contract: {
+        id: "contract-1", title: "Website redesign Agreement", status: "draft", provider: "local",
+        governing_law: "India", jurisdiction: "Karnataka", currency: "USD",
+        finalized_at: null, executed_at: null, voided_at: null,
+        void_requested_at: null, void_requested_by_role: null, void_request_note: null, void_confirm_note: null,
+        client: { id: "client-1", name: "Northstar Labs", email: "hello@northstar.example", company: null, address: null },
+        project: {
+          id: "project-1", title: "Website redesign", description: "Design and build the launch site.",
+          startDate: null, dueDate: null,
+          milestones: [{ id: "milestone-1", title: "Design approval", dueDate: "2026-09-15", completed: false }],
+        },
+        versions: [{
+          id: "version-1", version: 1, status: "draft", content_hash: "engagement-contract-hash",
+          created_at: "2026-08-10T09:00:00.000Z", finalized_at: null, artifacts: [],
+          content: {
+            title: "Website redesign Agreement", ownerName: "Engagement Tester", ownerEmail: "engagement@rive.test",
+            clientName: "Northstar Labs", clientEmail: "hello@northstar.example", clientCompany: null, clientAddress: null,
+            projectTitle: "Website redesign", projectDescription: "Design and build the launch site.",
+            governingLaw: "India", jurisdiction: "Karnataka",
+            sections: [{ key: "scope", title: "Scope", body: "Design and build the launch site.", enabled: true }],
+            paymentPlan: { currency: "USD", items: [{ id: "payment-1", label: "Project fee", amount: "1250.50", currency: "USD", triggerType: "on_signing", triggerDate: null, dueDays: 7, milestoneId: null, milestoneTitle: null, invoiceDescription: "Website redesign" }] },
+          },
+        }],
+        signers: [], review_links: [], comments: [], events: [],
+        payment_plan: [{ id: "payment-1", label: "Project fee", amount: "1250.50", currency: "USD", trigger_type: "on_signing", trigger_date: null, due_days: 7, invoice_description: "Website redesign", status: "scheduled", milestone: null, occurrence: null }],
+        work_setup: { status: "not_started", accepted_version_id: null, preview_plan: null, preview_hash: null, result_ids: null, error: null },
+      },
+    });
     return json({ success: true });
   });
   return () => command;
 }
 
 test("creates an Agreement-and-invoice engagement from one three-step composer", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
   const readCommand = await installMocks(page);
   await page.goto("/workflow/start-engagement", { waitUntil: "domcontentloaded" });
 
@@ -56,4 +104,5 @@ test("creates an Agreement-and-invoice engagement from one three-step composer",
     scopeMode: "agreement",
     invoice: { amount: "1250.50", dueDate: "2026-09-20" },
   });
+  expect(errors, "engagement flow emitted browser errors").toEqual([]);
 });

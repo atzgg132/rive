@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { Button, Card, Kicker } from "@/components/ui";
 import { formatMoney } from "@/lib/currency";
 
 type InvoiceSnapshot = {
@@ -42,60 +43,60 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
       .catch(() => setState("error"));
   }, [params]);
 
-  if (state === "loading") return <div className="grid min-h-screen place-items-center bg-slate-50"><Loader2 className="h-7 w-7 animate-spin text-blue-600" /></div>;
-  if (state === "error" || !snapshot) return <div className="grid min-h-screen place-items-center bg-slate-50 p-6"><div className="max-w-sm rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm"><AlertCircle className="mx-auto h-8 w-8 text-red-500" /><h1 className="mt-4 text-xl font-semibold text-slate-900">Invoice link unavailable</h1><p className="mt-2 text-sm text-slate-500">The link may have expired, been voided, or been replaced. Contact the sender for a fresh copy.</p></div></div>;
+  if (state === "loading") return <div className="grid min-h-screen place-items-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
+  if (state === "error" || !snapshot) return <div className="grid min-h-screen place-items-center bg-background p-6"><div className="max-w-sm rounded-none border border-border bg-card p-7 text-center"><AlertCircle className="mx-auto h-8 w-8 text-destructive" /><h1 className="mt-4 text-xl font-semibold text-foreground">Invoice link unavailable</h1><p className="mt-2 text-sm text-muted-foreground">The link may have expired, been voided, or been replaced. Contact the sender for a fresh copy.</p></div></div>;
 
   const money = (value: string | number) => formatMoney(Number(value) || 0, snapshot.currency);
   const outstanding = Math.max(Number(snapshot.outstanding ?? (Number(snapshot.total) - Number(snapshot.amountPaid))), 0);
   const isPaid = outstanding <= 0;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-8">
-      <div className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
-        <div className="border-b border-slate-100 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white sm:px-10">
+    <main className="min-h-screen bg-background px-4 py-10 text-foreground sm:px-8">
+      <Card className="mx-auto max-w-3xl overflow-hidden">
+        <div className="inverse-block p-8">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
               {snapshot.sender.logoUrl ? <Image loader={({ src }) => src} unoptimized src={snapshot.sender.logoUrl} width={160} height={40} alt="" className="mb-5 h-10 max-w-40 object-contain object-left" /> : <p className="mb-5 text-xl font-bold tracking-tight">{snapshot.sender.name}</p>}
-              <p className="text-sm text-blue-100">{snapshot.sender.email}{snapshot.sender.phone ? ` · ${snapshot.sender.phone}` : ""}</p>
+              <p className="text-sm opacity-80">{snapshot.sender.email}{snapshot.sender.phone ? ` · ${snapshot.sender.phone}` : ""}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">Invoice</p>
-              <p className="mt-2 text-2xl font-semibold">{snapshot.invoiceNumber}</p>
-              <p className="mt-2 text-sm text-blue-100">Issued {new Date(snapshot.issueDate).toLocaleDateString()}</p>
-              {snapshot.dueDate ? <p className="text-sm text-blue-100">Due {new Date(snapshot.dueDate).toLocaleDateString()}</p> : null}
-              {token ? <a href={`/api/public/invoices/${encodeURIComponent(token)}/pdf`} className="mt-4 inline-flex rounded-lg border border-white/25 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10">Download PDF</a> : null}
+              <Kicker className="text-background">Invoice</Kicker>
+              <p className="mt-2 font-mono text-2xl font-semibold tabular-nums">{snapshot.invoiceNumber}</p>
+              <p className="mt-2 text-sm font-mono tabular-nums opacity-80">Issued {new Date(snapshot.issueDate).toLocaleDateString()}</p>
+              {snapshot.dueDate ? <p className="text-sm font-mono tabular-nums opacity-80">Due {new Date(snapshot.dueDate).toLocaleDateString()}</p> : null}
+              {token ? <Button nativeButton={false} variant="outline" size="sm" className="mt-4 border-background/40 text-background hover:border-background hover:bg-background hover:text-foreground" render={<a href={`/api/public/invoices/${encodeURIComponent(token)}/pdf`} />}>Download PDF</Button> : null}
             </div>
           </div>
         </div>
 
         <div className="grid gap-8 px-6 py-8 sm:grid-cols-[1fr_auto] sm:px-10">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Bill to</p>
+            <Kicker tone="muted">Bill to</Kicker>
             <p className="mt-2 text-lg font-semibold">{snapshot.client.name}</p>
-            {snapshot.client.company ? <p className="text-sm text-slate-500">{snapshot.client.company}</p> : null}
-            {snapshot.client.address ? <p className="mt-2 whitespace-pre-line text-sm text-slate-500">{snapshot.client.address}</p> : null}
-            {snapshot.projectTitle ? <p className="mt-5 text-sm text-slate-500">Project <span className="font-medium text-slate-800">{snapshot.projectTitle}</span></p> : null}
+            {snapshot.client.company ? <p className="text-sm text-muted-foreground">{snapshot.client.company}</p> : null}
+            {snapshot.client.address ? <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.client.address}</p> : null}
+            {snapshot.projectTitle ? <p className="mt-5 text-sm text-muted-foreground">Project <span className="font-medium text-foreground">{snapshot.projectTitle}</span></p> : null}
           </div>
-          <div className="rounded-2xl bg-blue-50 px-5 py-4 sm:min-w-52">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">{isPaid ? "Paid in full" : "Amount due"}</p>
-            <p className="mt-2 text-3xl font-bold text-slate-950">{money(outstanding)}</p>
-            {Number(snapshot.amountPaid) > 0 ? <p className="mt-1 text-xs text-slate-600">Paid {money(snapshot.amountPaid)} of {money(snapshot.total)}</p> : null}
+          <div className="border border-border bg-muted p-6 sm:min-w-52">
+            <Kicker>{isPaid ? "Paid in full" : "Amount due"}</Kicker>
+            <p className="mt-2 font-mono text-3xl font-semibold tabular-nums">{money(outstanding)}</p>
+            {Number(snapshot.amountPaid) > 0 ? <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">Paid {money(snapshot.amountPaid)} of {money(snapshot.total)}</p> : null}
           </div>
         </div>
 
         <div className="px-6 sm:px-10">
-          <div className="table-scroll-region rounded-2xl border border-slate-200">
+          <div className="table-scroll-region rounded-none border border-border">
             <table className="w-full min-w-[520px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Description</th><th className="px-4 py-3 text-right">Qty</th><th className="px-4 py-3 text-right">Rate</th><th className="px-4 py-3 text-right">Amount</th></tr></thead>
-              <tbody className="divide-y divide-slate-100">{snapshot.items.map((item) => <tr key={`${item.description}-${item.amount}`}><td className="px-4 py-4 font-medium">{item.description}</td><td className="px-4 py-4 text-right text-slate-500">{item.quantity}</td><td className="px-4 py-4 text-right text-slate-500">{money(item.unitPrice)}</td><td className="px-4 py-4 text-right font-semibold">{money(item.amount)}</td></tr>)}</tbody>
+              <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Description</th><th className="px-4 py-3 text-right">Qty</th><th className="px-4 py-3 text-right">Rate</th><th className="px-4 py-3 text-right">Amount</th></tr></thead>
+              <tbody className="divide-y divide-border">{snapshot.items.map((item) => <tr key={`${item.description}-${item.amount}`}><td className="px-4 py-4 font-medium">{item.description}</td><td className="px-4 py-4 text-right text-muted-foreground">{item.quantity}</td><td className="px-4 py-4 text-right font-mono tabular-nums text-muted-foreground">{money(item.unitPrice)}</td><td className="px-4 py-4 text-right font-mono font-semibold tabular-nums">{money(item.amount)}</td></tr>)}</tbody>
             </table>
           </div>
-          <div className="ml-auto mt-6 max-w-xs space-y-2 text-sm"><div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{money(snapshot.subtotal)}</span></div>{Number(snapshot.discountAmount || 0) > 0 ? <div className="flex justify-between text-slate-500"><span>Discount{Number(snapshot.discountRate || 0) > 0 ? ` (${snapshot.discountRate}%)` : ""}</span><span>-{money(snapshot.discountAmount || "0")}</span></div> : null}{Number(snapshot.taxRate) > 0 ? <div className="flex justify-between text-slate-500"><span>Tax ({snapshot.taxRate}%)</span><span>{money(snapshot.taxAmount)}</span></div> : null}<div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold"><span>Total</span><span>{money(snapshot.total)}</span></div></div>
+          <div className="ml-auto mt-6 max-w-xs space-y-2 text-sm"><div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="font-mono tabular-nums">{money(snapshot.subtotal)}</span></div>{Number(snapshot.discountAmount || 0) > 0 ? <div className="flex justify-between text-muted-foreground"><span>Discount{Number(snapshot.discountRate || 0) > 0 ? ` (${snapshot.discountRate}%)` : ""}</span><span className="font-mono tabular-nums">-{money(snapshot.discountAmount || "0")}</span></div> : null}{Number(snapshot.taxRate) > 0 ? <div className="flex justify-between text-muted-foreground"><span>Tax ({snapshot.taxRate}%)</span><span className="font-mono tabular-nums">{money(snapshot.taxAmount)}</span></div> : null}<div className="flex justify-between border-t border-border pt-3 text-base font-bold"><span>Total</span><span className="font-mono tabular-nums">{money(snapshot.total)}</span></div></div>
         </div>
 
-        {snapshot.notes || snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <div className="grid gap-5 px-6 py-8 sm:grid-cols-2 sm:px-10"><div>{snapshot.notes ? <><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Notes</p><p className="mt-2 whitespace-pre-line text-sm text-slate-600">{snapshot.notes}</p></> : null}</div><div>{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Payment information</p><p className="mt-2 whitespace-pre-line text-sm text-slate-600">{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms}</p></> : null}</div></div> : null}
-        <div className="border-t border-slate-100 px-6 py-5 text-center text-xs text-slate-400 sm:px-10">This invoice was shared securely by {snapshot.sender.name}. Verify payment details with the sender before transferring funds. · <Link href="/" className="text-blue-600 hover:underline">rive.</Link></div>
-      </div>
+        {snapshot.notes || snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <div className="grid gap-5 px-6 py-8 sm:grid-cols-2 sm:px-10"><div>{snapshot.notes ? <><Kicker tone="muted">Notes</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.notes}</p></> : null}</div><div>{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <><Kicker tone="muted">Payment information</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms}</p></> : null}</div></div> : null}
+        <div className="border-t border-border px-6 py-5 text-center text-xs text-muted-foreground sm:px-10">This invoice was shared securely by {snapshot.sender.name}. Verify payment details with the sender before transferring funds. · <Link href="/" className="text-primary hover:underline">rive.</Link></div>
+      </Card>
     </main>
   );
 }

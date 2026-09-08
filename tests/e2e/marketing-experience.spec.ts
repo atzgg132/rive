@@ -92,10 +92,12 @@ test.describe("working edition marketing experience", () => {
   }
 
   test("signup opens a focused overlay and preserves the account form", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("rive-color-theme", "dark"));
     await page.goto("/", { waitUntil: "load" });
     await page.getByTestId("marketing-hero").getByRole("link", { name: "Start free", exact: true }).click();
     await expect(page).toHaveURL(/\?auth=register/);
     await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.locator(".auth-overlay-backdrop")).toHaveCSS("background-color", "rgba(0, 0, 0, 0.4)");
     await expect(page.getByRole("heading", { name: "Create your free account" })).toBeVisible();
     await expect(page.getByTestId("register-form")).toBeVisible();
     await expect(page.getByRole("dialog").getByText("No credit card required.")).toBeVisible();

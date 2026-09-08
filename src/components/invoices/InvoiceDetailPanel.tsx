@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, Textarea } from "@/components/ui";
+import { Button, Input, StatusBadge, Textarea } from "@/components/ui";
 import Portal from "@/components/ui/Portal";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { formatMoney } from "@/lib/currency";
@@ -22,8 +22,8 @@ import {
   canSendInvoice,
   canVoidInvoice,
   invoiceEventLabel,
-  invoiceStatusClass,
-  invoiceStatusLabel,
+
+
 } from "@/utils/invoiceStatus";
 
 export type InvoiceDetail = {
@@ -231,12 +231,12 @@ export default function InvoiceDetailPanel({
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="fixed inset-0 z-50 flex justify-end bg-foreground/50 backdrop-blur-sm" onClick={onClose}>
         <div
           role="dialog"
           aria-modal="true"
           aria-label={invoice ? `Invoice ${invoice.invoice_number}` : "Invoice detail"}
-          className="relative flex h-full w-full max-w-xl flex-col border-l border-border bg-background shadow-2xl animate-fade-in-up dark:bg-slate-950"
+          className="relative flex h-full w-full max-w-xl flex-col border-l border-border bg-background shadow-overlay animate-panel-in"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border p-5">
@@ -246,10 +246,10 @@ export default function InvoiceDetailPanel({
               ) : invoice ? (
                 <>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="truncate text-lg font-bold">{invoice.invoice_number}</h2>
-                    <span className={`inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${invoiceStatusClass(invoice.status)}`}>
-                      {invoiceStatusLabel(invoice.status)}
-                    </span>
+                    <h2 className="truncate font-mono text-lg font-bold tabular-nums">{invoice.invoice_number}</h2>
+                    <StatusBadge kind="invoice" value={invoice.status} />
+
+
                   </div>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
                     {invoice.client_name || "No client"}
@@ -269,24 +269,24 @@ export default function InvoiceDetailPanel({
             {loading && !invoice ? (
               <div className="flex h-40 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
             ) : error ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+              <div className="rounded-none border border-destructive/25 bg-destructive/10 p-4 text-sm text-destructive">
                 <p className="font-semibold">{error}</p>
                 <Button className="mt-3" size="sm" variant="outline" onClick={() => void load()}>Try again</Button>
               </div>
             ) : invoice ? (
               <div className="flex flex-col gap-6">
-                <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
+                <div className="grid gap-3 rounded-none border border-border bg-card p-4 sm:grid-cols-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Total</p>
-                    <p className="mt-1 text-lg font-bold tabular-nums">{money(Number(invoice.total), invoice.currency)}</p>
+                    <p className="mt-1 font-mono text-lg font-bold tabular-nums">{money(Number(invoice.total), invoice.currency)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Paid</p>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{money(amountPaid, invoice.currency)}</p>
+                    <p className="mt-1 font-mono text-lg font-bold tabular-nums text-success">{money(amountPaid, invoice.currency)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Outstanding</p>
-                    <p className="mt-1 text-lg font-bold tabular-nums">{money(outstanding, invoice.currency)}</p>
+                    <p className="mt-1 font-mono text-lg font-bold tabular-nums">{money(outstanding, invoice.currency)}</p>
                   </div>
                   {invoice.currency !== displayCurrency ? (
                     <p className="text-xs text-muted-foreground sm:col-span-3">Originally {formatMoney(Number(invoice.total), invoice.currency)}</p>
@@ -296,22 +296,22 @@ export default function InvoiceDetailPanel({
                 <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
                   <div className="flex justify-between gap-3 sm:block">
                     <dt className="text-xs text-muted-foreground">Issued</dt>
-                    <dd className="font-medium sm:mt-0.5">{dateLabel(invoice.issue_date)}</dd>
+                    <dd className="font-mono font-medium tabular-nums sm:mt-0.5">{dateLabel(invoice.issue_date)}</dd>
                   </div>
                   <div className="flex justify-between gap-3 sm:block">
                     <dt className="text-xs text-muted-foreground">Due</dt>
-                    <dd className="font-medium sm:mt-0.5">{dateLabel(invoice.due_date)}</dd>
+                    <dd className="font-mono font-medium tabular-nums sm:mt-0.5">{dateLabel(invoice.due_date)}</dd>
                   </div>
                   {invoice.sent_at ? (
                     <div className="flex justify-between gap-3 sm:block">
                       <dt className="text-xs text-muted-foreground">Sent</dt>
-                      <dd className="font-medium sm:mt-0.5">{dateLabel(invoice.sent_at)}</dd>
+                      <dd className="font-mono font-medium tabular-nums sm:mt-0.5">{dateLabel(invoice.sent_at)}</dd>
                     </div>
                   ) : null}
                   {invoice.latest_delivery ? (
                     <div className="flex justify-between gap-3 sm:block">
                       <dt className="text-xs text-muted-foreground">Email delivery</dt>
-                      <dd className={`font-medium sm:mt-0.5 ${invoice.latest_delivery.status === "failed" ? "text-destructive" : ""}`}>
+                      <dd className={`font-mono font-medium tabular-nums sm:mt-0.5 ${invoice.latest_delivery.status === "failed" ? "text-destructive" : ""}`}>
                         {invoice.latest_delivery.status === "sent" ? "Delivered" : invoice.latest_delivery.status === "failed" ? "Failed" : "Pending"}
                       </dd>
                     </div>
@@ -319,7 +319,7 @@ export default function InvoiceDetailPanel({
                   {invoice.paid_date ? (
                     <div className="flex justify-between gap-3 sm:block">
                       <dt className="text-xs text-muted-foreground">Paid</dt>
-                      <dd className="font-medium sm:mt-0.5">{dateLabel(invoice.paid_date)}</dd>
+                      <dd className="font-mono font-medium tabular-nums sm:mt-0.5">{dateLabel(invoice.paid_date)}</dd>
                     </div>
                   ) : null}
                 </dl>
@@ -327,17 +327,17 @@ export default function InvoiceDetailPanel({
                 {invoice.client_id || invoice.project_id || invoice.contract_id ? (
                   <div className="flex flex-wrap gap-2">
                     {invoice.client_id ? (
-                      <Link href={`/workflow/clients/${invoice.client_id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
+                      <Link href={`/workflow/clients/${invoice.client_id}`} className="inline-flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
                         <ExternalLink className="h-3.5 w-3.5" /> {invoice.client_name || "Client"}
                       </Link>
                     ) : null}
                     {invoice.project_id ? (
-                      <Link href={`/workflow/projects/${invoice.project_id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
+                      <Link href={`/workflow/projects/${invoice.project_id}`} className="inline-flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
                         <ExternalLink className="h-3.5 w-3.5" /> {invoice.project_title || "Project"}
                       </Link>
                     ) : null}
                     {invoice.contract_id ? (
-                      <Link href={`/workflow/contracts/${invoice.contract_id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
+                      <Link href={`/workflow/contracts/${invoice.contract_id}`} className="inline-flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
                         <FileSignature className="h-3.5 w-3.5" /> {invoice.contract_title || "Agreement"}
                       </Link>
                     ) : null}
@@ -346,7 +346,7 @@ export default function InvoiceDetailPanel({
 
                 <section>
                   <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Line items</h3>
-                  <div className="mt-2 overflow-hidden rounded-xl border border-border">
+                  <div className="mt-2 overflow-hidden rounded-none border border-border">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-muted/50 text-xs text-muted-foreground">
                         <tr>
@@ -359,8 +359,8 @@ export default function InvoiceDetailPanel({
                         {invoice.items.length ? invoice.items.map((item) => (
                           <tr key={item.id}>
                             <td className="px-3 py-2">{item.description}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{Number(item.quantity)}</td>
-                            <td className="px-3 py-2 text-right font-medium tabular-nums">{formatMoney(Number(item.amount), invoice.currency)}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">{Number(item.quantity)}</td>
+                            <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">{formatMoney(Number(item.amount), invoice.currency)}</td>
                           </tr>
                         ) ) : (
                           <tr><td colSpan={3} className="px-3 py-4 text-center text-xs text-muted-foreground">No line items recorded.</td></tr>
@@ -369,10 +369,10 @@ export default function InvoiceDetailPanel({
                     </table>
                   </div>
                   <dl className="mt-2 space-y-1 text-sm">
-                    <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums">{formatMoney(Number(invoice.subtotal), invoice.currency)}</dd></div>
-                    {Number(invoice.discount_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Discount</dt><dd className="tabular-nums">−{formatMoney(Number(invoice.discount_amount), invoice.currency)}</dd></div> : null}
-                    {Number(invoice.tax_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Tax ({Number(invoice.tax_rate)}%)</dt><dd className="tabular-nums">{formatMoney(Number(invoice.tax_amount), invoice.currency)}</dd></div> : null}
-                    <div className="flex justify-between border-t border-border pt-1 font-bold"><dt>Total</dt><dd className="tabular-nums">{formatMoney(Number(invoice.total), invoice.currency)}</dd></div>
+                    <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="font-mono tabular-nums">{formatMoney(Number(invoice.subtotal), invoice.currency)}</dd></div>
+                    {Number(invoice.discount_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Discount</dt><dd className="font-mono tabular-nums">−{formatMoney(Number(invoice.discount_amount), invoice.currency)}</dd></div> : null}
+                    {Number(invoice.tax_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Tax ({Number(invoice.tax_rate)}%)</dt><dd className="font-mono tabular-nums">{formatMoney(Number(invoice.tax_amount), invoice.currency)}</dd></div> : null}
+                    <div className="flex justify-between border-t border-border pt-1 font-bold"><dt>Total</dt><dd className="font-mono tabular-nums">{formatMoney(Number(invoice.total), invoice.currency)}</dd></div>
                   </dl>
                 </section>
 
@@ -381,9 +381,9 @@ export default function InvoiceDetailPanel({
                     <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Payments</h3>
                     <ul className="mt-2 space-y-2">
                       {invoice.payments.map((payment) => (
-                        <li key={payment.id} className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-2 text-sm">
+                        <li key={payment.id} className="flex items-start justify-between gap-3 rounded-none border border-border px-3 py-2 text-sm">
                           <div className="min-w-0">
-                            <p className="font-semibold tabular-nums">{formatMoney(Number(payment.amount), invoice.currency)}</p>
+                            <p className="font-mono font-semibold tabular-nums">{formatMoney(Number(payment.amount), invoice.currency)}</p>
                             <p className="mt-0.5 text-xs text-muted-foreground">
                               {dateLabel(payment.paid_at)} · {payment.method}
                               {payment.reference ? ` · ${payment.reference}` : ""}
@@ -398,7 +398,7 @@ export default function InvoiceDetailPanel({
                 {invoice.notes ? (
                   <section>
                     <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Notes</h3>
-                    <p className="mt-2 whitespace-pre-wrap rounded-xl bg-muted/50 p-3 text-sm">{invoice.notes}</p>
+                    <p className="mt-2 whitespace-pre-wrap rounded-none bg-muted/50 p-3 text-sm">{invoice.notes}</p>
                   </section>
                 ) : null}
 
@@ -409,7 +409,7 @@ export default function InvoiceDetailPanel({
                       {invoice.events.map((event) => (
                         <li key={event.id} className="flex items-baseline justify-between gap-3 text-xs">
                           <span className="font-medium">{invoiceEventLabel(event.event_type)}</span>
-                          <span className="shrink-0 text-muted-foreground">{dateTimeLabel(event.created_at)}</span>
+                          <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{dateTimeLabel(event.created_at)}</span>
                         </li>
                       ))}
                     </ul>
@@ -475,7 +475,7 @@ export default function InvoiceDetailPanel({
                     </Button>
                   ) : null}
                   {canVoidInvoice(invoice.status, amountPaid) ? (
-                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => void voidInvoice()} className="gap-1.5 text-red-700 dark:text-red-400">
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => void voidInvoice()} className="gap-1.5 text-destructive">
                       <Ban className="h-3.5 w-3.5" /> Void
                     </Button>
                   ) : null}

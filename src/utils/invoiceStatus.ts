@@ -19,11 +19,11 @@ const TONE_BY_STATUS: Record<string, InvoiceStatusTone> = {
 };
 
 const CLASS_BY_TONE: Record<InvoiceStatusTone, string> = {
-  paid: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300",
-  open: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300",
-  late: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300",
-  closed: "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  draft: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400",
+  paid: "border-success/25 bg-success/10 text-success dark:border-success/30 dark:bg-success/[0.16]",
+  open: "border-info/25 bg-info/10 text-info dark:border-info/30 dark:bg-info/[0.16]",
+  late: "border-destructive/25 bg-destructive/10 text-destructive dark:border-destructive/30 dark:bg-destructive/[0.16]",
+  closed: "border-border bg-muted text-muted-foreground",
+  draft: "border-border bg-muted text-muted-foreground",
 };
 
 const LABEL_BY_STATUS: Record<string, string> = {
@@ -41,8 +41,12 @@ export function invoiceStatusTone(status: string): InvoiceStatusTone {
   return TONE_BY_STATUS[status] || "draft";
 }
 
+const CLASS_BY_STATUS: Record<string, string> = {
+  partially_paid: "border-warning/25 bg-warning/10 text-warning dark:border-warning/30 dark:bg-warning/[0.16]",
+};
+
 export function invoiceStatusClass(status: string): string {
-  return CLASS_BY_TONE[invoiceStatusTone(status)];
+  return CLASS_BY_STATUS[status] || CLASS_BY_TONE[invoiceStatusTone(status)];
 }
 
 export function invoiceStatusLabel(status: string): string {

@@ -86,7 +86,7 @@ export default function PlanStep({
             </p>
           ) : null}
 
-          <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+          <div className="rounded-none border border-border bg-muted/30 px-4 py-3">
             <p className="text-xs text-muted-foreground">
               Rive matched {Math.round(plan.metrics.autoMappingRate * 100)}% of columns and{" "}
               {Math.round(plan.metrics.relationshipResolutionRate * 100)}% of relationships without asking. Existing records
@@ -95,7 +95,7 @@ export default function PlanStep({
           </div>
 
           {detail.excluded.count > 0 ? (
-            <div className="rounded-xl border border-border px-4 py-3">
+            <div className="rounded-none border border-border px-4 py-3">
               <p className="text-xs font-semibold text-foreground">Excluded rows ({detail.excluded.count})</p>
               <ul className="mt-2 max-h-36 space-y-1 overflow-auto text-xs text-muted-foreground">
                 {detail.excluded.rows.map((row) => (

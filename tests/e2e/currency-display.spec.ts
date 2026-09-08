@@ -4,6 +4,19 @@ function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 }
 
+function contrastRatio(foreground: string, background: string) {
+  const parse = (value: string) => value.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number) || [];
+  const luminance = (value: string) => parse(value).reduce((sum, channel, index) => {
+    const normalized = channel / 255;
+    return sum + (normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][index];
+  }, 0);
+  const foregroundLuminance = luminance(foreground);
+  const backgroundLuminance = luminance(background);
+  const light = Math.max(foregroundLuminance, backgroundLuminance);
+  const dark = Math.min(foregroundLuminance, backgroundLuminance);
+  return (light + 0.05) / (dark + 0.05);
+}
+
 async function mockCurrencyWorkspace(page: Page) {
   let displayCurrency = "INR";
   await page.route("**/api/**", async (route) => {
@@ -163,7 +176,9 @@ test("the revenue header presents Create invoice as a primary button", async ({ 
   const createInvoice = page.getByRole("button", { name: "Create invoice" });
   await expect(createInvoice).toBeVisible({ timeout: 20_000 });
   await expect(createInvoice).toHaveClass(/bg-primary/);
-  await expect(createInvoice).toHaveClass(/shadow-sm/);
+  await expect(createInvoice).toHaveClass(/rounded-none/);
+  await expect(createInvoice).not.toHaveClass(/shadow-(?:sm|md|lg|xl|2xl)/);
+  await expect(createInvoice).toHaveCSS("box-shadow", "none");
 });
 
 test("project budgets follow the selected display currency on the list and detail page", async ({ page }) => {
@@ -190,6 +205,11 @@ test("currency options stay readable in dark mode", async ({ page }) => {
   const option = selector.locator("option").first();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect(selector).toHaveValue("INR", { timeout: 20_000 });
-  await expect(option).toHaveCSS("background-color", "rgb(15, 23, 42)");
-  await expect(option).toHaveCSS("color", "rgb(241, 245, 249)");
+  const optionColors = await option.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return { background: style.backgroundColor, foreground: style.color };
+  });
+  expect(optionColors.background).toBe("rgb(13, 24, 42)");
+  expect(optionColors.foreground).toBe("rgb(241, 238, 230)");
+  expect(contrastRatio(optionColors.foreground, optionColors.background)).toBeGreaterThanOrEqual(4.5);
 });

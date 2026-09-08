@@ -63,11 +63,11 @@ export default function MigrationHistory({ onResume }: { onResume: (id: string) 
 
         <ul className="space-y-2">
           {migrations.map((migration) => (
-            <li key={migration.id} className="rounded-xl border border-border bg-background px-4 py-3">
+            <li key={migration.id} className="rounded-none border border-border bg-background px-4 py-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">
+                    <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
                       {new Date(migration.createdAt).toLocaleDateString(undefined, {
                         day: "numeric",
                         month: "short",

@@ -59,11 +59,11 @@ export default function UploadStep({
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           className={[
-            "rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors",
+            "rounded-none border-2 border-dashed px-6 py-10 text-center transition-colors",
             dragging ? "border-primary bg-primary/5" : "border-border bg-muted/30",
           ].join(" ")}
         >
-          <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm">
+          <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-none border border-border bg-card text-muted-foreground">
             <Upload className="h-5 w-5" aria-hidden="true" />
           </div>
           <h2 className="text-sm font-bold text-foreground">Upload the files you already use</h2>
@@ -105,7 +105,7 @@ export default function UploadStep({
             {files.map((file) => (
               <li
                 key={`${file.name}-${file.size}`}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5"
+                className="flex items-center justify-between gap-3 rounded-none border border-border bg-background px-3 py-2.5"
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

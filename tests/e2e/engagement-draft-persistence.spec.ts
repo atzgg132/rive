@@ -1,5 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 
+function captureBrowserErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 500) errors.push(`HTTP ${response.status()} ${response.url()}`);
+  });
+  return errors;
+}
+
 async function installMocks(page: Page) {
   let command: Record<string, unknown> | null = null;
   await page.route("**/api/**", async (route) => {
@@ -16,12 +28,19 @@ async function installMocks(page: Page) {
     if (url.pathname === "/api/activation") return json({ success: true, activation: null });
     if (url.pathname === "/api/notifications") return json({ success: true, notifications: [] });
     if (url.pathname === "/api/rates") return json({ success: true, data: { base: "USD", date: "2026-08-30", rates: { USD: 1 } } });
+    if (url.pathname === "/api/workflow/dashboard") return json({
+      success: true,
+      stats: { totalPaid: 0, totalPending: 0, activeProjects: 0, totalExpenses: 0, netEarnings: 0 },
+      topClients: [], recentActivity: [], chartData: [], activation: null, insights: null,
+      currency: { displayCurrency: "USD", ratesAsOf: "2026-08-30", conversionAvailable: true },
+    });
     return json({ success: true });
   });
   return () => command;
 }
 
 test("engagement draft survives a full reload mid-flow", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
   await installMocks(page);
   await page.goto("/workflow/start-engagement", { waitUntil: "domcontentloaded" });
 
@@ -38,9 +57,11 @@ test("engagement draft survives a full reload mid-flow", async ({ page }) => {
   await expect(page.getByLabel("Project deadline")).toHaveValue("2026-12-01");
   await expect(page.getByLabel("First milestone")).toHaveValue("Design approval");
   await expect(page.getByLabel("Milestone due date")).toHaveValue("2026-09-15");
+  expect(errors, "engagement draft reload emitted browser errors").toEqual([]);
 });
 
 test("back navigation preserves values entered on earlier steps", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
   await installMocks(page);
   await page.goto("/workflow/start-engagement", { waitUntil: "domcontentloaded" });
 
@@ -53,9 +74,11 @@ test("back navigation preserves values entered on earlier steps", async ({ page 
   await expect(page.getByLabel("Project name")).toHaveValue("Website redesign");
   await page.getByRole("main").getByRole("button", { name: "Back" }).click();
   await expect(page.getByLabel("Client name")).toHaveValue("Northstar Labs");
+  expect(errors, "engagement back navigation emitted browser errors").toEqual([]);
 });
 
 test("an engagement submits with no milestone and an independent deadline", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
   const readCommand = await installMocks(page);
   await page.goto("/workflow/start-engagement", { waitUntil: "domcontentloaded" });
 
@@ -73,4 +96,5 @@ test("an engagement submits with no milestone and an independent deadline", asyn
   expect(command?.milestone).toBeNull();
   expect(command?.project).toMatchObject({ title: "Website redesign", deadline: "2026-12-01" });
   await expect(page).toHaveURL(/\/dashboard/);
+  expect(errors, "engagement submission emitted browser errors").toEqual([]);
 });

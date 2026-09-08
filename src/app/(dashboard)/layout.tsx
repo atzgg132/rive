@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui";
+import { Button, Kicker } from "@/components/ui";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -11,9 +11,7 @@ import {
   DollarSign,
   Receipt,
   LayoutDashboard,
-  LogOut,
   Menu,
-  X,
   Search,
   Bell,
   Command,
@@ -21,16 +19,14 @@ import {
   Globe2,
   CalendarDays,
   FileSignature,
-  PanelLeftClose,
-  PanelLeftOpen,
   CircleHelp,
   Plus,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
-import Portal from "@/components/ui/Portal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import CommandPalette from "@/components/dashboard/CommandPalette";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
@@ -46,6 +42,7 @@ interface UserProfile {
   avatar_url?: string;
   onboarding_status?: string;
   display_currency?: string;
+  display_currency_source?: string;
 }
 
 interface WorkspaceNotification {
@@ -70,6 +67,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [activation, setActivation] = useState<ActivationPlan | null>(null);
   const [isMac, setIsMac] = useState(true);
   const [notifications, setNotifications] = useState<WorkspaceNotification[]>([]);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -83,14 +81,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
+    let persisted = false;
+    try {
+      persisted = window.localStorage.getItem("rive:sidebar-collapsed") === "true";
+    } catch {
+      // Private browsing and storage-blocking extensions should not take down
+      // the workspace shell; the control still works for the current session.
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSidebarCollapsed(window.localStorage.getItem("rive:sidebar-collapsed") === "true");
+    setSidebarCollapsed(persisted);
   }, []);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((current) => {
       const next = !current;
-      window.localStorage.setItem("rive:sidebar-collapsed", String(next));
+      try {
+        window.localStorage.setItem("rive:sidebar-collapsed", String(next));
+      } catch {
+        // Persistence is best-effort when browser storage is unavailable.
+      }
       return next;
     });
   };
@@ -208,31 +217,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ? { promptKey: "calendar_workflow", module: "calendar", triggerEvent: "calendar_opened", label: "Calendar feedback" }
       : { promptKey: "workspace_general", module: "workspace", triggerEvent: "workspace_viewed", label: "Share feedback" };
 
-  const renderNavLink = (link: (typeof allNavLinks)[number], mobile = false) => {
-    const Icon = link.icon;
-    const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-    return (
-      <Link
-        key={link.href}
-        href={link.href}
-        title={!mobile && sidebarCollapsed ? link.label : undefined}
-        onClick={mobile ? () => setMobileMenuOpen(false) : undefined}
-        className={mobile
-          ? `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive ? "bg-accent text-primary dark:bg-blue-900/20 dark:text-blue-400" : "text-muted-foreground hover:bg-background hover:text-foreground dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"}`
-          : `flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${isActive ? "bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
-      >
-        <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-        {(!sidebarCollapsed || mobile) && <span>{link.label}</span>}
-      </Link>
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="text-sm font-medium text-muted-foreground">Loading your workspace...</span>
+          <Kicker>Loading workspace</Kicker>
         </div>
       </div>
     );
@@ -240,52 +230,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled, engagementFlow: engagementFlowEnabled }}>
-    <CurrencyProvider initialCurrency={user?.display_currency}>
+    <CurrencyProvider initialCurrency={user?.display_currency} initialSource={user?.display_currency_source}>
     <div data-dashboard-shell className="fixed inset-0 flex min-h-0 overflow-hidden overscroll-none bg-background">
-      <Toaster position="bottom-right" theme="system" />
-      {/* ── Desktop Sidebar ── */}
-      <aside className={`sticky top-0 hidden h-full shrink-0 flex-col justify-between border-r border-border bg-card py-5 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
-        <div className="flex flex-col gap-7">
-          <div className={`flex items-center ${sidebarCollapsed ? "flex-col gap-3" : "justify-between px-3"}`}>
-            <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
-              <RiveLogo height={26} />
-            </Link>
-            {!sidebarCollapsed && <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-xs font-semibold capitalize text-primary">
-              {user?.plan}
-            </span>}
-            <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-muted-foreground hover:bg-accent hover:text-foreground ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-border bg-card shadow-sm"}`}>
-              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-            </Button>
-          </div>
-
-          <nav className="flex flex-col gap-1">
-            {navLinks.map((link) => renderNavLink(link))}
-          </nav>
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-border pt-4">
-          <div className={`flex items-center gap-3 px-3 py-2 ${sidebarCollapsed ? "justify-center" : ""}`} title={sidebarCollapsed ? `${user?.name} · ${user?.email}` : undefined}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/15 bg-primary/10 font-bold uppercase text-primary">
-              {user?.name?.substring(0, 2) || "U"}
-            </div>
-            {!sidebarCollapsed && <div className="flex flex-col min-w-0">
-              <span className="truncate text-sm font-semibold text-foreground">{user?.name}</span>
-              <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
-            </div>}
-          </div>
-
-          <Button
-            variant="ghost"
-            size="default"
-            onClick={handleLogout}
-            title={sidebarCollapsed ? "Sign out" : undefined}
-            className={`w-full justify-start px-3 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300 ${sidebarCollapsed ? "justify-center" : ""}`}
-          >
-            <LogOut className="h-5 w-5" />
-            {!sidebarCollapsed && <span>Sign out</span>}
-          </Button>
-        </div>
-      </aside>
+      <Toaster position="bottom-right" theme="system" toastOptions={{ classNames: { toast: "rounded-none border border-border bg-popover text-foreground shadow-overlay" } }} />
+      <DashboardSidebar
+        user={user}
+        navLinks={navLinks}
+        pathname={pathname}
+        collapsed={sidebarCollapsed}
+        mobileOpen={mobileMenuOpen}
+        engagementFlowEnabled={engagementFlowEnabled}
+        onToggleCollapsed={toggleSidebar}
+        onMobileOpenChange={setMobileMenuOpen}
+        onNewClientWork={() => router.push("/workflow/start-engagement")}
+        onLogout={handleLogout}
+      />
 
       {/* ── Mobile Header ── */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -299,17 +258,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 size="icon"
                 aria-label="New client work"
                 title="New client work"
+                className="hidden sm:inline-flex"
                 onClick={() => router.push("/workflow/start-engagement")}
               >
                 <Plus className="h-5 w-5" />
               </Button>
             )}
             <CurrencySwitcher compact />
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
+            <div className="max-[359px]:hidden"><ThemeToggle /></div>
+            <Button variant="ghost" size="icon" onClick={() => setCommandPaletteOpen(true)} aria-label="Search workspace" aria-haspopup="dialog" aria-expanded={commandPaletteOpen} className="text-muted-foreground"><Search className="h-5 w-5" /></Button><Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="hidden min-[390px]:inline-flex text-muted-foreground">
               <CircleHelp className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
+            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="text-muted-foreground">
               <Menu className="h-5 w-5" />
             </Button>
           </div>
@@ -319,16 +279,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="sticky top-0 z-30 hidden h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6 xl:px-8 md:flex">
           <div className="flex items-center gap-3 max-w-md w-full">
             <Button
+              ref={searchTriggerRef}
               variant="outline"
               size="sm"
               onClick={() => setCommandPaletteOpen(true)}
-              className="w-80 justify-between text-muted-foreground hover:border-primary/30"
+              aria-haspopup="dialog"
+              aria-controls="command-palette"
+              aria-expanded={commandPaletteOpen}
+              className={`w-80 justify-between text-muted-foreground hover:border-border hover:bg-card hover:text-foreground hover:translate-y-0 ${commandPaletteOpen ? "border-primary/50 text-primary" : ""}`}
             >
               <span className="flex items-center gap-2 overflow-hidden">
                 <Search className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate whitespace-nowrap">Search workspace...</span>
               </span>
-              <span className="flex items-center gap-1 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs">
+              <span className="flex items-center gap-1 rounded-none border border-border bg-muted px-1.5 py-0.5 font-mono text-[.7rem]">
                 {isMac ? (
                   <>
                     <Command className="h-2.5 w-2.5" /> K
@@ -342,7 +306,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="flex items-center gap-3">
             {engagementFlowEnabled && (
-              <Button variant="default" className="gap-2 whitespace-nowrap" onClick={() => router.push("/workflow/start-engagement")}>
+              <Button variant="inverse" className="gap-2 whitespace-nowrap" onClick={() => router.push("/workflow/start-engagement")}>
                 <Plus className="h-4 w-4" />
                 New client work
               </Button>
@@ -360,11 +324,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 <Bell className="h-5 w-5" />
                 {notifications.some(n => !n.read) && (
-                  <span className="absolute top-1 right-1 h-2 w-2 bg-blue-600 rounded-full animate-pulse"></span>
+                  <span className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-primary"></span>
                 )}
               </Button>
               {notificationsOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-72 animate-fade-in-up rounded-xl border border-border bg-popover p-4 shadow-overlay">
+                <div className="absolute right-0 z-50 mt-2 w-72 animate-panel-in rounded-none border border-border bg-popover p-4 shadow-overlay">
                   <h4 className="mb-3 text-xs font-semibold text-foreground">Notifications</h4>
                   <div className="max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain pr-1">
                     <div className="flex flex-col gap-2.5">
@@ -386,70 +350,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
-      {/* ── Mobile Sidebar Slideover Menu ── */}
-      {mobileMenuOpen && (
-        <Portal>
-          <div className="fixed inset-0 z-50 flex md:hidden bg-slate-900/40 backdrop-blur-sm">
-            <div className="relative flex w-full max-w-xs animate-fade-in-up flex-col bg-card px-4 py-6 shadow-overlay">
-              <div className="flex items-center justify-between mb-8">
-                <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                  <RiveLogo height={26} />
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-label="Close navigation"
-                  className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
-                >
-                  <X className="h-6 w-6" />
-                </Button>
-              </div>
-
-              <nav className="flex flex-col gap-1 flex-1">
-                {engagementFlowEnabled && (
-                  <Button variant="default" className="mb-3 w-full justify-start gap-2" onClick={() => { setMobileMenuOpen(false); router.push("/workflow/start-engagement"); }}>
-                    <Plus className="h-4 w-4" />
-                    New client work
-                  </Button>
-                )}
-                {navLinks.map((link) => renderNavLink(link, true))}
-              </nav>
-
-              <div className="flex flex-col gap-4 border-t border-border dark:border-slate-800 pt-4 mt-auto">
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold uppercase">
-                    {user?.name?.substring(0, 2) || "U"}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground dark:text-slate-200">{user?.name}</span>
-                    <span className="block truncate text-xs text-muted-foreground dark:text-slate-400">{user?.email}</span>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="default"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="w-full justify-start px-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Sign out</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Portal>
-      )}
-
       {/* ── Command Palette Wrapper ── */}
       <CommandPalette
         open={commandPaletteOpen}
         setOpen={setCommandPaletteOpen}
         agreementsEnabled={agreementsEnabled}
         engagementFlowEnabled={engagementFlowEnabled}
+        returnFocusRef={searchTriggerRef}
       />
       {user ? <div className="fixed bottom-4 right-4 z-40"><FeedbackWidget {...feedbackContext} /></div> : null}
     </div>

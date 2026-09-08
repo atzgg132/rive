@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { convertWithUsdRates, formatMoney, localeForCurrency, normalizeCurrency } from "../../src/lib/currency.ts";
+import {
+  convertWithUsdRates,
+  formatMoney,
+  inferCurrencyFromBrowser,
+  inferCurrencyFromLocale,
+  inferCurrencyFromRequest,
+  localeForCurrency,
+  normalizeCurrency,
+  resolveDisplayCurrency,
+} from "../../src/lib/currency.ts";
 
 const rates = { USD: 1, EUR: 0.8, GBP: 0.5, INR: 80 };
 
@@ -22,6 +31,34 @@ test("refuses to invent a conversion when either rate is unavailable", () => {
 test("normalizes supported preferences and falls back safely", () => {
   assert.equal(normalizeCurrency(" inr "), "INR");
   assert.equal(normalizeCurrency("XYZ"), "USD");
+});
+
+test("infers supported display currencies from locale regions", () => {
+  assert.equal(inferCurrencyFromLocale("en-IN"), "INR");
+  assert.equal(inferCurrencyFromLocale("de-DE"), "EUR");
+  assert.equal(inferCurrencyFromLocale("ja_JP"), "JPY");
+  assert.equal(inferCurrencyFromLocale("en-US;q=0.2,en-IN;q=0.9"), "INR");
+  assert.equal(inferCurrencyFromLocale("es-MX"), null);
+  assert.equal(inferCurrencyFromLocale("en"), null);
+  assert.equal(inferCurrencyFromLocale("not a locale"), null);
+});
+
+test("uses Accept-Language and ignores untrusted proxy country headers", () => {
+  const request = { headers: new Headers({ "x-vercel-ip-country": "IN", "accept-language": "en-US" }) };
+  assert.equal(inferCurrencyFromRequest(request), "USD");
+  assert.equal(inferCurrencyFromRequest({ headers: new Headers({ "accept-language": "en-GB,en;q=0.9" }) }), "GBP");
+});
+
+test("uses browser locale first and time zone as a fallback", () => {
+  assert.equal(inferCurrencyFromBrowser("en-IN", "America/New_York"), "INR");
+  assert.equal(inferCurrencyFromBrowser("en", "Asia/Kolkata"), "INR");
+  assert.equal(inferCurrencyFromBrowser("en", "Etc/UTC"), null);
+});
+
+test("gives an explicit display preference precedence over detection", () => {
+  assert.deepEqual(resolveDisplayCurrency({ explicit: " eur ", detected: "INR" }), { currency: "EUR", source: "user" });
+  assert.deepEqual(resolveDisplayCurrency({ explicit: "unsupported", detected: "INR" }), { currency: "INR", source: "inferred" });
+  assert.deepEqual(resolveDisplayCurrency({ fallback: "GBP" }), { currency: "GBP", source: "legacy" });
 });
 
 test("formats the selected currency rather than assuming dollars", () => {

@@ -30,6 +30,8 @@ test("every canonical status has a tone, a class, and a readable label", () => {
   assert.equal(invoiceStatusTone("partially_paid"), "open");
   assert.equal(invoiceStatusTone("voided"), "closed");
   assert.equal(invoiceStatusLabel("partially_paid"), "Partly paid");
+  assert.match(invoiceStatusClass("partially_paid"), /border-warning\/25/);
+  assert.match(invoiceStatusClass("paid"), /border-success\/25/);
 });
 
 test("an unknown status degrades instead of throwing", () => {

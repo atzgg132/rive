@@ -12,6 +12,7 @@ import { attributionFromRequest, saveUserAttribution } from "@/utils/attribution
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
+import { inferCurrencyFromBrowser, inferCurrencyFromRequest, resolveDisplayCurrency } from "@/lib/currency";
 
 function validEmail(value: unknown): value is string {
   return typeof value === "string" && /^\S+@\S+\.\S+$/.test(value.trim());
@@ -25,6 +26,8 @@ export async function POST(req: NextRequest) {
     const password = typeof body?.password === "string" ? body.password : "";
     const inviteToken = typeof body?.inviteToken === "string" ? body.inviteToken.trim() : "";
     const migrationIntent = body?.goal === "migrate" && body?.next === "/migrate";
+    const browserLocale = typeof body?.browserLocale === "string" ? body.browserLocale.slice(0, 128) : undefined;
+    const browserTimeZone = typeof body?.browserTimeZone === "string" ? body.browserTimeZone.slice(0, 128) : undefined;
 
     // Keep automated form posts from consuming database work. Honeypot hits
     // and instant POSTs get the same 201 a real signup would, so the filler
@@ -98,6 +101,12 @@ export async function POST(req: NextRequest) {
     const requiredAt = new Date();
     const preparedVerification = prepareAuthToken({ email, type: "email_verification" });
     const verificationEmail = buildEmailVerificationEmail(email, name, preparedVerification.token);
+    const displayCurrencyPreference = resolveDisplayCurrency({
+      explicit: body?.displayCurrency ?? body?.display_currency,
+      // New accounts always receive an inferred preference. USD is the safe
+      // final inference when the request and browser carry no usable hint.
+      detected: inferCurrencyFromRequest(req) || inferCurrencyFromBrowser(browserLocale, browserTimeZone) || "USD",
+    });
 
     const user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
@@ -112,6 +121,8 @@ export async function POST(req: NextRequest) {
           onboardingStep: 0,
           timeZone: "UTC",
           currency: "USD",
+          displayCurrency: displayCurrencyPreference.currency,
+          displayCurrencySource: displayCurrencyPreference.source,
           onboardingData: migrationIntent ? { goal: "migrate", startingPath: "import" } : undefined,
         },
         select: {
@@ -121,6 +132,8 @@ export async function POST(req: NextRequest) {
           plan: true,
           emailVerifiedAt: true,
           emailVerificationRequiredAt: true,
+          displayCurrency: true,
+          displayCurrencySource: true,
         },
       });
 

@@ -3,13 +3,9 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Loader2, Printer } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, StatusBadge } from "@/components/ui";
 import { formatMoney } from "@/lib/currency";
-import {
-  invoiceEventLabel,
-  invoiceStatusClass,
-  invoiceStatusLabel,
-} from "@/utils/invoiceStatus";
+import { invoiceEventLabel } from "@/utils/invoiceStatus";
 import type { InvoiceDetail } from "@/components/invoices/InvoiceDetailPanel";
 
 function dateLabel(value: string | null): string {
@@ -62,7 +58,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   if (error || !invoice) {
     return (
       <div className="workspace-page min-h-[calc(100vh-8rem)]">
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+        <div className="rounded-none border border-destructive/25 bg-destructive/10 p-6 text-sm text-destructive">
           <p className="font-semibold">{error || "Invoice not found."}</p>
           <Link href="/workflow/revenue" className="mt-3 inline-flex">
             <Button size="sm" variant="outline"><ArrowLeft className="h-4 w-4" /> Back to revenue</Button>
@@ -93,17 +89,15 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <article className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8 print:border-0 print:shadow-none">
+      <article className="rounded-none border border-border bg-card p-6 sm:p-8 print:border-0 print:shadow-none">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{invoice.invoice_number}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="font-mono text-2xl font-bold tabular-nums tracking-tight">{invoice.invoice_number}</h1>
+            <p className="mt-1 font-mono text-sm tabular-nums text-muted-foreground">
               Issued {dateLabel(invoice.issue_date)} · Due {dateLabel(invoice.due_date)}
             </p>
           </div>
-          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${invoiceStatusClass(invoice.status)}`}>
-            {invoiceStatusLabel(invoice.status)}
-          </span>
+          <StatusBadge kind="invoice" value={invoice.status} />
         </header>
 
         <section className="grid gap-6 border-b border-border py-6 sm:grid-cols-2">
@@ -115,9 +109,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </div>
           <div className="sm:text-right">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Amount due</p>
-            <p className="mt-2 text-2xl font-bold tabular-nums">{formatMoney(outstanding, invoice.currency)}</p>
+            <p className="mt-2 font-mono text-2xl font-bold tabular-nums">{formatMoney(outstanding, invoice.currency)}</p>
             {amountPaid > 0 ? (
-              <p className="text-sm text-emerald-700 dark:text-emerald-300">{formatMoney(amountPaid, invoice.currency)} paid of {formatMoney(total, invoice.currency)}</p>
+              <p className="font-mono text-sm tabular-nums text-success">{formatMoney(amountPaid, invoice.currency)} paid of {formatMoney(total, invoice.currency)}</p>
             ) : null}
             {invoice.project_title ? <p className="mt-2 text-sm text-muted-foreground">{invoice.project_title}</p> : null}
           </div>
@@ -138,9 +132,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 {invoice.items.length ? invoice.items.map((item) => (
                   <tr key={item.id}>
                     <td className="py-3 pr-3">{item.description}</td>
-                    <td className="py-3 text-right tabular-nums text-muted-foreground">{Number(item.quantity)}</td>
-                    <td className="py-3 text-right tabular-nums text-muted-foreground">{formatMoney(Number(item.unit_price), invoice.currency)}</td>
-                    <td className="py-3 text-right font-medium tabular-nums">{formatMoney(Number(item.amount), invoice.currency)}</td>
+                    <td className="py-3 text-right font-mono tabular-nums text-muted-foreground">{Number(item.quantity)}</td>
+                    <td className="py-3 text-right font-mono tabular-nums text-muted-foreground">{formatMoney(Number(item.unit_price), invoice.currency)}</td>
+                    <td className="py-3 text-right font-mono font-medium tabular-nums">{formatMoney(Number(item.amount), invoice.currency)}</td>
                   </tr>
                 )) : (
                   <tr><td colSpan={4} className="py-6 text-center text-sm text-muted-foreground">No line items recorded.</td></tr>
@@ -150,12 +144,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           <dl className="ml-auto mt-6 max-w-xs space-y-1.5 text-sm">
-            <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums">{formatMoney(Number(invoice.subtotal), invoice.currency)}</dd></div>
-            {Number(invoice.discount_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Discount</dt><dd className="tabular-nums">−{formatMoney(Number(invoice.discount_amount), invoice.currency)}</dd></div> : null}
-            {Number(invoice.tax_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Tax ({Number(invoice.tax_rate)}%)</dt><dd className="tabular-nums">{formatMoney(Number(invoice.tax_amount), invoice.currency)}</dd></div> : null}
-            <div className="flex justify-between border-t border-border pt-1.5 text-base font-bold"><dt>Total</dt><dd className="tabular-nums">{formatMoney(total, invoice.currency)}</dd></div>
-            {amountPaid > 0 ? <div className="flex justify-between text-emerald-700 dark:text-emerald-300"><dt>Paid</dt><dd className="tabular-nums">−{formatMoney(amountPaid, invoice.currency)}</dd></div> : null}
-            <div className="flex justify-between border-t border-border pt-1.5 font-bold"><dt>Amount due</dt><dd className="tabular-nums">{formatMoney(outstanding, invoice.currency)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="font-mono tabular-nums">{formatMoney(Number(invoice.subtotal), invoice.currency)}</dd></div>
+            {Number(invoice.discount_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Discount</dt><dd className="font-mono tabular-nums">−{formatMoney(Number(invoice.discount_amount), invoice.currency)}</dd></div> : null}
+            {Number(invoice.tax_amount) > 0 ? <div className="flex justify-between"><dt className="text-muted-foreground">Tax ({Number(invoice.tax_rate)}%)</dt><dd className="font-mono tabular-nums">{formatMoney(Number(invoice.tax_amount), invoice.currency)}</dd></div> : null}
+            <div className="flex justify-between border-t border-border pt-1.5 text-base font-bold"><dt>Total</dt><dd className="font-mono tabular-nums">{formatMoney(total, invoice.currency)}</dd></div>
+            {amountPaid > 0 ? <div className="flex justify-between text-success"><dt>Paid</dt><dd className="font-mono tabular-nums">−{formatMoney(amountPaid, invoice.currency)}</dd></div> : null}
+            <div className="flex justify-between border-t border-border pt-1.5 font-bold"><dt>Amount due</dt><dd className="font-mono tabular-nums">{formatMoney(outstanding, invoice.currency)}</dd></div>
           </dl>
         </section>
 
@@ -175,7 +169,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <span className="text-muted-foreground">
                     {dateLabel(payment.paid_at)} · {payment.method}{payment.reference ? ` · ${payment.reference}` : ""}
                   </span>
-                  <span className="font-semibold tabular-nums">{formatMoney(Number(payment.amount), invoice.currency)}</span>
+                  <span className="font-mono font-semibold tabular-nums">{formatMoney(Number(payment.amount), invoice.currency)}</span>
                 </li>
               ))}
             </ul>
@@ -189,7 +183,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               {invoice.events.map((event) => (
                 <li key={event.id} className="flex items-baseline justify-between gap-3 text-xs">
                   <span className="font-medium">{invoiceEventLabel(event.event_type)}</span>
-                  <span className="text-muted-foreground">{new Date(event.created_at).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                  <span className="font-mono tabular-nums text-muted-foreground">{new Date(event.created_at).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                 </li>
               ))}
             </ul>
