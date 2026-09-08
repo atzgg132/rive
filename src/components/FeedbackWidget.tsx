@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Clock, MessageSquare, Send, X } from "lucide-react";
-import { Button, Textarea } from "@/components/ui";
+import { Button, Kicker, Textarea } from "@/components/ui";
 import { formatCooldownClock } from "@/utils/feedback";
 
 type Props = {
@@ -152,10 +152,10 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
         <MessageSquare className="h-3.5 w-3.5" /> {label}
       </Button>
       {open ? (
-        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/25 p-4 sm:items-center" onClick={() => close("snooze")}>
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-foreground/25 p-4 sm:items-center" onClick={() => close("snooze")}>
+          <div className="w-full max-w-md rounded-none border border-border bg-card p-5 shadow-overlay" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
-              <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Help shape Rive</p><h2 className="mt-1 text-lg font-semibold">{waiting ? "Thanks — that is today's note" : "How is this feeling so far?"}</h2><p className="mt-1 text-sm text-muted-foreground">{waiting ? "Rive takes one piece of feedback per day from each account, so every note gets read properly." : "A quick note from your real workflow is more useful than a generic survey."}</p></div>
+              <div><Kicker>Help shape Rive</Kicker><h2 className="mt-1 text-lg font-semibold">{waiting ? "Thanks — that is today's note" : "How is this feeling so far?"}</h2><p className="mt-1 text-sm text-muted-foreground">{waiting ? "Rive takes one piece of feedback per day from each account, so every note gets read properly." : "A quick note from your real workflow is more useful than a generic survey."}</p></div>
               <Button type="button" variant="ghost" size="icon-sm" onClick={() => close("snooze")} aria-label="Snooze feedback"><X className="h-4 w-4" /></Button>
             </div>
             {(!waiting || hasDraft) && (
@@ -168,7 +168,7 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
               </>
             )}
             {waiting ? (
-              <div role="status" data-feedback-cooldown className="mt-4 rounded-xl border border-border bg-muted/50 p-4">
+              <div role="status" data-feedback-cooldown className="mt-4 rounded-none border border-border bg-muted/50 p-4">
                 <p className="flex items-start gap-2 text-sm font-medium text-foreground">
                   <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   You can share feedback again in{" "}
@@ -181,9 +181,9 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
                 </p>
               </div>
             ) : message ? (
-              <p className={`mt-3 text-xs ${state === "error" ? "text-red-600" : "text-emerald-600"}`}>{message}</p>
+              <p className={`mt-3 text-xs ${state === "error" ? "text-destructive" : "text-success"}`}>{message}</p>
             ) : null}
-            {state === "sent" ? <p className="mt-4 text-sm font-medium text-emerald-600">Thanks — feedback saved.</p> : <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => close("dismiss")}>{waiting ? "Close" : "Not now"}</Button>{!waiting && <Button type="button" size="sm" onClick={() => void submit()} disabled={state === "sending"} className="gap-2"><Send className="h-3.5 w-3.5" />{state === "sending" ? "Saving…" : "Send feedback"}</Button>}</div>}
+            {state === "sent" ? <p className="mt-4 text-sm font-medium text-success">Thanks — feedback saved.</p> : <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => close("dismiss")}>{waiting ? "Close" : "Not now"}</Button>{!waiting && <Button type="button" size="sm" onClick={() => void submit()} disabled={state === "sending"} className="gap-2"><Send className="h-3.5 w-3.5" />{state === "sending" ? "Saving…" : "Send feedback"}</Button>}</div>}
           </div>
         </div>
       ) : null}

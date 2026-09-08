@@ -483,7 +483,7 @@ function AnalyzingPanel({ detail, transfers }: { detail: MigrationDetail | null;
   const percent = detail?.progress.percent || 0;
   return (
     <div
-      className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-card"
+      className="flex min-h-56 flex-col items-center justify-center rounded-none border border-border bg-card px-6 py-12 text-center"
       role="status"
       aria-live="polite"
     >
@@ -493,8 +493,8 @@ function AnalyzingPanel({ detail, transfers }: { detail: MigrationDetail | null;
         Rive is working out what each file contains, how the columns map, and which records belong together.
       </p>
       <div className="mt-5 w-full max-w-lg" role="progressbar" aria-label="Migration analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
-        <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${percent}%` }} />
+        <div className="h-2 overflow-hidden rounded-none bg-muted">
+          <div className="h-full rounded-none bg-primary transition-[width]" style={{ width: `${percent}%` }} />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           {detail?.progress.phase ? `${detail.progress.phase.replaceAll("_", " ")} · ` : ""}{percent}%
@@ -503,7 +503,7 @@ function AnalyzingPanel({ detail, transfers }: { detail: MigrationDetail | null;
       {transfers.length ? (
         <ul className="mt-5 w-full max-w-lg space-y-2 text-left" aria-label="File upload progress">
           {transfers.map((file) => (
-            <li key={file.name} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-xs">
+            <li key={file.name} className="flex items-center justify-between gap-3 rounded-none border border-border px-3 py-2 text-xs">
               <span className="truncate text-foreground">{file.name}</span>
               <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
                 {file.state === "verified" ? <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" /> : null}
@@ -541,7 +541,7 @@ function CommittingPanel({ detail }: { detail: MigrationDetail | null }) {
   const percent = detail?.progress.percent || 0;
   return (
     <div
-      className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-card"
+      className="flex min-h-56 flex-col items-center justify-center rounded-none border border-border bg-card px-6 py-12 text-center"
       role="status"
       aria-live="polite"
     >
@@ -551,7 +551,7 @@ function CommittingPanel({ detail }: { detail: MigrationDetail | null }) {
         This picks up automatically — nothing already imported will be imported twice.
       </p>
       <div className="mt-5 w-full max-w-lg" role="progressbar" aria-label="Migration commit progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
-        <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${percent}%` }} /></div>
+        <div className="h-2 overflow-hidden rounded-none bg-muted"><div className="h-full rounded-none bg-primary transition-[width]" style={{ width: `${percent}%` }} /></div>
         <p className="mt-2 text-xs text-muted-foreground">{detail?.progress.completed || 0} of {detail?.progress.total || 0} operations · {percent}%</p>
       </div>
     </div>
@@ -584,7 +584,7 @@ function RecoveryPanel({
     <Card>
       <CardContent className="space-y-5">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 rounded-lg bg-destructive/10 p-2 text-destructive"><AlertTriangle className="h-5 w-5" aria-hidden="true" /></span>
+          <span className="mt-0.5 rounded-none bg-destructive/10 p-2 text-destructive"><AlertTriangle className="h-5 w-5" aria-hidden="true" /></span>
           <div>
             <h2 className="text-base font-bold text-foreground">The {detail.migration.failurePhase || "migration"} phase stopped safely</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -594,8 +594,8 @@ function RecoveryPanel({
           </div>
         </div>
         {detail.migration.error ? <Alert variant="warning">{detail.migration.error}</Alert> : null}
-        <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
-          Support reference: <span className="font-semibold text-foreground">{recovery.supportReference}</span>. No filenames or cell values are sent with a help request.
+        <div className="rounded-none border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+          Support reference: <span className="font-mono font-semibold tabular-nums text-foreground">{recovery.supportReference}</span>. No filenames or cell values are sent with a help request.
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" disabled={busy || !recovery.canRetry} onClick={() => void onRetry()}>

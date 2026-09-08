@@ -110,7 +110,7 @@ export function ThemeToggle() {
         onClick={showOptions}
         variant="ghost"
         size="unstyled"
-        className="relative z-0 h-7 w-7 rounded-[11px] border border-border/80 bg-card/80 p-0 text-muted-foreground shadow-sm backdrop-blur-md after:absolute after:-inset-2 after:content-[''] hover:border-primary/25 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-0"
+        className="relative z-0 h-7 w-7 rounded-full border border-border bg-muted p-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:border-primary/25 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-0"
         aria-label={`Theme: ${activeTheme}. Choose theme`}
         aria-haspopup="true"
         aria-expanded={paneExpanded}
@@ -122,13 +122,13 @@ export function ThemeToggle() {
 
       {paneMounted ? (
         <div
-          className="absolute right-0 top-0 z-50 h-7 w-[92px] overflow-hidden rounded-[11px] border border-border/80 bg-card/95 shadow-lg shadow-black/10 backdrop-blur-xl transition-[clip-path,transform,box-shadow] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+          className="absolute right-0 top-0 z-50 h-7 w-[92px] overflow-hidden rounded-full border border-border bg-muted shadow-overlay backdrop-blur-xl transition-[clip-path,transform,box-shadow] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           style={{
             clipPath: paneExpanded
-              ? "inset(0 0 0 0 round 11px)"
-              : `inset(0 ${collapsedRight}px 0 ${collapsedLeft}px round 11px)`,
+              ? "inset(0 0 0 0 round 999px)"
+              : `inset(0 ${collapsedRight}px 0 ${collapsedLeft}px round 999px)`,
             transform: paneExpanded ? "translateX(0)" : `translateX(${collapsedOffset}px)`,
-            boxShadow: paneExpanded ? "0 12px 34px rgba(0, 0, 0, 0.22)" : "0 2px 8px rgba(0, 0, 0, 0.1)",
+            boxShadow: paneExpanded ? "var(--shadow-overlay)" : "none",
           }}
           role="radiogroup"
           aria-label="Choose color theme"
@@ -137,7 +137,7 @@ export function ThemeToggle() {
         >
           <span
             className={cn(
-              "pointer-events-none absolute -left-px -top-px h-7 w-7 rounded-[11px] border border-border/80 bg-card/95 shadow-sm transition-opacity duration-150",
+              "pointer-events-none absolute -left-px -top-px h-7 w-7 rounded-full border border-border bg-card transition-opacity duration-150",
               paneExpanded ? "opacity-0" : "opacity-100",
             )}
             style={{ transform: `translateX(${activeIndex * 32}px)` }}
@@ -146,7 +146,7 @@ export function ThemeToggle() {
           />
           <span
             className={cn(
-              "pointer-events-none absolute -left-px top-[2px] h-[22px] w-[28px] rounded-[9px] border border-primary/25 bg-primary/10 shadow-[0_0_14px_rgba(96,165,250,0.08)] transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+              "pointer-events-none absolute -left-px top-[2px] h-[22px] w-[28px] rounded-full border border-border bg-card transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
               paneExpanded ? "opacity-100" : "opacity-0",
             )}
             style={{ transform: `translateX(${activeIndex * 32}px)` }}
@@ -165,7 +165,7 @@ export function ThemeToggle() {
                 onClick={() => chooseTheme(mode)}
                 style={{ right: `${(themes.length - index - 1) * 32 - 1}px` }}
                 className={cn(
-                  "absolute -top-px grid h-7 w-7 place-items-center rounded-[11px] text-muted-foreground transition-[color,opacity] duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/70",
+                  "absolute -top-px grid h-7 w-7 place-items-center rounded-full text-muted-foreground transition-[color,opacity] duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/70",
                   !paneExpanded && displayedTheme !== mode && "opacity-0",
                   displayedTheme === mode && "text-foreground",
                 )}

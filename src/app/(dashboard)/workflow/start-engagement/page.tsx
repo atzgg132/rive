@@ -41,17 +41,17 @@ export default function StartEngagementPage() {
   }, [inquiryId]);
 
   if (!engagementFlow) {
-    return <div className="workspace-page mx-auto max-w-xl rounded-2xl border border-border bg-card p-6"><h1 className="text-xl font-bold">New client work is not available here yet.</h1><p className="mt-2 text-sm text-muted-foreground">Use the existing client and project tools while this workflow is being rolled out.</p><Link href="/dashboard" className="mt-4 inline-flex text-sm font-bold text-primary hover:underline">Back to overview</Link></div>;
+    return <div className="workspace-page mx-auto max-w-xl rounded-none border border-border bg-card p-6"><h1 className="text-xl font-bold">New client work is not available here yet.</h1><p className="mt-2 text-sm text-muted-foreground">Use the existing client and project tools while this workflow is being rolled out.</p><Link href="/dashboard" className="mt-4 inline-flex text-sm font-bold text-primary hover:underline">Back to overview</Link></div>;
   }
   return (
-    <div className="workspace-page mx-auto max-w-4xl animate-fade-in">
+    <div className="workspace-page mx-auto max-w-4xl animate-panel-in">
       <Link href={inquiryId ? "/portfolio" : "/dashboard"} className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> {inquiryId ? "Back to portfolio" : "Back to overview"}
       </Link>
       {inquiryId && inquiryLoading ? (
-        <div className="rounded-3xl border border-border bg-card p-7 text-sm text-muted-foreground">Loading the converted enquiry…</div>
+        <div className="rounded-none border border-border bg-card p-7 text-sm text-muted-foreground">Loading the converted enquiry…</div>
       ) : inquiryId && inquiryError ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/5 p-7"><h1 className="text-xl font-black text-destructive">Start Engagement is not ready</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{inquiryError}</p><Link href="/portfolio" className="mt-4 inline-flex text-sm font-bold text-primary hover:underline">Return to enquiries</Link></div>
+        <div className="rounded-none border border-destructive/30 bg-destructive/5 p-7"><h1 className="text-xl font-black text-destructive">Start Engagement is not ready</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{inquiryError}</p><Link href="/portfolio" className="mt-4 inline-flex text-sm font-bold text-primary hover:underline">Return to enquiries</Link></div>
       ) : inquiryId && inquiry ? (
         <StartEngagementComposer entryPoint="inquiry" inquiry={inquiry} currency={displayCurrency} agreementsAvailable={agreements} />
       ) : (

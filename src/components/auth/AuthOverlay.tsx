@@ -22,9 +22,9 @@ export function AuthOverlay({ view, params, startPending, busy, onOpenChange, on
   return (
     <BaseDialog.Root open={Boolean(view)} onOpenChange={(nextOpen) => { if (!busy) onOpenChange(nextOpen); }} disablePointerDismissal={busy}>
       <BaseDialog.Portal keepMounted>
-        <BaseDialog.Backdrop className={`auth-overlay-backdrop fixed inset-0 z-[80] min-h-dvh ${dedicated ? "edition-auth-backdrop" : "bg-black/40 backdrop-blur-md"}`} />
+        <BaseDialog.Backdrop className={`auth-overlay-backdrop fixed inset-0 z-[80] min-h-dvh ${dedicated ? "edition-auth-backdrop" : "bg-[var(--auth-scrim)] backdrop-blur-md"}`} />
         <BaseDialog.Viewport className={`fixed inset-0 z-[80] flex ${dedicated ? "edition-auth-viewport overflow-hidden" : "min-h-dvh overflow-y-auto items-end justify-center p-0 sm:items-center sm:p-6"}`}>
-          <BaseDialog.Popup data-surface="marketing" className={dedicated ? "auth-overlay-panel edition-auth-panel" : "auth-overlay-panel relative w-full max-w-[26.5rem] max-h-[90dvh] overflow-y-auto rounded-t-[1.6rem] border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-6 pb-10 text-foreground shadow-overlay sm:max-h-[min(100dvh-3rem,_42rem)] sm:rounded-[1.6rem] sm:p-8"}>
+          <BaseDialog.Popup data-surface="marketing" className={dedicated ? "auth-overlay-panel edition-auth-panel" : "auth-overlay-panel relative w-full max-w-[26.5rem] max-h-[90dvh] overflow-y-auto rounded-t-none border border-[var(--stroke-hairline)] bg-[var(--surface-raised)] p-6 pb-10 text-foreground shadow-overlay sm:max-h-[min(100dvh-3rem,_42rem)] sm:rounded-none sm:p-8"}>
             {dedicated ? (
               <div className="edition-auth-art">
                 <div><RiveLogo height={28} /><span>{copy.kicker}</span></div>

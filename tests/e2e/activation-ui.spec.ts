@@ -521,8 +521,9 @@ test.describe("goal-aware activation", () => {
     await firstGuide.hover();
     await expect.poll(async () => firstGuide.evaluate((el) => {
       const bg = getComputedStyle(el).backgroundColor;
-      const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().split(/\s+/).join(", ");
-      return bg === `rgb(${accent})`;
+      const foreground = getComputedStyle(document.documentElement).getPropertyValue("--foreground").trim().split(/\s+/).map(Number);
+      const channels = bg.match(/^rgba?\(([^)]+)\)$/)?.[1].split(",").map((channel) => Number.parseFloat(channel.trim()));
+      return Boolean(channels && channels.length === 4 && foreground.length === 3 && foreground.every((channel, index) => channels[index] === channel) && Math.abs((channels[3] ?? 0) - 0.06) < 0.01);
     })).toBe(true);
     await page.getByTestId("guide-option-organize").click();
     await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "expanded");

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Switch, Textarea, Select } from "@/components/ui";
+import { Badge, Button, ContextualEmptyState, Input, PageHeader, Select, Switch, Tabs, Textarea } from "@/components/ui";
 
 import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -92,7 +92,7 @@ type View = "month" | "week" | "agenda";
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = Array.from({ length: 12 }, (_, month) => new Date(2020, month, 1).toLocaleDateString("en", { month: "short" }));
 const HOURS = Array.from({ length: 15 }, (_, index) => index + 7);
-const inputClass = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-950";
+const inputClass = "w-full rounded-none border border-input bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20";
 
 function startOfWeek(value: Date): Date {
   const result = new Date(value);
@@ -570,74 +570,73 @@ export default function CalendarPage() {
         </>}
       />
 
-      {guideReady && showGuide && <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      {guideReady && showGuide && <section className="rounded-none border border-border bg-card p-5">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-          <div><p className="text-xs font-black text-slate-800 dark:text-white">How work reaches your calendar</p><p className="mt-0.5 text-xs text-slate-400">Dates stay connected to their source records, so you only update them once.</p></div>
-          <Button onClick={dismissGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:text-slate-400"><X className="h-3 w-3" />Got it, hide this</Button>
+          <div><p className="text-xs font-black text-foreground">How work reaches your calendar</p><p className="mt-0.5 text-xs text-muted-foreground">Dates stay connected to their source records, so you only update them once.</p></div>
+          <Button variant="outline" size="sm" onClick={dismissGuide} className="inline-flex items-center gap-1.5"><X className="h-3 w-3" />Got it, hide this</Button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <ValueCard icon={<Briefcase className="h-4 w-4" />} tone="blue" value={`${deadlineCount} deadlines scheduled`} title="Projects & milestones" description="Project dates and unfinished milestones update here when the source record changes." />
-          <ValueCard icon={<Timer className="h-4 w-4" />} tone="teal" value={`${Math.round(scheduledFocusMinutes / 60 * 10) / 10}h protected`} title="Tasks & focus time" description="Turn due tasks into focus blocks, then complete them from the same plan." />
-          <ValueCard icon={<CircleDollarSign className="h-4 w-4" />} tone="amber" value="Invoice dates included" title="Revenue & invoices" description="Unpaid invoice due dates stay visible beside the work that generated them." />
-          <ValueCard icon={<Cloud className="h-4 w-4" />} tone="violet" value={visibleConnections.length ? `${connectedCalendars} calendars active` : "Ready to connect"} title={googleCalendarAvailable ? "Google & Apple" : "Apple calendar"} description={googleCalendarAvailable ? "rive. events sync both ways with Google; Apple receives the combined feed." : "Apple can receive a private, read-only feed of rive. events and deadlines."} />
+          <ValueCard icon={<Briefcase className="h-4 w-4" />} tone="primary" value={`${deadlineCount} deadlines scheduled`} title="Projects & milestones" description="Project dates and unfinished milestones update here when the source record changes." />
+          <ValueCard icon={<Timer className="h-4 w-4" />} tone="info" value={`${Math.round(scheduledFocusMinutes / 60 * 10) / 10}h protected`} title="Tasks & focus time" description="Turn due tasks into focus blocks, then complete them from the same plan." />
+          <ValueCard icon={<CircleDollarSign className="h-4 w-4" />} tone="warning" value="Invoice dates included" title="Revenue & invoices" description="Unpaid invoice due dates stay visible beside the work that generated them." />
+          <ValueCard icon={<Cloud className="h-4 w-4" />} tone="accent" value={visibleConnections.length ? `${connectedCalendars} calendars active` : "Ready to connect"} title={googleCalendarAvailable ? "Google & Apple" : "Apple calendar"} description={googleCalendarAvailable ? "rive. events sync both ways with Google; Apple receives the combined feed." : "Apple can receive a private, read-only feed of rive. events and deadlines."} />
         </div>
         {!visibleConnections.length && (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 dark:border-blue-900/60 dark:from-blue-950/30 dark:to-indigo-950/20">
-            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-600 text-white"><Sparkles className="h-4 w-4" /></span><div><p className="text-xs font-black text-slate-800 dark:text-white">See Rive alongside your other calendars</p><p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{googleCalendarAvailable ? "Connect Google Calendar for two-way sync, or add a private Rive feed to Apple Calendar." : "Add a private Rive feed to Apple Calendar."}</p></div></div>
-            <Button data-guide-target="calendar-connect" onClick={() => setConnectionsOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Connect calendar <ArrowRight className="h-3.5 w-3.5" /></Button>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-none border border-border bg-accent px-4 py-3">
+            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-none bg-primary text-primary-foreground"><Sparkles className="h-4 w-4" /></span><div><p className="text-xs font-black text-foreground">See Rive alongside your other calendars</p><p className="mt-0.5 text-xs text-muted-foreground">{googleCalendarAvailable ? "Connect Google Calendar for two-way sync, or add a private Rive feed to Apple Calendar." : "Add a private Rive feed to Apple Calendar."}</p></div></div>
+            <Button variant="default" size="sm" data-guide-target="calendar-connect" onClick={() => setConnectionsOpen(true)} className="inline-flex items-center gap-1.5">Connect calendar <ArrowRight className="h-3.5 w-3.5" /></Button>
           </div>
         )}
-        <p className="mt-3 text-xs leading-5 text-slate-400">Client details provide context through projects and invoices. Expenses and portfolio publishing stay out of the calendar.</p>
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">Client details provide context through projects and invoices. Expenses and portfolio publishing stay out of the calendar.</p>
       </section>}
 
       <div className="grid min-h-[calc(100vh-300px)] 2xl:grid-cols-[210px_minmax(0,1fr)_270px]">
-        <aside className="hidden border-r border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900 2xl:block">
-          <Button onClick={() => setCursor(new Date())} className="mb-5 w-full rounded-xl border border-slate-200 py-2 text-xs font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200">Today</Button>
-          <p className="mb-2 px-1 text-xs font-bold text-slate-500 dark:text-slate-300">My calendars</p>
+        <aside className="hidden border-r border-border bg-card p-4 2xl:block">
+          <Button variant="outline" size="sm" onClick={() => setCursor(new Date())} className="mb-5 w-full">Today</Button>
+          <p className="mb-2 px-1 text-xs font-bold text-muted-foreground">My calendars</p>
           <div className="space-y-1">
             {calendars.map((calendar) => (
-              <label key={calendar.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
+              <label key={calendar.id} className="flex cursor-pointer items-center gap-2 rounded-none px-2 py-2 text-xs font-semibold text-foreground hover:bg-foreground/[.05]">
                 <Input type="checkbox" checked={visibleCalendars.has(calendar.id)} onChange={() => setVisibleCalendars((current) => {
                   const next = new Set(current);
                   if (next.has(calendar.id)) next.delete(calendar.id); else next.add(calendar.id);
                   return next;
                 })} className="sr-only" />
-                <span className={`grid h-4 w-4 place-items-center rounded border ${visibleCalendars.has(calendar.id) ? "border-transparent text-white" : "border-slate-300"}`} style={{ background: visibleCalendars.has(calendar.id) ? calendar.color : "transparent" }}>{visibleCalendars.has(calendar.id) && <Check className="h-3 w-3" />}</span>
+                <span className={`grid h-4 w-4 place-items-center rounded border ${visibleCalendars.has(calendar.id) ? "border-transparent" : "border-border"}`} style={{ background: visibleCalendars.has(calendar.id) ? calendar.color : "transparent", color: "white" }}>{visibleCalendars.has(calendar.id) && <Check className="h-3 w-3" />}</span>
                 <span className="min-w-0 flex-1 truncate">{calendar.name}</span>
-                {calendar.externalCalendars.length > 0 && <span className="text-xs uppercase text-slate-400">{calendar.externalCalendars[0].connection.provider}</span>}
+                {calendar.externalCalendars.length > 0 && <span className="text-xs uppercase text-muted-foreground">{calendar.externalCalendars[0].connection.provider}</span>}
               </label>
             ))}
           </div>
-          <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900/60 dark:bg-blue-950/20">
-            <p className="text-xs font-bold text-blue-700 dark:text-blue-300">Always up to date</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Project deadlines, tasks, and invoice dates stay in sync with their source records.</p>
+          <div className="mt-6 rounded-none border border-info/25 bg-info/10 p-3">
+            <p className="text-xs font-bold text-info">Always up to date</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">Project deadlines, tasks, and invoice dates stay in sync with their source records.</p>
           </div>
         </aside>
 
         <main id="planning-queue" className="min-w-0 p-3 sm:p-5 lg:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1">
-              <Button onClick={() => moveCursor(-1)} aria-label="Previous date range" className="rounded-lg p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-800"><ChevronLeft className="h-4 w-4" /></Button>
-              <Button onClick={() => moveCursor(1)} aria-label="Next date range" className="rounded-lg p-2 text-slate-500 hover:bg-white dark:hover:bg-slate-800"><ChevronRight className="h-4 w-4" /></Button>
-              <Button onClick={() => setCursor(new Date())} className="ml-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">Today</Button>
-              <div className="ml-1 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold text-slate-600 hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                <CalendarRange className="h-3.5 w-3.5 text-blue-500" />
-                <Select aria-label="Select month" value={cursor.getMonth()} onChange={(event) => selectMonth(Number(event.target.value))} className="h-auto w-auto border-0 bg-transparent p-0 text-xs font-bold shadow-none outline-none focus-visible:ring-0 dark:bg-slate-900">{MONTHS.map((month, index) => <option key={month} value={index}>{month}</option>)}</Select>
-                <Input aria-label="Select year" type="number" min="1970" max="2100" value={cursor.getFullYear()} onChange={(event) => selectYear(Number(event.target.value))} className="h-auto w-12 border-0 bg-transparent p-0 text-xs font-bold shadow-none outline-none [appearance:textfield] focus-visible:ring-0 dark:bg-slate-900 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+              <Button variant="ghost" size="icon-sm" onClick={() => moveCursor(-1)} aria-label="Previous date range"><ChevronLeft className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon-sm" onClick={() => moveCursor(1)} aria-label="Next date range"><ChevronRight className="h-4 w-4" /></Button>
+              <Button variant="outline" size="sm" onClick={() => setCursor(new Date())} className="ml-1">Today</Button>
+              <div className="ml-1 inline-flex items-center gap-1 rounded-none border border-border bg-card px-2 py-1.5 text-xs font-bold text-foreground hover:border-primary/60">
+                <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                <Select aria-label="Select month" value={cursor.getMonth()} onChange={(event) => selectMonth(Number(event.target.value))} className="h-auto w-auto border-0 bg-transparent p-0 text-xs font-bold shadow-none outline-none focus-visible:ring-0">{MONTHS.map((month, index) => <option key={month} value={index}>{month}</option>)}</Select>
+                <Input aria-label="Select year" type="number" min="1970" max="2100" value={cursor.getFullYear()} onChange={(event) => selectYear(Number(event.target.value))} className="h-auto w-12 border-0 bg-transparent p-0 font-mono text-xs font-bold tabular-nums shadow-none outline-none [appearance:textfield] focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
               </div>
-              <h2 className="ml-2 text-sm font-black text-slate-800 dark:text-white">{title}</h2>
+              <h2 className="ml-2 text-sm font-black text-foreground">{title}</h2>
             </div>
-            <div className="flex rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
-              {(["month", "week", "agenda"] as View[]).map((item) => <Button key={item} onClick={() => setView(item)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${view === item ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "text-slate-500 dark:text-slate-400"}`}>{item}</Button>)}
-            </div>
+            <Tabs options={[{ id: "month", label: "month" }, { id: "week", label: "week" }, { id: "agenda", label: "agenda" }]} value={view} onChange={(id) => setView(id as View)} />
+
           </div>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>Double-click a day or time slot to add an event.</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-teal-500" />Scheduled tasks appear as focus blocks.</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-info" />Scheduled tasks appear as focus blocks.</span>
           </div>
 
           {loading ? (
-            <div className="grid h-[560px] place-items-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
+            <div className="grid h-[560px] place-items-center rounded-none border border-border bg-card"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
           ) : view === "month" ? (
             <MonthView rangeStart={range.start} groupedEvents={groupedEvents} onCreate={openCreate} onSelect={setSelectedEvent} />
           ) : view === "week" ? (
@@ -645,36 +644,36 @@ export default function CalendarPage() {
           ) : (
             <AgendaView events={visibleEvents} onSelect={setSelectedEvent} />
           )}
-          <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 2xl:hidden">
+          <section className="mt-4 rounded-none border border-border bg-card p-4 2xl:hidden">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><p className="text-xs font-black text-slate-800 dark:text-white">Planning queue</p><p className="mt-0.5 text-xs text-slate-400">Turn unfinished tasks into protected focus blocks.</p></div>
-              <Button onClick={openTaskComposer} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"><Plus className="h-3.5 w-3.5" />Add task</Button>
+              <div><p className="text-xs font-black text-foreground">Planning queue</p><p className="mt-0.5 text-xs text-muted-foreground">Turn unfinished tasks into protected focus blocks.</p></div>
+              <Button variant="outline" size="sm" onClick={openTaskComposer} className="inline-flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" />Add task</Button>
             </div>
-            {unscheduledTasks.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{unscheduledTasks.slice(0, 6).map((task) => <div key={task.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800"><Button onClick={() => completeTask(task)} aria-label={`Complete ${task.title}`} className="h-4 w-4 shrink-0 rounded-full border border-slate-300 hover:border-emerald-500 dark:border-slate-600" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">{task.title}</p><p className="mt-0.5 text-xs text-slate-400">{task.estimatedMinutes || 60} min{task.dueDate ? ` · due ${new Date(task.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}</p></div><Button onClick={() => openTaskScheduler(task)} className="rounded-lg bg-teal-50 px-2 py-1.5 text-xs font-bold text-teal-700 dark:bg-teal-950/30 dark:text-teal-300">Schedule</Button></div>)}</div> : <p className="mt-3 rounded-xl border border-dashed border-slate-200 py-4 text-center text-xs text-slate-400 dark:border-slate-700">Nothing waiting. Your current plan is fully scheduled.</p>}
+            {unscheduledTasks.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{unscheduledTasks.slice(0, 6).map((task) => <div key={task.id} className="flex items-center gap-3 rounded-none border border-border p-3"><Button onClick={() => completeTask(task)} aria-label={`Complete ${task.title}`} className="h-4 w-4 shrink-0 rounded-full border border-border hover:border-success hover:bg-success/10" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-foreground">{task.title}</p><p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">{task.estimatedMinutes || 60} min{task.dueDate ? ` · due ${new Date(task.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}</p></div><Button onClick={() => openTaskScheduler(task)} className="rounded-none bg-info/10 px-2 py-1.5 text-xs font-bold text-info">Schedule</Button></div>)}</div> : <p className="mt-3 rounded-none border border-dashed border-border py-4 text-center text-xs text-muted-foreground">Nothing waiting. Your current plan is fully scheduled.</p>}
           </section>
         </main>
 
-        <aside className="hidden border-t border-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900 2xl:block 2xl:border-l 2xl:border-t-0">
+        <aside className="hidden border-t border-border bg-card p-4 2xl:block 2xl:border-l 2xl:border-t-0">
           <div className="mb-4 flex items-center justify-between">
-            <div><p className="text-xs font-black text-slate-800 dark:text-white">Planning queue</p><p className="mt-0.5 text-xs text-slate-400">Give every task a home</p></div>
-            <ListTodo className="h-4 w-4 text-teal-500" />
+            <div><p className="text-xs font-black text-foreground">Planning queue</p><p className="mt-0.5 text-xs text-muted-foreground">Give every task a home</p></div>
+            <ListTodo className="h-4 w-4 text-info" />
           </div>
           {unscheduledTasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center dark:border-slate-700"><Focus className="mx-auto h-5 w-5 text-slate-300" /><p className="mt-2 text-xs font-bold text-slate-500">Your plan is clear.</p><p className="mt-1 text-xs leading-4 text-slate-400">New tasks wait here until you reserve time for them.</p></div>
+            <div className="rounded-none border border-dashed border-border p-4 text-center"><Focus className="mx-auto h-5 w-5 text-muted-foreground" /><p className="mt-2 text-xs font-bold text-muted-foreground">Your plan is clear.</p><p className="mt-1 text-xs leading-4 text-muted-foreground">New tasks wait here until you reserve time for them.</p></div>
           ) : (
             <div className="space-y-2">
               {unscheduledTasks.slice(0, 8).map((task) => (
-                <div key={task.id} className="group rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <div key={task.id} className="group rounded-none border border-border p-3">
                   <div className="flex items-start gap-2">
-                    <Button onClick={() => completeTask(task)} aria-label={`Complete ${task.title}`} className="mt-0.5 h-4 w-4 rounded-full border border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 dark:border-slate-600" />
-                    <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">{task.title}</p>{task.project && <p className="mt-0.5 truncate text-xs text-slate-400">{task.project.title}</p>}</div>
+                    <Button onClick={() => completeTask(task)} aria-label={`Complete ${task.title}`} className="mt-0.5 h-4 w-4 rounded-full border border-border hover:border-success hover:bg-success/10" />
+                    <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-foreground">{task.title}</p>{task.project && <p className="mt-0.5 truncate text-xs text-muted-foreground">{task.project.title}</p>}</div>
                   </div>
-                  <div className="mt-2 flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-xs text-slate-400">{task.estimatedMinutes && <span>{task.estimatedMinutes} min</span>}{task.dueDate && <span>due {new Date(task.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>}</div><Button onClick={() => openTaskScheduler(task)} className="inline-flex items-center gap-1 rounded-md bg-teal-50 px-2 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100 dark:bg-teal-950/30 dark:text-teal-300"><Clock3 className="h-3 w-3" />Schedule</Button></div>
+                  <div className="mt-2 flex items-center justify-between gap-2"><div className="flex items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">{task.estimatedMinutes && <span>{task.estimatedMinutes} min</span>}{task.dueDate && <span>due {new Date(task.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>}</div><Button onClick={() => openTaskScheduler(task)} className="inline-flex items-center gap-1 rounded-none bg-info/10 px-2 py-1 text-xs font-bold text-info hover:bg-info/20"><Clock3 className="h-3 w-3" />Schedule</Button></div>
                 </div>
               ))}
             </div>
           )}
-          <Button onClick={openTaskComposer} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-xs font-bold text-slate-500 hover:border-teal-300 hover:text-teal-700 dark:border-slate-700"><Plus className="h-3.5 w-3.5" />Add task</Button>
+          <Button variant="outline" size="sm" onClick={openTaskComposer} className="mt-3 flex w-full items-center justify-center gap-1.5"><Plus className="h-3.5 w-3.5" />Add task</Button>
         </aside>
       </div>
 
@@ -683,25 +682,25 @@ export default function CalendarPage() {
           <form onSubmit={saveTask} className="space-y-4">
             {taskMode === "create" ? (
               <>
-                <div className="rounded-xl border border-teal-100 bg-teal-50/70 p-3 dark:border-teal-900/50 dark:bg-teal-950/20"><p className="text-xs font-bold text-teal-800 dark:text-teal-200">Capture now. Schedule when you are ready.</p><p className="mt-1 text-xs leading-4 text-teal-700/70 dark:text-teal-300/70">The task enters your planning queue, where you can turn it into a focused block on the calendar.</p></div>
-                <label className="block"><span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">What needs to get done?</span><Input autoFocus required value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Prepare client proposal" className={inputClass} /></label>
+                <div className="rounded-none border border-info/25 bg-info/10 p-3"><p className="text-xs font-bold text-info">Capture now. Schedule when you are ready.</p><p className="mt-1 text-xs leading-4 text-info/80">The task enters your planning queue, where you can turn it into a focused block on the calendar.</p></div>
+                <label className="block"><span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">What needs to get done?</span><Input autoFocus required value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Prepare client proposal" className={inputClass} /></label>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <label><span className="mb-1.5 block text-xs font-bold text-slate-500">Priority</span><Select value={taskPriority} onChange={(event) => setTaskPriority(event.target.value)} className={inputClass}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></Select></label>
-                  <label><span className="mb-1.5 block text-xs font-bold text-slate-500">Due date</span><Input type="date" value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)} className={inputClass} /></label>
-                  <label><span className="mb-1.5 block text-xs font-bold text-slate-500">Estimate</span><Select value={taskEstimate} onChange={(event) => setTaskEstimate(event.target.value)} className={inputClass}><option value="30">30 Min</option><option value="60">1 Hour</option><option value="90">1.5 Hours</option><option value="120">2 Hours</option><option value="240">Half day</option></Select></label>
+                  <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Priority</span><Select value={taskPriority} onChange={(event) => setTaskPriority(event.target.value)} className={inputClass}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></Select></label>
+                  <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Due date</span><Input type="date" value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)} className={inputClass} /></label>
+                  <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Estimate</span><Select value={taskEstimate} onChange={(event) => setTaskEstimate(event.target.value)} className={inputClass}><option value="30">30 Min</option><option value="60">1 Hour</option><option value="90">1.5 Hours</option><option value="120">2 Hours</option><option value="240">Half day</option></Select></label>
                 </div>
               </>
             ) : (
               <>
-                <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/20"><p className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-300">Focus block</p><p className="mt-1 text-sm font-black text-slate-800 dark:text-white">{taskToSchedule?.title}</p><p className="mt-1 text-xs leading-4 text-slate-500 dark:text-slate-400">rive. will reserve this time as busy and keep the block linked to the original task.</p></div>
+                <div className="rounded-none border border-info/25 bg-info/10 p-4"><p className="text-xs font-black uppercase tracking-wider text-info">Focus block</p><p className="mt-1 text-sm font-black text-foreground">{taskToSchedule?.title}</p><p className="mt-1 text-xs leading-4 text-muted-foreground">rive. will reserve this time as busy and keep the block linked to the original task.</p></div>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <label><span className="mb-1.5 block text-xs font-bold text-slate-500">Date</span><Input type="date" required value={taskScheduleDate} onChange={(event) => setTaskScheduleDate(event.target.value)} className={inputClass} /></label>
-                  <label><span className="mb-1.5 block text-xs font-bold text-slate-500">Starts</span><Input type="time" required value={taskScheduleStart} onChange={(event) => setTaskScheduleStart(event.target.value)} className={inputClass} /></label>
-                  <label><span className="mb-1.5 block text-xs font-bold text-slate-500">Duration</span><Select value={taskEstimate} onChange={(event) => setTaskEstimate(event.target.value)} className={inputClass}><option value="30">30 Min</option><option value="60">1 Hour</option><option value="90">1.5 Hours</option><option value="120">2 Hours</option><option value="240">Half day</option></Select></label>
+                  <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Date</span><Input type="date" required value={taskScheduleDate} onChange={(event) => setTaskScheduleDate(event.target.value)} className={inputClass} /></label>
+                  <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Starts</span><Input type="time" required value={taskScheduleStart} onChange={(event) => setTaskScheduleStart(event.target.value)} className={inputClass} /></label>
+                  <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Duration</span><Select value={taskEstimate} onChange={(event) => setTaskEstimate(event.target.value)} className={inputClass}><option value="30">30 Min</option><option value="60">1 Hour</option><option value="90">1.5 Hours</option><option value="120">2 Hours</option><option value="240">Half day</option></Select></label>
                 </div>
               </>
             )}
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><p className="text-xs text-slate-400">{taskMode === "schedule" ? "You can complete the task from the planning queue." : "You can schedule it immediately after saving."}</p><Button type="submit" disabled={saving || (taskMode === "create" && !taskTitle.trim())} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{taskMode === "schedule" ? "protect this time" : "add to queue"}</Button></div>
+            <div className="flex items-center justify-between gap-3 border-t border-border pt-4"><p className="text-xs text-muted-foreground">{taskMode === "schedule" ? "You can complete the task from the planning queue." : "You can schedule it immediately after saving."}</p><Button variant="default" size="sm" type="submit" disabled={saving || (taskMode === "create" && !taskTitle.trim())} className="inline-flex items-center gap-2">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{taskMode === "schedule" ? "protect this time" : "add to queue"}</Button></div>
           </form>
         </ModalShell></Portal>
       )}
@@ -709,15 +708,15 @@ export default function CalendarPage() {
       {createOpen && (
         <Portal><ModalShell title={editingId ? "edit calendar event" : "new calendar event"} onClose={() => setCreateOpen(false)}>
           <form onSubmit={createEvent} className="space-y-4">
-            <label className="block"><span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">Event title</span><Input autoFocus required value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} placeholder="Client call, focused work, review…" className={inputClass} /></label>
-            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 text-card-foreground transition-colors hover:bg-muted/35"><span><span className="block text-xs font-bold text-slate-700 dark:text-slate-200">All-day event</span><span className="mt-0.5 block text-xs text-slate-400">Deadlines and date markers</span></span><Switch aria-label="All-day event" checked={draftAllDay} onCheckedChange={setDraftAllDay} /></label>
+            <label className="block"><span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">Event title</span><Input autoFocus required value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} placeholder="Client call, focused work, review…" className={inputClass} /></label>
+            <label className="flex cursor-pointer items-center justify-between rounded-none border border-border bg-card px-3 py-2.5 text-card-foreground transition-colors hover:bg-muted/[0.35]"><span><span className="block text-xs font-bold text-foreground">All-day event</span><span className="mt-0.5 block text-xs text-muted-foreground">Deadlines and date markers</span></span><Switch aria-label="All-day event" checked={draftAllDay} onCheckedChange={setDraftAllDay} /></label>
             <div className={`grid gap-3 ${draftAllDay ? "" : "sm:grid-cols-3"}`}>
-              <label><span className="mb-1.5 block text-xs font-bold text-slate-500">Date</span><Input type="date" required value={draftDate} onChange={(event) => setDraftDate(event.target.value)} className={inputClass} /></label>
-              {!draftAllDay && <><label><span className="mb-1.5 block text-xs font-bold text-slate-500">Starts</span><Input type="time" required value={draftStart} onChange={(event) => setDraftStart(event.target.value)} className={inputClass} /></label><label><span className="mb-1.5 block text-xs font-bold text-slate-500">Ends</span><Input type="time" required value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} className={inputClass} /></label></>}
+              <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Date</span><Input type="date" required value={draftDate} onChange={(event) => setDraftDate(event.target.value)} className={inputClass} /></label>
+              {!draftAllDay && <><label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Starts</span><Input type="time" required value={draftStart} onChange={(event) => setDraftStart(event.target.value)} className={inputClass} /></label><label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Ends</span><Input type="time" required value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} className={inputClass} /></label></>}
             </div>
-            <label className="block"><span className="mb-1.5 block text-xs font-bold text-slate-500">Location or meeting link</span><Input value={draftLocation} onChange={(event) => setDraftLocation(event.target.value)} placeholder="Optional" className={inputClass} /></label>
-            <label className="block"><span className="mb-1.5 block text-xs font-bold text-slate-500">Notes</span><Textarea value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} rows={3} placeholder="Context, agenda, or preparation notes" className={inputClass} /></label>
-            <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"><Input type="checkbox" checked={draftAvailability === "free"} onChange={(event) => setDraftAvailability(event.target.checked ? "free" : "busy")} />Show as available</label><Button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editingId ? "save changes" : "create event"}</Button></div>
+            <label className="block"><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Location or meeting link</span><Input value={draftLocation} onChange={(event) => setDraftLocation(event.target.value)} placeholder="Optional" className={inputClass} /></label>
+            <label className="block"><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Notes</span><Textarea value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} rows={3} placeholder="Context, agenda, or preparation notes" className={inputClass} /></label>
+            <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><Input type="checkbox" checked={draftAvailability === "free"} onChange={(event) => setDraftAvailability(event.target.checked ? "free" : "busy")} />Show as available</label><Button variant="default" size="sm" type="submit" disabled={saving} className="inline-flex items-center gap-2">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editingId ? "save changes" : "create event"}</Button></div>
           </form>
         </ModalShell></Portal>
       )}
@@ -725,14 +724,14 @@ export default function CalendarPage() {
       {selectedEvent && (
         <Portal><ModalShell title={selectedEvent.title} onClose={() => setSelectedEvent(null)}>
           <div className="space-y-5">
-            <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: selectedEvent.color }} /><span className="text-xs font-black uppercase tracking-wider text-slate-400">{sourceLabel(selectedEvent.source)}</span></div>
-            <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/70"><p className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-white"><Clock3 className="h-4 w-4 text-blue-500" />{selectedEvent.allDay ? new Date(`${selectedEvent.startDate}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : `${new Date(selectedEvent.startAt!).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · ${formatTime(selectedEvent.startAt)}–${formatTime(selectedEvent.endAt)}`}</p><p className="mt-1 text-xs text-slate-400">{selectedEvent.timeZone} · {selectedEvent.availability}</p></div>
-            {selectedEvent.description && <div><p className="text-xs font-black uppercase tracking-wider text-slate-400">Notes</p><p className="mt-1 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">{selectedEvent.description}</p></div>}
-            {selectedEvent.location && <div><p className="text-xs font-black uppercase tracking-wider text-slate-400">Location</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{selectedEvent.location}</p></div>}
-            {(selectedEvent.projectId || selectedEvent.invoiceId || selectedEvent.taskId || selectedEvent.clientId) && <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900 dark:bg-blue-950/20"><p className="text-xs font-bold text-blue-800 dark:text-blue-200">Live-linked to your workspace</p><p className="mt-1 text-xs leading-4 text-blue-700/70 dark:text-blue-300/70">Changes to the source record automatically update this calendar item.</p><div className="mt-2 flex flex-wrap gap-2">{selectedEvent.projectId && <Link href={`/workflow/projects/${selectedEvent.projectId}`} className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 shadow-sm dark:bg-slate-900 dark:text-blue-300">Open project <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.invoiceId && <Link href="/workflow/revenue" className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 shadow-sm dark:bg-slate-900 dark:text-blue-300">Open invoices <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.clientId && !selectedEvent.projectId && <Link href={`/workflow/clients/${selectedEvent.clientId}`} className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 shadow-sm dark:bg-slate-900 dark:text-blue-300">Open client <ArrowRight className="h-3 w-3" /></Link>}</div></div>}
+            <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: selectedEvent.color }} /><span className="text-xs font-black uppercase tracking-wider text-muted-foreground">{sourceLabel(selectedEvent.source)}</span></div>
+            <div className="rounded-none bg-muted p-4"><p className="flex items-center gap-2 text-sm font-bold text-foreground"><Clock3 className="h-4 w-4 text-primary" />{selectedEvent.allDay ? new Date(`${selectedEvent.startDate}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : `${new Date(selectedEvent.startAt!).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · ${formatTime(selectedEvent.startAt)}–${formatTime(selectedEvent.endAt)}`}</p><p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{selectedEvent.timeZone} · {selectedEvent.availability}</p></div>
+            {selectedEvent.description && <div><p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Notes</p><p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{selectedEvent.description}</p></div>}
+            {selectedEvent.location && <div><p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Location</p><p className="mt-1 text-sm text-muted-foreground">{selectedEvent.location}</p></div>}
+            {(selectedEvent.projectId || selectedEvent.invoiceId || selectedEvent.taskId || selectedEvent.clientId) && <div className="rounded-none border border-info/25 bg-info/10 p-3"><p className="text-xs font-bold text-info">Live-linked to your workspace</p><p className="mt-1 text-xs leading-4 text-info/80">Changes to the source record automatically update this calendar item.</p><div className="mt-2 flex flex-wrap gap-2">{selectedEvent.projectId && <Link href={`/workflow/projects/${selectedEvent.projectId}`} className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open project <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.invoiceId && <Link href="/workflow/revenue" className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open invoices <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.clientId && !selectedEvent.projectId && <Link href={`/workflow/clients/${selectedEvent.clientId}`} className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open client <ArrowRight className="h-3 w-3" /></Link>}</div></div>}
             <div className="flex justify-end gap-2">
-              {selectedEvent.source === "task" && selectedEvent.taskId && <Button onClick={() => completeTaskById(selectedEvent.taskId!)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"><Check className="h-4 w-4" />Mark complete</Button>}
-              {!selectedEvent.readOnly && !["derived", "task"].includes(selectedEvent.source) && <><Button onClick={() => openEdit(selectedEvent)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300"><Pencil className="h-4 w-4" />Edit</Button><Button onClick={deleteEvent} className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" />Remove</Button></>}
+              {selectedEvent.source === "task" && selectedEvent.taskId && <Button onClick={() => completeTaskById(selectedEvent.taskId!)} className="inline-flex items-center gap-2 rounded-none bg-success px-4 py-2 text-xs font-bold text-success-foreground hover:opacity-90"><Check className="h-4 w-4" />Mark complete</Button>}
+              {!selectedEvent.readOnly && !["derived", "task"].includes(selectedEvent.source) && <><Button variant="outline" size="sm" onClick={() => openEdit(selectedEvent)} className="inline-flex items-center gap-2"><Pencil className="h-4 w-4" />Edit</Button><Button onClick={deleteEvent} className="inline-flex items-center gap-2 rounded-none border border-destructive/40 px-3 py-2 text-xs font-bold text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" />Remove</Button></>}
             </div>
           </div>
         </ModalShell></Portal>
@@ -741,15 +740,15 @@ export default function CalendarPage() {
       {connectionsOpen && (
         <Portal><ModalShell title="Calendar connections" onClose={() => setConnectionsOpen(false)} wide>
           <div className="space-y-4">
-            {googleCalendarAvailable && <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-              <div className="flex items-start justify-between gap-4"><div className="flex gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700"><RefreshCw className="h-5 w-5 text-blue-600" /></div><div><p className="text-sm font-black text-slate-800 dark:text-white">Google calendar</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Two-way events, continuous updates, and calendar discovery.</p></div></div>{googleConnections.length ? <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">Connected</span> : <a href="/api/calendar/connections/google/start" className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white">Connect</a>}</div>
-              {googleConnections.map((connection) => <div key={connection.id} className="mt-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold text-slate-700 dark:text-slate-200">{connection.accountEmail}</p><p className="mt-0.5 text-xs text-slate-400">{connection.lastSyncedAt ? `Synced ${new Date(connection.lastSyncedAt).toLocaleString()}` : "Initial sync pending"}</p></div><Button onClick={() => syncGoogle(connection.id)} disabled={syncing} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"><RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />Sync now</Button></div>{connection.externalCalendars.length > 0 && <div className="mt-3 grid gap-1 border-t border-slate-200 pt-2 dark:border-slate-700">{connection.externalCalendars.map((calendar) => <label key={calendar.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-900"><Input type="checkbox" checked={calendar.selected} onChange={(event) => void toggleExternalCalendar(calendar.id, event.target.checked)} /><span className="h-2.5 w-2.5 rounded-full" style={{ background: calendar.color || "#4285F4" }} /><span className="min-w-0 flex-1 truncate">{calendar.name}</span><span className="text-xs uppercase text-slate-400">{calendar.accessRole}</span></label>)}</div>}{connection.lastError && <div className="mt-2 flex gap-2 text-xs text-red-600"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{connection.lastError}</div>}</div>)}
+            {googleCalendarAvailable && <section className="rounded-none border border-border p-4">
+              <div className="flex items-start justify-between gap-4"><div className="flex gap-3"><div className="grid h-10 w-10 place-items-center rounded-none border border-border bg-card"><RefreshCw className="h-5 w-5 text-primary" /></div><div><p className="text-sm font-black text-foreground">Google calendar</p><p className="mt-1 text-xs text-muted-foreground">Two-way events, continuous updates, and calendar discovery.</p></div></div>{googleConnections.length ? <Badge variant="success">Connected</Badge> : <a href="/api/calendar/connections/google/start" className="rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Connect</a>}</div>
+              {googleConnections.map((connection) => <div key={connection.id} className="mt-4 rounded-none bg-muted p-3"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold text-foreground">{connection.accountEmail}</p><p className="mt-0.5 text-xs text-muted-foreground">{connection.lastSyncedAt ? `Synced ${new Date(connection.lastSyncedAt).toLocaleString()}` : "Initial sync pending"}</p></div><Button variant="outline" size="sm" onClick={() => syncGoogle(connection.id)} disabled={syncing} className="inline-flex items-center gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />Sync now</Button></div>{connection.externalCalendars.length > 0 && <div className="mt-3 grid gap-1 border-t border-border pt-2">{connection.externalCalendars.map((calendar) => <label key={calendar.id} className="flex cursor-pointer items-center gap-2 rounded-none px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/[.05]"><Input type="checkbox" checked={calendar.selected} onChange={(event) => void toggleExternalCalendar(calendar.id, event.target.checked)} /><span className="h-2.5 w-2.5 rounded-full" style={{ background: calendar.color || "#4285F4" }} /><span className="min-w-0 flex-1 truncate">{calendar.name}</span><span className="text-xs uppercase text-muted-foreground">{calendar.accessRole}</span></label>)}</div>}{connection.lastError && <div className="mt-2 flex gap-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{connection.lastError}</div>}</div>)}
             </section>}
-            <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-              <div className="flex gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900"><CalendarDays className="h-5 w-5" /></div><div><p className="text-sm font-black text-slate-800 dark:text-white">Apple calendar</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Subscribe to a private, read-only feed of rive. events and deadlines.</p></div></div>
-              {!feedUrl ? <Button onClick={createAppleFeed} className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:border-blue-300 dark:border-slate-700 dark:text-slate-200">Create private apple feed</Button> : <div className="mt-4"><div className="flex gap-2"><Input readOnly value={feedUrl} className={`${inputClass} min-w-0 flex-1 text-xs`} /><Button onClick={copyFeed} className="rounded-xl border border-slate-200 px-3 dark:border-slate-700">{copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4 text-slate-500" />}</Button><a href={feedUrl} className="grid place-items-center rounded-xl bg-slate-900 px-3 text-white dark:bg-white dark:text-slate-900"><ExternalLink className="h-4 w-4" /></a></div><div className="mt-2 flex items-start justify-between gap-3"><p className="text-xs leading-4 text-slate-400">Treat this URL like a password. Regenerating it revokes the previous feed.</p><Button onClick={revokeAppleFeed} className="shrink-0 text-xs font-bold text-red-500 hover:underline">Revoke feed</Button></div></div>}
+            <section className="rounded-none border border-border p-4">
+              <div className="flex gap-3"><div className="grid h-10 w-10 place-items-center rounded-none bg-foreground text-background"><CalendarDays className="h-5 w-5" /></div><div><p className="text-sm font-black text-foreground">Apple calendar</p><p className="mt-1 text-xs text-muted-foreground">Subscribe to a private, read-only feed of rive. events and deadlines.</p></div></div>
+              {!feedUrl ? <Button variant="outline" onClick={createAppleFeed} className="mt-4 w-full text-xs font-bold">Create private apple feed</Button> : <div className="mt-4"><div className="flex gap-2"><Input readOnly value={feedUrl} className={`${inputClass} min-w-0 flex-1 font-mono text-xs tabular-nums`} /><Button variant="outline" size="sm" onClick={copyFeed} className="px-3">{copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-muted-foreground" />}</Button><a href={feedUrl} className="grid place-items-center rounded-none bg-foreground px-3 text-background"><ExternalLink className="h-4 w-4" /></a></div><div className="mt-2 flex items-start justify-between gap-3"><p className="text-xs leading-4 text-muted-foreground">Treat this URL like a password. Regenerating it revokes the previous feed.</p><Button onClick={revokeAppleFeed} className="shrink-0 text-xs font-bold text-destructive hover:underline">Revoke feed</Button></div></div>}
             </section>
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-4 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300"><Settings2 className="mr-1 inline h-3.5 w-3.5" />Full Apple two-way sync requires encrypted iCloud CalDAV credentials or the future native companion app. The subscription feed is deliberately read-only.</div>
+            <div className="rounded-none border border-warning/25 bg-warning/10 p-3 text-xs leading-4 text-warning"><Settings2 className="mr-1 inline h-3.5 w-3.5" />Full Apple two-way sync requires encrypted iCloud CalDAV credentials or the future native companion app. The subscription feed is deliberately read-only.</div>
           </div>
         </ModalShell></Portal>
       )}
@@ -757,26 +756,26 @@ export default function CalendarPage() {
   );
 }
 
-function ValueCard({ icon, tone, value, title, description }: { icon: ReactNode; tone: "blue" | "teal" | "violet" | "amber"; value: string; title: string; description: string }) {
+function ValueCard({ icon, tone, value, title, description }: { icon: ReactNode; tone: "primary" | "info" | "accent" | "warning"; value: string; title: string; description: string }) {
   const tones = {
-    blue: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300",
-    teal: "bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300",
-    violet: "bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300",
-    amber: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300",
+    primary: "bg-primary/10 text-primary",
+    info: "bg-info/10 text-info",
+    accent: "bg-accent text-accent-foreground",
+    warning: "bg-warning/10 text-warning",
   };
-  return <div className="flex min-w-0 gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/35"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tones[tone]}`}>{icon}</span><div className="min-w-0"><div className="flex flex-wrap items-baseline gap-x-2"><p className="text-xs font-black text-slate-800 dark:text-white">{title}</p><span className="text-xs font-bold text-slate-400">{value}</span></div><p className="mt-1 text-xs leading-4 text-slate-500 dark:text-slate-400">{description}</p></div></div>;
+  return <div className="flex min-w-0 gap-3 rounded-none border border-border bg-muted p-3"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-none ${tones[tone]}`}>{icon}</span><div className="min-w-0"><div className="flex flex-wrap items-baseline gap-x-2"><p className="text-xs font-black text-foreground">{title}</p><span className="text-xs font-bold text-muted-foreground">{value}</span></div><p className="mt-1 text-xs leading-4 text-muted-foreground">{description}</p></div></div>;
 }
 
 function ModalShell({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
-  return <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/45 p-4 backdrop-blur-sm" onMouseDown={onClose}><div className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 ${wide ? "max-w-2xl" : "max-w-lg"}`} onMouseDown={(event) => event.stopPropagation()}><div className="mb-5 flex items-start justify-between gap-4"><h2 className="text-lg font-black text-slate-900 dark:text-white">{title}</h2><Button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></Button></div>{children}</div></div>;
+  return <div className="fixed inset-0 z-[100] grid place-items-center bg-foreground/50 p-4 backdrop-blur-sm" onMouseDown={onClose}><div className={`max-h-[90vh] w-full overflow-y-auto rounded-none border border-border bg-popover p-5 shadow-overlay ${wide ? "max-w-2xl" : "max-w-lg"}`} onMouseDown={(event) => event.stopPropagation()}><div className="mb-5 flex items-start justify-between gap-4"><h2 className="text-lg font-extrabold tracking-[-0.03em] text-foreground">{title}</h2><Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></Button></div>{children}</div></div>;
 }
 
 function MonthView({ rangeStart, groupedEvents, onCreate, onSelect }: { rangeStart: Date; groupedEvents: Map<string, CalendarEvent[]>; onCreate: (date: Date) => void; onSelect: (event: CalendarEvent) => void }) {
   const currentMonth = addDays(rangeStart, 7).getMonth();
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="grid [grid-template-columns:repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
-        {WEEK_DAYS.map((day) => <div key={day} className="px-1 py-2 text-center text-xs font-black uppercase tracking-wider text-slate-400">{day}</div>)}
+    <div className="overflow-hidden rounded-none border border-border bg-card">
+      <div className="grid [grid-template-columns:repeat(7,minmax(0,1fr))] border-b border-border bg-muted">
+        {WEEK_DAYS.map((day) => <div key={day} className="px-1 py-2 text-center text-xs font-black uppercase tracking-wider text-muted-foreground">{day}</div>)}
       </div>
       <div className="grid [grid-template-columns:repeat(7,minmax(0,1fr))]">
         {Array.from({ length: 42 }, (_, index) => addDays(rangeStart, index)).map((date) => {
@@ -788,24 +787,24 @@ function MonthView({ rangeStart, groupedEvents, onCreate, onSelect }: { rangeSta
             <div
               key={key}
               onDoubleClick={() => onCreate(date)}
-              className={`min-h-28 min-w-0 overflow-hidden border-b border-r border-slate-100 p-1.5 transition-colors hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10 ${outsideMonth ? "bg-slate-50/50 dark:bg-slate-950/20" : ""}`}
+              className={`min-h-28 min-w-0 overflow-hidden border-b border-r border-border p-1.5 transition-colors hover:bg-accent ${outsideMonth ? "bg-muted/50" : ""}`}
             >
-              <span className={`inline-grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${today ? "bg-blue-600 text-white" : outsideMonth ? "text-slate-300 dark:text-slate-600" : "text-slate-500 dark:text-slate-400"}`}>{date.getDate()}</span>
+              <span className={`inline-grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${today ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{date.getDate()}</span>
               <div className="mt-1 min-w-0 space-y-1">
                 {items.slice(0, 3).map((event) => (
                   <Button
                     key={event.id}
                     onClick={(click) => { click.stopPropagation(); onSelect(event); }}
                     title={`${event.allDay ? "All day" : formatTime(event.startAt)} · ${event.title}`}
-                    className="flex h-5 w-full min-w-0 items-center justify-start gap-1 overflow-hidden rounded-md px-1.5 text-left text-xs font-bold"
+                    className="flex h-5 w-full min-w-0 items-center justify-start gap-1 overflow-hidden rounded-none px-1.5 text-left text-xs font-bold"
                     style={{ background: `${event.color}18`, color: event.color }}
                   >
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: event.color }} />
-                    {!event.allDay && <span className="hidden shrink-0 font-black xl:inline">{formatTime(event.startAt)}</span>}
+                    {!event.allDay && <span className="hidden shrink-0 font-mono font-black tabular-nums xl:inline">{formatTime(event.startAt)}</span>}
                     <span className="min-w-0 flex-1 truncate">{event.title}</span>
                   </Button>
                 ))}
-                {items.length > 3 && <span className="block truncate px-1 text-xs font-bold text-slate-400">+{items.length - 3} more events</span>}
+                {items.length > 3 && <span className="block truncate px-1 text-xs font-bold text-muted-foreground">+{items.length - 3} more events</span>}
               </div>
             </div>
           );
@@ -818,25 +817,25 @@ function MonthView({ rangeStart, groupedEvents, onCreate, onSelect }: { rangeSta
 function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date; events: CalendarEvent[]; onCreate: (date: Date, hour: number) => void; onSelect: (event: CalendarEvent) => void }) {
   const days = Array.from({ length: 7 }, (_, index) => addDays(rangeStart, index));
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <div className="overflow-x-auto rounded-none border border-border bg-card">
       <div className="min-w-[640px]">
-        <div data-calendar-week-header className="grid grid-cols-[58px_repeat(7,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-800">
+        <div data-calendar-week-header className="grid grid-cols-[58px_repeat(7,minmax(0,1fr))] border-b border-border">
           <div aria-hidden="true" />
           {days.map((day) => {
             const today = dateKey(day) === dateKey(new Date());
             return (
-              <div key={day.toISOString()} className="border-l border-slate-100 px-2 py-3 text-center dark:border-slate-800">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-400">{WEEK_DAYS[(day.getDay() + 6) % 7]}</p>
-                <p className={`mx-auto mt-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black ${today ? "bg-blue-600 text-white" : "text-slate-700 dark:text-slate-200"}`}>{day.getDate()}</p>
+              <div key={day.toISOString()} className="border-l border-border px-2 py-3 text-center">
+                <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">{WEEK_DAYS[(day.getDay() + 6) % 7]}</p>
+                <p className={`mx-auto mt-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black ${today ? "bg-primary text-primary-foreground" : "text-foreground"}`}>{day.getDate()}</p>
               </div>
             );
           })}
         </div>
         <div data-calendar-week-body className="grid grid-cols-[58px_repeat(7,minmax(0,1fr))]">
-          <div className="bg-slate-50/55 dark:bg-slate-950/25">
+          <div className="bg-muted">
             {HOURS.map((hour) => (
               <div key={hour} className="h-16 pr-3 pt-2 text-right">
-                <span data-calendar-hour-label={hour} className="inline-block text-xs font-medium leading-none text-slate-400">
+                <span data-calendar-hour-label={hour} className="inline-block font-mono text-xs font-medium tabular-nums leading-none text-muted-foreground">
                   {hour === 12 ? "12 pm" : hour > 12 ? `${hour - 12} pm` : `${hour} am`}
                 </span>
               </div>
@@ -848,14 +847,14 @@ function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date
             const timed = layoutOverlappingEvents(dayEvents.filter((event) => !event.allDay && event.startAt && event.endAt));
             const allDay = sortCalendarEvents(dayEvents.filter((event) => event.allDay));
             return (
-              <div key={key} className="relative min-w-0 border-l border-slate-100 dark:border-slate-800">
+              <div key={key} className={`relative min-w-0 border-l border-border ${key === dateKey(new Date()) ? "bg-accent/40" : ""}`}>
                 <div className="absolute left-1 right-1 top-1 z-10 space-y-1">
                   {allDay.slice(0, 2).map((event) => (
-                    <Button key={event.id} onClick={() => onSelect(event)} className="block w-full min-w-0 truncate rounded-md px-1.5 py-1 text-left text-xs font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.title}</Button>
+                    <Button key={event.id} onClick={() => onSelect(event)} className="block w-full min-w-0 truncate rounded-none px-1.5 py-1 text-left text-xs font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.title}</Button>
                   ))}
                 </div>
                 {HOURS.map((hour) => (
-                  <Button key={hour} onDoubleClick={() => onCreate(day, hour)} className="block h-16 w-full rounded-none border-b border-slate-100 text-left hover:bg-blue-50/30 dark:border-slate-800 dark:hover:bg-blue-950/10" aria-label={`Create event ${key} at ${hour}:00`} />
+                  <Button key={hour} onDoubleClick={() => onCreate(day, hour)} className="block h-16 w-full rounded-none border-b border-border text-left hover:bg-accent" aria-label={`Create event ${key} at ${hour}:00`} />
                 ))}
                 {timed.map(({ event, lane, laneCount }) => {
                   const start = new Date(event.startAt!);
@@ -863,9 +862,9 @@ function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date
                   const top = Math.max(0, ((start.getHours() * 60 + start.getMinutes()) - 420) / 60 * 64);
                   const height = Math.max(24, (end.getTime() - start.getTime()) / 3600000 * 64);
                   return (
-                    <Button key={event.id} onClick={() => onSelect(event)} title={`${formatTime(event.startAt)} · ${event.title}`} className="absolute z-20 min-w-0 overflow-hidden rounded-lg border-l-[3px] px-1.5 py-1 text-left shadow-sm" style={{ top, height, left: `calc(${lane * (100 / laneCount)}% + 3px)`, width: `calc(${100 / laneCount}% - 5px)`, background: `${event.color}1C`, borderColor: event.color, color: event.color }}>
+                    <Button key={event.id} onClick={() => onSelect(event)} title={`${formatTime(event.startAt)} · ${event.title}`} className="absolute z-20 min-w-0 overflow-hidden rounded-none border-l-[3px] px-1.5 py-1 text-left" style={{ top, height, left: `calc(${lane * (100 / laneCount)}% + 3px)`, width: `calc(${100 / laneCount}% - 5px)`, background: `${event.color}1C`, borderColor: event.color, color: event.color }}>
                       <span className="block truncate text-xs font-black">{event.title}</span>
-                      <span className="block truncate text-xs opacity-80">{formatTime(event.startAt)}</span>
+                      <span className="block truncate font-mono text-xs tabular-nums opacity-80">{formatTime(event.startAt)}</span>
                     </Button>
                   );
                 })}
@@ -881,6 +880,6 @@ function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date
 function AgendaView({ events, onSelect }: { events: CalendarEvent[]; onSelect: (event: CalendarEvent) => void }) {
   const grouped = new Map<string, CalendarEvent[]>();
   for (const event of events) grouped.set(eventDateKey(event), [...(grouped.get(eventDateKey(event)) || []), event]);
-  if (!events.length) return <ContextualEmptyState icon={<CalendarDays className="h-6 w-6" />} title="Your work will show up here" description="Project milestones, invoice deadlines, and scheduled work stay connected in Calendar." why="Calendar turns the work you entered elsewhere into a plan for your time." next="Create a project with a deadline or connect a calendar." after="Rive will surface the next dates here automatically." action={<Link href="/workflow/projects?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Create project</Link>} className="min-h-80 border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900" />;
-  return <div className="space-y-4">{Array.from(grouped.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([date, items]) => <section key={date} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><div className="border-b border-slate-100 bg-slate-50 px-4 py-2 dark:border-slate-800 dark:bg-slate-900"><p className="text-xs font-black uppercase tracking-wider text-slate-500">{new Date(`${date}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p></div><div className="divide-y divide-slate-100 dark:divide-slate-800">{items.map((event) => <Button key={event.id} onClick={() => onSelect(event)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"><span className="h-8 w-1 rounded-full" style={{ background: event.color }} /><span className="w-16 text-xs font-bold text-slate-400">{event.allDay ? "all day" : formatTime(event.startAt)}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-slate-700 dark:text-slate-200">{event.title}</span><span className="block text-xs text-slate-400">{sourceLabel(event.source)}</span></span></Button>)}</div></section>)}</div>;
+  if (!events.length) return <ContextualEmptyState icon={<CalendarDays className="h-6 w-6" />} title="Your work will show up here" description="Project milestones, invoice deadlines, and scheduled work stay connected in Calendar." why="Calendar turns the work you entered elsewhere into a plan for your time." next="Create a project with a deadline or connect a calendar." after="Rive will surface the next dates here automatically." action={<Link href="/workflow/projects?new=true" className="inline-flex items-center rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Create project</Link>} className="min-h-80 border-border bg-card" />;
+  return <div className="space-y-4">{Array.from(grouped.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([date, items]) => <section key={date} className="overflow-hidden rounded-none border border-border bg-card"><div className="border-b border-border bg-muted px-4 py-2"><p className="font-mono text-xs font-black uppercase tabular-nums tracking-wider text-muted-foreground">{new Date(`${date}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p></div><div className="divide-y divide-border">{items.map((event) => <Button key={event.id} onClick={() => onSelect(event)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[.05]"><span className="h-8 w-1 rounded-full" style={{ background: event.color }} /><span className="w-16 font-mono text-xs font-bold tabular-nums text-muted-foreground">{event.allDay ? "all day" : formatTime(event.startAt)}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-foreground">{event.title}</span><span className="block text-xs text-muted-foreground">{sourceLabel(event.source)}</span></span></Button>)}</div></section>)}</div>;
 }

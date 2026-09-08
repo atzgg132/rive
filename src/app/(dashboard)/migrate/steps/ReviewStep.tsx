@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, ChevronDown, Eye, Link2, Loader2, Users } from "lucide-react";
 
-import { Alert, Badge, Button, Card, CardContent, Select } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardContent, Kicker, Select } from "@/components/ui";
 import { DISPLAY_CURRENCIES } from "@/lib/currency";
 import { ENTITY_LABELS, type MigrationDetail, type MigrationRecordView, type MigrationSource } from "../types";
 
@@ -69,7 +69,7 @@ export default function ReviewStep({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-card px-4 py-3" role="status" aria-live="polite">
+      <div className="rounded-none border border-border bg-card px-4 py-3" role="status" aria-live="polite">
         <div className="flex items-center justify-between gap-3 text-xs">
           <span className="font-semibold text-foreground">Decision progress</span>
           <span className="text-muted-foreground">{detail.unresolved.total} remaining</span>
@@ -93,7 +93,7 @@ export default function ReviewStep({
               description="Rive could not tell what these hold. Choose one and it will map the columns straight away."
             />
             {unclassified.map((source) => (
-              <div key={source.sourceId} className="rounded-xl border border-border bg-background p-4">
+              <div key={source.sourceId} className="rounded-none border border-border bg-background p-4">
                 <p className="text-sm font-semibold text-foreground">
                   {source.name}
                   {source.sheetName ? <span className="text-muted-foreground"> · {source.sheetName}</span> : null}
@@ -154,7 +154,7 @@ export default function ReviewStep({
               description="Rive found a close match but will not connect records on a resemblance alone."
             />
             {relationshipRecords.slice(0, 25).map((record) => (
-              <div key={record.sourceKey} className="rounded-xl border border-border bg-background p-4">
+              <div key={record.sourceKey} className="rounded-none border border-border bg-background p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-sm font-semibold text-foreground">{labelOf(record)}</p>
                   <span className="text-xs text-muted-foreground">
@@ -230,17 +230,17 @@ export default function ReviewStep({
             {duplicateRecords.slice(0, 25).map((record) => {
               const candidate = record.duplicateCandidates[0];
               return (
-                <div key={record.sourceKey} className="rounded-xl border border-border bg-background p-4">
+                <div key={record.sourceKey} className="rounded-none border border-border bg-background p-4">
                   <p className="text-sm font-semibold text-foreground">We think these are the same</p>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <div className="rounded-lg border border-border px-3 py-2">
-                      <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                    <div className="rounded-none border border-border px-3 py-2">
+                      <Kicker tone="muted" dot={false}>
                         {candidate.scope === "workspace" ? "Already in Rive" : "Earlier in your files"}
-                      </p>
+                      </Kicker>
                       <p className="mt-0.5 truncate text-sm text-foreground">{candidate.label}</p>
                     </div>
-                    <div className="rounded-lg border border-border px-3 py-2">
-                      <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Being imported</p>
+                    <div className="rounded-none border border-border px-3 py-2">
+                      <Kicker tone="muted" dot={false}>Being imported</Kicker>
                       <p className="mt-0.5 truncate text-sm text-foreground">{labelOf(record)}</p>
                     </div>
                   </div>
@@ -306,7 +306,7 @@ export default function ReviewStep({
             />
             <ul className="space-y-2">
               {blocked.slice(0, 25).map((item) => (
-                <li key={item.sourceKey} className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5">
+                <li key={item.sourceKey} className="rounded-none border border-destructive/25 bg-destructive/5 px-3 py-2.5">
                   <p className="text-sm font-medium text-foreground">{item.label}</p>
                   <p className="mt-0.5 text-xs text-destructive">{item.message}</p>
                   <Button
@@ -386,7 +386,7 @@ function RecordPreview({ migrationId }: { migrationId: string }) {
         {loading ? <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading preview</p> : null}
         <div className="space-y-3">
           {records.map((record) => (
-            <article key={record.sourceKey} className="rounded-xl border border-border bg-background p-4">
+            <article key={record.sourceKey} className="rounded-none border border-border bg-background p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground">{labelOf(record)}</p>
                 <Badge variant={record.action === "skip" ? "warning" : record.action === "link" ? "secondary" : "success"}>{record.action}</Badge>
@@ -397,7 +397,7 @@ function RecordPreview({ migrationId }: { migrationId: string }) {
                 <ValueBlock label="Rive values" value={record.normalized} />
               </div>
               {record.relationshipCandidates.length ? <p className="mt-3 text-xs text-muted-foreground">Relationships: {record.relationshipCandidates.map((candidate) => `${candidate.label} (${Math.round(candidate.confidence * 100)}%)`).join(", ")}</p> : null}
-              {record.warnings.length ? <p className="mt-2 text-xs text-warning-foreground">Warnings: {record.warnings.map((warning) => warning.message).join(" · ")}</p> : null}
+              {record.warnings.length ? <p className="mt-2 text-xs text-warning">Warnings: {record.warnings.map((warning) => warning.message).join(" · ")}</p> : null}
             </article>
           ))}
         </div>
@@ -415,8 +415,8 @@ function RecordPreview({ migrationId }: { migrationId: string }) {
 
 function ValueBlock({ label, value }: { label: string; value: Record<string, unknown> }) {
   return (
-    <div className="rounded-lg bg-muted/40 px-3 py-2">
-      <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-none bg-muted/40 px-3 py-2">
+      <Kicker tone="muted" dot={false}>{label}</Kicker>
       <dl className="mt-2 space-y-1 text-xs">
         {Object.entries(value).slice(0, 10).map(([key, entry]) => (
           <div key={key} className="grid grid-cols-[minmax(5rem,0.4fr)_1fr] gap-2"><dt className="truncate text-muted-foreground">{key}</dt><dd className="truncate text-foreground">{String(entry ?? "—")}</dd></div>
@@ -519,7 +519,7 @@ function BulkIssueRow({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-background p-4">
+    <div className="rounded-none border border-border bg-background p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm text-foreground">{issue.message}</p>
         <Badge variant="secondary">
@@ -590,7 +590,7 @@ function ColumnMapping({
           const unresolved = (source.mapping || []).filter((mapping) => mapping.status === "UNRESOLVED").length;
           const isOpen = open === source.sourceId;
           return (
-            <div key={source.sourceId} className="rounded-xl border border-border bg-background">
+            <div key={source.sourceId} className="rounded-none border border-border bg-background">
               <button
                 type="button"
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"

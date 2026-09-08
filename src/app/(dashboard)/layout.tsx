@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui";
+import { Avatar, Badge, Button, Kicker } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -208,6 +208,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ? { promptKey: "calendar_workflow", module: "calendar", triggerEvent: "calendar_opened", label: "Calendar feedback" }
       : { promptKey: "workspace_general", module: "workspace", triggerEvent: "workspace_viewed", label: "Share feedback" };
 
+  const navLinkClassName = (isActive: boolean) =>
+    `relative flex min-h-11 items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${isActive ? "bg-accent text-primary before:absolute before:bottom-[30%] before:left-0 before:top-[30%] before:w-[2px] before:bg-primary" : "text-muted-foreground hover:bg-foreground/[.05] hover:text-foreground"}`;
+
   const renderNavLink = (link: (typeof allNavLinks)[number], mobile = false) => {
     const Icon = link.icon;
     const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
@@ -218,10 +221,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         title={!mobile && sidebarCollapsed ? link.label : undefined}
         onClick={mobile ? () => setMobileMenuOpen(false) : undefined}
         className={mobile
-          ? `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive ? "bg-accent text-primary dark:bg-blue-900/20 dark:text-blue-400" : "text-muted-foreground hover:bg-background hover:text-foreground dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"}`
-          : `flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${isActive ? "bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
+          ? navLinkClassName(isActive)
+          : navLinkClassName(isActive)}
       >
-        <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+        <Icon strokeWidth={1.75} className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
         {(!sidebarCollapsed || mobile) && <span>{link.label}</span>}
       </Link>
     );
@@ -232,7 +235,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="text-sm font-medium text-muted-foreground">Loading your workspace...</span>
+          <Kicker>Loading workspace</Kicker>
         </div>
       </div>
     );
@@ -242,18 +245,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled, engagementFlow: engagementFlowEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency}>
     <div data-dashboard-shell className="fixed inset-0 flex min-h-0 overflow-hidden overscroll-none bg-background">
-      <Toaster position="bottom-right" theme="system" />
+      <Toaster position="bottom-right" theme="system" toastOptions={{ classNames: { toast: "rounded-none border border-border bg-popover text-foreground shadow-overlay" } }} />
       {/* ── Desktop Sidebar ── */}
       <aside className={`sticky top-0 hidden h-full shrink-0 flex-col justify-between border-r border-border bg-card py-5 md:flex transition-[width,padding] duration-200 ${sidebarCollapsed ? "w-20 px-3" : "w-64 px-4"}`}>
         <div className="flex flex-col gap-7">
-          <div className={`flex items-center ${sidebarCollapsed ? "flex-col gap-3" : "justify-between px-3"}`}>
+          <div className={`flex items-center ${sidebarCollapsed ? "flex-col items-center gap-3 [&_a>span>svg]:h-[18px] [&_a>span>svg]:w-auto" : "gap-2 px-3"}`}>
             <Link href="/dashboard" className="flex items-center gap-2" title="rive. overview">
               <RiveLogo height={26} />
             </Link>
-            {!sidebarCollapsed && <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-xs font-semibold capitalize text-primary">
+            {!sidebarCollapsed && <Badge variant="outline" className="capitalize">
               {user?.plan}
-            </span>}
-            <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-muted-foreground hover:bg-accent hover:text-foreground ${sidebarCollapsed ? "" : "absolute left-[232px] top-[72px] border border-border bg-card shadow-sm"}`}>
+            </Badge>}
+            <Button variant="outline" size="icon-sm" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} className={`text-muted-foreground ${sidebarCollapsed ? "" : "ml-auto border border-border bg-card"}`}>
               {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </Button>
           </div>
@@ -265,10 +268,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <div className={`flex items-center gap-3 px-3 py-2 ${sidebarCollapsed ? "justify-center" : ""}`} title={sidebarCollapsed ? `${user?.name} · ${user?.email}` : undefined}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/15 bg-primary/10 font-bold uppercase text-primary">
+            <Avatar size="md"><div className="contents">
               {user?.name?.substring(0, 2) || "U"}
             </div>
-            {!sidebarCollapsed && <div className="flex flex-col min-w-0">
+            </Avatar>{!sidebarCollapsed && <div className="flex flex-col min-w-0">
               <span className="truncate text-sm font-semibold text-foreground">{user?.name}</span>
               <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
             </div>}
@@ -279,7 +282,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             size="default"
             onClick={handleLogout}
             title={sidebarCollapsed ? "Sign out" : undefined}
-            className={`w-full justify-start px-3 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300 ${sidebarCollapsed ? "justify-center" : ""}`}
+            className={`w-full justify-start px-3 text-sm font-medium text-destructive hover:bg-destructive/10 ${sidebarCollapsed ? "justify-center" : ""}`}
           >
             <LogOut className="h-5 w-5" />
             {!sidebarCollapsed && <span>Sign out</span>}
@@ -306,10 +309,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
             <CurrencySwitcher compact />
             <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
+            <Button variant="ghost" size="icon" onClick={() => setCommandPaletteOpen(true)} aria-label="Search workspace" className="text-muted-foreground"><Search className="h-5 w-5" /></Button><Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="text-muted-foreground">
               <CircleHelp className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="text-muted-foreground hover:bg-background dark:text-slate-400 dark:hover:bg-slate-800">
+            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} aria-label="Open navigation" className="text-muted-foreground">
               <Menu className="h-5 w-5" />
             </Button>
           </div>
@@ -328,7 +331,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Search className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate whitespace-nowrap">Search workspace...</span>
               </span>
-              <span className="flex items-center gap-1 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs">
+              <span className="flex items-center gap-1 rounded-none border border-border bg-muted px-1.5 py-0.5 font-mono text-[.7rem]">
                 {isMac ? (
                   <>
                     <Command className="h-2.5 w-2.5" /> K
@@ -342,7 +345,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="flex items-center gap-3">
             {engagementFlowEnabled && (
-              <Button variant="default" className="gap-2 whitespace-nowrap" onClick={() => router.push("/workflow/start-engagement")}>
+              <Button variant="inverse" className="gap-2 whitespace-nowrap" onClick={() => router.push("/workflow/start-engagement")}>
                 <Plus className="h-4 w-4" />
                 New client work
               </Button>
@@ -360,11 +363,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 <Bell className="h-5 w-5" />
                 {notifications.some(n => !n.read) && (
-                  <span className="absolute top-1 right-1 h-2 w-2 bg-blue-600 rounded-full animate-pulse"></span>
+                  <span className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-primary"></span>
                 )}
               </Button>
               {notificationsOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-72 animate-fade-in-up rounded-xl border border-border bg-popover p-4 shadow-overlay">
+                <div className="absolute right-0 z-50 mt-2 w-72 animate-panel-in rounded-none border border-border bg-popover p-4 shadow-overlay">
                   <h4 className="mb-3 text-xs font-semibold text-foreground">Notifications</h4>
                   <div className="max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain pr-1">
                     <div className="flex flex-col gap-2.5">
@@ -389,8 +392,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Mobile Sidebar Slideover Menu ── */}
       {mobileMenuOpen && (
         <Portal>
-          <div className="fixed inset-0 z-50 flex md:hidden bg-slate-900/40 backdrop-blur-sm">
-            <div className="relative flex w-full max-w-xs animate-fade-in-up flex-col bg-card px-4 py-6 shadow-overlay">
+          <div className="fixed inset-0 z-50 flex bg-foreground/50 backdrop-blur-sm md:hidden">
+            <div className="relative flex w-full max-w-xs animate-panel-in flex-col bg-card px-4 py-6 shadow-overlay">
               <div className="flex items-center justify-between mb-8">
                 <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
                   <RiveLogo height={26} />
@@ -400,7 +403,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   size="icon-sm"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-label="Close navigation"
-                  className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                  className="text-muted-foreground"
                 >
                   <X className="h-6 w-6" />
                 </Button>
@@ -408,7 +411,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <nav className="flex flex-col gap-1 flex-1">
                 {engagementFlowEnabled && (
-                  <Button variant="default" className="mb-3 w-full justify-start gap-2" onClick={() => { setMobileMenuOpen(false); router.push("/workflow/start-engagement"); }}>
+                  <Button variant="inverse" className="mb-3 w-full justify-start gap-2" onClick={() => { setMobileMenuOpen(false); router.push("/workflow/start-engagement"); }}>
                     <Plus className="h-4 w-4" />
                     New client work
                   </Button>
@@ -416,14 +419,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {navLinks.map((link) => renderNavLink(link, true))}
               </nav>
 
-              <div className="flex flex-col gap-4 border-t border-border dark:border-slate-800 pt-4 mt-auto">
+              <div className="flex flex-col gap-4 border-t border-border pt-4 mt-auto">
                 <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold uppercase">
+                  <Avatar size="md"><div className="contents">
                     {user?.name?.substring(0, 2) || "U"}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground dark:text-slate-200">{user?.name}</span>
-                    <span className="block truncate text-xs text-muted-foreground dark:text-slate-400">{user?.email}</span>
+                  </Avatar><div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-foreground">{user?.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{user?.email}</span>
                   </div>
                 </div>
                 <Button
@@ -433,7 +436,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     setMobileMenuOpen(false);
                     handleLogout();
                   }}
-                  className="w-full justify-start px-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                  className="w-full justify-start px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
                 >
                   <LogOut className="h-5 w-5" />
                   <span>Sign out</span>

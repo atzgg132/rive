@@ -8,7 +8,7 @@ export const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-2xl border border-border/90 bg-card text-card-foreground shadow-card",
+      "rounded-none border border-border bg-card text-card-foreground",
       className,
     )}
     {...props}
@@ -16,19 +16,22 @@ export const Card = React.forwardRef<
 ));
 Card.displayName = "Card";
 
-export const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("flex flex-col gap-1.5 p-5 sm:p-6", className)} {...props} />
-));
+export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  divided?: boolean;
+}
+
+export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
+  ({ className, divided, ...props }, ref) => (
+    <div ref={ref} className={cn("flex flex-col gap-1.5 p-5 sm:p-6", divided && "border-b border-border", className)} {...props} />
+  ),
+);
 CardHeader.displayName = "CardHeader";
 
 export const CardTitle = React.forwardRef<
   HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => (
-  <h3 ref={ref} className={cn("text-base font-bold text-card-foreground", className)} {...props} />
+  <h3 ref={ref} className={cn("text-[1.05rem] font-bold tracking-[-0.02em] text-card-foreground", className)} {...props} />
 ));
 CardTitle.displayName = "CardTitle";
 

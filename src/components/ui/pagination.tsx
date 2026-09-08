@@ -31,7 +31,7 @@ export function PaginationControls({ pagination, loading = false, label = "recor
             <span>Rows per page</span>
             <select
               aria-label={`Rows per page for ${label}`}
-              className="h-8 rounded-lg border border-input bg-background px-2 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-8 rounded-none border border-input bg-background px-2 text-xs font-semibold text-foreground outline-none transition-colors hover:border-primary/60 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-55 disabled:bg-muted"
               disabled={loading}
               value={pagination.pageSize}
               onChange={(event) => onPageSizeChange(Number(event.target.value))}
@@ -53,7 +53,7 @@ export function PaginationControls({ pagination, loading = false, label = "recor
           <ChevronLeft className="h-4 w-4" />
           Previous
         </Button>
-        <span aria-live="polite" className="whitespace-nowrap">Page {pagination.page} of {pagination.totalPages}</span>
+        <span aria-live="polite" className="whitespace-nowrap font-mono tabular-nums">Page {pagination.page} of {pagination.totalPages}</span>
         <Button
           type="button"
           variant="outline"

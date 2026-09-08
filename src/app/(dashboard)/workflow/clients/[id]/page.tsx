@@ -2,7 +2,9 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { 
+import { Badge, Kicker } from "@/components/ui";
+import { statusTone } from "@/lib/status-tone";
+import {
   ArrowLeft,
   Mail,
   Phone,
@@ -69,8 +71,8 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
   if (!client) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <h2 className="text-xl font-bold text-foreground dark:text-white">Client not found</h2>
-        <Link href="/workflow/clients" className="text-blue-600 mt-2 hover:underline">Return to directory</Link>
+        <h2 className="text-xl font-bold text-foreground">Client not found</h2>
+        <Link href="/workflow/clients" className="text-primary mt-2 hover:underline">Return to directory</Link>
       </div>
     );
   }
@@ -82,7 +84,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
   }, 0);
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in pb-12">
+    <div className="flex flex-col gap-8 animate-panel-in pb-12">
       {/* Header Breadcrumbs */}
       <div>
         <Link href="/workflow/clients" className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary mb-4 transition-colors">
@@ -91,64 +93,62 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div 
-              className="h-16 w-16 rounded-2xl flex items-center justify-center text-white font-extrabold text-2xl uppercase shadow-sm"
+            <div
+              className="h-16 w-16 rounded-full flex items-center justify-center text-primary-foreground font-extrabold text-2xl uppercase"
               style={{ backgroundColor: client.avatarColor }}
             >
               {client.name.substring(0, 2)}
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-foreground dark:text-white sm:text-3xl">{client.name}</h1>
-              <p className="text-sm text-muted-foreground dark:text-slate-400 font-medium">{client.company || "Private Client"} • Added {formatDate(client.createdAt)}</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{client.name}</h1>
+              <p className="text-sm text-muted-foreground font-medium">{client.company || "Private Client"} • Added {formatDate(client.createdAt)}</p>
             </div>
           </div>
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase ${
-            client.status === "active" ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50" : "bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border-border dark:border-slate-700"
-          }`}>
+          <Badge variant={statusTone("client", client.status)} dot className="uppercase">
             {client.status}
-          </span>
+          </Badge>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Left Column: Client Meta */}
         <div className="flex flex-col gap-6 lg:col-span-1">
           {/* Contact Card */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
-            <h3 className="text-sm font-bold text-foreground dark:text-white mb-4">Contact Details</h3>
-            <div className="flex flex-col gap-3 text-sm text-muted-foreground dark:text-slate-400">
+          <div className="bg-card p-6 rounded-none border border-border">
+            <h3 className="text-sm font-bold text-foreground mb-4">Contact Details</h3>
+            <div className="flex flex-col gap-3 text-sm text-muted-foreground">
               {client.email && (
                 <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800/60"><Mail className="h-4 w-4" /></div>
-                  <a href={`mailto:${client.email}`} className="hover:text-blue-600 truncate">{client.email}</a>
+                  <div className="p-2 bg-info/10 rounded-none text-info"><Mail className="h-4 w-4" /></div>
+                  <a href={`mailto:${client.email}`} className="hover:text-primary truncate">{client.email}</a>
                 </div>
               )}
               {client.phone && (
                 <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800/60"><Phone className="h-4 w-4" /></div>
+                  <div className="p-2 bg-info/10 rounded-none text-info"><Phone className="h-4 w-4" /></div>
                   <span>{client.phone}</span>
                 </div>
               )}
               {client.website && (
                 <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-lg text-blue-600 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800/60"><Globe className="h-4 w-4" /></div>
-                  <a href={client.website.startsWith("http") ? client.website : `https://${client.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 truncate">
+                  <div className="p-2 bg-info/10 rounded-none text-info"><Globe className="h-4 w-4" /></div>
+                  <a href={client.website.startsWith("http") ? client.website : `https://${client.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-primary truncate">
                     {client.website}
                   </a>
                 </div>
               )}
               {!client.email && !client.phone && !client.website && (
-                <span className="text-xs text-slate-400 italic">No contact details provided.</span>
+                <span className="text-xs text-muted-foreground italic">No contact details provided.</span>
               )}
             </div>
 
             {client.tags && client.tags.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-border dark:border-slate-700">
-                <h3 className="text-xs font-bold text-foreground dark:text-white mb-3 uppercase tracking-wider">Tags</h3>
+              <div className="mt-6 pt-4 border-t border-border">
+                <Kicker tone="muted" dot={false} className="mb-3">Tags</Kicker>
                 <div className="flex flex-wrap gap-2">
                   {client.tags.map((t: string, idx: number) => (
-                    <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-700 text-muted-foreground dark:text-slate-400 border border-border dark:border-slate-600 flex items-center gap-1">
+                    <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded-none bg-muted text-muted-foreground border border-border flex items-center gap-1">
                       <Tag className="h-2.5 w-2.5" />
                       <span>{t}</span>
                     </span>
@@ -159,79 +159,75 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* LTV & Stats */}
-          <div className="glass bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl border border-blue-800 text-white shadow-lg">
-            <h3 className="text-xs font-bold text-blue-100 mb-1 uppercase tracking-wider">Lifetime Value (LTV)</h3>
-            <div className="text-3xl font-extrabold mb-1 tracking-tight">{convertedLtv === null ? "Rates unavailable" : formatCurrency(convertedLtv)}</div>
-            <p className="mb-6 text-xs font-semibold text-blue-100">Paid invoices shown in {displayCurrency}</p>
-            
-            <div className="grid grid-cols-3 gap-3 border-t border-blue-500/30 pt-4">
+          <div className="inverse-block p-6 rounded-none border border-foreground">
+            <Kicker dot={false} className="mb-1 text-background/80">Lifetime Value (LTV)</Kicker>
+            <div className="text-3xl font-extrabold mb-1 tracking-tight font-mono tabular-nums">{convertedLtv === null ? "Rates unavailable" : formatCurrency(convertedLtv)}</div>
+            <p className="mb-6 text-xs font-semibold text-background/80">Paid invoices shown in {displayCurrency}</p>
+
+            <div className="grid grid-cols-3 gap-3 border-t border-background/20 pt-4">
               <div>
-                <div className="text-xs text-blue-200 mb-0.5 font-medium">Projects</div>
+                <div className="text-xs text-background/70 mb-0.5 font-medium">Projects</div>
                 <div className="text-xl font-bold">{client.related_counts.projects}</div>
               </div>
               <div>
-                <div className="text-xs text-blue-200 mb-0.5 font-medium">Invoices</div>
+                <div className="text-xs text-background/70 mb-0.5 font-medium">Invoices</div>
                 <div className="text-xl font-bold">{client.related_counts.invoices}</div>
               </div>
               {agreements && <div>
-                <div className="text-xs text-blue-200 mb-0.5 font-medium">Contracts</div>
+                <div className="text-xs text-background/70 mb-0.5 font-medium">Contracts</div>
                 <div className="text-xl font-bold">{client.related_counts.contracts}</div>
               </div>}
             </div>
           </div>
-          
+
           {/* Notes */}
           {client.notes && (
-            <div className="glass bg-amber-50/50 p-6 rounded-2xl border border-amber-200">
-              <h3 className="text-sm font-bold text-amber-900 mb-3 flex items-center gap-2">
+            <div className="bg-warning/[0.08] p-6 rounded-none border border-border">
+              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
                 <FileText className="h-4 w-4" /> Private Notes
               </h3>
-              <p className="text-sm text-amber-800 whitespace-pre-wrap leading-relaxed">{client.notes}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{client.notes}</p>
             </div>
           )}
         </div>
 
         {/* Right Column: Projects & Invoices */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          
+
           {/* Active Projects */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+          <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-blue-600" /> Linked Projects
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" /> Linked Projects
               </h3>
-              <Link href={`/workflow/projects?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
+              <Link href={`/workflow/projects?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>
             </div>
 
             {client.projects.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-muted-foreground dark:text-slate-500">
+              <div className="text-center py-8 border border-dashed border-border rounded-none bg-muted/40 text-sm text-muted-foreground">
                 No projects linked to this client yet.
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {client.projects.map((proj) => (
-                  <Link key={proj.id} href={`/workflow/projects`} className="flex items-center justify-between p-4 rounded-xl border border-border dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all group bg-white dark:bg-slate-800">
+                  <Link key={proj.id} href={`/workflow/projects/${proj.id}`} className="flex items-center justify-between p-4 rounded-none border border-border hover:border-primary transition-all group bg-card">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-slate-50 dark:bg-slate-700 border border-border dark:border-slate-600 rounded-lg flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-blue-600 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 transition-colors">
+                      <div className="h-10 w-10 bg-muted border border-border rounded-none flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-accent transition-colors">
                         <Briefcase className="h-5 w-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-foreground dark:text-white">{proj.title}</h4>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-slate-500">
+                        <h4 className="font-bold text-sm text-foreground">{proj.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
                           <span>Due {proj.dueDate ? formatDate(proj.dueDate) : "No due date"}</span>
                         </div>
                       </div>
                     </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border uppercase ${
-                      proj.status === "completed" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
-                      proj.status === "in_progress" ? "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-900/60" :
-                      "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"
-                    }`}>
+                    <Badge variant={statusTone("project", proj.status)} dot className="uppercase">
                       {proj.status.replace("_", " ")}
-                    </span>
+                    </Badge>
                   </Link>
                 ))}
               </div>
@@ -240,31 +236,31 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
 
           {agreements && <>
           {/* Linked Contracts */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+          <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
-                <FileSignature className="h-5 w-5 text-blue-600" /> Contracts
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <FileSignature className="h-5 w-5 text-primary" /> Contracts
               </h3>
-              <Link href={`/workflow/contracts?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
+              <Link href={`/workflow/contracts?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>
             </div>
             {client.contracts.length === 0 ? (
-              <div className="flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-5 py-8 text-center dark:border-slate-700">
+              <div className="flex flex-col items-center rounded-none border border-dashed border-border bg-muted/30 px-5 py-8 text-center">
                 <FileSignature className="h-7 w-7 text-muted-foreground" />
                 <p className="mt-3 text-sm font-bold">No Rive contracts for this client</p>
                 <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">Start a standalone agreement or link one of this client’s projects inside the composer.</p>
-                <Link href={`/workflow/contracts?new=1&clientId=${encodeURIComponent(client.id)}`} className="mt-4 inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90">Create contract</Link>
+                <Link href={`/workflow/contracts?new=1&clientId=${encodeURIComponent(client.id)}`} className="mt-4 inline-flex h-9 items-center justify-center rounded-none bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90">Create contract</Link>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {client.contracts.map((item) => (
-                  <Link key={item.id} href={`/workflow/contracts/${item.id}`} className="flex items-center justify-between gap-4 p-4 rounded-xl border border-border dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all group bg-white dark:bg-slate-800">
+                  <Link key={item.id} href={`/workflow/contracts/${item.id}`} className="flex items-center justify-between gap-4 p-4 rounded-none border border-border hover:border-primary transition-all group bg-card">
                     <div className="min-w-0">
-                      <h4 className="truncate font-bold text-sm text-foreground dark:text-white">{item.title}</h4>
-                      <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">{item.currency} · Updated {formatDate(item.updatedAt)}</p>
+                      <h4 className="truncate font-bold text-sm text-foreground">{item.title}</h4>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.currency} · Updated {formatDate(item.updatedAt)}</p>
                     </div>
-                    <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border uppercase text-muted-foreground dark:text-slate-400">{item.status.replaceAll("_", " ")}</span>
+                    <Badge variant={statusTone("contract", item.status)} dot className="uppercase">{item.status.replaceAll("_", " ")}</Badge>
                   </Link>
                 ))}
               </div>
@@ -274,18 +270,18 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           </>}
 
           {/* Recent Invoices */}
-          <div className="glass bg-white/95 dark:bg-slate-800/95 p-6 rounded-2xl border border-border dark:border-slate-700">
+          <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground dark:text-white flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-emerald-600" /> Billing History
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-success" /> Billing History
               </h3>
-              <Link href={`/workflow/revenue?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-3 py-1.5 rounded-lg transition-colors">
+              <Link href={`/workflow/revenue?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>
             </div>
 
             {client.invoices.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-border dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-muted-foreground dark:text-slate-500">
+              <div className="text-center py-8 border border-dashed border-border rounded-none bg-muted/40 text-sm text-muted-foreground">
                 No invoices issued to this client yet.
               </div>
             ) : (
@@ -302,28 +298,24 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                   <tbody>
                     {client.invoices.map((inv) => (
                       <tr key={inv.id} className="border-b border-border hover:bg-background transition-colors">
-                        <td className="py-3 pr-4 text-sm font-semibold text-foreground dark:text-slate-200">
+                        <td className="py-3 pr-4 text-sm font-semibold text-foreground">
                           <Link
                             href={`/workflow/invoices/${inv.id}`}
                             aria-label={`View invoice ${inv.invoiceNumber}`}
-                            className="rounded-sm hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                            className="rounded-none font-mono tabular-nums hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                           >
                             {inv.invoiceNumber}
                           </Link>
                         </td>
-                        <td className="py-3 pr-4 text-xs text-muted-foreground">{formatDate(inv.issueDate)}</td>
-                        <td className="py-3 pr-4 text-sm font-bold text-foreground dark:text-slate-200">
+                        <td className="py-3 pr-4 text-xs text-muted-foreground font-mono tabular-nums">{formatDate(inv.issueDate)}</td>
+                        <td className="py-3 pr-4 text-sm font-bold text-foreground font-mono tabular-nums">
                           <span className="block">{formatConverted(Number(inv.total), inv.currency) || formatCurrency(Number(inv.total), inv.currency)}</span>
                           {inv.currency !== displayCurrency && <span className="block text-xs font-medium text-muted-foreground">Originally {formatCurrency(Number(inv.total), inv.currency)}</span>}
                         </td>
                         <td className="py-3">
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border uppercase ${
-                            inv.status === "paid" ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/60" :
-                            inv.status === "overdue" ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-100 dark:border-red-900/60" :
-                            "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/60"
-                          }`}>
+                          <Badge variant={statusTone("invoice", inv.status)} dot>
                             {inv.status}
-                          </span>
+                          </Badge>
                         </td>
                       </tr>
                     ))}
@@ -332,7 +324,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
               </div>
             )}
           </div>
-          
+
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   DialogTitle,
   FormField,
   Input,
+  Kicker,
   Select,
   Textarea,
 } from "@/components/ui";
@@ -357,17 +358,17 @@ export function ContractComposer({
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-5xl flex-col overflow-hidden p-0" showClose={!saving}>
         <div className="shrink-0 border-b border-border px-5 py-4 pr-14 sm:px-7">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><FileSignature className="h-5 w-5" /></div>
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-primary/10 text-primary"><FileSignature className="h-5 w-5" /></div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Agreement composer</p>
-              <DialogTitle className="mt-0.5 text-xl font-extrabold">Create a reviewable first draft</DialogTitle>
+              <Kicker>Agreement composer</Kicker>
+              <DialogTitle className="mt-0.5 text-lg font-extrabold tracking-[-0.03em]">Create a reviewable first draft</DialogTitle>
               <DialogDescription className="mt-1 text-sm text-muted-foreground">Rive pre-fills what it already knows. You control every legal and payment term before anything is shared.</DialogDescription>
             </div>
           </div>
           <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Agreement creation progress">
             {stepLabels.map((label, index) => (
               <li key={label} className="min-w-0">
-                <div className={`h-1 rounded-full ${index <= step ? "bg-primary" : "bg-muted"}`} />
+                <div className={`h-1 rounded-none ${index <= step ? "bg-primary" : "bg-muted"}`} />
                 <p className={`mt-1.5 truncate text-[10px] font-bold sm:text-xs ${index === step ? "text-foreground" : "text-muted-foreground"}`}>{index + 1}. {label}</p>
               </li>
             ))}
@@ -404,7 +405,7 @@ export function ContractComposer({
                 </FormField>
 
                 {sourceContracts.length > 0 ? (
-                  <div className="sm:col-span-2 rounded-2xl border border-border bg-muted/30 p-4">
+                  <div className="sm:col-span-2 rounded-none border border-border bg-muted/30 p-4">
                     <div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-primary" /><h3 className="text-sm font-bold">Reuse clauses you already negotiated</h3></div>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">Only clause wording and venue are copied. Parties, project details, and payments stay specific to this engagement.</p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -419,7 +420,7 @@ export function ContractComposer({
               </div>
 
               <aside className="flex flex-col gap-4">
-                <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="rounded-none border border-border bg-card p-4">
                   <div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /><h3 className="text-sm font-bold">Parties and source data</h3></div>
                   {templateLoading ? <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparing the draft…</p> : selectedClient ? (
                     <dl className="mt-3 space-y-3 text-xs">
@@ -446,7 +447,7 @@ export function ContractComposer({
               </div>
               <div className="space-y-3">
                 {sections.map((section, index) => (
-                  <article key={section.key} className={`rounded-2xl border p-4 ${section.enabled ? "border-border bg-card" : "border-border/60 bg-muted/30"}`}>
+                  <article key={section.key} className={`rounded-none border p-4 ${section.enabled ? "border-border bg-card" : "border-border bg-muted/30"}`}>
                     <div className="flex items-start gap-3">
                       <input type="checkbox" checked={section.enabled} disabled={section.required} onChange={(event) => updateSection(index, { enabled: event.target.checked })} aria-label={`Include ${section.title}`} className="mt-3 h-4 w-4 shrink-0 accent-primary" />
                       <div className="min-w-0 flex-1">
@@ -477,7 +478,7 @@ export function ContractComposer({
                 </div>
 
                 {selectedProject?.milestones.length ? (
-                  <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex flex-wrap items-center gap-2 rounded-none border border-primary/20 bg-primary/5 p-3">
                     <Sparkles className="h-4 w-4 text-primary" />
                     <p className="mr-auto text-xs font-medium">Build a schedule from {selectedProject.milestones.length} existing project milestones.</p>
                     <Button type="button" variant="outline" size="sm" onClick={() => addMilestonePayments(false)}>Add milestones</Button>
@@ -486,11 +487,11 @@ export function ContractComposer({
                 ) : null}
 
                 {payments.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border px-5 py-10 text-center"><CircleDollarSign className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 text-sm font-bold">No automatic invoice schedule</p><p className="mt-1 text-xs text-muted-foreground">That is valid. You can invoice manually or add payment triggers here.</p></div>
+                  <div className="rounded-none border border-dashed border-border px-5 py-10 text-center"><CircleDollarSign className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 text-sm font-bold">No automatic invoice schedule</p><p className="mt-1 text-xs text-muted-foreground">That is valid. You can invoice manually or add payment triggers here.</p></div>
                 ) : (
                   <div className="space-y-3">
                     {payments.map((payment, index) => (
-                      <article key={`${index}-${payment.milestoneId}`} className="rounded-2xl border border-border bg-card p-4">
+                      <article key={`${index}-${payment.milestoneId}`} className="rounded-none border border-border bg-card p-4">
                         <div className="mb-3 flex items-center justify-between gap-3"><h4 className="text-sm font-bold">Payment {index + 1}</h4><Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => setPayments((current) => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="h-3.5 w-3.5" /> Remove</Button></div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <FormField label="Label" required><Input value={payment.label} onChange={(event) => updatePayment(index, { label: event.target.value })} placeholder="Kickoff deposit" maxLength={160} /></FormField>
@@ -507,16 +508,16 @@ export function ContractComposer({
               </div>
 
               <aside className="flex flex-col gap-4">
-                <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="rounded-none border border-border bg-card p-4">
                   <h3 className="text-sm font-bold">Draft summary</h3>
                   <dl className="mt-3 space-y-2 text-xs">
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Parties</dt><dd className="text-right font-semibold">You + {selectedClient?.name || "client"}</dd></div>
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Clauses</dt><dd className="font-semibold">{enabledSections.length} included</dd></div>
                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Payments</dt><dd className="font-semibold">{payments.length}</dd></div>
-                    <div className="flex justify-between gap-3 border-t border-border pt-2"><dt className="font-semibold">Agreement total</dt><dd className="font-extrabold">{currency} {total.toLocaleString(localeForCurrency(currency), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd></div>
-                    {projectBudget > 0 ? <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Project budget</dt><dd className="font-semibold">{currency} {projectBudget.toLocaleString(localeForCurrency(currency))}</dd></div> : null}
+                    <div className="flex justify-between gap-3 border-t border-border pt-2"><dt className="font-semibold">Agreement total</dt><dd className="font-mono font-extrabold tabular-nums">{currency} {total.toLocaleString(localeForCurrency(currency), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd></div>
+                    {projectBudget > 0 ? <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Project budget</dt><dd className="font-mono font-semibold tabular-nums">{currency} {projectBudget.toLocaleString(localeForCurrency(currency))}</dd></div> : null}
                   </dl>
-                  {projectBudget > 0 && Math.abs(budgetDelta) >= 0.01 ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">The payment schedule is {currency} {Math.abs(budgetDelta).toLocaleString(localeForCurrency(currency), { minimumFractionDigits: 2 })} {budgetDelta > 0 ? "above" : "below"} the project budget. That can be intentional—confirm it before saving.</p> : null}
+                  {projectBudget > 0 && Math.abs(budgetDelta) >= 0.01 ? <p className="mt-3 rounded-none bg-warning/10 px-3 py-2 text-[11px] leading-4 text-warning">The payment schedule is {currency} {Math.abs(budgetDelta).toLocaleString(localeForCurrency(currency), { minimumFractionDigits: 2 })} {budgetDelta > 0 ? "above" : "below"} the project budget. That can be intentional—confirm it before saving.</p> : null}
                 </div>
                 <Alert variant="info" className="text-xs">
                   <CheckCircle2 className="h-4 w-4" />
@@ -529,7 +530,7 @@ export function ContractComposer({
 
         <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:px-7">
           <div className="min-h-5 flex-1 text-xs" aria-live="polite">
-            {attemptedStep && stepProblem ? <span className="inline-flex items-center gap-1.5 font-semibold text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> {stepProblem}</span> : step === 2 && !selectedClient?.email ? <span className="text-amber-700 dark:text-amber-300">You can save this draft, but add the client email before review or recorded acceptance.</span> : <span className="text-muted-foreground">Step {step + 1} of 3</span>}
+            {attemptedStep && stepProblem ? <span className="inline-flex items-center gap-1.5 font-semibold text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> {stepProblem}</span> : step === 2 && !selectedClient?.email ? <span className="text-warning">You can save this draft, but add the client email before review or recorded acceptance.</span> : <span className="text-muted-foreground">Step {step + 1} of 3</span>}
           </div>
           <div className="flex items-center justify-end gap-2">
             {step > 0 ? <Button type="button" variant="outline" disabled={saving} onClick={() => { setStep((current) => current - 1); setAttemptedStep(false); }}><ArrowLeft className="h-4 w-4" /> Back</Button> : <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>Cancel</Button>}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
+import { Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Kicker, PageHeader, PaginationControls, Select, StatusBadge, Tabs, Textarea } from "@/components/ui";
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import DropdownPortal from "@/components/ui/DropdownPortal";
 import Portal from "@/components/ui/Portal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { statusLabel, statusTone } from "@/lib/status-tone";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import type { PaginationMeta } from "@/lib/pagination";
@@ -78,10 +79,10 @@ const STATUS_TABS = [
 
 // Only the three states a project can be moved between from this page;
 // "archived" is excluded by the list endpoint and is not a destination here.
-const STATUS_CHOICES = [
-  { value: "active", label: "In progress", dot: "bg-blue-500", pill: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300" },
-  { value: "paused", label: "Paused", dot: "bg-amber-500", pill: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300" },
-  { value: "completed", label: "Completed", dot: "bg-emerald-500", pill: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300" },
+const STATUS_VALUES = [
+  "active",
+  "paused",
+  "completed",
 ] as const;
 
 const SORT_OPTIONS = [
@@ -92,14 +93,14 @@ const SORT_OPTIONS = [
 ] as const;
 
 const DELIVERY_ACCENT: Record<DeliveryBucket, string> = {
-  overdue: "text-red-700 dark:text-red-400",
-  this_week: "text-amber-700 dark:text-amber-400",
+  overdue: "text-destructive",
+  this_week: "text-warning",
   later: "text-muted-foreground",
   no_deadline: "text-muted-foreground",
 };
 
-function statusChoice(status: string) {
-  return STATUS_CHOICES.find((choice) => choice.value === status) || STATUS_CHOICES[0];
+function statusTabOptions(counts: StatusCounts | null) {
+  return STATUS_TABS.map((tab) => ({ id: tab.value, label: tab.label, count: counts ? counts[tab.value] : undefined }));
 }
 
 // useSearchParams needs a suspense boundary for this route to keep its static
@@ -393,15 +394,6 @@ function ProjectsWorkspace() {
     router.push(`/workflow/contracts?${search.toString()}`);
   };
 
-  const getPriorityColor = (prio: string) => {
-    switch (prio) {
-      case "high": return "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/50";
-      case "urgent": return "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/50";
-      case "low": return "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/50";
-      default: return "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
-    }
-  };
-
   // Deadline copy is derived once per render pass so every row in a paint
   // compares against the same instant.
   const now = new Date();
@@ -439,7 +431,7 @@ function ProjectsWorkspace() {
   };
 
   return (
-    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
+    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-panel-in">
       <PageHeader
         title="Projects"
         description="Keep delivery moving with clear milestones, budgets, tasks, and deadlines."
@@ -449,7 +441,7 @@ function ProjectsWorkspace() {
       {/* Filter and Search */}
       <div className="workspace-toolbar">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search by title, description..."
@@ -475,31 +467,14 @@ function ProjectsWorkspace() {
       {/* Status filters. The tallies come from the server so they describe the
           whole workspace rather than whichever rows landed on this page. */}
       <div className="flex flex-wrap items-center gap-2">
-        {STATUS_TABS.map((tab) => {
-          const isActive = status === tab.value;
-          const count = counts ? counts[tab.value] : null;
-          return (
-            <Button
-              key={tab.value}
-              type="button"
-              size="sm"
-              variant={isActive ? "default" : "outline"}
-              aria-pressed={isActive}
-              onClick={() => setStatus(tab.value)}
-              className="gap-2"
-            >
-              {tab.label}
-              {count !== null ? <span className={`rounded px-1.5 py-0.5 text-[0.6875rem] font-bold tabular-nums ${isActive ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"}`}>{count}</span> : null}
-            </Button>
-          );
-        })}
+        <Tabs options={statusTabOptions(counts)} value={status} onChange={setStatus} />
         {counts && counts.overdue > 0 ? (
           <Button
             type="button"
             size="sm"
             variant="ghost"
             onClick={() => { setStatus("active"); setSort("due_date"); }}
-            className="gap-1.5 font-bold text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+            className="gap-1.5 font-bold text-destructive hover:bg-destructive/10"
           >
             <TriangleAlert className="h-3.5 w-3.5" />
             {counts.overdue} overdue
@@ -509,10 +484,10 @@ function ProjectsWorkspace() {
 
       {loading && projects.length === 0 ? (
         <div className="flex justify-center items-center h-48">
-          <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : projects.length === 0 && (debouncedSearch || status !== "all") ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-6 py-14 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-none border border-dashed border-border bg-card/60 px-6 py-14 text-center">
           <Briefcase className="h-6 w-6 text-muted-foreground/60" />
           <div>
             <p className="text-sm font-bold text-foreground">No projects match this view</p>
@@ -528,15 +503,15 @@ function ProjectsWorkspace() {
           why="A project gives Rive something meaningful to organize."
           next={clients.length === 0 ? "Add a client first, then create the project." : "Create the project you are working on now."}
           after="Its deadlines and budget can flow into Calendar and Revenue."
-          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">New client work</Link> : clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
+          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">New client work</Link> : clients.length === 0 ? <Link href="/workflow/clients?new=true" className="inline-flex items-center rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Add client first</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Create project</Button>}
         />
       ) : (<>
         <div className={`flex flex-col gap-6 transition-opacity ${loading ? "opacity-60" : "opacity-100"}`} aria-busy={loading}>
           {sections.map((section) => (
             <section key={section.bucket || "all"} className="flex flex-col gap-2.5">
               {section.bucket ? (
-                <h2 className="px-1 text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                  {DELIVERY_BUCKET_LABELS[section.bucket]}
+                <h2 className="px-1">
+                  <Kicker tone="muted" dot={false}>{DELIVERY_BUCKET_LABELS[section.bucket]}</Kicker>
                 </h2>
               ) : null}
               {section.items.map((project) => (
@@ -552,14 +527,13 @@ function ProjectsWorkspace() {
                   updateStatus={updateStatus}
                   openEdit={openEdit}
                   handleDelete={handleDelete}
-                  getPriorityColor={getPriorityColor}
                 />
               ))}
             </section>
           ))}
         </div>
         {pagination ? (
-          <div className="rounded-2xl border border-border bg-card shadow-card">
+          <div className="rounded-none border border-border bg-card">
             <PaginationControls pagination={pagination} loading={loading} label="projects" onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} />
           </div>
         ) : null}
@@ -568,13 +542,13 @@ function ProjectsWorkspace() {
       {/* Add/Edit Project Drawer */}
       {drawerOpen && (
         <Portal>
-          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full flex flex-col justify-between py-6 px-6 shadow-2xl border-l border-border dark:border-slate-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex justify-end bg-foreground/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
+            <div className="relative w-full max-w-md bg-card h-full flex flex-col justify-between py-6 px-6 shadow-overlay border-l border-border animate-panel-in" onClick={(e) => e.stopPropagation()}>
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit project" : "Create new project"}</h3>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">{editingId ? "Update project details and parameters." : "Launch a project tracker linked to an optional client profile."}</p>
+                    <h3 className="text-lg font-bold text-foreground">{editingId ? "Edit project" : "Create new project"}</h3>
+                    <p className="text-xs text-muted-foreground">{editingId ? "Update project details and parameters." : "Launch a project tracker linked to an optional client profile."}</p>
                   </div>
                   <Button
                     variant="ghost"
@@ -582,7 +556,7 @@ function ProjectsWorkspace() {
                     onClick={() => setDrawerOpen(false)}
                     aria-label="Close project editor"
                     title="Close project editor"
-                    className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                    className="text-muted-foreground hover:bg-background"
                   >
                     <X className="h-5 w-5" />
                   </Button>
@@ -597,7 +571,7 @@ function ProjectsWorkspace() {
                       placeholder="E.g. website redesign, mobile launch"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -608,7 +582,7 @@ function ProjectsWorkspace() {
                       placeholder="Describe the project parameters..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary resize-none"
                     />
                   </div>
 
@@ -617,7 +591,7 @@ function ProjectsWorkspace() {
                     <Select
                       value={clientId}
                       onChange={(e) => setClientId(e.target.value)}
-                      className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
+                      className="px-2.5 py-2 bg-card border border-border rounded-none text-xs text-foreground focus:outline-none"
                     >
                       <option value="">Select client (optional)</option>
                       {clients.map(c => (
@@ -632,7 +606,7 @@ function ProjectsWorkspace() {
                       <Select
                         value={priority}
                         onChange={(e) => setPriority(e.target.value)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
+                        className="px-2.5 py-2 bg-card border border-border rounded-none text-xs text-foreground focus:outline-none"
                       >
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -645,7 +619,7 @@ function ProjectsWorkspace() {
                       <Select
                         value={projectStatus}
                         onChange={(e) => setProjectStatus(e.target.value)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
+                        className="px-2.5 py-2 bg-card border border-border rounded-none text-xs text-foreground focus:outline-none"
                       >
                         <option value="active">In progress</option>
                         <option value="paused">Paused</option>
@@ -664,7 +638,7 @@ function ProjectsWorkspace() {
                         placeholder="E.g. 5000"
                         value={budget}
                         onChange={(e) => setBudget(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                        className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -680,7 +654,7 @@ function ProjectsWorkspace() {
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 border border-border bg-card rounded-none text-xs focus:outline-none focus:border-primary text-foreground"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -689,7 +663,7 @@ function ProjectsWorkspace() {
                         type="date"
                         value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 border border-border bg-card rounded-none text-xs focus:outline-none focus:border-primary text-foreground"
                       />
                     </div>
                   </div>
@@ -701,13 +675,13 @@ function ProjectsWorkspace() {
                       placeholder={editingId ? "Existing milestones stay unchanged. Add one new milestone per line." : "e.g. wireframes signoff\ndraft contract\nfinal deployment"}
                       value={milestonesInput}
                       onChange={(e) => setMilestonesInput(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none font-sans"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary resize-none font-sans"
                     />
                   </div>
                 </form>
               </div>
 
-              <div className="flex items-center gap-2 border-t border-border dark:border-slate-800 pt-4 mt-6">
+              <div className="flex items-center gap-2 border-t border-border pt-4 mt-6">
                 <Button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
@@ -737,28 +711,28 @@ function ProjectsWorkspace() {
         <DialogContent className="max-w-xl" showClose={!savingCoverage}>
           <div className="flex flex-col gap-5">
             <div className="pr-8">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-none bg-primary/10 text-primary">
                 <FileSignature className="h-5 w-5" />
               </div>
-              <DialogTitle className="text-xl font-extrabold">How is this project covered?</DialogTitle>
+              <DialogTitle className="text-lg font-extrabold tracking-[-0.03em]">How is this project covered?</DialogTitle>
               <DialogDescription className="mt-1.5 text-sm leading-6 text-muted-foreground">
                 {contractPrompt?.title} can continue without a Rive contract. Recording the decision now keeps the project, milestones, invoices, and legal record aligned.
               </DialogDescription>
             </div>
 
             {contractPrompt?.clientId ? (
-              <button type="button" onClick={startProjectContract} className="group flex w-full items-center gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-left transition hover:border-primary/60 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"><FileSignature className="h-4 w-4" /></span>
+              <button type="button" onClick={startProjectContract} className="group flex w-full items-center gap-4 rounded-none border border-primary/30 bg-primary/5 p-4 text-left transition hover:border-primary/60 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-primary text-primary-foreground"><FileSignature className="h-4 w-4" /></span>
                 <span className="min-w-0 flex-1"><span className="block text-sm font-bold">Create a Rive contract</span><span className="mt-0.5 block text-xs leading-5 text-muted-foreground">Prefill {contractPrompt.clientName || "the client"}, project brief, currency, and milestones. You review everything before sharing.</span></span>
                 <ArrowRight className="h-4 w-4 shrink-0 text-primary transition group-hover:translate-x-0.5" />
               </button>
             ) : (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+              <div className="rounded-none border border-warning/25 bg-warning/10 p-4 text-sm text-foreground">
                 Link a client to this project before creating a Rive contract. You can edit the project and return to this decision later.
               </div>
             )}
 
-            {externalCoverageOpen ? <div className="rounded-2xl border border-border bg-muted/25 p-4">
+            {externalCoverageOpen ? <div className="rounded-none border border-border bg-muted/25 p-4">
               <div className="flex items-center gap-2"><ExternalLink className="h-4 w-4 text-primary" /><p className="text-sm font-bold">Record the external contract</p></div>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">The label and link are internal references only. Rive will not alter or sign the external document.</p>
               <div className="mt-3 grid gap-3">
@@ -798,7 +772,6 @@ type ProjectRowProps = {
   updateStatus: (projectId: string, status: string) => void;
   openEdit: (project: Project) => void;
   handleDelete: (id: string, name: string) => void;
-  getPriorityColor: (priority: string) => string;
 };
 
 function ProjectRow({
@@ -812,14 +785,14 @@ function ProjectRow({
   updateStatus,
   openEdit,
   handleDelete,
-  getPriorityColor,
 }: ProjectRowProps) {
   const [actionsRect, setActionsRect] = useState<DOMRect | null>(null);
   const [statusRect, setStatusRect] = useState<DOMRect | null>(null);
   const { agreements } = useFeatureAvailability();
   const { displayCurrency, format, formatConverted } = useCurrency();
 
-  const choice = statusChoice(project.status);
+  const projectTone = statusTone("project", project.status);
+  const railClass = projectTone === "success" ? "bg-success" : projectTone === "warning" ? "bg-warning" : projectTone === "muted" ? "bg-muted" : "bg-info";
   const delivery = deliveryStatus(project.due_date, project.status, now);
   const pct = milestoneProgress(project.completed_milestones, project.milestone_count);
   const budgetAmount = project.budget === null ? null : Number(project.budget);
@@ -827,8 +800,8 @@ function ProjectRow({
   const busy = pendingStatusId === project.id;
 
   return (
-    <article className="group relative rounded-xl border border-border bg-card py-4 pl-5 pr-4 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-card">
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${choice.dot}`} />
+    <article className="group relative rounded-none border border-border bg-card py-4 pl-5 pr-4 transition-[border-color,box-shadow] hover:border-primary/25">
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 rounded-none ${railClass}`} />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -836,15 +809,13 @@ function ProjectRow({
             <Link href={`/workflow/projects/${project.id}`} className="min-w-0">
               <h3 className="truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary hover:underline">{project.title}</h3>
             </Link>
-            <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[0.6875rem] font-semibold capitalize ${getPriorityColor(project.priority)}`}>
-              {project.priority}
-            </span>
+            <StatusBadge kind="priority" value={project.priority} className="shrink-0" />
           </div>
           <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             {project.client_name ? (
               <>
-                <User className="h-3.5 w-3.5 shrink-0 text-primary dark:text-blue-400" />
-                <span className="shrink-0 font-semibold text-foreground dark:text-slate-200">{project.client_name}</span>
+                <User className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="shrink-0 font-semibold text-foreground">{project.client_name}</span>
               </>
             ) : (
               <span className="shrink-0">No client linked</span>
@@ -856,13 +827,13 @@ function ProjectRow({
         <div className="flex shrink-0 items-center gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             disabled={busy}
             aria-haspopup="menu"
             aria-expanded={statusMenuId === project.id}
-            aria-label={`Change status of ${project.title}, currently ${choice.label}`}
-            className={`gap-1.5 px-2.5 font-semibold ${choice.pill}`}
+            aria-label={`Change status of ${project.title}, currently ${statusLabel("project", project.status)}`}
+            className="gap-1 px-1.5 font-semibold"
             onClick={(e) => {
               e.stopPropagation();
               if (statusMenuId === project.id) {
@@ -874,25 +845,24 @@ function ProjectRow({
               }
             }}
           >
-            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <span aria-hidden="true" className={`h-2 w-2 rounded-full ${choice.dot}`} />}
-            {choice.label}
+            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+            <StatusBadge kind="project" value={project.status} />
             <ChevronDown className="h-3.5 w-3.5 opacity-60" />
           </Button>
 
           {statusMenuId === project.id && (
             <DropdownPortal triggerRect={statusRect} onClose={() => setStatusMenuId(null)}>
-              <div role="menu" aria-label={`Status for ${project.title}`} className="w-44 rounded-xl border border-border bg-card p-1 shadow-xl animate-fade-in-up">
-                {STATUS_CHOICES.map((option) => (
+              <div role="menu" aria-label={`Status for ${project.title}`} className="w-44 rounded-none border border-border bg-card p-1 shadow-overlay animate-panel-in">
+                {STATUS_VALUES.map((value) => (
                   <Button
-                    key={option.value}
+                    key={value}
                     role="menuitem"
                     variant="ghost"
                     className="w-full justify-start gap-2 px-3 py-2 text-xs font-medium"
-                    onClick={(e) => { e.stopPropagation(); updateStatus(project.id, option.value); }}
+                    onClick={(e) => { e.stopPropagation(); updateStatus(project.id, value); }}
                   >
-                    <span aria-hidden="true" className={`h-2 w-2 rounded-full ${option.dot}`} />
-                    {option.label}
-                    {option.value === project.status ? <Check className="ml-auto h-3.5 w-3.5 text-primary" /> : null}
+                    <StatusBadge kind="project" value={value} />
+                    {value === project.status ? <Check className="ml-auto h-3.5 w-3.5 text-primary" /> : null}
                   </Button>
                 ))}
               </div>
@@ -905,7 +875,7 @@ function ProjectRow({
             size="icon-sm"
             aria-label={`Actions for ${project.title}`}
             title={`Actions for ${project.title}`}
-            className="text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            className="text-muted-foreground hover:bg-foreground/[.05] hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
               if (openDropdownId === project.id) {
@@ -922,17 +892,17 @@ function ProjectRow({
 
           {openDropdownId === project.id && (
             <DropdownPortal triggerRect={actionsRect} onClose={() => setOpenDropdownId(null)}>
-              <div className="w-36 rounded-xl border border-slate-100 bg-white py-1 shadow-xl dark:border-slate-800 dark:bg-slate-900 animate-fade-in-up">
+              <div className="w-36 rounded-none border border-border bg-card py-1 shadow-overlay animate-panel-in">
                 <Button
                   data-guide-target={!project.due_date ? "projects-deadline" : undefined}
                   onClick={(e) => { e.stopPropagation(); openEdit(project); setOpenDropdownId(null); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <Edit2 className="h-3.5 w-3.5" /> Edit
                 </Button>
                 <Button
                   onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); setOpenDropdownId(null); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Delete
                 </Button>
@@ -964,8 +934,8 @@ function ProjectRow({
 
         {project.milestone_count > 0 ? (
           <span className="inline-flex items-center gap-2">
-            <span aria-hidden="true" className="block h-1.5 w-20 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <span className="block h-full rounded-full bg-primary transition-all duration-500 dark:bg-blue-500" style={{ width: `${pct}%` }} />
+            <span aria-hidden="true" className="block h-1.5 w-20 overflow-hidden rounded-none bg-muted">
+              <span className="block h-full rounded-none bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
             </span>
             <span className="font-medium text-muted-foreground">{project.completed_milestones}/{project.milestone_count} milestones</span>
           </span>
@@ -974,7 +944,7 @@ function ProjectRow({
         )}
 
         {budgetAmount !== null ? (
-          <span className="font-extrabold text-[#10B981] dark:text-emerald-400">
+          <span className="font-mono font-extrabold tabular-nums text-success">
             {convertedBudget || format(budgetAmount, project.currency)}
             {project.currency !== displayCurrency && convertedBudget ? (
               <span className="ml-1 font-medium text-muted-foreground">Originally {format(budgetAmount, project.currency)}</span>
@@ -986,24 +956,24 @@ function ProjectRow({
           <span className="inline-flex items-center gap-1.5">
             {project.contract_coverage === "rive" && project.latest_contract ? (
               <>
-                <FileSignature className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
-                <span className="font-semibold text-emerald-700 dark:text-emerald-300">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span>
+                <FileSignature className="h-3.5 w-3.5 shrink-0 text-success" />
+                <span className="font-semibold text-success">Rive contract · {project.latest_contract.status.replaceAll("_", " ")}</span>
                 <Link href={`/workflow/contracts/${project.latest_contract.id}`} className="font-bold text-primary hover:underline">Open</Link>
               </>
             ) : project.contract_coverage === "external" ? (
               <>
-                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-600 dark:text-slate-300" />
-                <span className="font-semibold text-slate-600 dark:text-slate-300">Contract handled elsewhere</span>
+                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="font-semibold text-muted-foreground">Contract handled elsewhere</span>
               </>
             ) : project.contract_coverage === "none" ? (
               <>
-                <CircleSlash2 className="h-3.5 w-3.5 shrink-0 text-slate-600 dark:text-slate-300" />
-                <span className="font-semibold text-slate-600 dark:text-slate-300">No contract required</span>
+                <CircleSlash2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="font-semibold text-muted-foreground">No contract required</span>
               </>
             ) : (
               <>
-                <FileSignature className="h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
-                <span className="font-semibold text-amber-700 dark:text-amber-300">Contract undecided</span>
+                <FileSignature className="h-3.5 w-3.5 shrink-0 text-warning" />
+                <span className="font-semibold text-warning">Contract undecided</span>
                 <Link
                   href={project.client_id ? `/workflow/contracts?new=1&projectId=${encodeURIComponent(project.id)}&clientId=${encodeURIComponent(project.client_id)}` : `/workflow/projects/${project.id}`}
                   className="font-bold text-primary hover:underline"

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Textarea, Select } from "@/components/ui";
+import { Button, Input, Kicker, Select, Textarea } from "@/components/ui";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -82,8 +82,6 @@ function normalizeSourceSelection(values: unknown): string[] {
   return sources.includes("starting_fresh") ? ["starting_fresh"] : Array.from(new Set(sources));
 }
 
-const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-950";
 const BUSINESS_TYPES = [
   {
     id: "freelancer",
@@ -461,9 +459,9 @@ export default function OnboardingPage() {
             <span className="hidden text-xs font-medium text-muted-foreground sm:block">
               {progress}% workspace ready
             </span>
-          <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 sm:block">
+          <div className="hidden h-1 w-28 overflow-hidden rounded-none bg-muted sm:block">
             <div
-              className="h-full rounded-full bg-blue-600 transition-all"
+              className="h-full rounded-none bg-primary transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -480,16 +478,17 @@ export default function OnboardingPage() {
           <ThemeToggle />
         </div>
       </header>
+      <div className="h-1 bg-muted sm:hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Setup progress">
+        <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+      </div>
 
       <main className="mx-auto grid min-h-[calc(100vh-64px)] max-w-6xl items-start gap-8 px-4 py-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8 lg:py-12">
         <aside className="hidden lg:block">
-          <p className="text-xs font-semibold text-primary">
-            Workspace launch
-          </p>
+          <Kicker>Workspace launch</Kicker>
           <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-[-0.035em]">
             Start with momentum, not an empty dashboard.
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             rive. turns what you already know—and what you already have—into a
             connected operating system.
           </p>
@@ -502,10 +501,10 @@ export default function OnboardingPage() {
             ].map((label, index) => (
               <div
                 key={label}
-                className={`flex items-center gap-3 text-xs font-bold ${onboardingStage >= index ? "text-blue-700 dark:text-blue-300" : "text-slate-400"}`}
+                className={`flex items-center gap-3 text-xs font-bold ${onboardingStage > index ? "text-success" : onboardingStage === index ? "border-l-2 border-primary bg-accent pl-2 text-primary" : "text-muted-foreground"}`}
               >
                 <span
-                  className={`grid h-7 w-7 place-items-center rounded-full border ${onboardingStage > index ? "border-blue-600 bg-blue-600 text-white" : onboardingStage === index ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950" : "border-slate-200 dark:border-slate-700"}`}
+                  className={`grid h-7 w-7 place-items-center rounded-full border text-[.75rem] font-extrabold ${onboardingStage > index ? "border-success bg-success text-success-foreground" : onboardingStage === index ? "border-primary text-primary" : "border-border text-muted-foreground"}`}
                 >
                   {onboardingStage > index ? <Check className="h-3.5 w-3.5" /> : index + 1}
                 </span>
@@ -515,42 +514,40 @@ export default function OnboardingPage() {
           </div>
         </aside>
 
-        <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <section className="overflow-hidden rounded-none border border-border bg-card">
           {step === 0 && (
             <div className="p-6 sm:p-9">
               <div className="max-w-2xl">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">One quick setup</p>
+                <Kicker>One quick setup</Kicker>
                 <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
                   What kind of work do you run?
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   We inherited your name from signup and detected your regional defaults. What you do and how you work only tune guidance — invoicing never waits on them.
                 </p>
               </div>
               <div className="mt-7 grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
+                  <div className="rounded-none border border-border bg-muted/40 px-4 py-3">
                     <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Signed in as</p>
                     <p className="mt-1 text-sm font-black">{name}</p>
                   </div>
                   <label>
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
-                      What do you do? <span className="font-medium normal-case tracking-normal text-slate-400">optional</span>
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
+                      What do you do? <span className="font-medium normal-case tracking-normal text-muted-foreground">optional</span>
                     </span>
                     <Input
                       value={profession}
                       onChange={(event) => setProfession(event.target.value)}
                       placeholder="Product designer, CA, filmmaker…"
-                      className={inputClass}
                     />
                   </label>
                   <label>
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                       Default currency
                     </span>
                     <Select
                       value={currency}
                       onChange={(event) => setCurrency(event.target.value)}
-                      className={inputClass}
                     >
                       {[
                         "INR",
@@ -567,18 +564,17 @@ export default function OnboardingPage() {
                     </Select>
                   </label>
                   <label>
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                       Timezone
                     </span>
                     <Input
                       value={timeZone}
                       onChange={(event) => setTimeZone(event.target.value)}
-                      className={inputClass}
                     />
                   </label>
               </div>
               <div className="mt-7">
-                <p className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
+                <p className="mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground">
                   How do you work? Choose all that apply, or skip this.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
@@ -591,12 +587,12 @@ export default function OnboardingPage() {
                         data-testid="onboarding-business-type-card"
                         aria-pressed={businessTypes.includes(item.id)}
                         onClick={() => setBusinessTypes((current) => current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id])}
-                        className={`flex min-h-28 min-w-0 items-start justify-start gap-2 rounded-xl border p-3 text-left whitespace-normal ${businessTypes.includes(item.id) ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
+                        className={`flex min-h-28 min-w-0 items-start justify-start gap-2 rounded-none border p-3 text-left whitespace-normal ${businessTypes.includes(item.id) ? "border-primary bg-accent" : "border-border"}`}
                       >
-                        <Icon className="h-4 w-4 shrink-0 text-blue-600" />
+                        <Icon className="h-4 w-4 shrink-0 text-primary" />
                         <span className="min-w-0">
                           <p className="text-xs font-black leading-4">{item.label}</p>
-                          <p className="mt-1 text-xs leading-4 text-slate-500 dark:text-slate-400">{item.detail}</p>
+                          <p className="mt-1 text-xs leading-4 text-muted-foreground">{item.detail}</p>
                         </span>
                       </Button>
                     );
@@ -607,7 +603,7 @@ export default function OnboardingPage() {
                 <Button
                   onClick={saveProfile}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
+                  variant="default"
                 >
                   {saving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -623,17 +619,15 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div className="p-6 sm:p-9">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-                Choose how to begin
-              </p>
+              <Kicker>Choose how to begin</Kicker>
               <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
                 Start with the fastest path to useful context.
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Start one real client engagement, import existing records, or explore an empty workspace. You can use every tool later.
               </p>
               <div className="hidden">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">
                   Where is your business information today? <span className="normal-case tracking-normal font-semibold">Select all existing sources, or choose one fresh start.</span>
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -653,11 +647,11 @@ export default function OnboardingPage() {
                       aria-pressed={sources.includes(id)}
                       aria-label={id === "starting_fresh" ? `${label} (choose instead of existing sources)` : label}
                       onClick={() => toggleSource(id)}
-                      className={`flex items-center justify-between rounded-xl border px-3.5 py-3 text-left text-xs font-bold ${sources.includes(id) ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-950/30 dark:text-blue-200" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"}`}
+                      className={`flex items-center justify-between rounded-none border px-3.5 py-3 text-left text-xs font-bold ${sources.includes(id) ? "border-primary bg-accent text-foreground" : "border-border text-muted-foreground"}`}
                     >
                       <span>{label}</span>
                       <span
-                        className={`grid h-5 w-5 place-items-center rounded-full border ${sources.includes(id) ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}
+                        className={`grid h-5 w-5 place-items-center rounded-full border ${sources.includes(id) ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}
                       >
                         {sources.includes(id) && <Check className="h-3 w-3" />}
                       </span>
@@ -667,11 +661,11 @@ export default function OnboardingPage() {
               </div>
               {googleAvailable && (
                 <div
-                  className={`hidden mt-7 flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${googleConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-blue-200 bg-blue-50/60 dark:border-blue-900 dark:bg-blue-950/20"}`}
+                  className={`hidden mt-7 flex-col gap-4 rounded-none border p-5 sm:flex-row sm:items-center sm:justify-between ${googleConnection?.status === "connected" ? "border-success/30 bg-success/10" : "border-primary/25 bg-primary/10"}`}
                 >
                   <div className="flex min-w-0 gap-4">
                     <span
-                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${googleConnection?.status === "connected" ? "bg-emerald-600 text-white" : "bg-white text-blue-600 shadow-sm dark:bg-slate-900"}`}
+                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-none ${googleConnection?.status === "connected" ? "bg-success text-success-foreground" : "bg-muted text-primary"}`}
                     >
                       {googleConnection?.status === "connected" ? (
                         <Check className="h-5 w-5" />
@@ -682,11 +676,11 @@ export default function OnboardingPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black">Google Calendar</p>
-                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-primary">
                           Live connector
                         </span>
                       </div>
-                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         {googleConnection?.status === "connected"
                           ? `${googleConnection.accountEmail || "Google account"} connected · events and updates sync both ways.`
                             : "Import existing calendars and events now. New Rive events can sync back to Google."}
@@ -696,14 +690,14 @@ export default function OnboardingPage() {
                   {googleConnection?.status === "connected" ? (
                     <a
                       href="/calendar"
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-xs font-black text-emerald-700 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300"
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-none border border-border bg-card px-4 py-2.5 text-xs font-black text-success"
                     >
                       Review calendars <ArrowRight className="h-3.5 w-3.5" />
                     </a>
                   ) : googleAvailable ? (
                     <a
                       href="/api/calendar/connections/google/start?from=onboarding"
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white shadow-lg shadow-blue-600/20"
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-none bg-primary px-4 py-2.5 text-xs font-black text-primary-foreground"
                     >
                       <Link2 className="h-3.5 w-3.5" />
                       Connect Google
@@ -713,11 +707,11 @@ export default function OnboardingPage() {
               )}
               {zohoAvailable && (
                 <div
-                  className={`hidden mt-4 flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${zohoConnection?.status === "connected" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-violet-200 bg-violet-50/60 dark:border-violet-900 dark:bg-violet-950/20"}`}
+                  className={`hidden mt-4 flex-col gap-4 rounded-none border p-5 sm:flex-row sm:items-center sm:justify-between ${zohoConnection?.status === "connected" ? "border-success/30 bg-success/10" : "border-info/25 bg-info/10"}`}
                 >
                   <div className="flex min-w-0 gap-4">
                     <span
-                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${zohoConnection?.status === "connected" ? "bg-emerald-600 text-white" : "bg-white text-violet-600 shadow-sm dark:bg-slate-900"}`}
+                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-none ${zohoConnection?.status === "connected" ? "bg-success text-success-foreground" : "bg-muted text-info"}`}
                     >
                       {zohoConnection?.status === "connected" ? (
                         <Check className="h-5 w-5" />
@@ -728,11 +722,11 @@ export default function OnboardingPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black">Zoho Books</p>
-                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                        <span className="rounded-full border border-current/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-info">
                           {zohoConnection ? "Connected" : "OAuth ready"}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         {zohoConnection
                           ? `${zohoConnection.accountLabel || "Zoho organization"} is connected. Rive will ask for confirmation before importing financial records.`
                             : "Connect securely to verify your organization. Record import stays disabled until the import review flow is production-ready."}
@@ -740,13 +734,13 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                   {zohoConnection ? (
-                    <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-xs font-black text-emerald-700 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300">
+                    <span className="inline-flex shrink-0 items-center justify-center rounded-none border border-border bg-card px-4 py-2.5 text-xs font-black text-success">
                       Organization ready
                     </span>
                   ) : zohoAvailable ? (
                     <a
                       href="/api/connectors/zoho-books/start?from=onboarding"
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-black text-white shadow-lg shadow-violet-600/20"
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-none bg-primary px-4 py-2.5 text-xs font-black text-primary-foreground"
                     >
                       <Link2 className="h-3.5 w-3.5" />
                       Connect Zoho
@@ -755,9 +749,7 @@ export default function OnboardingPage() {
                 </div>
               )}
               <div className="mt-7">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                  Choose one starting path
-                </p>
+                <Kicker tone="muted">Choose one starting path</Kicker>
                 <div className="mt-3 grid gap-4 md:grid-cols-3">
                   {[
                     {
@@ -792,14 +784,14 @@ export default function OnboardingPage() {
                         type="button"
                         aria-pressed={path === item.id}
                         onClick={() => choosePath(item.id)}
-                        className={`relative flex min-h-40 min-w-0 flex-col items-start justify-start whitespace-normal rounded-2xl border p-5 text-left ${path === item.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-200 dark:border-slate-700"}`}
+                        className={`relative flex min-h-40 min-w-0 flex-col items-start justify-start whitespace-normal rounded-none border p-5 text-left ${path === item.id ? "border-primary bg-accent" : "border-border"}`}
                       >
-                        <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-1 text-xs font-black uppercase text-blue-600 shadow-sm dark:bg-slate-800">
+                        <span className="absolute right-3 top-3 rounded-full bg-muted px-2 py-1 text-xs font-black uppercase text-primary">
                           {item.badge}
                         </span>
-                        <Icon className="h-6 w-6 shrink-0 text-blue-600" />
+                        <Icon className="h-6 w-6 shrink-0 text-primary" />
                         <p className="mt-8 text-sm font-black">{item.title}</p>
-                        <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">
                           {item.detail}
                         </p>
                       </Button>
@@ -810,7 +802,8 @@ export default function OnboardingPage() {
               <div className="mt-7 flex justify-between">
                 <Button
                   onClick={() => setStep(0)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"
+                  variant="ghost"
+                  className="text-xs"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
@@ -818,7 +811,7 @@ export default function OnboardingPage() {
                 <Button
                   onClick={() => void saveSourcesAndContinue()}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
+                  variant="default"
                 >
                   {path === "clean" ? "Open my workspace" : "Continue"}{" "}
                   <ArrowRight className="h-4 w-4" />
@@ -829,20 +822,19 @@ export default function OnboardingPage() {
 
           {step === 3 && path === "import" && migrationEngine && (
             <div className="p-6 sm:p-9">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-                Migration
-              </p>
+              <Kicker>Migration</Kicker>
               <h2 className="mt-2 text-2xl font-black tracking-tight">
                 Bring your business into Rive.
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Upload the client, project, invoice, and expense exports you
                 already have, in any order. Rive works out what each file holds,
                 reconnects the records to each other, and shows you exactly what
                 it will create before anything is written.
               </p>
               <Button
-                className="mt-7 w-full rounded-2xl bg-blue-600 px-5 py-3.5 text-sm font-black text-white hover:bg-blue-700 sm:w-auto"
+                variant="default"
+                className="mt-7 w-full sm:w-auto"
                 onClick={() => router.push("/migrate")}
               >
                 Start importing
@@ -850,7 +842,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setPath("quickstart")}
-                className="mt-4 block text-xs font-bold text-slate-500 underline-offset-4 hover:underline dark:text-slate-400"
+                className="mt-4 block text-xs font-bold text-muted-foreground underline-offset-4 hover:underline"
               >
                 I would rather start with one client instead
               </button>
@@ -859,24 +851,22 @@ export default function OnboardingPage() {
 
           {step === 3 && path === "import" && !migrationEngine && (
             <div className="p-6 sm:p-9">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-                Migration studio
-              </p>
+              <Kicker>Migration studio</Kicker>
               <h2 className="mt-2 text-2xl font-black tracking-tight">
                 Preview your records before bringing them across.
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Upload separate client, project, invoice, or expense exports
                 together. Rive detects them, previews the result, and preserves
                 where every record came from. Imported records remain in your
                 workspace after commit.
               </p>
-              <label className="mt-7 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-5 py-10 text-center hover:border-blue-400 dark:border-blue-900 dark:bg-blue-950/20">
-                <Upload className="h-8 w-8 text-blue-600" />
+              <label className="mt-7 flex cursor-pointer flex-col items-center rounded-none border-2 border-dashed border-primary/30 bg-primary/[0.05] px-5 py-10 text-center hover:border-primary">
+                <Upload className="h-8 w-8 text-primary" />
                 <p className="mt-3 text-sm font-black">
                   Choose up to six CSV or XLSX files
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   2 MB each · clients, projects, invoices, and expenses
                 </p>
                 <Input
@@ -896,7 +886,7 @@ export default function OnboardingPage() {
                   {files.map((file) => (
                     <span
                       key={`${file.name}-${file.size}`}
-                      className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                      className="rounded-full border border-border px-2.5 py-1 text-xs font-bold text-muted-foreground"
                     >
                       {file.name}
                     </span>
@@ -904,8 +894,8 @@ export default function OnboardingPage() {
                 </div>
               )}
               {preview.length > 0 && (
-                <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <div className="grid grid-cols-[1fr_100px_70px] bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800">
+                <div className="mt-5 overflow-hidden rounded-none border border-border">
+                  <div className="grid grid-cols-[1fr_100px_70px] bg-muted px-4 py-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
                     <span>File</span>
                     <span>Detected as</span>
                     <span>Rows</span>
@@ -913,21 +903,21 @@ export default function OnboardingPage() {
                   {preview.map((item) => (
                     <div
                       key={item.name}
-                      className="grid grid-cols-[1fr_100px_70px] border-t border-slate-100 px-4 py-3 text-xs dark:border-slate-800"
+                      className="grid grid-cols-[1fr_100px_70px] border-t border-border px-4 py-3 text-xs"
                     >
                       <span className="truncate font-bold">{item.name}</span>
                       <span
                         className={
                           item.entity === "unknown"
-                            ? "font-bold text-red-500"
-                            : "font-bold text-blue-600"
+                            ? "font-bold text-destructive"
+                            : "font-bold text-primary"
                         }
                       >
                         {item.entity}
                       </span>
-                      <span>{item.rows}</span>
+                      <span className="font-mono tabular-nums">{item.rows}</span>
                       {item.warning && (
-                        <span className="col-span-3 mt-1 text-xs text-red-500">
+                        <span className="col-span-3 mt-1 text-xs text-destructive">
                           {item.warning}
                         </span>
                       )}
@@ -940,8 +930,8 @@ export default function OnboardingPage() {
                   job.status,
                 ),
               ) && (
-                <div className="mt-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+                <div className="mt-6 rounded-none border border-border p-4">
+                  <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
                     Recent migrations
                   </p>
                   <div className="mt-3 space-y-2">
@@ -957,7 +947,7 @@ export default function OnboardingPage() {
                       .map((job) => (
                         <div
                           key={job.id}
-                          className="flex flex-col gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60 sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-3 rounded-none bg-muted p-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div>
                             <p className="text-xs font-black">
@@ -965,13 +955,13 @@ export default function OnboardingPage() {
                                 job.sourceLabel ||
                                 job.source}
                             </p>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-muted-foreground">
                               {job.createdRecords} created ·{" "}
                               {job.skippedRecords} skipped ·{" "}
                               {job.unresolvedCount} need review
                             </p>
                           </div>
-                          <span className="text-xs font-black uppercase text-slate-400">
+                          <span className="text-xs font-black uppercase text-muted-foreground">
                             {job.status === "rolled_back" ? "Rolled back" : "Imported"}
                           </span>
                         </div>
@@ -982,7 +972,8 @@ export default function OnboardingPage() {
               <div className="mt-7 flex flex-wrap justify-between gap-3">
                 <Button
                   onClick={() => setStep(2)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"
+                  variant="ghost"
+                  className="text-xs"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Choose another path
@@ -991,7 +982,8 @@ export default function OnboardingPage() {
                   <Button
                     onClick={() => runImport("preview")}
                     disabled={saving || !files.length}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
+                    variant="outline"
+                    className="text-xs"
                   >
                     Analyze files
                   </Button>
@@ -1002,7 +994,7 @@ export default function OnboardingPage() {
                       !preview.length ||
                       preview.some((item) => item.entity === "unknown")
                     }
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-40"
+                    variant="default"
                   >
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                     Import workspace
@@ -1023,7 +1015,8 @@ export default function OnboardingPage() {
               <Button
                 type="button"
                 onClick={() => setStep(2)}
-                className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-slate-500"
+                variant="ghost"
+                className="mt-4 text-xs"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Choose another path
@@ -1033,41 +1026,37 @@ export default function OnboardingPage() {
 
           {step === 3 && path === "quickstart" && !engagementFlow && (
             <form onSubmit={createQuickstart} className="p-6 sm:p-9">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-                One connected workflow
-              </p>
+              <Kicker>One connected workflow</Kicker>
               <h2 className="mt-2 text-2xl font-black tracking-tight">
                 Start with work you are actually doing.
               </h2>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-sm text-muted-foreground">
                 One submission creates the relationship, the work, its calendar
                 deadline, and an optional draft invoice.
               </p>
               <div className="mt-7 grid gap-4 sm:grid-cols-2">
                 <label>
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                     Client name
                   </span>
                   <Input
                     required
                     value={clientName}
                     onChange={(event) => setClientName(event.target.value)}
-                    className={inputClass}
                   />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                     Client email
                   </span>
                   <Input
                     type="email"
                     value={clientEmail}
                     onChange={(event) => setClientEmail(event.target.value)}
-                    className={inputClass}
                   />
                 </label>
                 <label className="sm:col-span-2">
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                     Project
                   </span>
                   <Input
@@ -1075,11 +1064,10 @@ export default function OnboardingPage() {
                     value={projectTitle}
                     onChange={(event) => setProjectTitle(event.target.value)}
                     placeholder="Website redesign, monthly accounting…"
-                    className={inputClass}
                   />
                 </label>
                 <label className="sm:col-span-2">
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                     What are you delivering?
                   </span>
                   <Textarea
@@ -1088,22 +1076,21 @@ export default function OnboardingPage() {
                     onChange={(event) =>
                       setProjectDescription(event.target.value)
                     }
-                    className={inputClass}
                   />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                     Deadline
                   </span>
                   <Input
                     type="date"
                     value={dueDate}
                     onChange={(event) => setDueDate(event.target.value)}
-                    className={inputClass}
+                    className="font-mono tabular-nums"
                   />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-slate-500">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wider text-muted-foreground">
                     draft invoice value ({currency})
                   </span>
                   <Input
@@ -1112,7 +1099,7 @@ export default function OnboardingPage() {
                     step="0.01"
                     value={invoiceAmount}
                     onChange={(event) => setInvoiceAmount(event.target.value)}
-                    className={inputClass}
+                    className="font-mono tabular-nums"
                   />
                 </label>
               </div>
@@ -1120,7 +1107,8 @@ export default function OnboardingPage() {
                 <Button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"
+                  variant="ghost"
+                  className="text-xs"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Choose another path
@@ -1128,7 +1116,7 @@ export default function OnboardingPage() {
                 <Button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white disabled:opacity-50"
+                  variant="default"
                 >
                   {saving && <Loader2 className="h-4 w-4 animate-spin" />}create
                   my workspace
@@ -1138,17 +1126,17 @@ export default function OnboardingPage() {
           )}
 
           {step === 4 && (
-            <div className="p-7 text-center sm:p-12">
-              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+            <div className="inverse-block p-7 text-center sm:p-12">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-none bg-background text-success">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
-              <p className="mt-6 text-xs font-black uppercase tracking-[0.16em] text-emerald-600">
+              <p className="mt-6 text-xs font-black uppercase tracking-[0.16em]">
                 Workspace activated
               </p>
               <h2 className="mt-2 text-3xl font-black tracking-tight">
                 You are opening rive. with context.
               </h2>
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-6">
                 Your imported work now powers the dashboard, financial insights,
                 calendar deadlines, and future portfolio draft.
               </p>
@@ -1159,10 +1147,10 @@ export default function OnboardingPage() {
                   ).map((key) => (
                     <div
                       key={key}
-                      className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                      className="rounded-none border border-background/30 p-4"
                     >
-                      <p className="text-2xl font-black">{report[key]}</p>
-                      <p className="mt-1 text-xs font-black uppercase tracking-wider text-slate-400">
+                      <p className="font-mono text-2xl font-semibold tabular-nums">{report[key]}</p>
+                      <p className="mt-1 text-xs font-black uppercase tracking-wider opacity-70">
                         {key}
                       </p>
                     </div>
@@ -1170,17 +1158,18 @@ export default function OnboardingPage() {
                 </div>
               )}
               {report?.unresolvedLinks ? (
-                <p className="mt-4 text-xs font-bold text-amber-600">
+                <p className="mt-4 text-xs font-bold">
                   {report.unresolvedLinks} relationships need manual review.
                 </p>
               ) : null}
               <Button
                 onClick={() => router.replace("/dashboard")}
-                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20"
+                variant="default"
+                className="mt-8"
               >
                 Open my operating system <ArrowRight className="h-4 w-4" />
               </Button>
-              <div className="mt-5 flex justify-center gap-5 text-xs font-bold text-slate-400">
+              <div className="mt-5 flex justify-center gap-5 text-xs font-bold opacity-70">
                 <span className="inline-flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5" />
                   Deadlines connected

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select } from "@/components/ui";
+import { Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select, StatusBadge } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -230,17 +230,6 @@ export default function ExpensesPage() {
     }
   };
 
-  const getCategoryColor = (cat: string) => {
-    switch (cat) {
-      case "software": return "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/50";
-      case "hardware": return "bg-[#F5F3FF] dark:bg-purple-900/20 text-[#8B5CF6] dark:text-purple-400 border-purple-100 dark:border-purple-900/50";
-      case "travel": return "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/50";
-      case "meals": return "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-900/50";
-      case "contractor": return "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50";
-      default: return "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
-    }
-  };
-
   const formatCurrency = (val: number, currency: string = displayCurrency) => format(val, currency);
 
   const now = new Date();
@@ -270,7 +259,7 @@ export default function ExpensesPage() {
   const linkedSpend = sumExpenses(expenses.filter((expense) => expense.project_id));
 
   return (
-    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
+    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-panel-in">
       <PageHeader
         title="Expenses"
         description={<>Track operating and project costs in {displayCurrency} while preserving each expense&apos;s original currency.</>}
@@ -283,7 +272,7 @@ export default function ExpensesPage() {
           ["billable, unreimbursed", formatSummary(billableOutstanding), "recoverable from clients"],
           ["largest category", topCategory?.[0] || "—", topCategory ? formatCurrency(topCategory[1]) : "categorize costs to reveal spend"],
           ["linked to projects", formatSummary(linkedSpend), "available for project profitability"],
-        ].map(([label, value, detail]) => <div key={label} className="rounded-2xl border border-border bg-card p-4 shadow-card"><p className="text-xs font-semibold capitalize text-muted-foreground">{label}</p><p className="mt-2 truncate text-xl font-extrabold capitalize text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>)}
+        ].map(([label, value, detail]) => <div key={label} className="rounded-none border border-border bg-card p-4"><p className="text-xs font-semibold capitalize text-muted-foreground">{label}</p><p className="mt-2 truncate font-mono text-xl font-extrabold capitalize tabular-nums text-foreground">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>)}
       </section>
 
       <p className="-mt-3 text-xs text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
@@ -291,7 +280,7 @@ export default function ExpensesPage() {
       {/* Filter and Search */}
       <div className="workspace-toolbar">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search by description..."
@@ -323,7 +312,7 @@ export default function ExpensesPage() {
       {/* Expense List Table */}
       {loading ? (
         <div className="flex justify-center items-center h-48">
-          <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : expenses.length === 0 ? (
         <ContextualEmptyState
@@ -352,23 +341,21 @@ export default function ExpensesPage() {
               </thead>
               <tbody className="divide-y divide-border text-sm text-foreground">
                 {expenses.map((exp) => (
-                  <tr key={exp.id} className="group transition-colors hover:bg-muted/35">
-                    <td className="py-4 px-6">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                  <tr key={exp.id} className="group transition-colors hover:bg-muted/[0.35]">
+                    <td className="py-4 px-6 font-mono tabular-nums">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                     <td className="py-4 px-6 font-bold">{exp.description}</td>
                     <td className="py-4 px-6">
-                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${getCategoryColor(exp.category)}`}>
-                        {exp.category}
-                      </span>
+                      <StatusBadge kind="expense" value={exp.category} />
                     </td>
                     <td className="py-4 px-6 text-muted-foreground">{exp.project_title || "None"}</td>
                     <td className="py-4 px-6">
                       {exp.is_billable ? (
-                        <span className="rounded-md border border-success/20 bg-success/10 px-2 py-1 text-xs font-semibold text-success">Yes</span>
+                        <Badge variant="success">Yes</Badge>
                       ) : (
-                        <span className="rounded-md border border-border bg-muted/60 px-2 py-1 text-xs font-semibold text-muted-foreground">No</span>
+                        <Badge variant="muted">No</Badge>
                       )}
                     </td>
-                    <td className="py-4 px-6 font-bold text-destructive">
+                    <td className="py-4 px-6 font-mono font-bold tabular-nums text-destructive">
                       <span className="block">{formatConverted(parseFloat(exp.amount), exp.currency) || formatCurrency(parseFloat(exp.amount), exp.currency)}</span>
                       {exp.currency !== displayCurrency && <span className="mt-0.5 block text-xs font-medium text-muted-foreground">Originally {formatCurrency(parseFloat(exp.amount), exp.currency)}</span>}
                     </td>
@@ -387,23 +374,23 @@ export default function ExpensesPage() {
                         title={`Actions for ${exp.description}`}
                         variant="ghost"
                         size="icon-sm"
-                        className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        className="text-muted-foreground hover:bg-foreground/[.05] hover:text-foreground opacity-0 group-hover:opacity-100 focus:opacity-100"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
 
                       {openDropdownId === exp.id && (
                         <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
-                          <div className="w-32 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up text-left">
+                          <div className="w-32 rounded-none border border-border bg-popover z-50 py-1 animate-panel-in text-left shadow-overlay">
                             <Button
                               onClick={() => { openEdit(exp); setOpenDropdownId(null); }}
-                              className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
+                              className="w-full text-left px-3 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-colors"
                             >
                               <Edit2 className="h-3.5 w-3.5" /> Edit
                             </Button>
                             <Button
                               onClick={() => { handleDelete(exp.id, exp.description); setOpenDropdownId(null); }}
-                              className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
+                              className="w-full text-left px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5" /> Delete
                             </Button>
@@ -423,13 +410,13 @@ export default function ExpensesPage() {
       {/* Add/Edit Expense Drawer */}
       {drawerOpen && (
         <Portal>
-          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full flex flex-col justify-between py-6 px-6 shadow-2xl border-l border-border dark:border-slate-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex justify-end bg-foreground/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
+            <div className="relative w-full max-w-md bg-card h-full flex flex-col justify-between py-6 px-6 shadow-overlay border-l border-border animate-panel-in" onClick={(e) => e.stopPropagation()}>
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit operating cost" : "Log operating cost"}</h3>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">Save receipt parameters and category classifications.</p>
+                    <h3 className="text-lg font-bold text-foreground">{editingId ? "Edit operating cost" : "Log operating cost"}</h3>
+                    <p className="text-xs text-muted-foreground">Save receipt parameters and category classifications.</p>
                   </div>
                   <Button
                     variant="ghost"
@@ -437,7 +424,7 @@ export default function ExpensesPage() {
                     onClick={() => setDrawerOpen(false)}
                     aria-label="Close expense editor"
                     title="Close expense editor"
-                    className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                    className="text-muted-foreground hover:bg-background"
                   >
                     <X className="h-5 w-5" />
                   </Button>
@@ -452,7 +439,7 @@ export default function ExpensesPage() {
                       placeholder="E.g. figma monthly, server fees, uber taxi"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -462,7 +449,7 @@ export default function ExpensesPage() {
                       <Select
                         value={categoryInput}
                         onChange={(e) => setCategoryInput(e.target.value)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
+                        className="px-2.5 py-2 bg-card border border-border rounded-none text-xs text-foreground focus:outline-none"
                       >
                         <option value="software">Software</option>
                         <option value="hardware">Hardware</option>
@@ -482,12 +469,12 @@ export default function ExpensesPage() {
                         placeholder="E.g. 49.00"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                        className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-bold text-foreground">Currency</label>
-                      <Select value={currencyInput} onChange={(event) => setCurrencyInput(event.target.value)} className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs font-bold text-foreground dark:text-slate-200">
+                      <Select value={currencyInput} onChange={(event) => setCurrencyInput(event.target.value)} className="px-2.5 py-2 bg-card border border-border rounded-none text-xs font-bold text-foreground">
                         {DISPLAY_CURRENCIES.map(({ code, label }) => <option key={code} value={code}>{code} · {label}</option>)}
                       </Select>
                     </div>
@@ -500,7 +487,7 @@ export default function ExpensesPage() {
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs focus:outline-none focus:border-blue-400 text-slate-600 dark:text-slate-300"
+                        className="px-3 py-2 border border-border bg-card rounded-none text-xs focus:outline-none focus:border-primary text-foreground"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -508,7 +495,7 @@ export default function ExpensesPage() {
                       <Select
                         value={projectId}
                         onChange={(e) => setProjectId(e.target.value)}
-                        className="px-2.5 py-2 bg-white dark:bg-slate-950 border border-border dark:border-slate-700 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none"
+                        className="px-2.5 py-2 bg-card border border-border rounded-none text-xs text-foreground focus:outline-none"
                       >
                         <option value="">Not linked</option>
                         {projects.map(p => (
@@ -518,23 +505,23 @@ export default function ExpensesPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-2 bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-border dark:border-slate-700">
+                  <div className="flex items-center gap-2 mt-2 bg-muted p-3 rounded-none border border-border">
                     <Input
                       type="checkbox"
                       id="billable"
                       checked={isBillable}
                       onChange={(e) => setIsBillable(e.target.checked)}
-                      className="h-4 w-4 text-primary dark:text-blue-500 focus:ring-blue-100 border-border dark:border-slate-600 rounded bg-white dark:bg-slate-900"
+                      className="h-4 w-4 rounded-none border-border bg-card text-primary accent-primary"
                     />
                     <div className="flex flex-col">
-                      <label htmlFor="billable" className="text-xs font-bold text-foreground dark:text-slate-200 cursor-pointer">Billable to client</label>
-                      <span className="text-xs text-muted-foreground dark:text-slate-400">Reclaim this expense via invoicing later.</span>
+                      <label htmlFor="billable" className="text-xs font-bold text-foreground cursor-pointer">Billable to client</label>
+                      <span className="text-xs text-muted-foreground">Reclaim this expense via invoicing later.</span>
                     </div>
                   </div>
                 </form>
               </div>
 
-              <div className="flex items-center gap-2 border-t border-border dark:border-slate-800 pt-4 mt-6">
+              <div className="flex items-center gap-2 border-t border-border pt-4 mt-6">
                 <Button
                   type="button"
                   onClick={() => setDrawerOpen(false)}

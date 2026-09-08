@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
+import { Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea, Select } from "@/components/ui";
+import { statusTone } from "@/lib/status-tone";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -13,7 +14,7 @@ import {
   Phone,
   Globe,
   Briefcase,
-  DollarSign,
+  WalletCards,
   X,
   Loader2,
   Tag,
@@ -234,7 +235,7 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-fade-in">
+    <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-panel-in">
       <PageHeader
         title="Clients"
         description="Keep contact details, projects, invoices, and relationship history together."
@@ -244,7 +245,7 @@ export default function ClientsPage() {
       {/* Filter bar */}
       <div className="workspace-toolbar">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search by name, email, company..."
@@ -271,7 +272,7 @@ export default function ClientsPage() {
       {/* Client List Grid */}
       {loading ? (
         <div className="flex justify-center items-center h-48">
-          <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-blue-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : clients.length === 0 ? (
         <ContextualEmptyState
@@ -281,12 +282,12 @@ export default function ClientsPage() {
           why="This is the context Rive reuses across the rest of your workspace."
           next="Add one client you are actively working with."
           after="Your projects and invoices can reuse these details."
-          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">New client work</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
+          action={engagementFlow ? <Link href="/workflow/start-engagement" className="inline-flex items-center rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">New client work</Link> : <Button variant="secondary" size="sm" onClick={openCreate}>Add client</Button>}
         />
       ) : (<>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {clients.map((c) => (
-            <div key={c.id} className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-card transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-lg">
+            <div key={c.id} className="group relative flex flex-col justify-between rounded-none border border-border bg-card p-5 transition-[border-color] hover:border-primary/25">
 
               {/* Dropdown Actions */}
               <div className="absolute top-4 right-4 z-10">
@@ -304,23 +305,23 @@ export default function ClientsPage() {
                   title={`Actions for ${c.name}`}
                   variant="ghost"
                   size="icon-sm"
-                  className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800"
+                  className="text-muted-foreground hover:text-foreground hover:bg-foreground/[.05]"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
 
                 {openDropdownId === c.id && (
                   <DropdownPortal triggerRect={dropdownRect} onClose={() => setOpenDropdownId(null)}>
-                    <div className="w-36 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 py-1 animate-fade-in-up">
+                    <div className="w-36 bg-popover rounded-none shadow-overlay border border-border z-50 py-1 animate-panel-in">
                       <Button
                         onClick={(e) => { e.stopPropagation(); openEdit(c); setOpenDropdownId(null); }}
-                        className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-3 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-colors"
                       >
                         <Edit2 className="h-3.5 w-3.5" /> Edit
                       </Button>
                       <Button
                         onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); setOpenDropdownId(null); }}
-                        className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors"
                       >
                         <Trash2 className="h-3.5 w-3.5" /> Delete
                       </Button>
@@ -333,28 +334,26 @@ export default function ClientsPage() {
                 <div className="flex justify-between items-start gap-4 mb-4 pr-6">
                   <div className="flex items-center gap-3">
                     <div
-                      className="h-10 w-10 rounded-full flex items-center justify-center text-white font-extrabold text-sm uppercase shadow-sm group-hover:scale-105 transition-all"
+                      className="h-10 w-10 rounded-full flex items-center justify-center text-primary-foreground font-extrabold text-sm uppercase group-hover:scale-105 transition-all"
                       style={{ backgroundColor: c.avatar_color }}
                     >
                       {c.name.substring(0, 2)}
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <Link href={`/workflow/clients/${c.id}`} className="text-sm font-bold text-foreground dark:text-slate-200 truncate hover:text-primary dark:hover:text-blue-400 hover:underline">{c.name}</Link>
+                      <Link href={`/workflow/clients/${c.id}`} className="text-sm font-bold text-foreground truncate hover:text-primary hover:underline">{c.name}</Link>
                       <span className="truncate text-xs text-muted-foreground">{c.company || "Private client"}</span>
                     </div>
                   </div>
-                  <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${
-                    c.status === "active" ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800" : "bg-slate-50 dark:bg-slate-800 text-muted-foreground dark:text-slate-400 border-border dark:border-slate-700"
-                  }`}>
+                  <Badge variant={statusTone("client", c.status)} dot className="uppercase">
                     {c.status}
-                  </span>
+                  </Badge>
                 </div>
 
                 {/* Tags */}
                 {c.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {c.tags.map((t, idx) => (
-                      <span key={idx} className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground">
+                      <span key={idx} className="flex items-center gap-1 rounded-none border border-border bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground">
                         <Tag className="h-2 w-2" />
                         <span>{t}</span>
                       </span>
@@ -363,23 +362,23 @@ export default function ClientsPage() {
                 )}
 
                 {/* Details list */}
-                <div className="flex flex-col gap-2 border-t border-border dark:border-slate-800 pt-4 mb-4">
+                <div className="flex flex-col gap-2 border-t border-border pt-4 mb-4">
                   {c.email && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Mail className="h-3.5 w-3.5" />
                       <span className="truncate">{c.email}</span>
                     </div>
                   )}
                   {c.phone && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Phone className="h-3.5 w-3.5" />
                       <span>{c.phone}</span>
                     </div>
                   )}
                   {c.website && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Globe className="h-3.5 w-3.5" />
-                      <a href={c.website.startsWith("http") ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary dark:hover:text-blue-400 truncate">
+                      <a href={c.website.startsWith("http") ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary truncate">
                         {c.website}
                       </a>
                     </div>
@@ -388,14 +387,14 @@ export default function ClientsPage() {
               </div>
 
               {/* Aggregations */}
-              <div className="flex justify-between items-center border-t border-border dark:border-slate-800 pt-4 text-xs font-semibold">
-                <span className="flex items-center gap-1 text-muted-foreground dark:text-slate-400">
+              <div className="flex justify-between items-center border-t border-border pt-4 text-xs font-semibold">
+                <span className="flex items-center gap-1 text-muted-foreground">
                   <Briefcase className="h-3.5 w-3.5" />
                   <span>{c.project_count} projects</span>
                 </span>
-                <span className="flex items-center gap-1 text-[#10B981] dark:text-emerald-400">
-                  <DollarSign className="h-3.5 w-3.5" />
-                  <span>{formatClientRevenue(c)} paid</span>
+                <span className="flex items-center gap-1 text-success">
+                  <WalletCards className="h-3.5 w-3.5" />
+                  <span className="font-mono tabular-nums">{formatClientRevenue(c)} paid</span>
                 </span>
               </div>
             </div>
@@ -407,13 +406,13 @@ export default function ClientsPage() {
       {/* Right Slideout Modal Drawer for adding/editing a Client */}
       {drawerOpen && (
         <Portal>
-          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full flex flex-col justify-between py-6 px-6 shadow-2xl border-l border-border dark:border-slate-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex justify-end bg-foreground/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
+            <div className="relative w-full max-w-md bg-card h-full flex flex-col justify-between py-6 px-6 shadow-overlay border-l border-border animate-panel-in" onClick={(e) => e.stopPropagation()}>
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-foreground dark:text-slate-200">{editingId ? "Edit client profile" : "Create new client"}</h3>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">{editingId ? "Update client details and information." : "Set up direct client details for project coordination."}</p>
+                    <h3 className="text-lg font-bold text-foreground">{editingId ? "Edit client profile" : "Create new client"}</h3>
+                    <p className="text-xs text-muted-foreground">{editingId ? "Update client details and information." : "Set up direct client details for project coordination."}</p>
                   </div>
                   <Button
                     variant="ghost"
@@ -421,7 +420,7 @@ export default function ClientsPage() {
                     onClick={() => setDrawerOpen(false)}
                     aria-label="Close client editor"
                     title="Close client editor"
-                    className="text-muted-foreground dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800"
+                    className="text-muted-foreground hover:bg-background"
                   >
                     <X className="h-5 w-5" />
                   </Button>
@@ -436,7 +435,7 @@ export default function ClientsPage() {
                       placeholder="E.g. acme corp, jane smith"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -447,7 +446,7 @@ export default function ClientsPage() {
                       placeholder="E.g. acme industries"
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -459,7 +458,7 @@ export default function ClientsPage() {
                         placeholder="client@domain.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                        className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -469,7 +468,7 @@ export default function ClientsPage() {
                         placeholder="+1 (555) 000-0000"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                        className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
                   </div>
@@ -481,7 +480,7 @@ export default function ClientsPage() {
                       placeholder="Www.clientwebsite.com"
                       value={website}
                       onChange={(e) => setWebsite(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -492,7 +491,7 @@ export default function ClientsPage() {
                       placeholder="Billing or office address..."
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary resize-none"
                     />
                   </div>
 
@@ -503,7 +502,7 @@ export default function ClientsPage() {
                       placeholder="Vip, monthly, design"
                       value={tagsInput}
                       onChange={(e) => setTagsInput(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -514,13 +513,13 @@ export default function ClientsPage() {
                       placeholder="Private client instructions, milestones..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="px-3 py-2 border border-border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-xs text-foreground dark:text-slate-200 focus:outline-none focus:border-blue-400 resize-none"
+                      className="px-3 py-2 border border-border bg-card rounded-none text-xs text-foreground focus:outline-none focus:border-primary resize-none"
                     />
                   </div>
                 </form>
               </div>
 
-              <div className="flex items-center gap-2 border-t border-border dark:border-slate-800 pt-4 mt-6">
+              <div className="flex items-center gap-2 border-t border-border pt-4 mt-6">
                 <Button
                   type="button"
                   onClick={() => setDrawerOpen(false)}

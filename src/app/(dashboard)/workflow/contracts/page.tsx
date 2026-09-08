@@ -5,11 +5,11 @@ import {
   type ContractComposerClient,
   type ContractComposerProject,
 } from "@/components/contracts/ContractComposer";
-import { Badge, Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, PaginationControls, Select } from "@/components/ui";
+import { Button, Card, CardContent, ContextualEmptyState, EmptyState, Input, PageHeader, PaginationControls, Select, StatusBadge } from "@/components/ui";
 import {
   AlertTriangle,
   ArrowRight,
-  CircleDollarSign,
+  WalletCards,
   Clock3,
   FileCheck2,
   FileSignature,
@@ -50,16 +50,16 @@ type ProjectListItem = ContractComposerProject & {
 type SourceContract = { id: string; title: string; client: { name: string } };
 type ContractSummary = { action: number; review: number; signing: number; executed: number };
 
-const statusMeta: Record<string, { label: string; description: string; badge: "default" | "secondary" | "outline" | "success" | "warning" | "destructive" }> = {
-  draft: { label: "Draft", description: "Finish the terms, then share for review.", badge: "secondary" },
-  in_review: { label: "In review", description: "Waiting for comments or client approval.", badge: "warning" },
-  ready_to_sign: { label: "Ready for acceptance", description: "Final version is locked; start recorded acceptance.", badge: "default" },
-  starting: { label: "Preparing acceptance", description: "The acceptance request is being prepared.", badge: "warning" },
-  signing: { label: "Acceptance", description: "Acceptance is being collected in sequence.", badge: "default" },
-  executed: { label: "Accepted", description: "Both parties recorded acceptance; payment triggers are active.", badge: "success" },
-  declined: { label: "Changes requested", description: "A signer declined; revise and reissue.", badge: "destructive" },
-  expired: { label: "Expired", description: "Reissue the review or acceptance request.", badge: "warning" },
-  void: { label: "Void", description: "Retained for history; no longer active.", badge: "outline" },
+const statusMeta: Record<string, { description: string }> = {
+  draft: { description: "Finish the terms, then share for review." },
+  in_review: { description: "Waiting for comments or client approval." },
+  ready_to_sign: { description: "Final version is locked; start recorded acceptance." },
+  starting: { description: "The acceptance request is being prepared." },
+  signing: { description: "Acceptance is being collected in sequence." },
+  executed: { description: "Both parties recorded acceptance; payment triggers are active." },
+  declined: { description: "A signer declined; revise and reissue." },
+  expired: { description: "Reissue the review or acceptance request." },
+  void: { description: "Retained for history; no longer active." },
 };
 
 const filters = [
@@ -251,7 +251,7 @@ function ContractsWorkspace() {
   const uncoveredProjects = useMemo(() => projects.filter((project) => !project.contract_coverage || project.contract_coverage === "undecided"), [projects]);
 
   return (
-    <div className="workspace-page max-w-7xl animate-fade-in">
+    <div className="workspace-page max-w-7xl animate-panel-in">
       <PageHeader
         title="Agreements"
         description="Draft, review, accept, and bill from one agreement using the client and project details already in Rive."
@@ -269,7 +269,7 @@ function ContractsWorkspace() {
         <Card className="border-primary/20 bg-primary/[0.035]">
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
               <div>
                 <p className="text-sm font-bold">{uncoveredProjects.length} active project{uncoveredProjects.length === 1 ? "" : "s"} need an Agreement decision</p>
                 <p className="mt-0.5 text-xs leading-5 text-muted-foreground">Start with the existing client, brief, milestones, and currency. You can keep, remove, or rewrite every optional clause before sharing.</p>
@@ -305,7 +305,7 @@ function ContractsWorkspace() {
             why="This is most useful once there is real work to protect."
             next={clients.length === 0 ? "Add a client first." : "Create a project first."}
             after="Then Rive can prefill the Agreement without duplicating your records."
-            action={<Link href={clients.length === 0 ? "/workflow/clients?new=true" : "/workflow/projects?new=true"} className="inline-flex items-center rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">{clients.length === 0 ? "Add client first" : "Create project first"}</Link>}
+            action={<Link href={clients.length === 0 ? "/workflow/clients?new=true" : "/workflow/projects?new=true"} className="inline-flex items-center rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">{clients.length === 0 ? "Add client first" : "Create project first"}</Link>}
           />
         ) : (
           <EmptyState
@@ -320,22 +320,22 @@ function ContractsWorkspace() {
       ) : (<>
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredContracts.map((contract) => {
-            const meta = statusMeta[contract.status] || { label: contract.status, description: "Open the Agreement record.", badge: "outline" as const };
+            const meta = statusMeta[contract.status] || { description: "Open the Agreement record." };
             const signedCount = contract.signers.filter((signer) => signer.status === "signed").length;
             const paymentTotal = contract.payment_plan.reduce((sum, item) => sum + Number(item.amount), 0);
             return (
-              <Link key={contract.id} href={`/workflow/contracts/${contract.id}`} className="group rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                <Card className="h-full transition duration-200 group-hover:-translate-y-0.5 group-hover:border-primary/35 group-hover:shadow-lg">
+              <Link key={contract.id} href={`/workflow/contracts/${contract.id}`} className="group rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <Card className="h-full transition duration-200 group-hover:-translate-y-0.5 group-hover:border-primary/[0.35]">
                   <CardContent className="flex h-full flex-col gap-4 p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0"><h2 className="truncate text-base font-extrabold group-hover:text-primary">{contract.title}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{contract.client.name}{contract.project ? ` · ${contract.project.title}` : " · Standalone agreement"}</p></div>
-                      <Badge variant={meta.badge}>{meta.label}</Badge>
+                      <StatusBadge kind="contract" value={contract.status} />
                     </div>
-                    <div className="rounded-xl bg-muted/45 px-3 py-2.5"><p className="text-xs font-bold">{nextAction(contract)}</p><p className="mt-0.5 text-xs leading-4 text-muted-foreground">{meta.description}</p></div>
+                    <div className="rounded-none bg-muted/[0.45] px-3 py-2.5"><p className="text-xs font-bold">{nextAction(contract)}</p><p className="mt-0.5 text-xs leading-4 text-muted-foreground">{meta.description}</p></div>
                     <div className="mt-auto grid grid-cols-3 gap-3 border-t border-border pt-4 text-xs">
                       <Metric icon={Users} value={`${signedCount}/2`} label="accepted" />
                       <Metric icon={Clock3} value={`v${contract.current_version?.version || 1}`} label={new Date(contract.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
-                      <Metric icon={CircleDollarSign} value={contract.payment_plan.length ? `${contract.currency} ${paymentTotal.toLocaleString(localeForCurrency(contract.currency))}` : "Manual"} label={contract.payment_plan.length ? `${contract.payment_plan.length} trigger${contract.payment_plan.length === 1 ? "" : "s"}` : "billing"} />
+                      <Metric icon={WalletCards} value={contract.payment_plan.length ? `${contract.currency} ${paymentTotal.toLocaleString(localeForCurrency(contract.currency))}` : "Manual"} label={contract.payment_plan.length ? `${contract.payment_plan.length} trigger${contract.payment_plan.length === 1 ? "" : "s"}` : "billing"} />
                     </div>
                     <span className="inline-flex items-center justify-end gap-1 text-xs font-bold text-primary opacity-70 transition group-hover:opacity-100">Open Agreement <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" /></span>
                   </CardContent>
@@ -364,13 +364,13 @@ function ContractsWorkspace() {
 function SummaryCard({ icon: Icon, label, value, tone }: { icon: typeof FileSignature; label: string; value: number; tone: "primary" | "amber" | "blue" | "green" }) {
   const tones = {
     primary: "bg-primary/10 text-primary",
-    amber: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-    blue: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
-    green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+    amber: "bg-warning/10 text-warning",
+    blue: "bg-info/10 text-info",
+    green: "bg-success/10 text-success",
   };
-  return <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p></div></div>;
+  return <div className="flex items-center gap-3 rounded-none border border-border bg-card p-4"><span className={`flex h-9 w-9 items-center justify-center rounded-none ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p></div></div>;
 }
 
 function Metric({ icon: Icon, value, label }: { icon: typeof Users; value: string; label: string }) {
-  return <div className="min-w-0"><p className="flex items-center gap-1.5 truncate font-bold"><Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{label}</p></div>;
+  return <div className="min-w-0"><p className="flex items-center gap-1.5 truncate font-bold font-mono tabular-nums"><Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{label}</p></div>;
 }

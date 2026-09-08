@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route, type TestInfo } from "@playwright/test";
 
 const majorPages = [
   { name: "overview", path: "/dashboard", heading: "Your business, at a glance" },
@@ -62,6 +62,44 @@ const portfolioContent = {
 
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+}
+
+function captureBrowserErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 500) errors.push(`HTTP ${response.status()} ${response.url()}`);
+  });
+  return errors;
+}
+
+async function expectNoHorizontalOverflow(page: Page, route: string) {
+  const dimensions = await page.evaluate(() => {
+    const clientWidth = document.documentElement.clientWidth;
+    const overflowSources = Array.from(document.querySelectorAll("body *"))
+      .map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          tag: element.tagName.toLowerCase(),
+          className: element.getAttribute("class") || "",
+          left: Math.round(bounds.left),
+          right: Math.round(bounds.right),
+          width: Math.round(bounds.width),
+        };
+      })
+      .filter((element) => element.left < -1 || element.right > clientWidth + 1)
+      .slice(0, 8);
+
+    return { clientWidth, overflowSources, scrollWidth: document.documentElement.scrollWidth };
+  });
+
+  expect(
+    dimensions.scrollWidth,
+    `${route} overflows horizontally: ${JSON.stringify(dimensions.overflowSources)}`,
+  ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 }
 
 async function mockVisualWorkspace(page: Page, guidance: "completed" | "active" | "activated" = "completed") {
@@ -188,9 +226,14 @@ async function prepareVisualPage(page: Page, theme: "light" | "dark", viewport =
   await page.addInitScript((selectedTheme) => {
     window.localStorage.setItem("rive-color-theme", selectedTheme);
     window.localStorage.setItem("rive:sidebar-collapsed", "false");
-    const style = document.createElement("style");
-    style.textContent = "nextjs-portal{display:none!important}*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}";
-    document.documentElement.appendChild(style);
+    const installCaptureStyle = () => {
+      if (!document.documentElement) return;
+      const style = document.createElement("style");
+      style.textContent = "nextjs-portal{display:none!important}*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}";
+      document.documentElement.appendChild(style);
+    };
+    if (document.documentElement) installCaptureStyle();
+    else document.addEventListener("DOMContentLoaded", installCaptureStyle, { once: true });
   }, theme);
   await mockVisualWorkspace(page, guidance);
 }
@@ -199,7 +242,7 @@ async function expectDesktopVisualInvariants(page: Page, theme: "light" | "dark"
   const logo = page.locator('[aria-label="rive."]').first();
   await expect(logo).toBeVisible();
   const fills = await logo.locator("path").evaluateAll((parts) => Array.from(new Set(parts.map((part) => getComputedStyle(part).fill))).sort());
-  expect(fills).toEqual(theme === "dark" ? ["rgb(248, 250, 252)", "rgb(96, 165, 250)"] : ["rgb(12, 30, 54)", "rgb(37, 99, 235)"]);
+  expect(fills).toEqual(theme === "dark" ? ["rgb(241, 238, 230)", "rgb(96, 144, 255)"] : ["rgb(12, 30, 54)", "rgb(37, 99, 235)"]);
 
   const geometry = await page.evaluate(() => {
     const aside = document.querySelector("aside")?.getBoundingClientRect();
@@ -505,5 +548,332 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.goto("/p/e2e-workspace-portfolio", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Independent product designer building calm, useful software." })).toBeVisible({ timeout: 20_000 });
     await expect(page).toHaveScreenshot(`public-portfolio-${viewport.width}x${viewport.height}.png`, { fullPage: false });
+  });
+}
+
+/* ─── Working Edition restyle captures (Phase 0) ────────────────────────────
+   Screenshot-only coverage for pages the pixel-baseline suite does not pin.
+   No toHaveScreenshot assertions here, so intentional restyle diffs never fail
+   this block. Captures are attached from Playwright's test output at 1440x900,
+   light+dark, for owner review.
+
+   /onboarding is deliberately NOT repeated here: it already has light+dark
+   1440x900 baseline tests above. Public token pages use route-interception
+   fixtures in the same style as the rest of this file; payload shapes mirror
+   the pages' own TypeScript response types. */
+
+const restyleViewport = { width: 1440, height: 900 };
+
+async function mockRestyleWorkspace(page: Page, engagementFlow: boolean) {
+  await page.route("**/api/**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === "/api/auth/session") {
+      return json(route, {
+        success: true,
+        user: { id: "restyle-user", name: "Rive Restyle Tester", email: "restyle@rive.test", plan: "pro", onboarding_status: "complete", display_currency: "USD" },
+        featureAvailability: { agreements: true, engagementFlow },
+      });
+    }
+    if (pathname === "/api/notifications") return json(route, { success: true, notifications: [] });
+    if (pathname === "/api/activation") return json(route, { success: true, activation: null });
+    if (pathname === "/api/rates") return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { USD: 1, INR: 83, EUR: 0.9, GBP: 0.8 } } });
+    if (pathname === "/api/engagement-events") return json(route, { success: true });
+    if (pathname === "/api/workflow/clients") return json(route, { success: true, clients: [] });
+    if (pathname === "/api/workflow/invoice-profile") {
+      return json(route, { success: true, profile: { businessName: "Restyle Studio", contactName: "Rive Restyle Tester", email: "restyle@rive.test", defaultCurrency: "USD", invoicePrefix: "INV" } });
+    }
+    if (pathname === "/api/workflow/projects/visual-project") {
+      return json(route, {
+        success: true,
+        project: {
+          id: "visual-project", title: "Restyle Fixture Project", status: "active", createdAt: "2026-08-01T00:00:00.000Z",
+          budget: "5000", currency: "USD", dueDate: "2026-09-30", tags: ["restyle"],
+          description: "A fixture project for restyle screenshots.", contractCoverage: "none",
+          externalContractLabel: null, externalContractUrl: null, contractDecisionAt: null, proof_offer: null,
+          related_counts: { invoices: 1, milestones: 1, contracts: 0 },
+          client: { id: "visual-client", name: "Restyle Fixture Client", company: "Restyle Co", avatarColor: "#2563EB" },
+          invoices: [{ id: "invoice-1", invoiceNumber: "INV-RESTYLE-001", issueDate: "2026-08-01", total: 1320, currency: "USD", status: "sent" }],
+          milestones: [{ id: "milestone-1", title: "Kickoff", dueDate: "2026-08-15", completed: false, completedAt: null }],
+          tasks: [], contracts: [],
+        },
+      });
+    }
+    if (pathname === "/api/workflow/clients/visual-client") {
+      return json(route, {
+        success: true,
+        client: {
+          id: "visual-client", name: "Restyle Fixture Client", company: "Restyle Co", avatarColor: "#2563EB",
+          createdAt: "2026-08-01T00:00:00.000Z", status: "active", email: "client@rive.test",
+          phone: "+91 90000 00000", website: "https://example.com", tags: ["restyle"], ltv: 1320,
+          paid_revenue_by_currency: { USD: 1320 }, related_counts: { projects: 1, invoices: 1, contracts: 0 }, notes: null,
+          projects: [{ id: "visual-project", title: "Restyle Fixture Project", dueDate: "2026-09-30", status: "active" }],
+          invoices: [{ id: "invoice-1", invoiceNumber: "INV-RESTYLE-001", issueDate: "2026-08-01", total: 1320, currency: "USD", status: "sent" }],
+          contracts: [],
+        },
+      });
+    }
+    return json(route, { success: true });
+  });
+}
+
+async function mockRestylePublic(page: Page) {
+  let signMode: "sign" | "completed" = "sign";
+  let signStatus: "signing" | "executed" = "signing";
+  let signerStatus: "pending" | "signed" = "pending";
+  let signDownloadUrl: string | null = null;
+  let reviewMode: "review" | "read_only" = "review";
+  let reviewVersionStatus: "draft" | "approved" = "draft";
+  const reviewComments: Array<Record<string, unknown>> = [];
+
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === "/api/public/invoices/restyle-token" && request.method() === "GET") {
+      return json(route, {
+        success: true,
+        invoice: {
+          status: "partially_paid",
+          amountPaid: "320.00",
+          snapshot: {
+            invoiceNumber: "INV-RESTYLE-001", currency: "USD", subtotal: "1200.00",
+            discountRate: "0", discountAmount: "0.00", taxRate: "10", taxAmount: "120.00",
+            total: "1320.00", amountPaid: "320.00", outstanding: "1000.00",
+            issueDate: "2026-08-01T00:00:00.000Z", dueDate: "2026-08-31T00:00:00.000Z",
+            notes: "Thank you for your business.",
+            client: { name: "Restyle Client", company: "Restyle Co", address: "1 Paper Street\nBengaluru 560001" },
+            projectTitle: "Restyle fixture project",
+            items: [
+              { description: "Design restyle", quantity: "10", unitPrice: "100.00", amount: "1000.00" },
+              { description: "Review session", quantity: "2", unitPrice: "100.00", amount: "200.00" },
+            ],
+            sender: {
+              name: "Restyle Studio", contactName: "Rive Restyle Tester", email: "restyle@rive.test",
+              phone: "+91 90000 00000", address: "2 Ink Road, Mumbai", taxId: "GSTIN0000", logoUrl: null,
+              paymentInstructions: "Pay via bank transfer.", defaultTerms: "Due within 30 days.",
+            },
+          },
+        },
+      });
+    }
+    if (pathname === "/api/public/contracts/sign/restyle-token" && request.method() === "GET") {
+      return json(route, {
+        success: true, mode: signMode, demo: true, downloadUrl: signDownloadUrl,
+        contract: {
+          id: "contract-restyle", title: "Restyle Fixture Agreement", status: signStatus, governing_law: "India", jurisdiction: "Karnataka", currency: "USD", client_name: "Restyle Client",
+          content: {
+            ownerName: "Restyle Studio", ownerEmail: "restyle@rive.test", clientName: "Restyle Client", clientCompany: "Restyle Co",
+            projectTitle: "Restyle fixture project", projectDescription: "A fixture brief.",
+            governingLaw: "India", jurisdiction: "Karnataka",
+            sections: [{ key: "scope", title: "Scope", body: "The studio will restyle the workspace.", enabled: true }],
+            paymentPlan: { currency: "USD", items: [{ label: "Kickoff", amount: "500.00", currency: "USD", triggerType: "on_signing", triggerDate: null, milestoneTitle: null, dueDays: 7 }] },
+          },
+          version: { id: "version-restyle", number: 1, hash: "restyle-hash-fixture" }, expires_at: "2026-09-30T00:00:00.000Z",
+          executed_at: null, void_requested_at: null, void_requested_by_role: null,
+          void_request_note: null, void_confirm_note: null,
+        },
+        signer: { id: "signer-restyle", role: "client", name: "Restyle Client", email: "client@rive.test", status: signerStatus, sequence: 1 },
+        consent: { version: "2026-08-03-v2", text: "I confirm that I have read and approve this exact Agreement version, and that I am authorised to act for myself or the named organisation. I consent to Rive recording my typed-name acceptance, the displayed timestamp, and the associated acceptance evidence. I understand that this record describes the method used and is not an OTP or identity-verification result." },
+      });
+    }
+    if (pathname === "/api/public/contracts/sign/restyle-token" && request.method() === "POST") {
+      const body = request.postDataJSON() as { typedName?: unknown; consentAccepted?: unknown; action?: unknown };
+      if (body.action === "decline") return json(route, { success: true, declined: true, message: "The recorded-acceptance request was declined and the sender has been notified." });
+      if (body.typedName !== "Restyle Client" || body.consentAccepted !== true) return json(route, { success: false, message: "The acceptance details are incomplete." }, 400);
+      signMode = "completed";
+      signStatus = "executed";
+      signerStatus = "signed";
+      signDownloadUrl = "/api/public/contracts/artifact/restyle-artifact";
+      return json(route, { success: true, alreadySigned: false, completed: true, artifactHash: "restyle-artifact-hash", downloadUrl: signDownloadUrl, message: "Both parties have recorded acceptance. The accepted Agreement is ready." });
+    }
+    if (pathname === "/api/public/contracts/review/restyle-token" && request.method() === "GET") {
+      return json(route, {
+        success: true, mode: reviewMode,
+        contract: {
+          id: "contract-restyle", title: "Restyle Fixture Agreement", status: "in_review", provider: "local",
+          governing_law: "India", jurisdiction: "Karnataka", client_name: "Restyle Client",
+          content: {
+            ownerName: "Restyle Studio", clientName: "Restyle Client", clientEmail: "client@rive.test",
+            projectTitle: "Restyle fixture project", projectDescription: "A fixture brief.", governingLaw: "India",
+            sections: [{ key: "scope", title: "Scope", body: "The studio will restyle the workspace.", enabled: true }],
+            paymentPlan: { currency: "USD", items: [{ label: "Kickoff", amount: "500.00", currency: "USD", triggerType: "on_signing", triggerDate: null, dueDays: 7, milestoneTitle: null }] },
+          },
+          version: { id: "version-restyle", number: 1, status: reviewVersionStatus, hash: "restyle-hash-fixture", created_at: "2026-08-01T00:00:00.000Z" },
+          comments: reviewComments, expires_at: "2026-09-30T00:00:00.000Z",
+        },
+      });
+    }
+    if (pathname === "/api/public/contracts/review/restyle-token" && request.method() === "POST") {
+      const body = request.postDataJSON() as { action?: unknown; authorName?: string; authorEmail?: string; sectionKey?: string | null; body?: string };
+      if (body.action === "approve") {
+        reviewMode = "read_only";
+        reviewVersionStatus = "approved";
+        return json(route, { success: true, approved: true, message: "The sender has been told this Agreement version is ready for finalization and recorded acceptance." });
+      }
+      const comment = { id: `comment-${reviewComments.length + 1}`, authorRole: "client", authorName: body.authorName || "Restyle Client", sectionKey: body.sectionKey || null, body: body.body || "", status: "open", createdAt: "2026-08-10T09:00:00.000Z" };
+      reviewComments.push(comment);
+      return json(route, { success: true, comment, message: "Comment added." }, 201);
+    }
+    return json(route, { success: true });
+  });
+}
+
+async function captureRestyle(
+  page: Page,
+  theme: "light" | "dark",
+  name: string,
+  path: string,
+  setup: "workspace" | "workspace-engaged" | "public" | "none",
+  ready: (capturePage: Page) => Promise<unknown>,
+  testInfo: TestInfo,
+  options: { viewport?: { width: number; height: number }; screenshot?: boolean } = {},
+) {
+  const errors = captureBrowserErrors(page);
+  const viewport = options.viewport || restyleViewport;
+  await page.setViewportSize(viewport);
+  await page.clock.setFixedTime(new Date("2026-08-10T09:00:00.000Z"));
+  await page.addInitScript((selectedTheme) => {
+    window.localStorage.setItem("rive-color-theme", selectedTheme);
+    window.localStorage.setItem("rive:sidebar-collapsed", "false");
+    const installCaptureStyle = () => {
+      if (!document.documentElement) return;
+      const style = document.createElement("style");
+      style.textContent = "nextjs-portal{display:none!important}*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}";
+      document.documentElement.appendChild(style);
+    };
+    if (document.documentElement) installCaptureStyle();
+    else document.addEventListener("DOMContentLoaded", installCaptureStyle, { once: true });
+  }, theme);
+  if (setup === "workspace") await mockRestyleWorkspace(page, false);
+  if (setup === "workspace-engaged") await mockRestyleWorkspace(page, true);
+  if (setup === "public") await mockRestylePublic(page);
+  await page.goto(path, { waitUntil: "domcontentloaded" });
+  await ready(page);
+  await page.evaluate(() => document.fonts.ready);
+  await expectNoHorizontalOverflow(page, path);
+  await page.waitForTimeout(100);
+  expect(errors, `${path} emitted browser errors`).toEqual([]);
+  if (options.screenshot !== false) {
+    const screenshotPath = testInfo.outputPath(`${name}-${theme}-${viewport.width}x${viewport.height}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: false });
+    await testInfo.attach(`${name}-${theme}-${viewport.width}x${viewport.height}`, { path: screenshotPath, contentType: "image/png" });
+  }
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test(`restyle capture login ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "login", "/login", "none", async (capturePage) => {
+      await expect(capturePage.getByRole("dialog")).toBeVisible();
+      await expect(capturePage.locator('form[data-testid="login-form"][data-hydrated="true"]')).toBeVisible();
+      await expect(capturePage.getByTestId("login-submit")).toBeEnabled();
+    }, testInfo);
+  });
+
+  test(`restyle capture start-engagement ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "start-engagement", "/workflow/start-engagement", "workspace-engaged", async (capturePage) => {
+      await expect(capturePage.getByRole("heading", { name: "New client work" })).toBeVisible({ timeout: 20_000 });
+    }, testInfo);
+  });
+
+  test(`restyle capture invoice-settings ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "invoice-settings", "/workflow/invoice-settings", "workspace", async (capturePage) => {
+      await expect(capturePage.getByRole("heading", { name: "Invoice settings" })).toBeVisible({ timeout: 20_000 });
+    }, testInfo);
+  });
+
+  test(`restyle capture project detail ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "project-detail", "/workflow/projects/visual-project", "workspace", async (capturePage) => {
+      await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Project" })).toBeVisible({ timeout: 20_000 });
+    }, testInfo);
+  });
+
+  test(`restyle capture client detail ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "client-detail", "/workflow/clients/visual-client", "workspace", async (capturePage) => {
+      await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Client" })).toBeVisible({ timeout: 20_000 });
+    }, testInfo);
+  });
+
+  test(`restyle capture public invoice ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "public-invoice", "/invoice/restyle-token", "public", async (capturePage) => {
+      await expect(capturePage.getByText("INV-RESTYLE-001", { exact: true })).toBeVisible({ timeout: 20_000 });
+    }, testInfo);
+  });
+
+  test(`restyle capture sign ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "sign", "/sign/restyle-token", "public", async (capturePage) => {
+      await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+      const recordButton = capturePage.getByRole("button", { name: "Record acceptance" });
+      await expect(recordButton).toBeDisabled();
+      await expect(capturePage.getByRole("checkbox")).toBeVisible();
+      await capturePage.locator('input[placeholder="Restyle Client"]').fill("Restyle Client");
+      await capturePage.getByRole("checkbox").check();
+      await expect(recordButton).toBeEnabled();
+    }, testInfo);
+  });
+
+  test(`restyle capture review ${theme}`, async ({ page }, testInfo) => {
+    await captureRestyle(page, theme, "review", "/review/restyle-token", "public", async (capturePage) => {
+      await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+      await expect(capturePage.getByRole("button", { name: /Looks good/ })).toBeVisible();
+      await expect(capturePage.getByRole("textbox").first()).toHaveValue("Restyle Client");
+    }, testInfo);
+  });
+}
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 1024, height: 768 }]) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`restyle public surfaces ${theme} ${viewport.width}x${viewport.height} stay usable`, async ({ page }, testInfo) => {
+      await captureRestyle(page, theme, "public-invoice", "/invoice/restyle-token", "public", async (capturePage) => {
+        await expect(capturePage.getByText("Amount due", { exact: true })).toBeVisible({ timeout: 20_000 });
+      }, testInfo, { viewport });
+
+      await captureRestyle(page, theme, "sign", "/sign/restyle-token", "public", async (capturePage) => {
+        await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+        await expect(capturePage.getByRole("button", { name: "Record acceptance" })).toBeDisabled();
+      }, testInfo, { viewport });
+
+      await captureRestyle(page, theme, "review", "/review/restyle-token", "public", async (capturePage) => {
+        await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+        await expect(capturePage.getByRole("button", { name: /Looks good/ })).toBeVisible();
+      }, testInfo, { viewport });
+    });
+  }
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test(`restyle public actions update state ${theme}`, async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(new Date("2026-08-10T09:00:00.000Z"));
+    await page.addInitScript((selectedTheme) => {
+      window.localStorage.setItem("rive-color-theme", selectedTheme);
+      const installCaptureStyle = () => {
+        if (!document.documentElement) return;
+        const style = document.createElement("style");
+        style.textContent = "nextjs-portal{display:none!important}*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}";
+        document.documentElement.appendChild(style);
+      };
+      if (document.documentElement) installCaptureStyle();
+      else document.addEventListener("DOMContentLoaded", installCaptureStyle, { once: true });
+    }, theme);
+    await mockRestylePublic(page);
+
+    await page.goto("/sign/restyle-token", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+    await page.locator('input[placeholder="Restyle Client"]').fill("Restyle Client");
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Record acceptance" }).click();
+    await expect(page.getByText("Both parties have recorded acceptance.", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: "Record acceptance" })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page, "/sign/restyle-token");
+
+    await page.goto("/review/restyle-token", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: /Looks good/ }).click();
+    await expect(page.getByText(/You marked this draft ready\./)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /Looks good/ })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page, "/review/restyle-token");
+
+    await page.waitForTimeout(100);
+    expect(errors, `public action flow (${theme}) emitted browser errors`).toEqual([]);
   });
 }

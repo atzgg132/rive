@@ -50,7 +50,7 @@ export default function AnalysisStep({
               {entities.map(([entity, counts]) => {
                 const Icon = ENTITY_ICONS[entity] || FileSpreadsheet;
                 return (
-                  <div key={entity} className="rounded-xl border border-border bg-background p-4">
+                  <div key={entity} className="rounded-none border border-border bg-background p-4">
                     <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     <p className="mt-2.5 text-2xl font-extrabold leading-none tracking-tight text-foreground">
                       {counts.create}
@@ -76,11 +76,11 @@ export default function AnalysisStep({
             {detail.sources.map((source) => (
               <li
                 key={source.sourceId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-border bg-background px-3 py-2.5"
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   {source.entity === "unknown" || source.entity === "mixed" ? (
-                    <FileSpreadsheet className="h-4 w-4 shrink-0 text-warning-foreground" aria-hidden="true" />
+                    <FileSpreadsheet className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                   ) : (
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
                   )}
