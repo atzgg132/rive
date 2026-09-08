@@ -39,7 +39,7 @@ import { RiveLogo } from "@/components/RiveLogo";
 
 export type WorkspacePreviewView = "dashboard" | "clients" | "projects" | "agreements" | "revenue" | "calendar" | "portfolio";
 
-const navigation = [
+export const navigation = [
   ["dashboard", "Overview", Grid2X2],
   ["calendar", "Calendar", CalendarDays],
   ["projects", "Projects", BriefcaseBusiness],
@@ -49,7 +49,7 @@ const navigation = [
   ["portfolio", "Portfolio", FolderKanban],
 ] as const;
 
-const pageCopy: Record<WorkspacePreviewView, { title: string; description: string; action: string; ActionIcon: LucideIcon; secondary?: string; SecondaryIcon?: LucideIcon }> = {
+export const pageCopy: Record<WorkspacePreviewView, { title: string; description: string; action: string; ActionIcon: LucideIcon; secondary?: string; SecondaryIcon?: LucideIcon }> = {
   dashboard: { title: "Your business, at a glance", description: "See what is moving, what is due, and where your attention will make the biggest difference.", action: "New invoice", ActionIcon: FileText, secondary: "New project", SecondaryIcon: Plus },
   clients: { title: "Clients", description: "Keep contact details, projects, invoices, and relationship history together.", action: "Add client", ActionIcon: Plus },
   projects: { title: "Projects", description: "Keep delivery moving with clear milestones, budgets, tasks, and deadlines.", action: "Create project", ActionIcon: Plus },
@@ -59,7 +59,7 @@ const pageCopy: Record<WorkspacePreviewView, { title: string; description: strin
   portfolio: { title: "Portfolio Studio", description: "Build a portfolio that makes your work easy to understand and easy to hire.", action: "Update live site", ActionIcon: Check, secondary: "Preview", SecondaryIcon: Eye },
 };
 
-function initials(name: string) {
+export function initials(name: string) {
   return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
@@ -67,7 +67,7 @@ function initials(name: string) {
 /* Seeded workspace data — one fictional studio, reused across views.  */
 /* ------------------------------------------------------------------ */
 
-const seededClients = [
+export const seededClients = [
   { name: "Aster House", company: "asterhouse.co", email: "hello@asterhouse.co", color: "#2354d3", status: "Active", projects: "2 projects", paid: "₹1,80,000" },
   { name: "Northline Studio", company: "northline.studio", email: "team@northline.studio", color: "#0f9a72", status: "Active", projects: "1 project", paid: "₹96,000" },
   { name: "Field Notes", company: "fieldnotes.co", email: "brief@fieldnotes.co", color: "#7c4dcc", status: "Active", projects: "1 project", paid: "₹72,000" },
@@ -76,14 +76,14 @@ const seededClients = [
   { name: "Kaveri Foods", company: "kaverifoods.in", email: "hello@kaverifoods.in", color: "#64748b", status: "Inactive", projects: "1 project", paid: "₹24,000" },
 ] as const;
 
-const dashboardMetrics = [
+export const dashboardMetrics = [
   { label: "Revenue collected", value: "₹2,84,500", sub: "Outstanding: ₹1,26,500", Icon: CircleDollarSign, tone: "green" },
   { label: "Active projects", value: "4", sub: "Currently in progress", Icon: Briefcase, tone: "blue" },
   { label: "Expenses logged", value: "₹38,240", sub: "All categorized business costs", Icon: Receipt, tone: "red" },
   { label: "Net earnings", value: "₹2,46,260", sub: "Collected minus expenses", Icon: TrendingUp, tone: "violet" },
 ] as const;
 
-const dashboardActivity = [
+export const dashboardActivity = [
   { kind: "Invoice sent", title: "INV-024 · Aster House", when: "Aug 21", tone: "amber" },
   { kind: "Payment recorded", title: "₹48,000 · Northline Studio", when: "Aug 14", tone: "green" },
   { kind: "Agreement accepted", title: "Research engagement", when: "Aug 12", tone: "blue" },
@@ -91,14 +91,14 @@ const dashboardActivity = [
   { kind: "Project created", title: "Q3 design retainer", when: "Aug 08", tone: "blue" },
 ] as const;
 
-const projectTabs = [
+export const projectTabs = [
   { label: "All work", count: "6", active: true },
   { label: "In progress", count: "3", active: false },
   { label: "Paused", count: "1", active: false },
   { label: "Completed", count: "2", active: false },
 ] as const;
 
-const projectGroups = [
+export const projectGroups = [
   {
     label: "This week",
     projects: [
@@ -115,20 +115,20 @@ const projectGroups = [
   },
 ] as const;
 
-const agreementSummary = [
+export const agreementSummary = [
   { label: "Needs your action", value: "1", Icon: Sparkles, tone: "blue" },
   { label: "With clients", value: "1", Icon: MessageSquareText, tone: "amber" },
   { label: "Acceptance", value: "1", Icon: FileSignature, tone: "violet" },
   { label: "Accepted", value: "2", Icon: FileCheck2, tone: "green" },
 ] as const;
 
-const agreementRows = [
+export const agreementRows = [
   { title: "Website launch agreement", client: "Aster House", project: "Website launch", action: "Open review workspace", hint: "Waiting for comments", stage: "In review", tone: "warning" },
   { title: "Brand system terms", client: "Northline Studio", project: "Brand system", action: "Waiting for client", hint: "1 of 2 accepted", stage: "Acceptance", tone: "info" },
   { title: "Research engagement", client: "Field Notes", project: "Research sprint", action: "View agreement & invoices", hint: "Accepted Aug 12", stage: "Accepted", tone: "success" },
 ] as const;
 
-const revenueSummary = [
+export const revenueSummary = [
   { label: "Total invoiced", value: "₹4,11,000", Icon: FileText, tone: "blue" },
   { label: "Collected", value: "₹2,84,500", Icon: WalletCards, tone: "green" },
   { label: "Outstanding", value: "₹90,000", Icon: Clock3, tone: "amber" },
@@ -136,14 +136,14 @@ const revenueSummary = [
   { label: "Draft pipeline", value: "₹72,000", Icon: FileText, tone: "slate" },
 ] as const;
 
-const invoiceRows = [
+export const invoiceRows = [
   { number: "INV-024", issued: "Issued Aug 21", client: "Aster House", project: "Website launch", due: "Due Aug 28", amount: "₹90,000", status: "Sent", tone: "info" },
   { number: "INV-021", issued: "Issued Jul 22", client: "Meridian Labs", project: "Q3 design retainer", due: "Due Aug 05", amount: "₹36,500", status: "Overdue", tone: "danger" },
   { number: "INV-019", issued: "Issued Aug 02", client: "Northline Studio", project: "Brand system", due: "Paid Aug 14", amount: "₹48,000", status: "Paid", tone: "success" },
   { number: "INV-017", issued: "Issued Aug 10", client: "Field Notes", project: "Research sprint", due: "No due date", amount: "₹72,000", status: "Draft", tone: "muted" },
 ] as const;
 
-const calendarWeek = [
+export const calendarWeek = [
   { name: "Mon", num: "10", today: false, events: [{ time: "10:00", title: "Homepage review · Aster", tone: "blue" }, { time: "15:30", title: "Invoice follow-up", tone: "blue" }] },
   { name: "Tue", num: "11", today: true, events: [{ time: "09:30", title: "Focus · Brand concepts", tone: "teal" }] },
   { name: "Wed", num: "12", today: false, events: [{ time: "All day", title: "INV-024 due · ₹90,000", tone: "amber" }, { time: "14:00", title: "Client call · Field Notes", tone: "blue" }] },
@@ -153,12 +153,12 @@ const calendarWeek = [
   { name: "Sun", num: "16", today: false, events: [] },
 ] as const;
 
-const planningQueue = [
+export const planningQueue = [
   { title: "Prepare Meridian proposal", meta: "45 min" },
   { title: "Send invoice reminder", meta: "15 min" },
 ] as const;
 
-const studioSections = [
+export const studioSections = [
   { label: "Selected work", sub: "3 projects", Icon: FolderKanban, active: true },
   { label: "Profile", sub: "Identity & contact", Icon: UserRound, active: false },
   { label: "Services", sub: "2 services", Icon: BriefcaseBusiness, active: false },
@@ -166,7 +166,7 @@ const studioSections = [
   { label: "Appearance", sub: "Theme & visibility", Icon: Settings2, active: false },
 ] as const;
 
-const studioWork = [
+export const studioWork = [
   { index: "01", title: "Website launch", meta: "Aster House · Product design", visibility: "Public", tone: "success" },
   { index: "02", title: "Brand system", meta: "Northline Studio · Brand identity", visibility: "Public", tone: "success" },
   { index: "03", title: "Research sprint", meta: "Field Notes · UX research", visibility: "Private", tone: "muted" },
@@ -176,7 +176,7 @@ const studioWork = [
 /* Views                                                               */
 /* ------------------------------------------------------------------ */
 
-function MetricCard({ label, value, sub, Icon, tone }: { label: string; value: string; sub?: string; Icon: LucideIcon; tone: string }) {
+export function MetricCard({ label, value, sub, Icon, tone }: { label: string; value: string; sub?: string; Icon: LucideIcon; tone: string }) {
   return (
     <div className="wp-metric">
       <div><span>{label}</span><i data-tone={tone}><Icon /></i></div>
@@ -186,7 +186,7 @@ function MetricCard({ label, value, sub, Icon, tone }: { label: string; value: s
   );
 }
 
-function Toolbar({ searchPlaceholder, selectLabel, selectValue }: { searchPlaceholder: string; selectLabel: string; selectValue: string }) {
+export function Toolbar({ searchPlaceholder, selectLabel, selectValue }: { searchPlaceholder: string; selectLabel: string; selectValue: string }) {
   return (
     <div className="wp-toolbar">
       <span className="wp-search"><Search />{searchPlaceholder}</span>
@@ -414,7 +414,7 @@ export function WorkspacePreview({ view, className = "" }: { view: WorkspacePrev
   const page = pageCopy[view];
   const ViewContent = views[view];
   return (
-    <div className={`workspace-preview ${className}`} data-workspace-preview={view} role="img" aria-label="Rive product preview">
+    <div className={`workspace-preview workspace-preview--full ${className}`} data-workspace-preview={view} role="img" aria-label="Rive product preview">
       <div className="workspace-preview__topbar"><div className="wp-wordmark"><RiveLogo height={24} /><span>Free</span></div><span><Search />Search workspace…</span><div><span>Display&nbsp;&nbsp; INR · Indian rupee</span><Moon /><Bell /></div></div>
       <div className="workspace-preview__body">
         <aside>{navigation.map(([id, label, Icon]) => <span key={id} className={id === view ? "active" : ""}><Icon />{label}</span>)}<div><i>MR</i><span><b>Maya Rao</b><small>Independent studio</small></span></div></aside>

@@ -2080,6 +2080,8 @@ body[data-auth-dedicated] .edition-footer { display: none; }
   .edition-hero__copy h1 { max-width: 23rem; font-size: clamp(3.2rem, 15.5vw, 4.15rem); line-height: 1.04; }
   .edition-hero__copy > p { font-size: 1rem; }
   .edition-hero-stage { padding-top: 0; }
+  .edition-hero-stage .workspace-preview { max-height: min(58svh, 30rem); }
+  .edition-hero-stage .workspace-preview__body { min-height: min(18rem, 30svh); }
   .edition-preview-label { margin-bottom: .55rem; }
   .workspace-preview { border-radius: .75rem; box-shadow: 0 1rem 2.5rem rgb(12 30 54 / .12); }
   .workspace-preview__topbar { grid-template-columns: 1fr auto; height: 3rem; }
@@ -2403,6 +2405,31 @@ body[data-auth-dedicated] .edition-footer { display: none; }
   .workspace-preview .wp-cal__day { min-height: 7.5rem; padding-inline: .25rem; }
 }
 
+/* Compact workspace preview — essential data for small/short viewports. */
+
+.workspace-preview--full { display: block; }
+.workspace-preview--compact { display: none; }
+
+@media (max-width: 1100px), (max-width: 1536px) and (max-height: 900px) and (min-width: 768px) {
+  .workspace-preview--full { display: none; }
+  .workspace-preview--compact { display: block; }
+}
+
+.workspace-preview--compact .workspace-preview__body { min-height: auto; grid-template-columns: 1fr; }
+.workspace-preview--compact .workspace-preview__body > aside { display: none; }
+.workspace-preview--compact .workspace-preview__topbar > div > span { display: none; }
+.workspace-preview--compact .wp-actions .wp-btn-ghost { display: none; }
+
+.workspace-preview--compact .wp-metrics,
+.workspace-preview--compact .wp-client-grid,
+.workspace-preview--compact .wp-cal__week { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
+.workspace-preview--compact .wp-client-grid { gap: .55rem; margin-top: .7rem; }
+.workspace-preview--compact .wp-cal__week { margin-top: .6rem; }
+.workspace-preview--compact .wp-cal__day { min-height: 5.5rem; padding-inline: .3rem; }
+
+.workspace-preview--compact .wp-work { margin-top: .45rem; }
+.workspace-preview--compact .wp-work-add { margin-top: .45rem; }
+
 /* Short-viewport/small-laptop adjustments: 1080p at 125-150% scaling and 1366x768.
    Applies to desktop widths only; the 767px mobile media query stays in control below that. */
 @media (max-width: 1536px) and (max-height: 900px) and (min-width: 768px) {
@@ -2436,7 +2463,7 @@ body[data-auth-dedicated] .edition-footer { display: none; }
   .edition-hero__grid {
     flex: none;
     min-height: auto;
-    grid-template-columns: minmax(16rem, 1.1fr) minmax(22rem, .9fr);
+    grid-template-columns: minmax(14rem, .85fr) minmax(24rem, .95fr);
     gap: 2rem;
     padding-block: 2rem;
     align-items: start;
@@ -2453,7 +2480,11 @@ body[data-auth-dedicated] .edition-footer { display: none; }
   .edition-hero__copy .edition-assurance { margin-top: 1rem; }
 
   .edition-hero-stage { padding-top: 0; }
-  .edition-hero-stage .workspace-preview { max-height: min(46vh, 22rem); }
+  .edition-hero-stage .workspace-preview {
+    max-width: 46rem;
+    margin: 0 auto;
+    max-height: min(58svh, 30rem);
+  }
   .edition-hero-stage .workspace-preview__body { min-height: min(15rem, 35svh); }
   .edition-hero-stage .workspace-preview .wp-activity li:nth-child(n+4),
   .edition-hero-stage .workspace-preview .wp-people li:nth-child(n+4) { display: none; }

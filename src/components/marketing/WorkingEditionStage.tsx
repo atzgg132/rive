@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, ArrowUpRight, CircleDollarSign, MapPin, Sparkles } from "lucide-react";
-import { WorkspacePreview, type WorkspacePreviewView } from "@/components/marketing/WorkspacePreview";
+import { type WorkspacePreviewView } from "@/components/marketing/WorkspacePreview";
+import { ResponsiveWorkspacePreview } from "@/components/marketing/ResponsiveWorkspacePreview";
 
 export function ClientScene({ selected = 0 }: { selected?: number }) {
   const views: WorkspacePreviewView[] = ["clients", "projects", "calendar"];
-  return <WorkspacePreview view={views[selected] ?? "clients"} />;
+  return <ResponsiveWorkspacePreview view={views[selected] ?? "clients"} />;
 }
 
 export function HeroClientStage() {
   return (
     <div className="edition-hero-stage" data-testid="hero-client-stage">
       <div className="edition-preview-label"><span>Inside Rive</span></div>
-      <WorkspacePreview view="dashboard" />
+      <ResponsiveWorkspacePreview view="dashboard" />
     </div>
   );
 }
@@ -44,7 +45,7 @@ export function ProductQuestionStage() {
         {active === "outstanding" ? <small><CircleDollarSign className="h-4 w-4" /> Payments are recorded in Rive; Rive does not currently collect or transfer funds.</small> : null}
         <Link href={active === "due" ? "/product/clients-projects" : "/product/agreements-invoices"}>Explore {current.note.toLowerCase()} <ArrowRight className="h-4 w-4" /></Link>
       </div>
-      <div key={active} className="edition-question-visual"><WorkspacePreview view={current.view} /></div>
+      <div key={active} className="edition-question-visual"><ResponsiveWorkspacePreview view={current.view} /></div>
     </div>
   );
 }
