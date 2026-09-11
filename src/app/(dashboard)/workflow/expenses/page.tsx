@@ -41,6 +41,13 @@ interface Project {
   currency?: string;
 }
 
+interface ExpenseSummary {
+  month?: { byCurrency?: Record<string, number>; count?: number };
+  billableOutstanding?: { byCurrency?: Record<string, number> };
+  linked?: { byCurrency?: Record<string, number> };
+  categories?: { category: string; currency: string; amount: number }[];
+}
+
 const EXPENSE_CATEGORY_OPTIONS = [
   { value: "all", label: "All categories" },
   { value: "software", label: "Software" },
@@ -62,6 +69,7 @@ export default function ExpensesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [summary, setSummary] = useState<ExpenseSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Form Drawer state
@@ -92,6 +100,7 @@ export default function ExpensesPage() {
           // adopting that clamp the local page counter drifts, and the Next
           // button then re-requests a page the list is already showing.
           setPagination(data.pagination || null);
+          setSummary(data.summary || null);
           if (data.pagination && data.pagination.page !== page) setPage(data.pagination.page);
         }
       }
@@ -255,17 +264,51 @@ export default function ExpensesPage() {
     }
     return total;
   };
+  const sumByCurrency = (byCurrency?: Record<string, number> | null) => {
+    if (!byCurrency) return null;
+    let total = 0;
+    for (const [currencyCode, value] of Object.entries(byCurrency)) {
+      const converted = convert(value, currencyCode);
+      if (converted === null) return null;
+      total += converted;
+    }
+    return total;
+  };
   const formatSummary = (value: number | null) => value === null ? (ratesStatus === "loading" ? "Converting…" : "Rates unavailable") : formatCurrency(value);
-  const monthSpend = sumExpenses(monthExpenses);
-  const billableOutstanding = sumExpenses(expenses.filter((expense) => expense.is_billable && !expense.is_reimbursed));
   const categoriesAvailable = expenses.every((expense) => convert(Number(expense.amount), expense.currency) !== null);
   const categoryTotals = expenses.reduce<Record<string, number>>((totals, expense) => {
     const converted = convert(Number(expense.amount), expense.currency);
     totals[expense.category] = (totals[expense.category] || 0) + (converted || 0);
     return totals;
   }, {});
-  const topCategory = categoriesAvailable ? Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || null : null;
-  const linkedSpend = sumExpenses(expenses.filter((expense) => expense.project_id));
+  // Workspace-wide breakdown from the server summary when present; the
+  // page-rows reduce below only serves older responses without it.
+  const categoryBreakdown = (() => {
+    const totals = new Map<string, number>();
+    if (summary?.categories) {
+      for (const row of summary.categories) {
+        const converted = convert(row.amount, row.currency);
+        if (converted === null) return [] as { category: string; amount: number; share: number }[];
+        totals.set(row.category, (totals.get(row.category) || 0) + converted);
+      }
+    } else if (categoriesAvailable) {
+      for (const [categoryName, amountValue] of Object.entries(categoryTotals)) totals.set(categoryName, amountValue);
+    }
+    const sorted = [...totals.entries()].filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
+    const grandTotal = sorted.reduce((sum, [, value]) => sum + value, 0);
+    const restTotal = sorted.slice(5).reduce((sum, [, value]) => sum + value, 0);
+    const rows: [string, number][] = restTotal > 0 ? [...sorted.slice(0, 5), ["everything else", restTotal]] : sorted.slice(0, 5);
+    return rows.map(([categoryName, amountValue]) => ({ category: categoryName, amount: amountValue, share: grandTotal > 0 ? amountValue / grandTotal : 0 }));
+  })();
+  // Tiles describe the workspace, not the visible page — prefer the server
+  // summary and only fall back to summing loaded rows when it is absent.
+  const monthSpend = summary ? sumByCurrency(summary.month?.byCurrency) : sumExpenses(monthExpenses);
+  const billableOutstanding = summary ? sumByCurrency(summary.billableOutstanding?.byCurrency) : sumExpenses(expenses.filter((expense) => expense.is_billable && !expense.is_reimbursed));
+  const linkedSpend = summary ? sumByCurrency(summary.linked?.byCurrency) : sumExpenses(expenses.filter((expense) => expense.project_id));
+  const topCategory = summary
+    ? categoryBreakdown.length ? ([categoryBreakdown[0].category, categoryBreakdown[0].amount] as const) : null
+    : categoriesAvailable ? Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || null : null;
+  const monthCount = summary?.month?.count ?? monthExpenses.length;
 
   return (
     <div className="workspace-page relative min-h-[calc(100vh-8rem)] animate-panel-in">
@@ -277,7 +320,7 @@ export default function ExpensesPage() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["this month", formatSummary(monthSpend), `${monthExpenses.length} logged cost${monthExpenses.length === 1 ? "" : "s"}`],
+          ["this month", formatSummary(monthSpend), `${monthCount} logged cost${monthCount === 1 ? "" : "s"}`],
           ["billable, unreimbursed", formatSummary(billableOutstanding), "recoverable from clients"],
           ["largest category", topCategory?.[0] || "—", topCategory ? formatCurrency(topCategory[1]) : "categorize costs to reveal spend"],
           ["linked to projects", formatSummary(linkedSpend), "available for project profitability"],
@@ -285,6 +328,24 @@ export default function ExpensesPage() {
       </section>
 
       <p className="-mt-3 text-xs text-muted-foreground">Original expense currencies remain unchanged. {ratesStatus === "ready" ? `Display conversions use indicative reference rates dated ${ratesAsOf || "the latest business day"}.` : ratesStatus === "loading" ? "Loading current reference rates…" : "Reference rates are temporarily unavailable; native expense amounts remain visible."}</p>
+
+      {categoryBreakdown.length >= 2 ? (
+        <section className="rounded-none border border-border bg-card p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xs font-bold text-foreground">All logged costs by category</h2>
+            <span className="text-xs text-muted-foreground">{displayCurrency}</span>
+          </div>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {categoryBreakdown.map((row) => (
+              <li key={row.category} className="flex items-center gap-3">
+                <span className="w-24 shrink-0 truncate text-xs font-semibold capitalize text-foreground">{row.category}</span>
+                <span className="h-2 flex-1 overflow-hidden rounded-none bg-muted" aria-hidden="true"><span className="block h-full bg-primary/60" style={{ width: `${Math.max(2, row.share * 100)}%` }} /></span>
+                <span className="w-24 shrink-0 text-right font-mono text-xs font-bold tabular-nums text-foreground">{formatCurrency(row.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* Filter and Search */}
       <div className="workspace-toolbar">

@@ -29,6 +29,7 @@ const { normalizeGuideProgress } = await import("../../src/lib/guides.ts");
 const invoiceTotals = await import("../../src/utils/invoiceTotals.ts");
 const revenueTrend = await import("../../src/utils/revenueTrend.ts");
 const invoiceLifecycle = await import("../../src/utils/invoiceLifecycle.ts");
+const signalsUtil = await import("../../src/utils/signals.ts");
 
 function compileRoute(relativePath) {
   const source = readFileSync(new URL(relativePath, import.meta.url), "utf8");
@@ -76,6 +77,7 @@ function loadDashboard() {
         "@/lib/activation-plan": { buildActivationPlan },
         "@/lib/activation": { normalizeActivationGoal },
         "@/lib/guides": { normalizeGuideProgress },
+        "@/utils/signals": signalsUtil,
       };
       return deps[name] || require(name);
     },

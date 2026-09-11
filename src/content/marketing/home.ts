@@ -81,7 +81,7 @@ export const homeContent = {
         visual: {
           kind: "dashboard",
           props: {
-            title: "Your business, at a glance",
+            title: "Overview",
             metrics: [
               { label: "Revenue collected", value: "₹4.82L", tone: "emerald" },
               { label: "Active projects", value: "7", tone: "blue" },

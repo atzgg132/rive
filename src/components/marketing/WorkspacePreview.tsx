@@ -50,7 +50,7 @@ export const navigation = [
 ] as const;
 
 export const pageCopy: Record<WorkspacePreviewView, { title: string; description: string; action: string; ActionIcon: LucideIcon; secondary?: string; SecondaryIcon?: LucideIcon }> = {
-  dashboard: { title: "Your business, at a glance", description: "See what is moving, what is due, and where your attention will make the biggest difference.", action: "New invoice", ActionIcon: FileText, secondary: "New project", SecondaryIcon: Plus },
+  dashboard: { title: "Overview", description: "Cash in, costs out, and the signals worth acting on.", action: "New invoice", ActionIcon: FileText, secondary: "New project", SecondaryIcon: Plus },
   clients: { title: "Clients", description: "Keep contact details, projects, invoices, and relationship history together.", action: "Add client", ActionIcon: Plus },
   projects: { title: "Projects", description: "Keep delivery moving with clear milestones, budgets, tasks, and deadlines.", action: "Create project", ActionIcon: Plus },
   agreements: { title: "Agreements", description: "Draft, review, accept, and bill from one agreement using the client and project details already in Rive.", action: "New agreement", ActionIcon: Plus },

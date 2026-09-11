@@ -93,6 +93,66 @@ export function buildMonthlyTrend(
   return { points, complete: dropped.size === 0 };
 }
 
+/** The dated-cash series: receipts grouped by payment month, not issue month. */
+export type MonthlyCashRow = {
+  /** `YYYY-MM`, as the API returns it. */
+  month: string;
+  currency: string;
+  cashReceived: number;
+};
+
+export type CashTrendPoint = {
+  month: string;
+  label: string;
+  /** Display currency. */
+  received: number;
+  /** The original currencies that were summed into this point. */
+  currencies: string[];
+  /** 0–1 against the largest month in the window. Drives bar length. */
+  share: number;
+};
+
+/**
+ * The cash-received counterpart to `buildMonthlyTrend`. Same rule: a month is
+ * only plotted when every currency row inside it converted — half a month
+ * drawn as a whole one is worse than an honest gap.
+ */
+export function buildCashTrend(
+  rows: MonthlyCashRow[],
+  convert: (value: number, currency: string) => number | null,
+  months = 6,
+): { points: CashTrendPoint[]; complete: boolean } {
+  const byMonth = new Map<string, { received: number; currencies: Set<string> }>();
+  const dropped = new Set<string>();
+
+  for (const row of rows) {
+    const received = convert(row.cashReceived, row.currency);
+    if (received === null) {
+      dropped.add(row.month);
+      continue;
+    }
+    const entry = byMonth.get(row.month) || { received: 0, currencies: new Set<string>() };
+    entry.received += received;
+    entry.currencies.add(row.currency);
+    byMonth.set(row.month, entry);
+  }
+
+  for (const month of dropped) byMonth.delete(month);
+
+  const ordered = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-months);
+  const largest = ordered.reduce((max, [, entry]) => Math.max(max, entry.received), 0);
+
+  const points = ordered.map(([month, entry]) => ({
+    month,
+    label: monthLabel(month),
+    received: entry.received,
+    currencies: [...entry.currencies].sort(),
+    share: largest > 0 ? entry.received / largest : 0,
+  }));
+
+  return { points, complete: dropped.size === 0 };
+}
+
 /** The shape the monthly cohort needs from an invoice. */
 export type CohortInvoice = {
   currency: string;

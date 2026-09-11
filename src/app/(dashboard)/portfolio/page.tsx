@@ -143,6 +143,17 @@ export default function PortfolioDashboardPage() {
   const unstarted = isPortfolioUnstarted(content);
   const saveErrorSection = portfolioPublishErrorSection(saveError);
 
+  /* Deep links like /portfolio?tab=inquiries (dashboard enquiry signals) open
+     straight on the right tab. Read once on mount; the tab itself stays local
+     state after that. */
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested === "analytics" || requested === "inquiries") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTab(requested);
+    }
+  }, []);
+
   /* The unread count is loaded up front so the tab can carry a badge without
      the owner having to open it first. A failure here is silent: an absent
      badge is a far smaller problem than a toast on every studio visit. */

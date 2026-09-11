@@ -16,9 +16,34 @@ export type FinancialChartPoint = {
 export type FinancialChart = {
   points: FinancialChartPoint[];
   scaleMax: number;
+  /**
+   * Readable ceilings for the diverging net bars: `up` is the headroom above
+   * the zero baseline, `down` below it. Either is 0 when no month nets that
+   * way, so an all-positive chart keeps its baseline on the bottom edge.
+   */
+  netExtent: { up: number; down: number };
+  /** Fraction of the bar track sitting above the zero baseline. */
+  baselineShare: number;
   totals: { revenue: number; expenses: number; net: number };
   defaultPointKey: string | null;
   hasActivity: boolean;
+};
+
+/**
+ * Month-to-date set against the same days of the month before it — comparing
+ * "September so far" to all of August penalises the current month for days
+ * that have not happened yet.
+ */
+export type ChartPace = {
+  monthKey: string;
+  label: string;
+  dayOfMonth: number;
+  daysInMonth: number;
+  cashIn: number;
+  expensesOut: number;
+  net: number;
+  prior: { cashIn: number; expensesOut: number; net: number };
+  priorLabel: string;
 };
 
 function nonNegativeFinite(value: number): number {
@@ -68,10 +93,16 @@ export function prepareFinancialChart(data: FinancialChartInput[]): FinancialCha
   );
   const lastActive = points.findLast((point) => point.revenue > 0 || point.expenses > 0);
   const largestValue = points.reduce((largest, point) => Math.max(largest, point.revenue, point.expenses), 0);
+  const maxPositiveNet = points.reduce((largest, point) => Math.max(largest, point.net), 0);
+  const maxNegativeNet = points.reduce((largest, point) => Math.max(largest, -point.net), 0);
+  const up = maxPositiveNet > 0 ? financialChartScale(maxPositiveNet) : 0;
+  const down = maxNegativeNet > 0 ? financialChartScale(maxNegativeNet) : 0;
 
   return {
     points,
     scaleMax: financialChartScale(largestValue),
+    netExtent: { up, down },
+    baselineShare: up + down > 0 ? up / (up + down) : 1,
     totals,
     defaultPointKey: lastActive?.key || points.at(-1)?.key || null,
     hasActivity: largestValue > 0,
