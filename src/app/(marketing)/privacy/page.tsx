@@ -52,7 +52,7 @@ export default function PrivacyPage() {
                   <li><strong>Browser and device information</strong> — Browser type, OS, screen resolution, for product compatibility purposes.</li>
                   <li><strong>Cookies</strong> — See our <a href="/cookies" className="text-primary hover:underline">Cookie Policy</a> for details.</li>
                 </ul>
-                <p>We do not collect payment details, government IDs, or sensitive personal data at this stage.</p>
+                <p>We do not collect payment details or government IDs. Synced calendar events can include the titles, times, and details you or others put on those events.</p>
               </Section>
 
               <Section id="use" title="3. How we use your information">
