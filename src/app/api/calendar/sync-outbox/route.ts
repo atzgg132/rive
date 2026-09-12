@@ -31,7 +31,10 @@ export async function POST(req: NextRequest) {
       await prisma.calendarSyncOutbox.update({
         where: { id: job.id },
         data: {
-          status: "pending",
+          // The claim query only selects attempts < 8, so a job that stays
+          // "pending" at the cap would never be picked again — mark it failed
+          // so the count the connections endpoint surfaces is honest.
+          status: attempts >= 8 ? "failed" : "pending",
           availableAt: new Date(Date.now() + Math.min(6 * 60 * 60 * 1000, 2 ** attempts * 30_000)),
           lastError: error instanceof Error ? error.message.slice(0, 500) : "Sync failed",
         },

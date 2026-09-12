@@ -3,6 +3,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { createCalendarOAuthState } from "@/utils/calendarCrypto";
 import { googleAuthorizationUrl } from "@/utils/googleCalendar";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
+import { prisma } from "@/utils/db";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -10,7 +11,14 @@ export async function GET(req: NextRequest) {
   if (!googleCalendarAvailable()) return NextResponse.redirect(new URL("/calendar?connectionError=google_not_available", process.env.APP_URL || req.url));
   try {
     const returnTo = req.nextUrl.searchParams.get("from") === "onboarding" ? "/onboarding" : "/calendar";
-    return NextResponse.redirect(googleAuthorizationUrl(createCalendarOAuthState(session.userId, returnTo)));
+    // On reconnect, hint the previously connected account so the chooser lands
+    // on it — multi-account browsers otherwise default to the wrong identity.
+    const existing = await prisma.calendarConnection.findFirst({
+      where: { userId: session.userId, provider: "google" },
+      orderBy: { updatedAt: "desc" },
+      select: { accountEmail: true },
+    });
+    return NextResponse.redirect(googleAuthorizationUrl(createCalendarOAuthState(session.userId, returnTo), existing?.accountEmail || undefined));
   } catch (error) {
     console.error("Google calendar connection error:", error);
     return NextResponse.redirect(new URL("/calendar?connectionError=google_not_configured", process.env.APP_URL || req.url));

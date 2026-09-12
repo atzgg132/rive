@@ -6,6 +6,7 @@ import {
   connectorCredentialConfigured,
   googleCalendarAvailable,
 } from "@/utils/connectorConfig";
+import { localDateTimeInZone } from "@/lib/calendar-time";
 import { GOOGLE_CALENDAR_OAUTH_SCOPES } from "@/utils/googleScopes";
 
 export { googleCalendarAvailable, GOOGLE_CALENDAR_OAUTH_SCOPES };
@@ -60,18 +61,22 @@ function googleConfig() {
   };
 }
 
-export function googleAuthorizationUrl(state: string): string {
+export function googleAuthorizationUrl(state: string, loginHint?: string): string {
   const config = googleConfig();
   const params = new URLSearchParams({
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
     response_type: "code",
     access_type: "offline",
-    prompt: "consent",
+    // consent keeps reissuing refresh tokens on reconnect; select_account
+    // forces the chooser so a multi-account browser can't silently attach the
+    // wrong Google account to this Rive user.
+    prompt: "consent select_account",
     include_granted_scopes: "true",
     state,
     scope: GOOGLE_CALENDAR_OAUTH_SCOPES.join(" "),
   });
+  if (loginHint) params.set("login_hint", loginHint);
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
@@ -97,8 +102,34 @@ export async function exchangeGoogleCode(code: string): Promise<GoogleCredential
   };
 }
 
+/**
+ * The grant is dead (revoked at Google, or no usable refresh token). Mark the
+ * connection so every surface — calendar UI, onboarding, admin — can offer
+ * reconnect instead of presenting a healthy-looking badge. The update itself
+ * must never mask the original failure.
+ */
+/**
+ * Google's token endpoint answers a refresh with 400 + `invalid_grant` only
+ * when the grant itself is dead (revoked or expired beyond use). Every other
+ * failure — 5xx, network, client misconfiguration — is transient for the user
+ * and must not flag the connection for reconnect.
+ */
+export function isRevokedGrantResponse(status: number, body: string): boolean {
+  return status === 400 && body.includes("invalid_grant");
+}
+
+async function markConnectionNeedsReconnect(connectionId: string, message: string) {
+  await prisma.calendarConnection.update({
+    where: { id: connectionId },
+    data: { status: "needs_reconnect", lastError: message.slice(0, 500) },
+  }).catch((error) => console.error("Could not flag Google connection for reconnect:", error));
+}
+
 async function refreshCredentials(connectionId: string, credentials: GoogleCredentials): Promise<GoogleCredentials> {
-  if (!credentials.refreshToken) throw new Error("Google access expired. Reconnect the account.");
+  if (!credentials.refreshToken) {
+    await markConnectionNeedsReconnect(connectionId, "Google access expired. Reconnect the account.");
+    throw new Error("Google access expired. Reconnect the account.");
+  }
   const config = googleConfig();
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -110,11 +141,23 @@ async function refreshCredentials(connectionId: string, credentials: GoogleCrede
       grant_type: "refresh_token",
     }),
   });
-  if (!response.ok) throw new Error("Google authorization was revoked. Reconnect the account.");
-  const payload = await response.json() as { access_token: string; expires_in: number };
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0, 300);
+    // invalid_grant means the grant itself is gone — flag it so the UI can
+    // offer reconnect. Anything else (5xx, network blip, client config) is
+    // transient or operator-side and must not strand a healthy connection.
+    if (isRevokedGrantResponse(response.status, detail)) {
+      await markConnectionNeedsReconnect(connectionId, "Google access was revoked. Reconnect the account.");
+      throw new Error("Google access was revoked. Reconnect the account.");
+    }
+    throw new Error(`Google token refresh failed (${response.status}).`);
+  }
+  const payload = await response.json() as { access_token: string; refresh_token?: string; expires_in: number };
   const refreshed = {
     ...credentials,
     accessToken: payload.access_token,
+    // Google occasionally rotates the refresh token — keep whichever is newest.
+    refreshToken: payload.refresh_token || credentials.refreshToken,
     expiresAt: Date.now() + payload.expires_in * 1000,
   };
   await prisma.calendarConnection.update({
@@ -465,7 +508,7 @@ export async function watchGoogleCalendar(externalCalendarId: string) {
   return id;
 }
 
-function eventToGooglePayload(event: {
+export function eventToGooglePayload(event: {
   title: string;
   description: string | null;
   location: string | null;
@@ -477,12 +520,18 @@ function eventToGooglePayload(event: {
   timeZone: string;
   availability: string;
 }) {
+  // Send the naive wall time plus the named zone — Google's recommended form.
+  // A Z-suffixed dateTime alongside timeZone is overspecified: it happens to
+  // work today because Google's offset-wins precedence, but it silently breaks
+  // if the stored zone and the instant ever disagree.
+  const startDateTime = event.allDay || !event.startAt ? null : localDateTimeInZone(event.startAt, event.timeZone);
+  const endDateTime = event.allDay || !event.endAt ? null : localDateTimeInZone(event.endAt, event.timeZone);
   return {
     summary: event.title,
     description: event.description || undefined,
     location: event.location || undefined,
-    start: event.allDay ? { date: event.startDate } : { dateTime: event.startAt?.toISOString(), timeZone: event.timeZone },
-    end: event.allDay ? { date: event.endDate } : { dateTime: event.endAt?.toISOString(), timeZone: event.timeZone },
+    start: event.allDay ? { date: event.startDate } : { dateTime: startDateTime, timeZone: event.timeZone },
+    end: event.allDay ? { date: event.endDate } : { dateTime: endDateTime, timeZone: event.timeZone },
     transparency: event.availability === "free" ? "transparent" : "opaque",
     extendedProperties: { private: { riveEventId: "" } },
   };
@@ -515,15 +564,34 @@ export async function pushEventToGoogle(eventId: string, operation: "create" | "
     return true;
   }
   if (operation !== "create") return false;
-  const connection = await prisma.calendarConnection.findFirst({
-    where: { userId: event.userId, provider: "google", status: "connected", defaultExternalCalendarId: { not: null } },
-  });
-  if (!connection || !connection.defaultExternalCalendarId) return false;
-  const external = await prisma.externalCalendar.findUnique({
-    where: { connectionId_providerCalendarId: { connectionId: connection.id, providerCalendarId: connection.defaultExternalCalendarId } },
+  // Resolve the destination deterministically — with more than one Google
+  // account connected, an unordered findFirst could write the event to a
+  // different account than the user expects. Preference order:
+  // 1. the Google calendar that mirrors this event's local calendar;
+  // 2. the oldest healthy connection's default calendar.
+  const READ_ONLY_ROLES = ["reader", "freeBusyReader"];
+  const mappedExternal = await prisma.externalCalendar.findFirst({
+    where: {
+      calendarId: event.calendarId,
+      connection: { userId: event.userId, provider: "google", status: "connected" },
+    },
     include: { connection: true },
   });
-  if (!external || ["reader", "freeBusyReader"].includes(external.accessRole || "")) return false;
+  let external = mappedExternal && !READ_ONLY_ROLES.includes(mappedExternal.accessRole || "") ? mappedExternal : null;
+  if (!external) {
+    const connection = await prisma.calendarConnection.findFirst({
+      where: { userId: event.userId, provider: "google", status: "connected", defaultExternalCalendarId: { not: null } },
+      orderBy: { createdAt: "asc" },
+    });
+    if (connection?.defaultExternalCalendarId) {
+      const fallback = await prisma.externalCalendar.findUnique({
+        where: { connectionId_providerCalendarId: { connectionId: connection.id, providerCalendarId: connection.defaultExternalCalendarId } },
+        include: { connection: true },
+      });
+      if (fallback && !READ_ONLY_ROLES.includes(fallback.accessRole || "")) external = fallback;
+    }
+  }
+  if (!external) return false;
 
   // Search-before-create safety net. If a previous attempt's Google POST
   // succeeded but the local mapping write was lost (crash, network blip, or a

@@ -55,6 +55,7 @@ export function UsersTab() {
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [diagnosis, setDiagnosis] = useState<FunnelDiagnosis | null>(null);
   const [timeline, setTimeline] = useState<Array<{ id: string; kind: string; type: string; module: string | null; at: string }>>([]);
+  const [calendarConnections, setCalendarConnections] = useState<Array<{ id: string; provider: string; accountEmail: string | null; status: string; lastSyncedAt: string | null; lastError: string | null }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailError, setDetailError] = useState("");
@@ -146,6 +147,7 @@ export function UsersTab() {
       if (!response.ok || !data?.success) throw new Error(data?.message || "Timeline could not be loaded.");
       setTimeline(data.timeline || []);
       setDiagnosis(data.funnel || null);
+      setCalendarConnections(data.calendarConnections || []);
     } catch (err) {
       if (seq === openSeq.current) setDetailError(err instanceof Error ? err.message : "Timeline could not be loaded.");
     } finally {
@@ -274,6 +276,21 @@ export function UsersTab() {
                 <p><span className="text-muted-foreground">Starting path:</span> {selected.startingPath || "Not recorded"}</p>
                 <p><span className="text-muted-foreground">Source:</span> {selected.attribution?.firstTouchSource || "Not recorded"}</p>
                 <p><span className="text-muted-foreground">Verified:</span> {selected.emailVerified ? "Yes" : "No"}</p>
+                {calendarConnections.length ? (
+                  <div>
+                    <p className="text-muted-foreground">Calendar connections:</p>
+                    <ul className="mt-1 space-y-1">
+                      {calendarConnections.map((connection) => (
+                        <li key={connection.id} className="rounded-none border border-border px-2 py-1.5 text-xs">
+                          <span className="font-medium">{connection.accountEmail || connection.provider}</span>
+                          <span className={`ml-2 font-bold ${connection.status === "connected" ? "text-success" : "text-destructive"}`}>{connection.status}</span>
+                          <span className="ml-2 text-muted-foreground">{connection.lastSyncedAt ? `synced ${ago(connection.lastSyncedAt)}` : "never synced"}</span>
+                          {connection.lastError ? <p className="mt-0.5 text-destructive">{connection.lastError}</p> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
               <div className="max-h-80 space-y-2 overflow-y-auto">
                 {timelineLoading ? <Loading label="Loading timeline" /> : timeline.map((event) => <div key={event.id} className="rounded-none border border-border px-3 py-2"><div className="flex justify-between gap-3"><span className="text-sm font-medium">{event.type}</span><span className="text-xs text-muted-foreground">{ago(event.at)}</span></div><p className="mt-1 text-xs text-muted-foreground">{event.module || event.kind}</p></div>)}

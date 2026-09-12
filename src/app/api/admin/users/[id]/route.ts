@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   await prisma.auditEvent.create({ data: { action: "admin.users.view", targetType: "user", targetId: id, ipHash: hashRequestValue(getRequestIp(req)) } }).catch((error) => console.warn("Admin access audit failed:", error));
 
   const deepWindowEnd = new Date(user.createdAt.getTime() + DEEP_ACTIVATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const [events, deepEvents, audit, invoiceEvents, slices, clientCount, projectCount, invoiceCount, expenseCount, projectDeadlineCount, sentInvoiceCount, calendarConnectionCount, publishedPortfolio] = await Promise.all([
+  const [events, deepEvents, audit, invoiceEvents, slices, clientCount, projectCount, invoiceCount, expenseCount, projectDeadlineCount, sentInvoiceCount, calendarConnectionCount, calendarConnections, publishedPortfolio] = await Promise.all([
     prisma.productEvent.findMany({ where: { userId: id }, orderBy: { occurredAt: "desc" }, take: 100 }),
     // Deep activation reads the same inputs as the Overview card: meaningful
     // product events inside the fourteen-day window after signup, scoped to
@@ -46,6 +46,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     prisma.project.count({ where: { userId: id, dueDate: { not: null } } }),
     prisma.invoice.count({ where: { userId: id, status: { in: ["sent", "viewed", "overdue", "partially_paid", "paid"] } } }),
     prisma.calendarConnection.count({ where: { userId: id, status: "connected" } }),
+    prisma.calendarConnection.findMany({
+      where: { userId: id },
+      select: { id: true, provider: true, accountEmail: true, status: true, lastSyncedAt: true, lastError: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
     prisma.portfolio.findUnique({ where: { userId: id }, select: { status: true, publishedAt: true, content: true } }),
   ]);
   const slice = slices.get(id) || { clients: [], projects: [], invoices: [], expenses: [], calendarEvents: [], importJobs: [], portfolios: [] };
@@ -95,5 +100,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       workspace: summary.workspace,
     },
     timeline,
+    calendarConnections,
   });
 }

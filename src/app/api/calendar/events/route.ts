@@ -44,7 +44,9 @@ function parseRange(req: NextRequest) {
 function parseEventInput(body: Record<string, unknown>) {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   const allDay = body.allDay === true;
-  const timeZone = typeof body.timeZone === "string" && isValidTimeZone(body.timeZone) ? body.timeZone : "UTC";
+  // Null = not provided/invalid; callers decide the default (UTC on create,
+  // the existing value on update) so an update can't silently reset the zone.
+  const timeZone = typeof body.timeZone === "string" && isValidTimeZone(body.timeZone) ? body.timeZone : null;
   if (!title) return { error: "Event title is required." } as const;
 
   if (allDay) {
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
   const body = (await req.json()) as Record<string, unknown>;
   const parsed = parseEventInput(body);
   if ("error" in parsed) return NextResponse.json({ success: false, message: parsed.error }, { status: 400 });
-  const fallback = await ensureDefaultCalendar(session.userId, parsed.data.timeZone);
+  const fallback = await ensureDefaultCalendar(session.userId, parsed.data.timeZone || "UTC");
   const calendarId = typeof body.calendarId === "string" ? body.calendarId : fallback.id;
   const calendar = await prisma.calendar.findFirst({ where: { id: calendarId, userId: session.userId } });
   if (!calendar) return NextResponse.json({ success: false, message: "Calendar not found." }, { status: 404 });
@@ -98,6 +100,7 @@ export async function POST(req: NextRequest) {
   const event = await prisma.calendarEvent.create({
     data: {
       ...parsed.data,
+      timeZone: parsed.data.timeZone || "UTC",
       userId: session.userId,
       calendarId,
       description: typeof body.description === "string" ? body.description.trim() || null : null,
@@ -129,6 +132,7 @@ export async function PUT(req: NextRequest) {
     where: { id },
     data: {
       ...parsed.data,
+      timeZone: parsed.data.timeZone || existing.timeZone,
       description: typeof body.description === "string" ? body.description.trim() || null : existing.description,
       location: typeof body.location === "string" ? body.location.trim() || null : existing.location,
       availability: body.availability === "free" ? "free" : "busy",
