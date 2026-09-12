@@ -1,6 +1,6 @@
 import { checkServerIdentity } from "node:tls";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type Response as PlaywrightResponse } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 
@@ -9,9 +9,33 @@ import { Pool } from "pg";
 // cookie the browser refused to send to /api/admin/* still looked healthy in CI.
 const adminUsername = process.env.ADMIN_USERNAME;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
+const adminTotpSecret = process.env.ADMIN_TOTP_SECRET;
 
 const ADMIN_SESSION_COOKIE = "rive_admin_session";
-const adminTabs = ["Overview", "Funnel", "Users", "Feedback", "Reliability", "Legacy archive"];
+const adminTabs = ["Overview", "Funnel", "Users", "Feedback", "Reliability", "Migration reliability", "Legacy archive"];
+
+// Signs in through the real form, completing the second factor only when the
+// server asks for it. Works whether the authenticator field was advertised by
+// the session check up front or revealed by a totp_required response.
+async function signInAsAdmin(page: Page): Promise<PlaywrightResponse> {
+  await page.getByLabel("Username").fill(adminUsername!);
+  await page.getByLabel("Password", { exact: true }).fill(adminPassword!);
+  let loginResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/admin/login") && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Sign in securely" }).click();
+  let response = await loginResponse;
+  if (response.status() === 401 && adminTotpSecret) {
+    const { totpCode } = await import("../../src/utils/adminTotp");
+    await page.getByLabel("Authenticator code").fill(totpCode(adminTotpSecret, Date.now())!);
+    loginResponse = page.waitForResponse(
+      (candidate) => candidate.url().includes("/api/admin/login") && candidate.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Sign in securely" }).click();
+    response = await loginResponse;
+  }
+  return response;
+}
 const protectedEndpoints = [
   "/api/admin/analytics",
   "/api/admin/users?page=1&search=",
@@ -85,15 +109,7 @@ test.describe("admin session lifecycle", () => {
 
   test("signs in and stores a durable, correctly scoped session cookie", async () => {
     await page.goto("/admin");
-    const loginResponse = page.waitForResponse(
-      (response) => response.url().includes("/api/admin/login") && response.request().method() === "POST",
-    );
-
-    await page.getByLabel("Username").fill(adminUsername!);
-    await page.getByLabel("Password", { exact: true }).fill(adminPassword!);
-    await page.getByRole("button", { name: "Sign in securely" }).click();
-
-    const response = await loginResponse;
+    const response = await signInAsAdmin(page);
     expect(response.status()).toBe(200);
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 

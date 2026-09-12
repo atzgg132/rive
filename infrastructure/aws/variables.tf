@@ -47,6 +47,13 @@ variable "admin_password_hash" {
   description = "Temporary scrypt hash for the bootstrap admin password. Change through SSM after bootstrap."
 }
 
+variable "admin_totp_secret" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Base32 TOTP seed for the admin portal second factor. Empty creates no parameter and leaves sign-in password-only; generate with node scripts/setup-admin.mjs --totp."
+}
+
 variable "google_calendar_client_id" {
   type        = string
   sensitive   = true

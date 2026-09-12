@@ -7,7 +7,6 @@ import { GetQueueAttributesCommand, SQSClient } from "@aws-sdk/client-sqs";
 import {
   acquisitionSource,
   ACTIVATION_WINDOW_DAYS,
-  evaluateActivation,
   FUNNEL_DEFINITION_VERSION,
   INTERNAL_ACCOUNT_TYPES,
   isMeaningfulProductEvent,
@@ -16,6 +15,7 @@ import {
   REAL_DATA_ORIGINS,
   withinDays,
 } from "@/utils/funnelDefinitions";
+import { funnelSummaryForUser } from "@/utils/adminFunnelFacts";
 
 type UserRow = {
   id: string;
@@ -32,9 +32,15 @@ type UserRow = {
   attribution: {
     firstTouchSource: string | null;
     lastTouchSource: string | null;
+    firstTouchMedium: string | null;
+    firstTouchCampaign: string | null;
     referralSource: string | null;
   } | null;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
 type QualitySnapshot = {
   contractRejections24h: number;
@@ -46,7 +52,37 @@ type QualitySnapshot = {
   eventLagMinutes: number | null;
 };
 
-let cached: { expiresAt: number; value: AdminMetrics } | null = null;
+export type AdminUserIndexEntry = {
+  id: string;
+  email: string;
+  name: string | null;
+  createdAt: string;
+  emailVerified: boolean;
+  onboardingStatus: string;
+  businessType: string | null;
+  profession: string | null;
+  goal: string | null;
+  startingPath: string | null;
+  qualified: boolean;
+  activated: boolean;
+  deeplyActivated: boolean;
+  deepActivation: { moduleCount: number; activeDays: number; connectedWorkflow: boolean } | null;
+  stage: "registered" | "qualified" | "activated";
+  realData: boolean;
+  qualificationBlockers: string[];
+  activationPaths: string[];
+  source: string;
+  attribution: {
+    firstTouchSource: string | null;
+    lastTouchSource: string | null;
+    firstTouchMedium: string | null;
+    firstTouchCampaign: string | null;
+    referralSource: string | null;
+  } | null;
+  lastActivity: { at: string; eventName: string; module: string | null } | null;
+};
+
+let cached: { expiresAt: number; value: AdminMetrics; cohort: AdminUserIndexEntry[] } | null = null;
 
 async function migrationDlqDepth(): Promise<number | null> {
   const queueUrl = process.env.MIGRATION_DLQ_URL;
@@ -212,7 +248,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
       businessType: true,
       profession: true,
       onboardingData: true,
-      attribution: { select: { firstTouchSource: true, lastTouchSource: true, referralSource: true } },
+      attribution: { select: { firstTouchSource: true, lastTouchSource: true, firstTouchMedium: true, firstTouchCampaign: true, referralSource: true } },
     },
     orderBy: { createdAt: "asc" },
     take: 20_000,
@@ -369,6 +405,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   const retentionDenominatorUsers = qualifiedUsers.filter((user) => user.createdAt <= new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000));
   const retentionDenominatorIdSet = new Set(retentionDenominatorUsers.map((user) => user.id));
   let retentionNumerator = 0;
+  const cohort: AdminUserIndexEntry[] = [];
 
   for (const user of customerUsers) {
     const source = sourceFrom(user);
@@ -400,8 +437,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     const userPortfolios = portfoliosByUser.get(user.id) || [];
     const realRecords = [...userClients, ...userProjects, ...userInvoices, ...userExpenses, ...userCalendar].filter((record) => within(record.createdAt, user.createdAt, 3650));
     if (realRecords.length) { realDataUsers += 1; realDataRecords += realRecords.length; }
-    const activation = evaluateActivation({
-      signupAt: user.createdAt,
+    const summary = funnelSummaryForUser(user, {
       clients: userClients,
       projects: userProjects,
       invoices: userInvoices,
@@ -409,6 +445,34 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
       calendarEvents: userCalendar,
       importJobs: userImports,
       portfolios: userPortfolios,
+    }, userEvents);
+    const activation = summary.activation;
+    const onboarding = isRecord(user.onboardingData) ? user.onboardingData : {};
+    const lastEvent = userEvents[userEvents.length - 1];
+    cohort.push({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt.toISOString(),
+      emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequiredAt),
+      onboardingStatus: user.onboardingStatus,
+      businessType: user.businessType,
+      profession: user.profession,
+      goal: typeof onboarding.goal === "string" ? onboarding.goal : null,
+      startingPath: typeof onboarding.startingPath === "string" ? onboarding.startingPath : null,
+      qualified: summary.qualified,
+      activated: summary.activated,
+      deeplyActivated: summary.deeplyActivated,
+      deepActivation: summary.deepActivation
+        ? { moduleCount: summary.deepActivation.moduleCount, activeDays: summary.deepActivation.activeDays, connectedWorkflow: summary.deepActivation.connectedWorkflow }
+        : null,
+      stage: summary.stage,
+      realData: summary.realData,
+      qualificationBlockers: summary.qualificationBlockers,
+      activationPaths: summary.activationPaths,
+      source,
+      attribution: user.attribution,
+      lastActivity: lastEvent ? { at: lastEvent.occurredAt.toISOString(), eventName: lastEvent.eventName, module: lastEvent.module } : null,
     });
     if (!isQualified) {
       unqualified += 1;
@@ -427,15 +491,13 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
       for (const blocker of activation.blockers) addToMap(blockerCounts, `activation:${blocker}`);
     }
 
-    const meaningful = userEvents.filter((event) => isMeaningfulProductEvent(event) && within(event.occurredAt, user.createdAt, 14));
-    const modules = new Set(meaningful.map((event) => event.module || event.eventName));
-    const activeDays = new Set(meaningful.map((event) => dayKey(event.occurredAt)));
-    const deepProjects = userProjects.filter((project) => within(project.createdAt, user.createdAt, 14));
-    const connectedWorkflow = deepProjects.some((project) => userInvoices.some((invoice) => within(invoice.createdAt, user.createdAt, 14) && invoice.projectId === project.id) || userExpenses.some((expense) => within(expense.createdAt, user.createdAt, 14) && expense.projectId === project.id) || userCalendar.some((event) => within(event.createdAt, user.createdAt, 14) && event.projectId === project.id));
-    moduleCounts.push(modules.size);
-    if (activeDays.size >= 2) twoActiveDays += 1;
-    if (connectedWorkflow) connected += 1;
-    if (isActivated && modules.size >= 3 && activeDays.size >= 2 && connectedWorkflow) deep += 1;
+    const deepResult = summary.deepActivation;
+    if (deepResult) {
+      moduleCounts.push(deepResult.moduleCount);
+      if (deepResult.activeDays >= 2) twoActiveDays += 1;
+      if (deepResult.connectedWorkflow) connected += 1;
+      if (deepResult.deeplyActivated) deep += 1;
+    }
   }
 
   const sourceBreakdown = Array.from(new Set([...sourceSignup.keys(), ...sourceQualified.keys()]))
@@ -605,8 +667,18 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     },
   };
 
-  cached = { expiresAt: Date.now() + 30_000, value: metrics };
+  cached = { expiresAt: Date.now() + 30_000, value: metrics, cohort };
   return metrics;
+}
+
+/**
+ * Per-user funnel facts computed in the same pass as the Overview metrics, so
+ * the Users list, its filters and the drill-down counts can never disagree
+ * with the cards. Shares the metrics cache — at most one scan per 30s.
+ */
+export async function getAdminCohortUsers(force = false): Promise<AdminUserIndexEntry[]> {
+  await getAdminMetrics(force);
+  return cached?.cohort || [];
 }
 
 export function clearAdminMetricsCache(): void {

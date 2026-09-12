@@ -7,6 +7,7 @@ import {
   qualificationBlockers,
   acquisitionSource,
   evaluateActivation,
+  evaluateDeepActivation,
   hasRealDataRecords,
   summarizeFunnelUser,
 } from "../../src/utils/funnelDefinitions.ts";
@@ -194,4 +195,105 @@ test("a qualified native user is funnel-activated", () => {
   assert.equal(summary.stage, "activated");
   assert.equal(summary.qualified, true);
   assert.equal(summary.activated, true);
+});
+
+// Deep activation must stay identical to the Overview card, so these cases pin
+// the shared evaluator the metrics pass, the Users list and the diagnosis all
+// read from.
+function deepFacts(overrides = {}) {
+  return {
+    signupAt: signup,
+    activated: true,
+    events: [
+      { eventName: "client_created", module: "clients", occurredAt: day3 },
+      { eventName: "project_created", module: "projects", occurredAt: day3 },
+      { eventName: "invoice_created", module: "invoices", occurredAt: new Date("2026-08-06T00:00:00.000Z") },
+    ],
+    projects: [{ id: "p1", clientId: "c1", dueDate: day3, createdAt: day3 }],
+    invoices: [{ id: "i1", projectId: "p1", clientId: "c1", createdAt: day3 }],
+    expenses: [],
+    calendarEvents: [],
+    ...overrides,
+  };
+}
+
+test("deep activation needs 3+ modules, 2+ active days and a connected workflow within 14 days", () => {
+  const result = evaluateDeepActivation(deepFacts());
+  assert.equal(result.deeplyActivated, true);
+  assert.equal(result.moduleCount, 3);
+  assert.equal(result.activeDays, 2);
+  assert.equal(result.connectedWorkflow, true);
+});
+
+test("a single active day is not deep activation even with enough modules", () => {
+  const result = evaluateDeepActivation(deepFacts({
+    events: [
+      { eventName: "client_created", module: "clients", occurredAt: day3 },
+      { eventName: "project_created", module: "projects", occurredAt: day3 },
+      { eventName: "invoice_created", module: "invoices", occurredAt: day3 },
+    ],
+  }));
+  assert.equal(result.deeplyActivated, false);
+  assert.equal(result.activeDays, 1);
+});
+
+test("two modules is not deep activation even across two days", () => {
+  const result = evaluateDeepActivation(deepFacts({
+    events: [
+      { eventName: "client_created", module: "clients", occurredAt: day3 },
+      { eventName: "project_created", module: "projects", occurredAt: new Date("2026-08-06T00:00:00.000Z") },
+    ],
+  }));
+  assert.equal(result.deeplyActivated, false);
+  assert.equal(result.moduleCount, 2);
+});
+
+test("an unlinked invoice does not connect the workflow", () => {
+  const result = evaluateDeepActivation(deepFacts({
+    invoices: [{ id: "i1", projectId: "someone-elses-project", clientId: null, createdAt: day3 }],
+  }));
+  assert.equal(result.connectedWorkflow, false);
+  assert.equal(result.deeplyActivated, false);
+});
+
+test("events after day 14 do not count toward deep activation", () => {
+  const late = new Date("2026-08-20T00:00:00.000Z");
+  const result = evaluateDeepActivation(deepFacts({
+    events: [
+      { eventName: "client_created", module: "clients", occurredAt: late },
+      { eventName: "project_created", module: "projects", occurredAt: late },
+      { eventName: "invoice_created", module: "invoices", occurredAt: late },
+    ],
+    invoices: [{ id: "i1", projectId: "p1", clientId: "c1", createdAt: late }],
+  }));
+  assert.equal(result.moduleCount, 0);
+  assert.equal(result.connectedWorkflow, false);
+  assert.equal(result.deeplyActivated, false);
+});
+
+test("deep signals without funnel activation do not count", () => {
+  const result = evaluateDeepActivation(deepFacts({ activated: false }));
+  assert.equal(result.deeplyActivated, false);
+  // The sub-scores still report, so the diagnosis can say what is missing.
+  assert.equal(result.moduleCount, 3);
+});
+
+test("the funnel summary carries deep activation to the Users list and diagnosis", () => {
+  const summary = summarizeFunnelUser({
+    user: user(),
+    activation: evaluateActivation(facts()),
+    realData: true,
+    deepActivation: evaluateDeepActivation(deepFacts()),
+  });
+  assert.equal(summary.stage, "activated");
+  assert.equal(summary.deeplyActivated, true);
+  assert.equal(summary.deepActivation?.connectedWorkflow, true);
+
+  const shallow = summarizeFunnelUser({
+    user: user(),
+    activation: evaluateActivation(facts()),
+    realData: true,
+  });
+  assert.equal(shallow.deeplyActivated, false);
+  assert.equal(shallow.deepActivation, null);
 });

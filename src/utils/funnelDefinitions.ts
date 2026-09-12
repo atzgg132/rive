@@ -170,11 +170,58 @@ export function evaluateActivation(facts: ActivationFacts): {
   return { activated, native, migration, portfolio, paths, blockers };
 }
 
-export function isMeaningfulProductEvent(event: { eventName: string; properties: unknown }): boolean {
+export function isMeaningfulProductEvent(event: { eventName: string; properties?: unknown }): boolean {
   if (event.eventName !== "page_viewed") return MEANINGFUL_PRODUCT_EVENTS.has(event.eventName);
   const properties = isRecord(event.properties) ? event.properties : {};
   const path = typeof properties.path === "string" ? properties.path : "";
   return ["/dashboard", "/workflow", "/calendar", "/portfolio"].some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
+export const DEEP_ACTIVATION_WINDOW_DAYS = 14;
+
+export type DeepActivationFacts = {
+  signupAt: Date;
+  activated: boolean;
+  events: Array<{ eventName: string; module: string | null; occurredAt: Date; properties?: unknown }>;
+  projects: ActivationFacts["projects"];
+  invoices: ActivationFacts["invoices"];
+  expenses: ActivationFacts["expenses"];
+  calendarEvents: ActivationFacts["calendarEvents"];
+};
+
+export type DeepActivationResult = {
+  deeplyActivated: boolean;
+  moduleCount: number;
+  activeDays: number;
+  connectedWorkflow: boolean;
+};
+
+/**
+ * Deep activation is the aggregate-metric definition — 3+ meaningful modules,
+ * 2+ distinct active days, and a project linked to an invoice, expense or
+ * calendar event, all within fourteen days of signup — applied per user. The
+ * Overview card, the Users list and the user diagnosis all read this one
+ * evaluator so the count can never drift between surfaces.
+ */
+export function evaluateDeepActivation(facts: DeepActivationFacts): DeepActivationResult {
+  const start = facts.signupAt;
+  const meaningful = facts.events.filter((event) => (
+    isMeaningfulProductEvent(event) && withinDays(event.occurredAt, start, DEEP_ACTIVATION_WINDOW_DAYS)
+  ));
+  const modules = new Set(meaningful.map((event) => event.module || event.eventName));
+  const activeDays = new Set(meaningful.map((event) => event.occurredAt.toISOString().slice(0, 10)));
+  const deepProjects = facts.projects.filter((project) => withinDays(project.createdAt, start, DEEP_ACTIVATION_WINDOW_DAYS));
+  const connectedWorkflow = deepProjects.some((project) => (
+    facts.invoices.some((invoice) => withinDays(invoice.createdAt, start, DEEP_ACTIVATION_WINDOW_DAYS) && invoice.projectId === project.id)
+    || facts.expenses.some((expense) => withinDays(expense.createdAt, start, DEEP_ACTIVATION_WINDOW_DAYS) && expense.projectId === project.id)
+    || facts.calendarEvents.some((event) => withinDays(event.createdAt, start, DEEP_ACTIVATION_WINDOW_DAYS) && event.projectId === project.id)
+  ));
+  return {
+    deeplyActivated: facts.activated && modules.size >= 3 && activeDays.size >= 2 && connectedWorkflow,
+    moduleCount: modules.size,
+    activeDays: activeDays.size,
+    connectedWorkflow,
+  };
 }
 
 export function isRealDataEvent(event: { eventName: string; dataOrigin?: string | null }): boolean {
@@ -203,12 +250,15 @@ export type FunnelUserSummary = {
   activationPaths: ActivationPath[];
   activationBlockers: ActivationBlocker[];
   stage: "registered" | "qualified" | "activated";
+  deeplyActivated: boolean;
+  deepActivation: DeepActivationResult | null;
 };
 
 export function summarizeFunnelUser(input: {
   user: QualificationUser;
   activation: ReturnType<typeof evaluateActivation>;
   realData: boolean;
+  deepActivation?: DeepActivationResult | null;
 }): FunnelUserSummary {
   const blockers = qualificationBlockers(input.user);
   const qualified = blockers.length === 0;
@@ -222,5 +272,7 @@ export function summarizeFunnelUser(input: {
     activationPaths: input.activation.paths,
     activationBlockers: activated ? [] : input.activation.blockers,
     stage,
+    deeplyActivated: activated && Boolean(input.deepActivation?.deeplyActivated),
+    deepActivation: input.deepActivation ?? null,
   };
 }

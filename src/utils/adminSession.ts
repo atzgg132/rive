@@ -46,7 +46,12 @@ function hash(value: string): string {
 }
 
 function hashIp(value: string): string {
-  return hash(`${process.env.SESSION_SECRET || process.env.DATABASE_URL || "rive-admin"}:${value}`);
+  // SESSION_SECRET is the only acceptable key here — never DATABASE_URL. The
+  // fallback only keeps local and CI sessions auditable without one.
+  const deployed = process.env.NODE_ENV === "production"
+    && !["local", "development", "test"].includes((process.env.APP_ENV || "").toLowerCase());
+  const secret = process.env.SESSION_SECRET || (deployed ? "" : "rive-admin");
+  return hash(`${secret}:${value}`);
 }
 
 export async function createAdminSession(req: NextRequest, response: NextResponse): Promise<void> {

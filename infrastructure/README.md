@@ -75,7 +75,10 @@ $env:TF_VAR_smtp_password = "<Google Workspace app password>"
 The production SMTP password and Google Calendar OAuth credentials are rotated
 directly in SSM and are operator-managed after bootstrap. Terraform records the
 parameters but ignores subsequent changes to their values. Admin credentials
-follow the same operator-managed model.
+follow the same operator-managed model. `ADMIN_TOTP_SECRET` (base32 seed from
+`node scripts/setup-admin.mjs --totp`) enables the admin portal's second factor;
+create `/rive/{environment}/ADMIN_TOTP_SECRET` as a SecureString when enrolling
+and remove it to return to password-only sign-in.
 
 The SMTP parameters default to `smtp.gmail.com:587` with STARTTLS as
 `hello@rive.work`. Clear the shell variable after the apply. If the account uses

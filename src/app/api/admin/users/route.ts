@@ -1,47 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/utils/db";
 import { hasAdminSession } from "@/utils/adminSession";
-import { funnelSummaryForUser, loadWorkspaceSlices } from "@/utils/adminFunnelFacts";
+import { getAdminCohortUsers, type AdminUserIndexEntry } from "@/utils/adminMetrics";
 
-function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
+const STAGES = new Set(["all", "registered", "qualified", "activated", "deeply_activated"]);
+const EXPORT_CAP = 5000;
+
+// Stage filters are cumulative to match the Overview cards: "Qualified" is every
+// qualified account (activated included), so the table count equals the card.
+function matchesStage(user: AdminUserIndexEntry, stage: string): boolean {
+  if (stage === "registered") return !user.qualified;
+  if (stage === "qualified") return user.qualified;
+  if (stage === "activated") return user.activated;
+  if (stage === "deeply_activated") return user.deeplyActivated;
+  return true;
+}
 
 export async function GET(req: NextRequest) {
   if (!await hasAdminSession(req)) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const params = new URL(req.url).searchParams;
   const page = Math.max(Number.parseInt(params.get("page") || "1", 10) || 1, 1);
   const pageSize = Math.min(Math.max(Number.parseInt(params.get("pageSize") || "25", 10) || 25, 1), 50);
-  const search = (params.get("search") || "").trim();
-  const where = { accountType: "customer", ...(search ? { OR: [{ email: { contains: search, mode: "insensitive" as const } }, { name: { contains: search, mode: "insensitive" as const } }] } : {}) };
-  const [total, users] = await Promise.all([
-    prisma.user.count({ where }),
-    prisma.user.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize, select: { id: true, email: true, name: true, createdAt: true, accountType: true, emailVerifiedAt: true, emailVerificationRequiredAt: true, onboardingStatus: true, businessType: true, profession: true, onboardingData: true, attribution: { select: { firstTouchSource: true, lastTouchSource: true, firstTouchMedium: true, firstTouchCampaign: true, referralSource: true } } } }),
-  ]);
-  const slices = await loadWorkspaceSlices(users.map((user) => user.id));
-  const lastEvents = await Promise.all(users.map((user) => prisma.productEvent.findFirst({ where: { userId: user.id }, orderBy: { occurredAt: "desc" }, select: { occurredAt: true, eventName: true, module: true } })));
-  const data = users.map((user, index) => {
-    const lastEvent = lastEvents[index];
-    const funnel = funnelSummaryForUser(user, slices.get(user.id) || { clients: [], projects: [], invoices: [], expenses: [], calendarEvents: [], importJobs: [], portfolios: [] });
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      createdAt: user.createdAt,
-      accountType: user.accountType,
-      emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequiredAt),
-      onboardingStatus: user.onboardingStatus,
-      businessType: user.businessType,
-      profession: user.profession,
-      goal: isRecord(user.onboardingData) && typeof user.onboardingData.goal === "string" ? user.onboardingData.goal : null,
-      startingPath: isRecord(user.onboardingData) && typeof user.onboardingData.startingPath === "string" ? user.onboardingData.startingPath : null,
-      qualified: funnel.qualified,
-      activated: funnel.activated,
-      stage: funnel.stage,
-      realData: funnel.realData,
-      qualificationBlockers: funnel.qualificationBlockers,
-      activationPaths: funnel.activationPaths,
-      attribution: user.attribution,
-      lastActivity: lastEvent ? { at: lastEvent.occurredAt, eventName: lastEvent.eventName, module: lastEvent.module } : null,
-    };
+  const search = (params.get("search") || "").trim().toLowerCase();
+  const stage = STAGES.has(params.get("stage") || "") ? params.get("stage")! : "all";
+  const verified = params.get("verified");
+  const realData = params.get("realData") === "true";
+  const source = (params.get("source") || "").trim();
+
+  const cohort = await getAdminCohortUsers();
+  const matchesNonStage = (user: AdminUserIndexEntry) => (
+    (!search || user.email.toLowerCase().includes(search) || (user.name || "").toLowerCase().includes(search))
+    && (verified !== "true" && verified !== "false" || String(user.emailVerified) === verified)
+    && (!realData || user.realData)
+    && (!source || user.source === source)
+  );
+
+  // Chip counts answer "how many rows would this stage show here", so they are
+  // computed over every other active filter — but never the stage itself.
+  const base = cohort.filter(matchesNonStage);
+  const facets = {
+    all: base.length,
+    registered: base.filter((user) => !user.qualified).length,
+    qualified: base.filter((user) => user.qualified).length,
+    activated: base.filter((user) => user.activated).length,
+    deeply_activated: base.filter((user) => user.deeplyActivated).length,
+    unverified: base.filter((user) => !user.emailVerified).length,
+    realData: base.filter((user) => user.realData).length,
+  };
+
+  const filtered = base.filter((user) => matchesStage(user, stage));
+
+  if (params.get("export") === "emails") {
+    return NextResponse.json({ success: true, total: filtered.length, emails: filtered.slice(0, EXPORT_CAP).map((user) => user.email) });
+  }
+
+  const total = filtered.length;
+  const data = filtered.slice((page - 1) * pageSize, page * pageSize);
+  return NextResponse.json({
+    success: true,
+    page,
+    pageSize,
+    total,
+    hasMore: page * pageSize < total,
+    facets,
+    sources: Array.from(new Set(cohort.map((user) => user.source))).sort(),
+    data,
   });
-  return NextResponse.json({ success: true, page, pageSize, total, data });
 }
