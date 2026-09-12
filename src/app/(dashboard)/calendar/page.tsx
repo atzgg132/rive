@@ -34,6 +34,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Portal from "@/components/ui/Portal";
+import {
+  addDays as addDaysToDateKey,
+  instantToWallParts,
+  isValidTimeZone,
+  supportedTimeZones,
+  wallToInstant,
+} from "@/lib/calendar-time";
 
 type CalendarItem = {
   id: string;
@@ -82,10 +89,35 @@ type Connection = {
   provider: string;
   accountEmail: string | null;
   status: string;
+  defaultExternalCalendarId: string | null;
   lastSyncedAt: string | null;
   lastError: string | null;
-  externalCalendars: Array<{ id: string; name: string; color: string | null; selected: boolean; accessRole: string | null }>;
+  externalCalendars: Array<{ id: string; providerCalendarId: string; name: string; color: string | null; selected: boolean; accessRole: string | null }>;
 };
+
+type SyncOutboxSummary = { pending: number; failed: number };
+
+const READ_ONLY_ACCESS_ROLES = ["reader", "freeBusyReader"];
+
+const CONNECTION_ERROR_MESSAGES: Record<string, string> = {
+  invalid_google_callback: "That Google sign-in link expired or didn't match this session. Try connecting again.",
+  google_not_available: "Google Calendar isn't enabled on this environment.",
+  google_not_configured: "Google Calendar isn't configured correctly. Check the integration settings.",
+  google_access_denied: "The Google connection was cancelled — no access was granted.",
+  google_sync_failed: "Google connected, but the first sync failed. Open calendar feeds and try Sync now.",
+};
+
+function connectionStatusLabel(status: string): string {
+  if (status === "connected") return "Connected";
+  if (status === "needs_reconnect") return "Reconnect needed";
+  return "Sync error";
+}
+
+function connectionStatusVariant(status: string): "success" | "warning" | "destructive" {
+  if (status === "connected") return "success";
+  if (status === "needs_reconnect") return "warning";
+  return "destructive";
+}
 
 type View = "month" | "week" | "agenda";
 
@@ -128,9 +160,13 @@ function rangeFor(view: View, cursor: Date) {
   return { start, end };
 }
 
-function formatTime(value: string | null): string {
+function formatTime(value: string | null, timeZone?: string): string {
   if (!value) return "";
-  return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    ...(timeZone && isValidTimeZone(timeZone) ? { timeZone } : {}),
+  }).format(new Date(value));
 }
 
 function sourceLabel(source: string): string {
@@ -199,6 +235,8 @@ export default function CalendarPage() {
   const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [outbox, setOutbox] = useState<SyncOutboxSummary>({ pending: 0, failed: 0 });
+  const [userTimeZone, setUserTimeZone] = useState("");
   const [googleCalendarAvailable, setGoogleCalendarAvailable] = useState(false);
   const [visibleCalendars, setVisibleCalendars] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -222,6 +260,7 @@ export default function CalendarPage() {
   const [draftDescription, setDraftDescription] = useState("");
   const [draftLocation, setDraftLocation] = useState("");
   const [draftAllDay, setDraftAllDay] = useState(false);
+  const [draftTimeZone, setDraftTimeZone] = useState("");
   const [draftAvailability, setDraftAvailability] = useState<"busy" | "free">("busy");
   const [taskTitle, setTaskTitle] = useState("");
   const [taskPriority, setTaskPriority] = useState("medium");
@@ -255,6 +294,7 @@ export default function CalendarPage() {
       setCalendars(calendarData.calendars || []);
       setTasks(taskData.tasks || []);
       setConnections(connectionData.connections || []);
+      setOutbox(connectionData.outbox || { pending: 0, failed: 0 });
       setGoogleCalendarAvailable(connectionData.connectorAvailability?.googleCalendar === true);
       setVisibleCalendars((current) => current.size ? current : new Set((calendarData.calendars || []).filter((item: CalendarItem) => item.isVisible).map((item: CalendarItem) => item.id)));
     } catch (error) {
@@ -272,13 +312,19 @@ export default function CalendarPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected") === "google") toast.success("Google Calendar connected and synchronized.");
-    if (params.get("connectionError")) toast.error("Google Calendar could not be connected. Check the integration configuration.");
+    const connectionError = params.get("connectionError");
+    if (connectionError) {
+      toast.error(CONNECTION_ERROR_MESSAGES[connectionError] || "Google Calendar could not be connected. Check the integration configuration.");
+    }
   }, []);
 
   useEffect(() => {
     async function loadGuidePreference() {
       const response = await fetch("/api/auth/session").catch(() => null);
       const data = response?.ok ? await response.json().catch(() => null) : null;
+      if (typeof data?.user?.time_zone === "string" && isValidTimeZone(data.user.time_zone)) {
+        setUserTimeZone(data.user.time_zone);
+      }
       const key = `rive:calendar-guide:${data?.user?.id || "local"}:v1`;
       setGuideStorageKey(key);
       setShowGuide(window.localStorage.getItem(key) !== "dismissed");
@@ -314,6 +360,28 @@ export default function CalendarPage() {
   const deadlineCount = visibleEvents.filter(
     (event) => event.allDay && ["derived", "task"].includes(event.source),
   ).length;
+
+  // Mirrors the server-side push-target resolution in pushEventToGoogle: an
+  // event on the default calendar goes to that calendar's Google mirror when
+  // it's writable, otherwise to the oldest healthy connection's default.
+  const syncDestination = useMemo(() => {
+    const healthy = googleConnections.filter((connection) => connection.status === "connected");
+    const defaultCalendar = calendars.find((calendar) => calendar.isDefault);
+    const mapped = defaultCalendar?.externalCalendars.find(
+      (external) =>
+        external.connection.provider === "google" &&
+        external.connection.status === "connected" &&
+        !READ_ONLY_ACCESS_ROLES.includes(external.accessRole || ""),
+    );
+    const connection = mapped
+      ? healthy.find((candidate) => candidate.externalCalendars.some((external) => external.id === mapped.id))
+      : healthy.find((candidate) => candidate.defaultExternalCalendarId);
+    if (!connection) return null;
+    const calendarName =
+      mapped?.name ||
+      connection.externalCalendars.find((external) => external.providerCalendarId === connection.defaultExternalCalendarId)?.name;
+    return { email: connection.accountEmail, calendarName };
+  }, [googleConnections, calendars]);
   const scheduledFocusMinutes = visibleEvents
     .filter((event) => event.source === "task" && event.startAt && event.endAt)
     .reduce(
@@ -325,7 +393,9 @@ export default function CalendarPage() {
     setEditingId(null);
     setDraftDate(dateKey(date));
     setDraftStart(`${String(hour).padStart(2, "0")}:00`);
-    setDraftEnd(`${String(Math.min(hour + 1, 23)).padStart(2, "0")}:00`);
+    // Wrap past midnight — the submit path reads an end ≤ start as next-day.
+    setDraftEnd(`${String((hour + 1) % 24).padStart(2, "0")}:00`);
+    setDraftTimeZone(userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
     setDraftTitle("");
     setDraftDescription("");
     setDraftLocation("");
@@ -336,20 +406,28 @@ export default function CalendarPage() {
 
   function openEdit(event: CalendarEvent) {
     if (event.readOnly || ["derived", "task"].includes(event.source)) return;
+    const eventTimeZone = isValidTimeZone(event.timeZone)
+      ? event.timeZone
+      : userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     setEditingId(event.id);
     setDraftTitle(event.title);
     setDraftDescription(event.description || "");
     setDraftLocation(event.location || "");
     setDraftAllDay(event.allDay);
+    setDraftTimeZone(eventTimeZone);
     setDraftAvailability(event.availability === "free" ? "free" : "busy");
     if (event.allDay && event.startDate) {
       setDraftDate(event.startDate);
     } else if (event.startAt && event.endAt) {
-      const start = new Date(event.startAt);
-      const end = new Date(event.endAt);
-      setDraftDate(dateKey(start));
-      setDraftStart(`${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`);
-      setDraftEnd(`${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`);
+      // Show wall times in the event's own zone so editing a Tokyo event from
+      // a Kolkata browser doesn't shift what "15:00" means.
+      const start = instantToWallParts(event.startAt, eventTimeZone);
+      const end = instantToWallParts(event.endAt, eventTimeZone);
+      if (start && end) {
+        setDraftDate(start.date);
+        setDraftStart(start.time);
+        setDraftEnd(end.time);
+      }
     }
     setSelectedEvent(null);
     setCreateOpen(true);
@@ -359,28 +437,37 @@ export default function CalendarPage() {
     event.preventDefault();
     setSaving(true);
     try {
-      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-      const payload = draftAllDay
-        ? {
-            title: draftTitle,
-            description: draftDescription,
-            location: draftLocation,
-            allDay: true,
-            startDate: draftDate,
-            endDate: dateKey(addDays(new Date(`${draftDate}T12:00:00`), 1)),
-            timeZone,
-            availability: draftAvailability,
-          }
-        : {
-            title: draftTitle,
-            description: draftDescription,
-            location: draftLocation,
-            allDay: false,
-            startAt: new Date(`${draftDate}T${draftStart}:00`).toISOString(),
-            endAt: new Date(`${draftDate}T${draftEnd}:00`).toISOString(),
-            timeZone,
-            availability: draftAvailability,
-          };
+      const timeZone = draftTimeZone || userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      let payload: Record<string, unknown>;
+      if (draftAllDay) {
+        payload = {
+          title: draftTitle,
+          description: draftDescription,
+          location: draftLocation,
+          allDay: true,
+          startDate: draftDate,
+          endDate: addDaysToDateKey(draftDate, 1),
+          timeZone,
+          availability: draftAvailability,
+        };
+      } else {
+        // Wall times are interpreted in the chosen zone. An end at or before
+        // the start is an overnight event — it lands on the next day.
+        const startAt = wallToInstant(draftDate, draftStart, timeZone);
+        const endDay = draftEnd <= draftStart ? addDaysToDateKey(draftDate, 1) : draftDate;
+        const endAt = wallToInstant(endDay, draftEnd, timeZone);
+        if (!startAt || !endAt) throw new Error("Check the event date and times.");
+        payload = {
+          title: draftTitle,
+          description: draftDescription,
+          location: draftLocation,
+          allDay: false,
+          startAt: startAt.toISOString(),
+          endAt: endAt.toISOString(),
+          timeZone,
+          availability: draftAvailability,
+        };
+      }
       const response = await fetch("/api/calendar/events", {
         method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -503,6 +590,16 @@ export default function CalendarPage() {
     }
   }
 
+  async function disconnectConnection(connection: Connection) {
+    const label = connection.accountEmail || "this Google account";
+    if (!window.confirm(`Disconnect ${label}? Calendars and events imported from it are removed from rive. Your Google Calendar itself is unchanged.`)) return;
+    const response = await fetch(`/api/calendar/connections?id=${encodeURIComponent(connection.id)}`, { method: "DELETE" });
+    const data = await response.json();
+    if (!response.ok) return toast.error(data.message || "The connection could not be removed.");
+    toast.success("Google account disconnected.");
+    await loadWorkspace();
+  }
+
   async function toggleExternalCalendar(externalCalendarId: string, selected: boolean) {
     const response = await fetch("/api/calendar/connections", {
       method: "PATCH",
@@ -560,11 +657,11 @@ export default function CalendarPage() {
     <div className="calendar-shell workspace-page max-w-[100rem]">
       <PageHeader
         className="sm:flex-col xl:flex-row"
-        title={<span className="flex flex-wrap items-center gap-2">Your work, on one timeline <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2.5 py-1 text-xs font-semibold tracking-normal text-primary">Connected</span></span>}
+        title="Your work, on one timeline"
         description="Plan meetings and focus time alongside project deadlines, tasks, milestones, and invoice due dates."
         actions={<>
           {guideReady && !showGuide && <Button variant="ghost" onClick={() => setShowGuide(true)} className="hidden sm:inline-flex"><Info /> How it connects</Button>}
-          <Button data-guide-target="calendar-connect" variant="outline" onClick={() => setConnectionsOpen(true)}><span className={`h-2 w-2 rounded-full ${visibleConnections.length ? "bg-success" : "bg-warning"}`} /><Link2 /> {visibleConnections.length ? `${connectedCalendars} synced` : "Calendar feeds"}</Button>
+          <Button data-guide-target="calendar-connect" variant="outline" onClick={() => setConnectionsOpen(true)}><span className={`h-2 w-2 rounded-full ${visibleConnections.length && visibleConnections.every((connection) => connection.status === "connected") ? "bg-success" : "bg-warning"}`} /><Link2 /> {visibleConnections.length ? `${connectedCalendars} synced` : "Calendar feeds"}</Button>
           <Button variant="outline" onClick={openTaskComposer} className="hidden sm:inline-flex"><ListTodo /> Add task</Button>
           <Button onClick={() => openCreate()}><Plus /> New event</Button>
         </>}
@@ -712,8 +809,12 @@ export default function CalendarPage() {
             <label className="flex cursor-pointer items-center justify-between rounded-none border border-border bg-card px-3 py-2.5 text-card-foreground transition-colors hover:bg-muted/[0.35]"><span><span className="block text-xs font-bold text-foreground">All-day event</span><span className="mt-0.5 block text-xs text-muted-foreground">Deadlines and date markers</span></span><Switch aria-label="All-day event" checked={draftAllDay} onCheckedChange={setDraftAllDay} /></label>
             <div className={`grid gap-3 ${draftAllDay ? "" : "sm:grid-cols-3"}`}>
               <label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Date</span><Input type="date" required value={draftDate} onChange={(event) => setDraftDate(event.target.value)} className={inputClass} /></label>
-              {!draftAllDay && <><label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Starts</span><Input type="time" required value={draftStart} onChange={(event) => setDraftStart(event.target.value)} className={inputClass} /></label><label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Ends</span><Input type="time" required value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} className={inputClass} /></label></>}
+              {!draftAllDay && <><label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Starts</span><Input type="time" required value={draftStart} onChange={(event) => setDraftStart(event.target.value)} className={inputClass} /></label><label><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Ends{draftEnd <= draftStart ? <span className="ml-1 font-semibold text-info">(+1 day)</span> : null}</span><Input type="time" required value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} className={inputClass} /></label></>}
             </div>
+            {!draftAllDay && (
+              <label className="block"><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Timezone</span><Select value={draftTimeZone} onChange={(event) => setDraftTimeZone(event.target.value)} className={inputClass}>{supportedTimeZones().map((zone) => <option key={zone} value={zone}>{zone}</option>)}</Select></label>
+            )}
+            {syncDestination && !editingId ? <p className="text-xs text-muted-foreground">New events sync to {syncDestination.calendarName || "the primary calendar"} on {syncDestination.email || "your Google account"}.</p> : null}
             <label className="block"><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Location or meeting link</span><Input value={draftLocation} onChange={(event) => setDraftLocation(event.target.value)} placeholder="Optional" className={inputClass} /></label>
             <label className="block"><span className="mb-1.5 block text-xs font-bold text-muted-foreground">Notes</span><Textarea value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} rows={3} placeholder="Context, agenda, or preparation notes" className={inputClass} /></label>
             <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><Input type="checkbox" checked={draftAvailability === "free"} onChange={(event) => setDraftAvailability(event.target.checked ? "free" : "busy")} />Show as available</label><Button variant="default" size="sm" type="submit" disabled={saving} className="inline-flex items-center gap-2">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editingId ? "save changes" : "create event"}</Button></div>
@@ -725,7 +826,7 @@ export default function CalendarPage() {
         <Portal><ModalShell title={selectedEvent.title} onClose={() => setSelectedEvent(null)}>
           <div className="space-y-5">
             <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: selectedEvent.color }} /><span className="text-xs font-black uppercase tracking-wider text-muted-foreground">{sourceLabel(selectedEvent.source)}</span></div>
-            <div className="rounded-none bg-muted p-4"><p className="flex items-center gap-2 text-sm font-bold text-foreground"><Clock3 className="h-4 w-4 text-primary" />{selectedEvent.allDay ? new Date(`${selectedEvent.startDate}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : `${new Date(selectedEvent.startAt!).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · ${formatTime(selectedEvent.startAt)}–${formatTime(selectedEvent.endAt)}`}</p><p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{selectedEvent.timeZone} · {selectedEvent.availability}</p></div>
+            <div className="rounded-none bg-muted p-4"><p className="flex items-center gap-2 text-sm font-bold text-foreground"><Clock3 className="h-4 w-4 text-primary" />{selectedEvent.allDay ? new Date(`${selectedEvent.startDate}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : `${new Date(selectedEvent.startAt!).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", ...(isValidTimeZone(selectedEvent.timeZone) ? { timeZone: selectedEvent.timeZone } : {}) })} · ${formatTime(selectedEvent.startAt, selectedEvent.timeZone)}–${formatTime(selectedEvent.endAt, selectedEvent.timeZone)}`}</p><p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{selectedEvent.timeZone} · {selectedEvent.availability}</p></div>
             {selectedEvent.description && <div><p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Notes</p><p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{selectedEvent.description}</p></div>}
             {selectedEvent.location && <div><p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Location</p><p className="mt-1 text-sm text-muted-foreground">{selectedEvent.location}</p></div>}
             {(selectedEvent.projectId || selectedEvent.invoiceId || selectedEvent.taskId || selectedEvent.clientId) && <div className="rounded-none border border-info/25 bg-info/10 p-3"><p className="text-xs font-bold text-info">Live-linked to your workspace</p><p className="mt-1 text-xs leading-4 text-info/80">Changes to the source record automatically update this calendar item.</p><div className="mt-2 flex flex-wrap gap-2">{selectedEvent.projectId && <Link href={`/workflow/projects/${selectedEvent.projectId}`} className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open project <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.invoiceId && <Link href="/workflow/revenue" className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open invoices <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.clientId && !selectedEvent.projectId && <Link href={`/workflow/clients/${selectedEvent.clientId}`} className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open client <ArrowRight className="h-3 w-3" /></Link>}</div></div>}
@@ -741,8 +842,10 @@ export default function CalendarPage() {
         <Portal><ModalShell title="Calendar connections" onClose={() => setConnectionsOpen(false)} wide>
           <div className="space-y-4">
             {googleCalendarAvailable && <section className="rounded-none border border-border p-4">
-              <div className="flex items-start justify-between gap-4"><div className="flex gap-3"><div className="grid h-10 w-10 place-items-center rounded-none border border-border bg-card"><RefreshCw className="h-5 w-5 text-primary" /></div><div><p className="text-sm font-black text-foreground">Google calendar</p><p className="mt-1 text-xs text-muted-foreground">Two-way events, continuous updates, and calendar discovery.</p></div></div>{googleConnections.length ? <Badge variant="success">Connected</Badge> : <a href="/api/calendar/connections/google/start" className="rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">Connect</a>}</div>
-              {googleConnections.map((connection) => <div key={connection.id} className="mt-4 rounded-none bg-muted p-3"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold text-foreground">{connection.accountEmail}</p><p className="mt-0.5 text-xs text-muted-foreground">{connection.lastSyncedAt ? `Synced ${new Date(connection.lastSyncedAt).toLocaleString()}` : "Initial sync pending"}</p></div><Button variant="outline" size="sm" onClick={() => syncGoogle(connection.id)} disabled={syncing} className="inline-flex items-center gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />Sync now</Button></div>{connection.externalCalendars.length > 0 && <div className="mt-3 grid gap-1 border-t border-border pt-2">{connection.externalCalendars.map((calendar) => <label key={calendar.id} className="flex cursor-pointer items-center gap-2 rounded-none px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/[.05]"><Input type="checkbox" checked={calendar.selected} onChange={(event) => void toggleExternalCalendar(calendar.id, event.target.checked)} /><span className="h-2.5 w-2.5 rounded-full" style={{ background: calendar.color || "#4285F4" }} /><span className="min-w-0 flex-1 truncate">{calendar.name}</span><span className="text-xs uppercase text-muted-foreground">{calendar.accessRole}</span></label>)}</div>}{connection.lastError && <div className="mt-2 flex gap-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{connection.lastError}</div>}</div>)}
+              <div className="flex items-start justify-between gap-4"><div className="flex gap-3"><div className="grid h-10 w-10 place-items-center rounded-none border border-border bg-card"><RefreshCw className="h-5 w-5 text-primary" /></div><div><p className="text-sm font-black text-foreground">Google calendar</p><p className="mt-1 text-xs text-muted-foreground">Two-way events, continuous updates, and calendar discovery.</p></div></div><a href="/api/calendar/connections/google/start" className="rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">{googleConnections.length ? "Add account" : "Connect"}</a></div>
+              {googleConnections.map((connection) => <div key={connection.id} className="mt-4 rounded-none bg-muted p-3"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="flex flex-wrap items-center gap-2 text-xs font-bold text-foreground"><span className="truncate">{connection.accountEmail}</span><Badge variant={connectionStatusVariant(connection.status)}>{connectionStatusLabel(connection.status)}</Badge></p><p className="mt-0.5 text-xs text-muted-foreground">{connection.lastSyncedAt ? `Synced ${new Date(connection.lastSyncedAt).toLocaleString()}` : "Initial sync pending"}</p></div><div className="flex shrink-0 items-center gap-2">{connection.status !== "connected" && <a href="/api/calendar/connections/google/start" className="rounded-none bg-primary px-2.5 py-1.5 text-xs font-bold text-primary-foreground">Reconnect</a>}<Button variant="outline" size="sm" onClick={() => syncGoogle(connection.id)} disabled={syncing} className="inline-flex items-center gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />Sync now</Button><Button variant="outline" size="sm" onClick={() => void disconnectConnection(connection)} className="text-destructive hover:bg-destructive/10">Disconnect</Button></div></div>{connection.externalCalendars.length > 0 && <div className="mt-3 grid gap-1 border-t border-border pt-2">{connection.externalCalendars.map((calendar) => <label key={calendar.id} className="flex cursor-pointer items-center gap-2 rounded-none px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-foreground/[.05]"><Input type="checkbox" checked={calendar.selected} onChange={(event) => void toggleExternalCalendar(calendar.id, event.target.checked)} /><span className="h-2.5 w-2.5 rounded-full" style={{ background: calendar.color || "#4285F4" }} /><span className="min-w-0 flex-1 truncate">{calendar.name}</span><span className="text-xs uppercase text-muted-foreground">{calendar.accessRole}</span></label>)}</div>}{connection.lastError && <div className="mt-2 flex gap-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{connection.lastError}</div>}</div>)}
+              {outbox.failed > 0 && <p className="mt-3 flex gap-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{outbox.failed} calendar {outbox.failed === 1 ? "change" : "changes"} could not reach Google and stopped retrying. Reconnect the account or sync again.</p>}
+              {outbox.pending > 0 && <p className="mt-2 text-xs text-muted-foreground">{outbox.pending} calendar {outbox.pending === 1 ? "change is" : "changes are"} waiting to sync to Google.</p>}
             </section>}
             <section className="rounded-none border border-border p-4">
               <div className="flex gap-3"><div className="grid h-10 w-10 place-items-center rounded-none bg-foreground text-background"><CalendarDays className="h-5 w-5" /></div><div><p className="text-sm font-black text-foreground">Apple calendar</p><p className="mt-1 text-xs text-muted-foreground">Subscribe to a private, read-only feed of rive. events and deadlines.</p></div></div>
@@ -844,23 +947,45 @@ function WeekView({ rangeStart, events, onCreate, onSelect }: { rangeStart: Date
           {days.map((day) => {
             const key = dateKey(day);
             const dayEvents = events.filter((event) => eventDateKey(event) === key);
-            const timed = layoutOverlappingEvents(dayEvents.filter((event) => !event.allDay && event.startAt && event.endAt));
+            // The grid spans 07:00–22:00. Events outside it used to be clamped
+            // onto the 7 AM slot; now anything fully out of range renders as a
+            // chip in the top strip with its real time, and partial overlaps
+            // are clipped to the visible window.
+            const GRID_START_MIN = 420;
+            const GRID_END_MIN = 1320;
+            const GRID_HEIGHT = HOURS.length * 64;
+            const timedEvents = dayEvents.filter((event) => !event.allDay && event.startAt && event.endAt);
+            const timedRange = (event: CalendarEvent) => {
+              const start = new Date(event.startAt!);
+              const end = new Date(event.endAt!);
+              const startMin = dateKey(start) === key ? start.getHours() * 60 + start.getMinutes() : 0;
+              const endMin = dateKey(end) === key ? end.getHours() * 60 + end.getMinutes() : 24 * 60;
+              return { startMin, endMin };
+            };
+            const inGrid = timedEvents.filter((event) => {
+              const { startMin, endMin } = timedRange(event);
+              return startMin < GRID_END_MIN && endMin > GRID_START_MIN;
+            });
+            const outsideGrid = timedEvents.filter((event) => !inGrid.includes(event));
+            const timed = layoutOverlappingEvents(inGrid);
             const allDay = sortCalendarEvents(dayEvents.filter((event) => event.allDay));
+            const stripEvents = [...allDay, ...outsideGrid];
             return (
               <div key={key} className={`relative min-w-0 border-l border-border ${key === dateKey(new Date()) ? "bg-accent/40" : ""}`}>
                 <div className="absolute left-1 right-1 top-1 z-10 space-y-1">
-                  {allDay.slice(0, 2).map((event) => (
-                    <Button key={event.id} onClick={() => onSelect(event)} className="block w-full min-w-0 truncate rounded-none px-1.5 py-1 text-left text-xs font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.title}</Button>
+                  {stripEvents.slice(0, 2).map((event) => (
+                    <Button key={event.id} onClick={() => onSelect(event)} title={`${event.allDay ? "All day" : formatTime(event.startAt)} · ${event.title}`} className="block w-full min-w-0 truncate rounded-none px-1.5 py-1 text-left text-xs font-bold" style={{ background: `${event.color}20`, color: event.color }}>{event.allDay ? event.title : `${formatTime(event.startAt)} · ${event.title}`}</Button>
                   ))}
+                  {stripEvents.length > 2 && <span className="block truncate px-1 text-xs font-bold text-muted-foreground">+{stripEvents.length - 2} more</span>}
                 </div>
                 {HOURS.map((hour) => (
                   <Button key={hour} onDoubleClick={() => onCreate(day, hour)} className="block h-16 w-full rounded-none border-b border-border text-left hover:bg-accent" aria-label={`Create event ${key} at ${hour}:00`} />
                 ))}
                 {timed.map(({ event, lane, laneCount }) => {
-                  const start = new Date(event.startAt!);
-                  const end = new Date(event.endAt!);
-                  const top = Math.max(0, ((start.getHours() * 60 + start.getMinutes()) - 420) / 60 * 64);
-                  const height = Math.max(24, (end.getTime() - start.getTime()) / 3600000 * 64);
+                  const { startMin, endMin } = timedRange(event);
+                  const top = Math.max(0, ((startMin - GRID_START_MIN) / 60) * 64);
+                  const bottom = Math.min(GRID_HEIGHT, ((endMin - GRID_START_MIN) / 60) * 64);
+                  const height = Math.max(24, bottom - top);
                   return (
                     <Button key={event.id} onClick={() => onSelect(event)} title={`${formatTime(event.startAt)} · ${event.title}`} className="absolute z-20 min-w-0 overflow-hidden rounded-none border-l-[3px] px-1.5 py-1 text-left" style={{ top, height, left: `calc(${lane * (100 / laneCount)}% + 3px)`, width: `calc(${100 / laneCount}% - 5px)`, background: `${event.color}1C`, borderColor: event.color, color: event.color }}>
                       <span className="block truncate text-xs font-black">{event.title}</span>

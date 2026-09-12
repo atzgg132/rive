@@ -218,7 +218,9 @@ export default function OnboardingPage() {
         );
       if (params.get("connectionError"))
         toast.error(
-          "Google Calendar could not be connected. You can continue and try again later.",
+          params.get("connectionError") === "google_access_denied"
+            ? "The Google connection was cancelled — no access was granted."
+            : "Google Calendar could not be connected. You can continue and try again later.",
         );
       const restarting = params.get("restart") === "1";
       const focus = params.get("focus");
@@ -683,6 +685,8 @@ export default function OnboardingPage() {
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         {googleConnection?.status === "connected"
                           ? `${googleConnection.accountEmail || "Google account"} connected · events and updates sync both ways.`
+                          : googleConnection
+                            ? "This Google connection needs attention — reconnect it from the calendar to resume sync."
                             : "Import existing calendars and events now. New Rive events can sync back to Google."}
                       </p>
                     </div>
@@ -700,7 +704,7 @@ export default function OnboardingPage() {
                       className="inline-flex shrink-0 items-center justify-center gap-2 rounded-none bg-primary px-4 py-2.5 text-xs font-black text-primary-foreground"
                     >
                       <Link2 className="h-3.5 w-3.5" />
-                      Connect Google
+                      {googleConnection ? "Reconnect Google" : "Connect Google"}
                     </a>
                   ) : null}
                 </div>
