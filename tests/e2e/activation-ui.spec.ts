@@ -120,7 +120,13 @@ function dashboardPayload(state: MockState) {
     success: true,
     stats: { totalPaid: 0, totalPending: 0, activeProjects: state.counts.projects, totalExpenses: 0, netEarnings: 0 },
     topClients: [],
-    recentActivity: [],
+    signals: [],
+    periods: {
+      month: { cashIn: 0, expensesOut: 0, net: 0, prior: { cashIn: 0, expensesOut: 0, net: 0 }, priorLabel: "Last month", dayOfMonth: 1 },
+      sixMonths: { cashIn: 0, expensesOut: 0, net: 0, prior: { cashIn: 0, expensesOut: 0, net: 0 } },
+      all: { cashIn: 0, expensesOut: 0, net: 0 },
+    },
+    chartPace: null,
     chartData: [],
     activation,
     profileReadiness: { completed: 0, total: 6, percentage: 0, substantial: false, signals: [] },
@@ -302,7 +308,7 @@ test.describe("goal-aware activation", () => {
     await page.locator("#login-password").fill("activation-password");
     await page.getByTestId("login-submit").click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Your business, at a glance" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await expect(page).not.toHaveURL(/\/onboarding/, { timeout: 15_000 });
   });
 

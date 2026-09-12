@@ -9,6 +9,7 @@ import { buildActivationPlan } from "@/lib/activation-plan";
 import { normalizeActivationGoal } from "@/lib/activation";
 import { normalizeGuideProgress } from "@/lib/guides";
 import { ISSUED_STATUSES, OPEN_STATUSES, collectedAmount, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
+import { mergeSignals, signalFromContractEvent, signalFromInquiry, signalFromInvoiceEvent } from "@/utils/signals";
 
 /* Cash-reporting helpers (MONEY-03). The overview trend is cash received, so
    it buckets actual `InvoicePayment.amount` rows by `paidAt` in the owner's
@@ -44,6 +45,19 @@ function monthKeyInTimeZone(value: Date | string, timeZone: string): string {
   if (!Number.isFinite(date.getTime())) throw new Error("Invalid financial timestamp.");
   const parts = Object.fromEntries(reportTimeZoneFormatter(timeZone).formatToParts(date).map((part) => [part.type, part.value]));
   return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}`;
+}
+
+/** Day-of-month (1–31) for a timestamp in the reporting timezone. */
+function dayOfMonthInTimeZone(value: Date | string, timeZone: string): number {
+  const date = value instanceof Date ? value : new Date(value);
+  const parts = Object.fromEntries(reportTimeZoneFormatter(timeZone).formatToParts(date).map((part) => [part.type, part.value]));
+  return Number(parts.day);
+}
+
+/** Calendar length of a `YYYY-MM` month — month length is not zone-dependent. */
+function daysInReportMonth(month: string): number {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
 }
 
 const REPORT_MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -139,10 +153,6 @@ export async function GET(req: NextRequest) {
       activeProjectsCount,
       expensesAggregate,
       paidRevenueByClient,
-      recentClients,
-      recentProjects,
-      recentInvoices,
-      recentExpenses
     ] = await Promise.all([
       // Revenue aggregations
       prisma.invoice.groupBy({
@@ -197,34 +207,6 @@ export async function GET(req: NextRequest) {
         where: { userId, status: { in: [...ISSUED_STATUSES] }, clientId: { not: null } },
         _sum: { total: true, amountPaid: true },
       }),
-      // Recent clients
-      prisma.client.findMany({
-        where: { userId },
-        select: { name: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 10
-      }),
-      // Recent projects
-      prisma.project.findMany({
-        where: { userId },
-        select: { title: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 10
-      }),
-      // Recent invoices
-      prisma.invoice.findMany({
-        where: { userId },
-        select: { invoiceNumber: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 10
-      }),
-      // Recent expenses
-      prisma.expense.findMany({
-        where: { userId },
-        select: { description: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 10
-      })
     ]);
 
     // Cash in hand and money still owed, split the way the revenue workspace
@@ -264,42 +246,29 @@ export async function GET(req: NextRequest) {
     }
 
     // Format top clients and sort by revenue after applying the workspace's
-    // exchange-rate snapshot to each currency group.
+    // exchange-rate snapshot to each currency group. A client who has only ever
+    // been billed still earns a row — "who owes me" is as useful as "who paid".
     const topClients = clientRecords
-      .map((client) => ({
-        id: client.id,
-        name: client.name,
-        company: client.company,
-        avatar_color: client.avatarColor,
-        total_revenue: (revenueByClient.get(client.id) || []).reduce(
-          (sum, group) => sum + convertAmount(collectedAmount(group.total, group.amountPaid), group.currency),
-          0,
-        ).toString(),
-      }))
-      .filter((c) => Number(c.total_revenue) > 0)
+      .map((client) => {
+        const groups = revenueByClient.get(client.id) || [];
+        return {
+          id: client.id,
+          name: client.name,
+          company: client.company,
+          avatar_color: client.avatarColor,
+          total_revenue: groups.reduce(
+            (sum, group) => sum + convertAmount(collectedAmount(group.total, group.amountPaid), group.currency),
+            0,
+          ).toString(),
+          outstanding: groups.reduce(
+            (sum, group) => sum + convertAmount(outstandingAmount(group.total, group.amountPaid), group.currency),
+            0,
+          ).toString(),
+        };
+      })
+      .filter((c) => Number(c.total_revenue) > 0 || Number(c.outstanding) > 0)
       .sort((a, b) => Number(b.total_revenue) - Number(a.total_revenue))
       .slice(0, 5);
-
-    // Combine and sort recent activity stream in memory
-    const activities: { type: string; title: string; created_at: string; rawDate: Date }[] = [];
-    
-    recentClients.forEach((c) => {
-      activities.push({ type: "client_added", title: c.name, created_at: c.createdAt.toISOString(), rawDate: c.createdAt });
-    });
-    recentProjects.forEach((p) => {
-      activities.push({ type: "project_created", title: p.title, created_at: p.createdAt.toISOString(), rawDate: p.createdAt });
-    });
-    recentInvoices.forEach((i) => {
-      activities.push({ type: "invoice_created", title: `invoice #${i.invoiceNumber}`, created_at: i.createdAt.toISOString(), rawDate: i.createdAt });
-    });
-    recentExpenses.forEach((e) => {
-      activities.push({ type: "expense_logged", title: e.description, created_at: e.createdAt.toISOString(), rawDate: e.createdAt });
-    });
-
-    const recentActivity = activities
-      .sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime())
-      .slice(0, 10)
-      .map(({ type, title, created_at }) => ({ type, title, created_at }));
 
     // The overview trend is cash received. Invoice totals belong to the issue
     // cohort; a settled 1,000 invoice may have 400 received in August and 600
@@ -307,10 +276,18 @@ export async function GET(req: NextRequest) {
     // bucketed in the owner's calendar, so split-month collections — including
     // partials recorded before settlement — land in their actual months.
     const chartNow = new Date();
-    const reporting = reportingWindow(chartNow, currencyOwner?.timeZone || "UTC", 6);
+    // The walk covers twelve months: the chart renders the latest six, and the
+    // earlier six are the "prior period" the six-month delta compares against.
+    const reporting = reportingWindow(chartNow, currencyOwner?.timeZone || "UTC", 12);
+    const currentMonth = monthKeyInTimeZone(chartNow, reporting.timeZone);
+    const priorMonth = shiftReportMonth(currentMonth, -1);
+    const todayDay = dayOfMonthInTimeZone(chartNow, reporting.timeZone);
     const monthlyChartData: Record<string, { month: string, period: string, revenue: number, expenses: number }> = Object.fromEntries(
       reporting.months.map(({ month, label }) => [month, { month: label, period: month, revenue: 0, expenses: 0 }]),
     );
+    // Day-aligned month-to-date: "last month by day 11" is the honest
+    // comparison for a month that has only seen 11 days.
+    const priorMonthToDate = { cashIn: 0, expensesOut: 0 };
 
     // Bounded keyset walk: only the current page is ever held in memory.
     let paymentCursor: string | undefined;
@@ -327,8 +304,12 @@ export async function GET(req: NextRequest) {
       });
       for (const payment of paymentRows) {
         const month = monthKeyInTimeZone(payment.paidAt, reporting.timeZone);
+        const amount = convertAmount(Number(payment.amount), payment.invoice.currency);
         if (monthlyChartData[month]) {
-          monthlyChartData[month].revenue += convertAmount(Number(payment.amount), payment.invoice.currency);
+          monthlyChartData[month].revenue += amount;
+        }
+        if (month === priorMonth && dayOfMonthInTimeZone(payment.paidAt, reporting.timeZone) <= todayDay) {
+          priorMonthToDate.cashIn += amount;
         }
       }
       if (paymentRows.length < REPORT_PAGE_SIZE) break;
@@ -351,8 +332,12 @@ export async function GET(req: NextRequest) {
       });
       for (const expense of expenseRows) {
         const month = monthKeyInTimeZone(expense.date, reporting.timeZone);
+        const amount = convertAmount(Number(expense.amount), expense.currency);
         if (monthlyChartData[month]) {
-          monthlyChartData[month].expenses += convertAmount(Number(expense.amount), expense.currency);
+          monthlyChartData[month].expenses += amount;
+        }
+        if (month === priorMonth && dayOfMonthInTimeZone(expense.date, reporting.timeZone) <= todayDay) {
+          priorMonthToDate.expensesOut += amount;
         }
       }
       if (expenseRows.length < REPORT_PAGE_SIZE) break;
@@ -382,6 +367,9 @@ export async function GET(req: NextRequest) {
       activeImportJobCount,
       migrationsNeedingReview,
       latestResumableMigration,
+      signalInvoiceEvents,
+      signalContractEvents,
+      signalInquiries,
     ] = await Promise.all([
       prisma.client.count({ where: { userId } }),
       prisma.project.count({ where: { userId } }),
@@ -441,6 +429,46 @@ export async function GET(req: NextRequest) {
         orderBy: { updatedAt: "desc" },
         select: { id: true },
       }),
+      // Signals: outside events worth opening the app for — the client opened
+      // the invoice, cash landed, an invoice went overdue, an agreement moved,
+      // a portfolio enquiry arrived. Bounded takes; merged below.
+      prisma.invoiceEvent.findMany({
+        where: { userId, eventType: { in: ["viewed", "payment_recorded", "paid", "overdue"] } },
+        orderBy: { createdAt: "desc" },
+        take: 15,
+        select: {
+          eventType: true,
+          createdAt: true,
+          metadata: true,
+          invoice: { select: { id: true, invoiceNumber: true, currency: true, client: { select: { name: true } } } },
+        },
+      }),
+      prisma.contractEvent.findMany({
+        where: {
+          contract: { userId },
+          eventType: { in: ["signer_signed", "signer_declined", "client_comment_added", "client_review_approved", "contract_executed"] },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 15,
+        select: {
+          eventType: true,
+          createdAt: true,
+          metadata: true,
+          contract: { select: { id: true, title: true } },
+        },
+      }),
+      prisma.portfolioInquiry.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: { id: true, name: true, projectType: true, sourceProjectTitle: true, createdAt: true },
+      }),
+    ]);
+
+    const signals = mergeSignals([
+      ...signalInvoiceEvents.map(signalFromInvoiceEvent),
+      ...signalContractEvents.map(signalFromContractEvent),
+      ...signalInquiries.map(signalFromInquiry),
     ]);
 
     const unresolvedImportIssues = migrationsNeedingReview._sum.unresolvedCount || 0;
@@ -522,6 +550,38 @@ export async function GET(req: NextRequest) {
       paymentReconciliationExcess: Number(row.payment_reconciliation_excess || 0),
     })).filter((row) => row.collectionsWithoutPaymentDate > 0 || row.paymentReconciliationExcess > 0);
 
+    // The card row is period-scoped. `month` and `sixMonths` count dated cash
+    // received (payment `paidAt`), matching the chart. `all` keeps the ledger
+    // reading of `amountPaid`, which also captures collections that have no
+    // dated receipt row — the reconciliation gap above — so toggling to
+    // "All time" can legitimately show more than the dated windows summed.
+    const monthRows = Object.values(monthlyChartData);
+    const chartRows = monthRows.slice(-6);
+    const sumRows = (rows: typeof monthRows) => rows.reduce(
+      (sum, row) => ({ cashIn: sum.cashIn + row.revenue, expensesOut: sum.expensesOut + row.expenses }),
+      { cashIn: 0, expensesOut: 0 },
+    );
+    const withNet = <T extends { cashIn: number; expensesOut: number }>(block: T) => ({ ...block, net: block.cashIn - block.expensesOut });
+    const currentMonthSums = monthlyChartData[currentMonth] || { revenue: 0, expenses: 0 };
+    const monthPeriod = {
+      cashIn: currentMonthSums.revenue,
+      expensesOut: currentMonthSums.expenses,
+      prior: withNet(priorMonthToDate),
+      priorLabel: reportingMonthLabel(priorMonth),
+      dayOfMonth: todayDay,
+    };
+    const chartPace = monthPeriod.cashIn > 0 || monthPeriod.expensesOut > 0
+      ? {
+          monthKey: currentMonth,
+          label: reportingMonthLabel(currentMonth),
+          dayOfMonth: todayDay,
+          daysInMonth: daysInReportMonth(currentMonth),
+          ...withNet({ cashIn: monthPeriod.cashIn, expensesOut: monthPeriod.expensesOut }),
+          prior: monthPeriod.prior,
+          priorLabel: monthPeriod.priorLabel,
+        }
+      : null;
+
     return NextResponse.json({
       success: true,
       currency: {
@@ -536,16 +596,22 @@ export async function GET(req: NextRequest) {
         totalExpenses,
         netEarnings
       },
+      periods: {
+        month: withNet(monthPeriod),
+        sixMonths: { ...withNet(sumRows(chartRows)), prior: withNet(sumRows(monthRows.slice(0, 6))) },
+        all: { cashIn: totalPaid, expensesOut: totalExpenses, net: netEarnings },
+      },
+      chartPace,
       topClients,
-      recentActivity,
-      chartData: Object.values(monthlyChartData),
+      signals,
+      chartData: chartRows,
       chartDefinition: {
         metric: "cash_received",
         source: "InvoicePayment.amount",
         dateField: "paidAt",
         timeZone: reporting.timeZone,
-        startMonth: reporting.months[0]?.month || null,
-        endMonth: reporting.months.at(-1)?.month || null,
+        startMonth: chartRows[0]?.period || null,
+        endMonth: chartRows.at(-1)?.period || null,
       },
       financialIntegrity,
       activation,

@@ -10,7 +10,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { formatMoney } from "@/lib/currency";
 import type { PaginationMeta } from "@/lib/pagination";
-import { buildMonthlyTrend } from "@/utils/revenueTrend";
+import { buildCashTrend, buildMonthlyTrend } from "@/utils/revenueTrend";
 import InvoiceDetailPanel from "@/components/invoices/InvoiceDetailPanel";
 import { canSendInvoice } from "@/utils/invoiceStatus";
 
@@ -43,6 +43,8 @@ type Invoice = {
 type CurrencySummary = { currency: string; issued: number; collected: number; outstanding: number; overdue: number; draft: number; invoiceCount: number; paidCount: number; collectionRate: number | null };
 type AgingRow = { currency: string; current: number; days30: number; days60: number; days90: number; days90Plus: number; noDueDate: number };
 type MonthlyRow = { month: string; currency: string; invoiced: number; collected: number };
+type CashMonthRow = { month: string; currency: string; cashReceived: number };
+type ClientBalanceRow = { clientId: string | null; client: string; currency: string; invoiced: number; collected: number; outstanding: number };
 type AttentionRow = { id: string; invoiceNumber: string; currency: string; status: string; outstanding: number; dueDate: string | null; client: string | null; reason: string };
 
 const INVOICE_STATUS_OPTIONS = [
@@ -79,7 +81,10 @@ function RevenueWorkspace() {
   const [summaries, setSummaries] = useState<CurrencySummary[]>([]);
   const [aging, setAging] = useState<AgingRow[]>([]);
   const [monthly, setMonthly] = useState<MonthlyRow[]>([]);
+  const [cashByMonth, setCashByMonth] = useState<CashMonthRow[]>([]);
+  const [clientBalances, setClientBalances] = useState<ClientBalanceRow[]>([]);
   const [attention, setAttention] = useState<AttentionRow[]>([]);
+  const [trendMode, setTrendMode] = useState<"cohort" | "cash">("cohort");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -135,6 +140,8 @@ function RevenueWorkspace() {
         setSummaries(summaryData.currencies || []);
         setAging(summaryData.aging || []);
         setMonthly(summaryData.monthlyRevenue || []);
+        setCashByMonth(summaryData.cashByMonth || []);
+        setClientBalances(summaryData.byClient || []);
         setAttention(summaryData.attention || []);
       }
     } catch (error) {
@@ -181,6 +188,29 @@ function RevenueWorkspace() {
      "INR — $12.55". Everything else on this page is already in the display
      currency, so this is too. */
   const monthlyTrend = useMemo(() => buildMonthlyTrend(monthly, convert), [monthly, convert]);
+  /* The dated-cash sibling: receipts grouped by payment month. Billed and
+     banked answer different questions, so both stay one toggle apart. */
+  const cashTrend = useMemo(() => buildCashTrend(cashByMonth, convert), [cashByMonth, convert]);
+  const trendIncomplete = trendMode === "cash" ? !cashTrend.complete : !monthlyTrend.complete;
+
+  /* `byClient` arrives per (client, currency) — roll currencies up so a client
+     billed in two of them still reads as one row in the owed list. */
+  const outstandingByClient = useMemo(() => {
+    const merged = new Map<string, { clientId: string | null; client: string; outstanding: number }>();
+    for (const row of clientBalances) {
+      if (row.outstanding <= 0) continue;
+      const converted = convert(row.outstanding, row.currency);
+      if (converted === null) continue;
+      const key = row.clientId || row.client;
+      const entry = merged.get(key) || { clientId: row.clientId, client: row.client, outstanding: 0 };
+      entry.outstanding += converted;
+      merged.set(key, entry);
+    }
+    return [...merged.entries()]
+      .map(([key, entry]) => ({ key, ...entry }))
+      .sort((a, b) => b.outstanding - a.outstanding)
+      .slice(0, 5);
+  }, [clientBalances, convert]);
 
   const refresh = () => { void load(); };
 
@@ -234,7 +264,17 @@ function RevenueWorkspace() {
           <div className="mt-6 h-3 overflow-hidden rounded-none bg-muted"><div className="h-full rounded-none bg-success transition-all" style={{ width: `${Math.min(collectionRate || 0, 100)}%` }} /></div>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">{summaries.map((summary) => <div key={summary.currency} className="rounded-none border border-border/70 bg-background p-3"><div className="flex justify-between text-xs text-muted-foreground"><span>{summary.currency}</span><span>{summary.invoiceCount} invoices</span></div><p className="mt-2 font-mono text-sm font-semibold tabular-nums">{formatConverted(summary.collected, summary.currency) || `${summary.currency} ${summary.collected.toFixed(2)}`}</p><p className="mt-1 text-xs text-muted-foreground">{summary.collectionRate === null ? "No issued value" : `${summary.collectionRate}% collection rate`}</p></div>)}</div>
         </section>
-        <section className="rounded-none border border-border bg-card p-5"><Kicker>A/R aging</Kicker><h2 className="mt-1 text-xl font-semibold">Where outstanding money sits</h2><div className="mt-5 space-y-3">{aging.length ? aging.map((row) => <div key={row.currency} className="rounded-none border border-border/70 p-3"><div className="flex justify-between text-xs font-semibold"><span>{row.currency}</span><span>{formatConverted(row.days30 + row.days60 + row.days90 + row.days90Plus, row.currency) || "—"} overdue</span></div><div className="mt-3 grid grid-cols-4 gap-2 whitespace-nowrap text-xs text-muted-foreground"><span>1–30<br /><strong className="font-mono tabular-nums text-foreground">{row.days30.toFixed(0)}</strong></span><span>31–60<br /><strong className="font-mono tabular-nums text-foreground">{row.days60.toFixed(0)}</strong></span><span>61–90<br /><strong className="font-mono tabular-nums text-foreground">{row.days90.toFixed(0)}</strong></span><span>90+<br /><strong className="font-mono tabular-nums text-foreground">{row.days90Plus.toFixed(0)}</strong></span></div></div>) : <p className="rounded-none bg-success/10 p-4 text-sm text-success">No outstanding balances have aged yet.</p>}</div></section>
+        <section className="rounded-none border border-border bg-card p-5"><Kicker>A/R aging</Kicker><h2 className="mt-1 text-xl font-semibold">Where outstanding money sits</h2><div className="mt-5 space-y-3">{aging.length ? aging.map((row) => {
+          const rowOverdue = row.days30 + row.days60 + row.days90 + row.days90Plus;
+          const buckets = [
+            { label: "1–30", value: row.days30, tone: "bg-warning/50" },
+            { label: "31–60", value: row.days60, tone: "bg-warning" },
+            { label: "61–90", value: row.days90, tone: "bg-destructive/60" },
+            { label: "90+", value: row.days90Plus, tone: "bg-destructive" },
+          ];
+          const notYetDue = row.current + row.noDueDate;
+          return <div key={row.currency} className="rounded-none border border-border/70 p-3"><div className="flex justify-between text-xs font-semibold"><span>{row.currency}</span><span>{formatConverted(rowOverdue, row.currency) || "—"} overdue</span></div>{rowOverdue > 0 ? <div className="mt-3 flex h-2 overflow-hidden rounded-none bg-muted" aria-hidden="true">{buckets.map((bucket) => bucket.value > 0 ? <span key={bucket.label} className={bucket.tone} style={{ width: `${(bucket.value / rowOverdue) * 100}%` }} /> : null)}</div> : null}<div className="mt-3 grid grid-cols-4 gap-2 whitespace-nowrap text-xs text-muted-foreground">{buckets.map((bucket) => <span key={bucket.label}>{bucket.label}<br /><strong className="font-mono tabular-nums text-foreground">{bucket.value.toFixed(0)}</strong></span>)}</div>{notYetDue > 0 ? <p className="mt-2 text-[11px] text-muted-foreground">{formatConverted(notYetDue, row.currency) || `${row.currency} ${notYetDue.toFixed(2)}`} not yet due</p> : null}</div>;
+        }) : <p className="rounded-none bg-success/10 p-4 text-sm text-success">No outstanding balances have aged yet.</p>}{outstandingByClient.length ? <div className="border-t border-border/70 pt-3"><h3 className="text-xs font-bold text-foreground">Owed to you, by client</h3><ul className="mt-2 space-y-1">{outstandingByClient.map((row) => <li key={row.key} className="flex items-center justify-between gap-2 text-xs"><span className="min-w-0 truncate text-muted-foreground">{row.clientId ? <Link href={`/workflow/revenue?clientId=${row.clientId}`} className="font-medium transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{row.client}</Link> : <span className="font-medium">{row.client}</span>}</span><span className="shrink-0 font-mono font-bold tabular-nums text-warning">{formatMoney(row.outstanding, displayCurrency)}</span></li>)}</ul></div> : null}</div></section>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
@@ -242,45 +282,87 @@ function RevenueWorkspace() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <Kicker>Trend</Kicker>
-              <h2 className="mt-1 text-xl font-semibold">Monthly invoice activity</h2>
+              <h2 className="mt-1 text-xl font-semibold">{trendMode === "cohort" ? "Monthly invoice activity" : "Monthly cash received"}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {trendMode === "cohort" ? "Invoices grouped by issue month" : "Receipts grouped by payment month"} · last 6 recorded months · {displayCurrency}
+              </p>
             </div>
-            <span className="shrink-0 text-xs text-muted-foreground">Last 6 recorded months · {displayCurrency}</span>
+            <div role="group" aria-label="Trend view" className="flex gap-1 rounded-none border border-border p-1">
+              {([{ key: "cohort", label: "Billed" }, { key: "cash", label: "Cash received" }] as const).map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  aria-pressed={trendMode === option.key}
+                  onClick={() => setTrendMode(option.key)}
+                  className={`rounded-none px-2.5 py-1 text-xs font-bold transition ${trendMode === option.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-          {/* Two quantities, two lengths, both labelled. The bar compares this
-              month's invoiced value against the largest month in the window;
-              the solid part of it is what has actually been collected. */}
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-primary/25" /> Invoiced, relative to the busiest month</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-success" /> Paid so far, of that month&apos;s invoices</span>
-          </div>
-          {monthlyTrend.points.length ? (
+          {trendMode === "cohort" ? (
+            <>
+              {/* Two quantities, two lengths, both labelled. The bar compares this
+                  month's invoiced value against the largest month in the window;
+                  the solid part of it is what has actually been collected. */}
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-primary/25" /> Invoiced, relative to the busiest month</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-success" /> Paid so far, of that month&apos;s invoices</span>
+              </div>
+              {monthlyTrend.points.length ? (
+                <div className="mt-5 space-y-4">
+                  {monthlyTrend.points.map((point) => (
+                    <div key={point.month}>
+                      <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                        <span className="text-sm font-semibold">{point.label}</span>
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                          <strong className="font-mono font-semibold tabular-nums text-foreground">{formatMoney(point.invoiced, displayCurrency)}</strong> invoiced
+                          {point.collectionRate !== null ? ` · ${point.collectionRate}% paid` : ""}
+                        </span>
+                      </div>
+                      <div
+                        className="h-2.5 overflow-hidden rounded-none bg-muted"
+                        role="img"
+                        aria-label={`${point.label}: ${formatMoney(point.invoiced, displayCurrency)} invoiced, ${point.collectionRate === null ? "nothing billed" : `${point.collectionRate}% of it paid`}${point.currencies.length > 1 ? `, across ${point.currencies.join(" and ")}` : ""}`}
+                      >
+                        {/* A visible sliver for a month that had activity but is
+                            dwarfed by another — zero-width would read as no data. */}
+                        <div className="h-full rounded-none bg-primary/25" style={{ width: `${point.invoiced > 0 ? Math.max(2, point.share * 100) : 0}%` }}>
+                          <div className="h-full rounded-none bg-success" style={{ width: `${point.invoiced > 0 ? Math.min(100, (point.collected / point.invoiced) * 100) : 0}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {!monthlyTrend.complete && <p className="pt-1 text-xs text-muted-foreground">Some months are still converting to {displayCurrency} and are not shown yet.</p>}
+                </div>
+              ) : (
+                <p className="mt-5 text-sm text-muted-foreground">{ratesStatus === "loading" && monthly.length ? `Converting to ${displayCurrency}…` : "Your monthly trend will appear after the first invoice."}</p>
+              )}
+            </>
+          ) : cashTrend.points.length ? (
             <div className="mt-5 space-y-4">
-              {monthlyTrend.points.map((point) => (
+              {cashTrend.points.map((point) => (
                 <div key={point.month}>
                   <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                     <span className="text-sm font-semibold">{point.label}</span>
                     <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                      <strong className="font-mono font-semibold tabular-nums text-foreground">{formatMoney(point.invoiced, displayCurrency)}</strong> invoiced
-                      {point.collectionRate !== null ? ` · ${point.collectionRate}% paid` : ""}
+                      <strong className="font-mono font-semibold tabular-nums text-foreground">{formatMoney(point.received, displayCurrency)}</strong> received
                     </span>
                   </div>
                   <div
                     className="h-2.5 overflow-hidden rounded-none bg-muted"
                     role="img"
-                    aria-label={`${point.label}: ${formatMoney(point.invoiced, displayCurrency)} invoiced, ${point.collectionRate === null ? "nothing billed" : `${point.collectionRate}% of it paid`}${point.currencies.length > 1 ? `, across ${point.currencies.join(" and ")}` : ""}`}
+                    aria-label={`${point.label}: ${formatMoney(point.received, displayCurrency)} received${point.currencies.length > 1 ? `, across ${point.currencies.join(" and ")}` : ""}`}
                   >
-                    {/* A visible sliver for a month that had activity but is
-                        dwarfed by another — zero-width would read as no data. */}
-                    <div className="h-full rounded-none bg-primary/25" style={{ width: `${point.invoiced > 0 ? Math.max(2, point.share * 100) : 0}%` }}>
-                      <div className="h-full rounded-none bg-success" style={{ width: `${point.invoiced > 0 ? Math.min(100, (point.collected / point.invoiced) * 100) : 0}%` }} />
-                    </div>
+                    <div className="h-full rounded-none bg-success" style={{ width: `${point.received > 0 ? Math.max(2, point.share * 100) : 0}%` }} />
                   </div>
                 </div>
               ))}
-              {!monthlyTrend.complete && <p className="pt-1 text-xs text-muted-foreground">Some months are still converting to {displayCurrency} and are not shown yet.</p>}
+              {trendIncomplete && <p className="pt-1 text-xs text-muted-foreground">Some months are still converting to {displayCurrency} and are not shown yet.</p>}
             </div>
           ) : (
-            <p className="mt-5 text-sm text-muted-foreground">{ratesStatus === "loading" && monthly.length ? `Converting to ${displayCurrency}…` : "Your monthly trend will appear after the first invoice."}</p>
+            <p className="mt-5 text-sm text-muted-foreground">No dated receipts yet — cash appears here when payments are recorded.</p>
           )}
         </section>
         <section className="rounded-none border border-border bg-card p-5">

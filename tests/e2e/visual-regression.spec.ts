@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Route, type TestInfo } from "@playwright/test";
 
 const majorPages = [
-  { name: "overview", path: "/dashboard", heading: "Your business, at a glance" },
+  { name: "overview", path: "/dashboard", heading: "Overview" },
   { name: "calendar", path: "/calendar", heading: "Your work, on one timeline" },
   { name: "projects", path: "/workflow/projects", heading: "Projects" },
   { name: "clients", path: "/workflow/clients", heading: "Clients" },
@@ -151,7 +151,17 @@ async function mockVisualWorkspace(page: Page, guidance: "completed" | "active" 
       return json(route, {
         success: true,
         stats: { totalPaid: 5075, totalPending: 825, activeProjects: 3, totalExpenses: 522, netEarnings: 4553 },
-        topClients: [], recentActivity: [],
+        topClients: [],
+        signals: [
+          { kind: "invoice_paid", tone: "success", tag: "Paid", title: "INV-1042 paid in full", detail: "Acme Co", amount: 1350, currency: "USD", href: "/workflow/revenue", at: "2026-08-06T14:30:00.000Z" },
+          { kind: "invoice_viewed", tone: "info", tag: "Opened", title: "Acme Co opened INV-1043", detail: "They have seen the invoice.", amount: null, currency: "USD", href: "/workflow/revenue", at: "2026-08-05T09:12:00.000Z" },
+        ],
+        periods: {
+          month: { cashIn: 0, expensesOut: 0, net: 0, prior: { cashIn: 1400, expensesOut: 90, net: 1310 }, priorLabel: "Jul 2026", dayOfMonth: 7 },
+          sixMonths: { cashIn: 5075, expensesOut: 522, net: 4553, prior: { cashIn: 4200, expensesOut: 610, net: 3590 } },
+          all: { cashIn: 5075, expensesOut: 522, net: 4553 },
+        },
+        chartPace: null,
         chartData: [
           { month: "Mar 2026", period: "2026-03", revenue: 900, expenses: 120 }, { month: "Apr 2026", period: "2026-04", revenue: 1350, expenses: 80 },
           { month: "May 2026", period: "2026-05", revenue: 1425, expenses: 112 }, { month: "Jun 2026", period: "2026-06", revenue: 1400, expenses: 90 },
@@ -279,7 +289,7 @@ for (const { width, height } of [{ width: 1280, height: 800 }, { width: 1024, he
     test(`overview ${theme} ${width}x${height} visual`, async ({ page }) => {
       await prepareVisualPage(page, theme, { width, height });
       await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-      await expect(page.getByRole("heading", { name: "Your business, at a glance" })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible({ timeout: 20_000 });
       await page.evaluate(() => document.fonts.ready);
       await expectDesktopVisualInvariants(page, theme);
       await expect(page).toHaveScreenshot(`overview-${theme}-${width}x${height}.png`, {
@@ -294,10 +304,10 @@ test("financial overview reveals exact month values without a moving tooltip", a
   await prepareVisualPage(page, "light");
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-  const chart = page.getByRole("region", { name: "Paid invoices and expenses" });
+  const chart = page.getByRole("region", { name: "Net by month" });
   await expect(chart).toBeVisible({ timeout: 20_000 });
   await expect(chart.getByText("Jul 2026", { exact: true }).first()).toBeVisible();
-  const april = chart.getByRole("button", { name: /Apr 2026: \$1,350\.00 paid invoice value/ });
+  const april = chart.getByRole("button", { name: /Apr 2026: net \+\$1,270\.00, \$1,350\.00 received, \$80\.00 expenses/ });
   await april.focus();
   await expect(april).toHaveAttribute("aria-pressed", "true");
   await expect(chart.getByText("$1,350.00", { exact: true })).toBeVisible();
@@ -521,7 +531,7 @@ for (const theme of ["light", "dark"] as const) {
   test(`mobile shell and onboarding ${theme} visual`, async ({ page }) => {
     await prepareVisualPage(page, theme, { width: 390, height: 844 });
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Your business, at a glance" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible({ timeout: 20_000 });
     await expect(page.locator("aside")).toBeHidden();
     await expect(page).toHaveScreenshot(`overview-${theme}-390x844.png`, { fullPage: false });
 

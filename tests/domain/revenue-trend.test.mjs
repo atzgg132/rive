@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildMonthlyTrend, monthKeyUtc, monthLabel, monthlyCohortRows } from "../../src/utils/revenueTrend.ts";
+import { buildCashTrend, buildMonthlyTrend, monthKeyUtc, monthLabel, monthlyCohortRows } from "../../src/utils/revenueTrend.ts";
 
 /**
  * The chart this replaces drew each bar from `collected / invoiced` under a
@@ -176,4 +176,76 @@ test("the output feeds straight into the chart it exists for", () => {
     ["Mar 2026", 25, 0.25],
     ["Apr 2026", 100, 1],
   ]);
+});
+
+
+/**
+ * The dated-cash sibling of the cohort trend. `cashByMonth` groups receipts by
+ * the month they were paid — the same series the dashboard chart draws — so a
+ * March invoice settled in June belongs to June here and to March there.
+ */
+
+test("cash trend sums a month across currencies and never splits a row", () => {
+  const { points } = buildCashTrend(
+    [
+      { month: "2026-07", currency: "INR", cashReceived: 150 },
+      { month: "2026-07", currency: "USD", cashReceived: 250 },
+    ],
+    usd,
+  );
+
+  assert.equal(points.length, 1, "one month must not produce two rows");
+  assert.equal(points[0].received, 400);
+  assert.deepEqual(points[0].currencies, ["INR", "USD"]);
+});
+
+test("cash trend orders oldest first and windows on the most recent", () => {
+  const rows = ["2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"].map((month) => ({
+    month,
+    currency: "USD",
+    cashReceived: 10,
+  }));
+
+  const { points } = buildCashTrend(rows, usd, 6);
+  assert.equal(points.length, 6);
+  assert.equal(points[0].month, "2026-01", "the oldest month must be the one dropped");
+  assert.equal(points[5].month, "2026-06");
+});
+
+test("cash trend drops a month whole when any currency in it cannot convert", () => {
+  const convertOnlyUsd = (value, currency) => (currency === "USD" ? value : null);
+  const { points, complete } = buildCashTrend(
+    [
+      { month: "2026-06", currency: "USD", cashReceived: 500 },
+      { month: "2026-07", currency: "USD", cashReceived: 300 },
+      { month: "2026-07", currency: "INR", cashReceived: 900 },
+    ],
+    convertOnlyUsd,
+  );
+
+  assert.equal(complete, false);
+  assert.deepEqual(points.map((point) => point.month), ["2026-06"]);
+});
+
+test("cash trend share tracks the largest month so a dwarfed month still shows a sliver", () => {
+  const { points } = buildCashTrend(
+    [
+      { month: "2026-06", currency: "USD", cashReceived: 100 },
+      { month: "2026-07", currency: "USD", cashReceived: 1_000 },
+    ],
+    usd,
+  );
+
+  assert.equal(points[1].share, 1);
+  assert.equal(points[0].share, 0.1);
+});
+
+test("cash trend with no rates yields nothing rather than a wrong total", () => {
+  const { points, complete } = buildCashTrend(
+    [{ month: "2026-07", currency: "INR", cashReceived: 900 }],
+    noRates,
+  );
+
+  assert.deepEqual(points, []);
+  assert.equal(complete, false);
 });

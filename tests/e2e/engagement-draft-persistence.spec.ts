@@ -31,7 +31,7 @@ async function installMocks(page: Page) {
     if (url.pathname === "/api/workflow/dashboard") return json({
       success: true,
       stats: { totalPaid: 0, totalPending: 0, activeProjects: 0, totalExpenses: 0, netEarnings: 0 },
-      topClients: [], recentActivity: [], chartData: [], activation: null, insights: null,
+      topClients: [], signals: [], chartData: [], activation: null, insights: null,
       currency: { displayCurrency: "USD", ratesAsOf: "2026-08-30", conversionAvailable: true },
     });
     return json({ success: true });

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Inbox, Info, RefreshCw, Users } from "lucide-react";
-import { Badge, Button, EmptyState, Skeleton } from "@/components/ui";
+import { AlertTriangle, BarChart3, Inbox, Info, RefreshCw, Users } from "lucide-react";
+import { Badge, Button, EmptyState, Movement, Skeleton } from "@/components/ui";
 import PortfolioTrafficChart from "@/components/portfolio/PortfolioTrafficChart";
 import {
   PORTFOLIO_ANALYTICS_RANGES,
@@ -28,31 +28,6 @@ const RANGE_LABELS: Record<PortfolioAnalyticsRange, string> = {
 
 const numberFormat = new Intl.NumberFormat();
 
-
-/** Movement against the previous period, or nothing when there is nothing honest to show. */
-function Movement({ change, suffix = "%", inverse = false }: { change: number | null; suffix?: string; inverse?: boolean }) {
-  if (change === null) return <span className="text-xs text-muted-foreground">No comparison</span>;
-  if (change === 0) {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-        <ArrowRight className="h-3 w-3" /> No change
-      </span>
-    );
-  }
-  const positive = inverse ? change < 0 : change > 0;
-  const Icon = change > 0 ? ArrowUpRight : ArrowDownRight;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 text-xs font-bold ${positive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
-    >
-      <Icon className="h-3 w-3" />
-      {change > 0 ? "+" : ""}
-      {change}
-      {suffix}
-      <span className="font-medium text-muted-foreground">vs previous</span>
-    </span>
-  );
-}
 
 function KpiCard({
   label,

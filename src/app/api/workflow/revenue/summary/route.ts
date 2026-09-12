@@ -158,12 +158,6 @@ export async function GET(req: NextRequest) {
       ...(projectId ? { projectId } : {}),
     };
 
-    const eventsPromise = prisma.invoiceEvent.findMany({
-      where: { invoice: invoiceWhere },
-      select: { eventType: true, createdAt: true, metadata: true, invoice: { select: { invoiceNumber: true, currency: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 12,
-    });
     const owner = await prisma.user.findUnique({ where: { id: session.userId }, select: { timeZone: true } });
     const reportingTimeZone = normalizeSummaryTimeZone(owner?.timeZone);
     const currentMonth = monthKeyInTimeZone(now, reportingTimeZone);
@@ -304,7 +298,6 @@ export async function GET(req: NextRequest) {
       invoiceCursor = nextCursor;
     }
 
-    const events = await eventsPromise;
     for (const row of byCurrency.values()) row.collectionRate = row.issued > 0 ? Math.round((row.collected / row.issued) * 1000) / 10 : null;
 
     /* One cohort per row — `monthlyCohortRows` owns the rule (issue-month
@@ -335,7 +328,6 @@ export async function GET(req: NextRequest) {
       },
       byClient: Array.from(byClient.values()).sort((a, b) => b.invoiced - a.invoiced || (a.clientId || "").localeCompare(b.clientId || "")).slice(0, 20),
       byProject: Array.from(byProject.values()).sort((a, b) => b.invoiced - a.invoiced || (a.projectId || "").localeCompare(b.projectId || "")).slice(0, 20),
-      recentActivity: events.map((event) => ({ eventType: event.eventType, createdAt: event.createdAt, invoiceNumber: event.invoice.invoiceNumber, currency: event.invoice.currency, metadata: event.metadata })),
       attention: attention.sort((a, b) => b.outstanding - a.outstanding || a.id.localeCompare(b.id)).slice(0, 12),
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

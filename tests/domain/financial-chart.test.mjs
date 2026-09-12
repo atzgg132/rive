@@ -61,3 +61,44 @@ test("net keeps its sign when the month is not break-even", () => {
   assert.equal(chart.points[1].net, 500);
   assert.equal(chart.totals.net, 200);
 });
+
+test("net extent gives each direction its own readable ceiling", () => {
+  const chart = prepareFinancialChart([
+    { month: "Oct 2026", period: "2026-10", revenue: 100, expenses: 400 }, // net -300
+    { month: "Nov 2026", period: "2026-11", revenue: 900, expenses: 400 }, // net +500
+  ]);
+
+  // Both directions round up to the same nice ceiling: the baseline sits mid-track.
+  assert.deepEqual(chart.netExtent, { up: 500, down: 500 });
+  assert.equal(chart.baselineShare, 0.5);
+});
+
+test("an all-positive window keeps the baseline on the bottom edge", () => {
+  const chart = prepareFinancialChart([
+    { month: "Oct 2026", period: "2026-10", revenue: 400, expenses: 100 },
+    { month: "Nov 2026", period: "2026-11", revenue: 900, expenses: 400 },
+  ]);
+
+  assert.equal(chart.netExtent.down, 0);
+  assert.equal(chart.baselineShare, 1);
+});
+
+test("an all-negative window parks the baseline on the top edge", () => {
+  const chart = prepareFinancialChart([
+    { month: "Oct 2026", period: "2026-10", revenue: 100, expenses: 400 },
+    { month: "Nov 2026", period: "2026-11", revenue: 100, expenses: 900 },
+  ]);
+
+  assert.equal(chart.netExtent.up, 0);
+  assert.equal(chart.baselineShare, 0);
+});
+
+test("an empty window still has a stable extent and baseline", () => {
+  const chart = prepareFinancialChart([
+    { month: "Jan", revenue: 0, expenses: 0 },
+    { month: "Feb", revenue: 0, expenses: 0 },
+  ]);
+
+  assert.deepEqual(chart.netExtent, { up: 0, down: 0 });
+  assert.equal(chart.baselineShare, 1);
+});

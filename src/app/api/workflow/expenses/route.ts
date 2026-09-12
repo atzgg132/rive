@@ -9,6 +9,66 @@ type ProjectValidation =
   | { ok: true; projectId: string | null }
   | { ok: false; response: NextResponse };
 
+// Owner-calendar reporting helpers, kept local so this route owns its
+// reporting rule — the same approach the dashboard and revenue routes take.
+function reportTimeZoneFormatter(timeZone: string): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat("en-US", {
+    calendar: "iso8601",
+    numberingSystem: "latn",
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function reportDayToInstant(day: string, timeZone: string): Date {
+  const approximateUtc = Date.parse(`${day}T00:00:00.000Z`);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      calendar: "iso8601",
+      numberingSystem: "latn",
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(approximateUtc)).map((part) => [part.type, part.value]),
+  );
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour === "24" ? "0" : parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return new Date(approximateUtc - (asUtc - approximateUtc));
+}
+
+function monthKeyInTimeZone(value: Date, timeZone: string): string {
+  const parts = Object.fromEntries(reportTimeZoneFormatter(timeZone).formatToParts(value).map((part) => [part.type, part.value]));
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}`;
+}
+
+function shiftMonth(month: string, offset: number): string {
+  const [year, number] = month.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, number - 1 + offset, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Currency -> amount map for a Prisma groupBy(_sum) result. */
+function sumByCurrency(groups: Array<{ currency: string; _sum: { amount: unknown } }>): Record<string, number> {
+  const byCurrency: Record<string, number> = {};
+  for (const group of groups) {
+    byCurrency[group.currency] = Number(group._sum.amount || 0);
+  }
+  return byCurrency;
+}
+
 async function validateOwnedProject(userId: string, value: unknown): Promise<ProjectValidation> {
   if (value === undefined || value === null || value === "") return { ok: true, projectId: null };
   if (typeof value !== "string") {
@@ -55,6 +115,34 @@ export async function GET(req: NextRequest) {
 
     const total = await prisma.expense.count({ where });
     const pagination = buildPagination(total, requestedPagination);
+
+    // Summary tiles describe the workspace, not the current page or filter —
+    // they deliberately aggregate over `userId` alone. Without them the client
+    // could only sum the rows it happened to load, so "this month" changed
+    // when the owner paged or filtered.
+    const owner = await prisma.user.findUnique({ where: { id: session.userId }, select: { timeZone: true } });
+    const timeZone = owner?.timeZone || "UTC";
+    const currentMonth = monthKeyInTimeZone(new Date(), timeZone);
+    const monthStart = reportDayToInstant(`${currentMonth}-01`, timeZone);
+    const monthEnd = reportDayToInstant(`${shiftMonth(currentMonth, 1)}-01`, timeZone);
+    const [monthGroups, monthCount, billableGroups, linkedGroups, categoryGroups] = await Promise.all([
+      prisma.expense.groupBy({ by: ["currency"], where: { userId: session.userId, date: { gte: monthStart, lt: monthEnd } }, _sum: { amount: true } }),
+      prisma.expense.count({ where: { userId: session.userId, date: { gte: monthStart, lt: monthEnd } } }),
+      prisma.expense.groupBy({ by: ["currency"], where: { userId: session.userId, isBillable: true, isReimbursed: false }, _sum: { amount: true } }),
+      prisma.expense.groupBy({ by: ["currency"], where: { userId: session.userId, projectId: { not: null } }, _sum: { amount: true } }),
+      prisma.expense.groupBy({ by: ["category", "currency"], where: { userId: session.userId }, _sum: { amount: true } }),
+    ]);
+    const summary = {
+      month: { byCurrency: sumByCurrency(monthGroups), count: monthCount },
+      billableOutstanding: { byCurrency: sumByCurrency(billableGroups) },
+      linked: { byCurrency: sumByCurrency(linkedGroups) },
+      categories: categoryGroups.map((group) => ({
+        category: group.category,
+        currency: group.currency,
+        amount: Number(group._sum.amount || 0),
+      })),
+    };
+
     const expenses = await prisma.expense.findMany({
       where,
       include: {
@@ -90,6 +178,7 @@ export async function GET(req: NextRequest) {
       success: true,
       expenses: formattedExpenses,
       pagination,
+      summary,
     });
   } catch (error: unknown) {
     console.error("Expenses fetch error:", error);
