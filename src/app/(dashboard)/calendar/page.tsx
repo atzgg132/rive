@@ -560,7 +560,7 @@ export default function CalendarPage() {
     <div className="calendar-shell workspace-page max-w-[100rem]">
       <PageHeader
         className="sm:flex-col xl:flex-row"
-        title={<span className="flex flex-wrap items-center gap-2"><CalendarDays className="h-6 w-6 text-primary" /> Your work, on one timeline <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2.5 py-1 text-xs font-semibold tracking-normal text-primary">Connected</span></span>}
+        title={<span className="flex flex-wrap items-center gap-2">Your work, on one timeline <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2.5 py-1 text-xs font-semibold tracking-normal text-primary">Connected</span></span>}
         description="Plan meetings and focus time alongside project deadlines, tasks, milestones, and invoice due dates."
         actions={<>
           {guideReady && !showGuide && <Button variant="ghost" onClick={() => setShowGuide(true)} className="hidden sm:inline-flex"><Info /> How it connects</Button>}

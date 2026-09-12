@@ -3,6 +3,7 @@ import { verifyPassword } from "@/utils/userAuth";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { createAdminSession } from "@/utils/adminSession";
+import { verifyTotp } from "@/utils/adminTotp";
 import { prisma } from "@/utils/db";
 import { hashRequestValue } from "@/utils/contracts";
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { username, password } = await req.json();
+    const { username, password, code } = await req.json();
 
     if (username !== ADMIN_USERNAME) {
       return NextResponse.json({ success: false, message: "Invalid credentials." }, { status: 401 });
@@ -44,9 +45,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid credentials." }, { status: 401 });
     }
 
+    // TOTP is the second factor whenever the secret is provisioned; the form
+    // learns whether to show the field from the session check, so these codes
+    // only matter for clients that got here without it.
+    const totpSecret = process.env.ADMIN_TOTP_SECRET?.trim();
+    if (totpSecret) {
+      if (typeof code !== "string" || !code.trim()) {
+        return NextResponse.json({ success: false, code: "totp_required", message: "Enter the 6-digit authenticator code." }, { status: 401 });
+      }
+      if (!verifyTotp(code.trim(), totpSecret)) {
+        return NextResponse.json({ success: false, code: "totp_invalid", message: "Invalid authenticator code." }, { status: 401 });
+      }
+    }
+
     const response = NextResponse.json({ success: true, message: "Admin session created." });
     await createAdminSession(req, response);
-    await prisma.auditEvent.create({ data: { action: "admin.login", targetType: "admin_session", metadata: { username: ADMIN_USERNAME }, ipHash: hashRequestValue(ip) } }).catch((error) => console.warn("Admin access audit failed:", error));
+    await prisma.auditEvent.create({ data: { action: "admin.login", targetType: "admin_session", metadata: { username: ADMIN_USERNAME, totp: Boolean(totpSecret) }, ipHash: hashRequestValue(ip) } }).catch((error) => console.warn("Admin access audit failed:", error));
     return response;
   } catch {
     return NextResponse.json({ success: false, message: "Bad request." }, { status: 400 });

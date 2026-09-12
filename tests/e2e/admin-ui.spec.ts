@@ -35,7 +35,27 @@ const productFunnel = {
   activeUsers: { wau: 2, mau: 3 },
   retention: { available: false, numerator: 0, denominator: 0, rate: null, definition: "Qualified users active in days 7–13 after signup, among cohorts at least 14 days old." },
   workflowDepth: { averageModules: 1.2, buckets: [{ label: "0–1 modules", count: 3 }, { label: "2 modules", count: 1 }, { label: "3+ modules", count: 0 }] },
-  reliability: { productEvents24h: 9, failedEmails24h: 0, queuedEmails: 0 },
+  reliability: {
+    productEvents24h: 9,
+    failedEmails24h: 0,
+    queuedEmails: 0,
+    migration: {
+      sessions24h: 0,
+      sessions7d: 0,
+      completionRate24h: null,
+      completionRate7d: null,
+      failed24h: 0,
+      recoveredRetries7d: 0,
+      staleJobs: 0,
+      assistanceBacklog: 0,
+      p50AnalysisMinutes: null,
+      p95AnalysisMinutes: null,
+      p50CommitMinutes: null,
+      p95CommitMinutes: null,
+      dlqMessages: null,
+      failures: [],
+    },
+  },
   window: { label: "all_customer_accounts", signupSparklineDays: 14, activationWindowDays: 7, deepActivationWindowDays: 14 },
   dropOff: {
     unqualified: 6,
@@ -191,5 +211,39 @@ test.describe("admin control room", () => {
     await expect(page.getByText("Missing for qualification:")).toContainText("No primary goal");
     await expect(page.getByText("Native path would already count")).toBeVisible();
     await expect(page.locator("p").filter({ hasText: "Product guidance:" })).toContainText("activated");
+  });
+
+  test("restores the section from the URL and keeps tab selection in it", async ({ page }) => {
+    await page.route("**/api/admin/session", (route) => json(route, { success: true }));
+    await page.route("**/api/admin/analytics", (route) => json(route, { success: true, data: { productFunnel } }));
+    await page.route("**/api/admin/users?*", (route) => json(route, { success: true, total: 0, data: [] }));
+
+    await page.goto("/admin?tab=users");
+    await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Funnel", exact: true }).click();
+    await expect(page).toHaveURL(/[?&]tab=funnel/);
+    await expect(page.getByRole("heading", { name: "Where users stop" })).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Where users stop" })).toBeVisible();
+  });
+
+  test("drills the Deeply activated card into the matching Users cohort", async ({ page }) => {
+    await page.route("**/api/admin/session", (route) => json(route, { success: true }));
+    await page.route("**/api/admin/analytics", (route) => json(route, { success: true, data: { productFunnel } }));
+    const requested: string[] = [];
+    await page.route("**/api/admin/users?*", (route) => {
+      requested.push(route.request().url());
+      return json(route, { success: true, total: 0, hasMore: false, facets: { all: 0, registered: 0, qualified: 0, activated: 0, deeply_activated: 0, unverified: 0, realData: 0 }, sources: [], data: [] });
+    });
+
+    await page.goto("/admin");
+    await page.getByRole("link", { name: /Deeply activated/ }).first().click();
+
+    await expect(page).toHaveURL(/tab=users&stage=deeply_activated/);
+    await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+    await expect.poll(() => requested.some((url) => url.includes("stage=deeply_activated"))).toBe(true);
+    await expect(page.getByRole("button", { name: /^Deeply activated/ })).toHaveAttribute("aria-pressed", "true");
   });
 });

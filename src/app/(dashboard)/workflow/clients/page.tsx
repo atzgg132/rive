@@ -13,12 +13,10 @@ import {
   Mail,
   Phone,
   Globe,
-  Briefcase,
   X,
   Loader2,
-  Tag,
   MoreVertical,
-  Edit2,
+  Pencil,
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
@@ -302,7 +300,7 @@ export default function ClientsPage() {
                   }
                 >
                   <AnchoredMenuItem onClick={(e) => { e.stopPropagation(); openEdit(c); setOpenDropdownId(null); }}>
-                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                    <Pencil className="h-3.5 w-3.5" /> Edit
                   </AnchoredMenuItem>
                   <AnchoredMenuItem
                     className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
@@ -336,10 +334,7 @@ export default function ClientsPage() {
                 {c.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {c.tags.map((t, idx) => (
-                      <span key={idx} className="flex items-center gap-1 rounded-none border border-border bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground">
-                        <Tag className="h-2 w-2" />
-                        <span>{t}</span>
-                      </span>
+                      <span key={idx} className="rounded-none border border-border bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground">{t}</span>
                     ))}
                   </div>
                 )}
@@ -371,10 +366,7 @@ export default function ClientsPage() {
 
               {/* Aggregations */}
               <div className="flex justify-between items-center border-t border-border pt-4 text-xs font-semibold">
-                <span className="flex items-center gap-1 text-muted-foreground">
-                  <Briefcase className="h-3.5 w-3.5" />
-                  <span>{c.project_count} projects</span>
-                </span>
+                <span className="text-muted-foreground">{c.project_count} projects</span>
                 <span className="font-mono tabular-nums text-success">
                   {formatClientRevenue(c)} paid
                 </span>

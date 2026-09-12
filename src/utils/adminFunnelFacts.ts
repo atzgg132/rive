@@ -3,7 +3,9 @@ import "server-only";
 import { prisma } from "@/utils/db";
 import {
   evaluateActivation,
+  evaluateDeepActivation,
   hasRealDataRecords,
+  isQualifiedUser,
   REAL_DATA_ORIGINS,
   summarizeFunnelUser,
   type ActivationFacts,
@@ -79,7 +81,11 @@ export async function loadWorkspaceSlices(userIds: string[]): Promise<Map<string
   return slices;
 }
 
-export function funnelSummaryForUser(user: QualificationUser & { createdAt: Date }, slice: WorkspaceSlice): FunnelUserSummary & {
+export function funnelSummaryForUser(
+  user: QualificationUser & { createdAt: Date },
+  slice: WorkspaceSlice,
+  events?: Array<{ eventName: string; module: string | null; occurredAt: Date; properties?: unknown }>,
+): FunnelUserSummary & {
   activation: ReturnType<typeof evaluateActivation>;
   workspace: { clients: number; projects: number; invoices: number; expenses: number; calendarEvents: number; publishedPortfolios: number };
 } {
@@ -101,8 +107,20 @@ export function funnelSummaryForUser(user: QualificationUser & { createdAt: Date
     expenses: slice.expenses.length,
     calendarEvents: slice.calendarEvents.length,
   };
+  const qualified = isQualifiedUser(user);
+  const deepActivation = events
+    ? evaluateDeepActivation({
+        signupAt: user.createdAt,
+        activated: qualified && activation.activated,
+        events,
+        projects: slice.projects,
+        invoices: slice.invoices,
+        expenses: slice.expenses,
+        calendarEvents: slice.calendarEvents,
+      })
+    : null;
   return {
-    ...summarizeFunnelUser({ user, activation, realData: hasRealDataRecords(counts) }),
+    ...summarizeFunnelUser({ user, activation, realData: hasRealDataRecords(counts), deepActivation }),
     activation,
     workspace: { ...counts, publishedPortfolios: slice.portfolios.length },
   };

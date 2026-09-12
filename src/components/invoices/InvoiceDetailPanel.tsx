@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
   Ban,
+  Briefcase,
   CheckCircle,
   Download,
-  ExternalLink,
   FileSignature,
   Loader2,
   Send,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -328,12 +330,12 @@ export default function InvoiceDetailPanel({
                   <div className="flex flex-wrap gap-2">
                     {invoice.client_id ? (
                       <Link href={`/workflow/clients/${invoice.client_id}`} className="inline-flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
-                        <ExternalLink className="h-3.5 w-3.5" /> {invoice.client_name || "Client"}
+                        <Users className="h-3.5 w-3.5" /> {invoice.client_name || "Client"}
                       </Link>
                     ) : null}
                     {invoice.project_id ? (
                       <Link href={`/workflow/projects/${invoice.project_id}`} className="inline-flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold hover:border-primary/40 hover:text-primary">
-                        <ExternalLink className="h-3.5 w-3.5" /> {invoice.project_title || "Project"}
+                        <Briefcase className="h-3.5 w-3.5" /> {invoice.project_title || "Project"}
                       </Link>
                     ) : null}
                     {invoice.contract_id ? (
@@ -449,7 +451,7 @@ export default function InvoiceDetailPanel({
               ) : (
                 <div className="flex flex-wrap gap-2">
                   <Link href={`/workflow/invoices/${invoice.id}`}>
-                    <Button size="sm" variant="outline" className="gap-1.5"><ExternalLink className="h-3.5 w-3.5" /> Full invoice</Button>
+                    <Button size="sm" variant="outline" className="gap-1.5"><ArrowRight className="h-3.5 w-3.5" /> Full invoice</Button>
                   </Link>
                   <Button size="sm" variant="outline" onClick={() => window.open(`/api/workflow/invoices/${invoice.id}/pdf`, "_blank", "noopener,noreferrer")} className="gap-1.5">
                     <Download className="h-3.5 w-3.5" /> PDF

@@ -10,11 +10,8 @@ import {
   Phone,
   Globe,
   Briefcase,
-  DollarSign,
-  Tag,
   Loader2,
   Calendar,
-  FileText,
   FileSignature
 } from "lucide-react";
 import { toast } from "sonner";
@@ -148,10 +145,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 <Kicker tone="muted" dot={false} className="mb-3">Tags</Kicker>
                 <div className="flex flex-wrap gap-2">
                   {client.tags.map((t: string, idx: number) => (
-                    <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded-none bg-muted text-muted-foreground border border-border flex items-center gap-1">
-                      <Tag className="h-2.5 w-2.5" />
-                      <span>{t}</span>
-                    </span>
+                    <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded-none bg-muted text-muted-foreground border border-border">{t}</span>
                   ))}
                 </div>
               </div>
@@ -183,9 +177,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           {/* Notes */}
           {client.notes && (
             <div className="bg-warning/[0.08] p-6 rounded-none border border-border">
-              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Private Notes
-              </h3>
+              <h3 className="text-sm font-bold text-foreground mb-3">Private Notes</h3>
               <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{client.notes}</p>
             </div>
           )}
@@ -197,9 +189,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           {/* Active Projects */}
           <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-primary" /> Linked Projects
-              </h3>
+              <h3 className="text-lg font-bold text-foreground">Linked Projects</h3>
               <Link href={`/workflow/projects?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>
@@ -238,9 +228,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           {/* Linked Contracts */}
           <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <FileSignature className="h-5 w-5 text-primary" /> Contracts
-              </h3>
+              <h3 className="text-lg font-bold text-foreground">Contracts</h3>
               <Link href={`/workflow/contracts?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>
@@ -272,9 +260,7 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
           {/* Recent Invoices */}
           <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-success" /> Billing History
-              </h3>
+              <h3 className="text-lg font-bold text-foreground">Billing History</h3>
               <Link href={`/workflow/revenue?clientId=${encodeURIComponent(client.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>

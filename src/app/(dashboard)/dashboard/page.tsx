@@ -3,14 +3,10 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { 
-  WalletCards,
-  Briefcase, 
-  Receipt, 
-  Plus, 
+import {
+  Plus,
   FileText,
   ChevronRight,
-  TrendingUp,
   Activity,
   AlertTriangle,
   CalendarDays,
@@ -200,16 +196,12 @@ export default function DashboardOverview() {
       sub: activePeriod?.prior
         ? <span className="inline-flex flex-wrap items-center gap-x-1.5"><Movement change={cashDelta} comparison={comparisonLabel} /><span className="text-muted-foreground">· {formatCurrency(stats.totalPending)} still owed</span></span>
         : `All-time collected · ${formatCurrency(stats.totalPending)} still owed`,
-      icon: WalletCards,
-      tone: "success" as const,
     },
-    { title: "Active projects", value: stats.activeProjects, sub: "Right now — unaffected by the period", icon: Briefcase, tone: "info" as const },
+    { title: "Active projects", value: stats.activeProjects, sub: "Right now — unaffected by the period" },
     {
       title: period === "all" ? "Expenses logged" : "Expenses",
       value: formatCurrency(periodExpenses),
       sub: activePeriod?.prior ? <Movement change={expenseDelta} neutral comparison={comparisonLabel} /> : "All-time logged",
-      icon: Receipt,
-      tone: "destructive" as const,
     },
     {
       title: "Net",
@@ -217,8 +209,6 @@ export default function DashboardOverview() {
       sub: activePeriod?.prior
         ? <Movement change={netDelta} formatValue={(value) => formatCurrency(value)} comparison={comparisonLabel} />
         : "Cash received minus expenses",
-      icon: TrendingUp,
-      tone: "violet" as const,
     },
   ];
   const hasMeaningfulContext = activation?.hasMeaningfulContext ?? Boolean(
@@ -292,19 +282,14 @@ export default function DashboardOverview() {
 
       {/* Metrics Row */}
       {!isFirstRun && <div className={metricsGridClassName}>
-        {statCards.map((c, idx) => {
-          const Icon = c.icon;
-          return (
-            <MetricCard
-              key={idx}
-              label={c.title}
-              value={currencyMeta?.conversionAvailable === false && idx !== 1 ? "—" : c.value}
-              sub={c.sub}
-              tone={c.tone}
-              icon={<Icon className="h-4 w-4" strokeWidth={1.75} />}
-            />
-          );
-        })}
+        {statCards.map((c, idx) => (
+          <MetricCard
+            key={idx}
+            label={c.title}
+            value={currencyMeta?.conversionAvailable === false && idx !== 1 ? "—" : c.value}
+            sub={c.sub}
+          />
+        ))}
       </div>}
 
       {!isFirstRun && insights && currencyMeta?.conversionAvailable !== false && (
@@ -348,10 +333,7 @@ export default function DashboardOverview() {
         {/* Signals: things that happened to the work, not a log of clicks */}
         <div className="flex flex-col gap-5 rounded-none border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
-              <h3 className="font-bold text-base text-foreground">Signals</h3>
-            </div>
+            <h3 className="font-bold text-base text-foreground">Signals</h3>
             <Badge>
               Updates automatically
             </Badge>

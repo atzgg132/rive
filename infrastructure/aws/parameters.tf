@@ -194,3 +194,18 @@ resource "aws_ssm_parameter" "admin_username" {
     ignore_changes = [value]
   }
 }
+
+# The parameter is created only when a seed is supplied — an empty or placeholder
+# value would still count as configured and lock every admin out behind an
+# unknown code. Operator-managed like the rest of the admin credentials.
+resource "aws_ssm_parameter" "admin_totp_secret" {
+  for_each    = var.admin_totp_secret == "" ? toset([]) : local.environments
+  name        = "/rive/${each.key}/ADMIN_TOTP_SECRET"
+  type        = "SecureString"
+  value       = var.admin_totp_secret
+  description = "Admin portal TOTP seed (base32). Generate with: node scripts/setup-admin.mjs --totp"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}

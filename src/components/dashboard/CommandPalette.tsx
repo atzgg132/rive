@@ -19,7 +19,7 @@ import {
   PlusCircle,
   Receipt,
   Search,
-  Settings,
+  SunMoon,
   Users,
   X,
 } from "lucide-react";
@@ -560,7 +560,7 @@ export default function CommandPalette({
 
             <Command.Group heading={<Kicker tone="muted" dot={false}>Settings</Kicker>} className="px-2 py-2">
               <Command.Item value="Toggle dark mode" onSelect={() => runCommand(() => setTheme(theme === "dark" ? "light" : "dark"))} className={COMMAND_ITEM_CLASS}>
-                <Settings className="h-4 w-4" aria-hidden="true" />
+                <SunMoon className="h-4 w-4" aria-hidden="true" />
                 Toggle {theme === "dark" ? "Light" : "Dark"} Mode
               </Command.Item>
             </Command.Group>

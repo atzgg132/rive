@@ -10,7 +10,7 @@ import {
   X,
   Loader2,
   MoreVertical,
-  Edit2,
+  Pencil,
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
@@ -433,7 +433,7 @@ export default function ExpensesPage() {
                         }
                       >
                         <AnchoredMenuItem onClick={() => { openEdit(exp); setOpenDropdownId(null); }}>
-                          <Edit2 className="h-3.5 w-3.5" /> Edit
+                          <Pencil className="h-3.5 w-3.5" /> Edit
                         </AnchoredMenuItem>
                         <AnchoredMenuItem
                           className="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"

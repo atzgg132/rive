@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, ArrowUpRight, ChevronRight, Clock3, Download, FileText, MoreVertical, Plus, Search, Send, Trash2, WalletCards } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronRight, Download, FileText, MoreVertical, Plus, Search, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Button, Input, Kicker, PageHeader, PaginationControls, StatusBadge } from "@/components/ui";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -243,11 +243,11 @@ function RevenueWorkspace() {
   };
 
   const summaryCards = [
-    { label: "Total invoiced", value: invoiced, icon: FileText, tone: "bg-info/10 text-info" },
-    { label: "Collected", value: collected, icon: WalletCards, tone: "bg-success/10 text-success" },
-    { label: "Outstanding", value: outstanding, icon: Clock3, tone: "bg-warning/10 text-warning" },
+    { label: "Total invoiced", value: invoiced },
+    { label: "Collected", value: collected },
+    { label: "Outstanding", value: outstanding },
     { label: "Overdue", value: overdue, icon: AlertTriangle, tone: "bg-destructive/10 text-destructive" },
-    { label: "Draft pipeline", value: drafts, icon: FileText, tone: "bg-muted text-muted-foreground" },
+    { label: "Draft pipeline", value: drafts },
   ];
 
   return (
@@ -255,12 +255,12 @@ function RevenueWorkspace() {
       <PageHeader title="Revenue & invoices" description="A reliable view of what has been invoiced, collected, and needs attention across every currency." actions={<Link href="/workflow/invoices/new"><Button data-guide-target="revenue-create" variant="default"><Plus className="h-4 w-4" /> Create invoice</Button></Link>} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {summaryCards.map(({ label, value, icon: Icon, tone }) => <div key={label} className="rounded-none border border-border bg-card p-4"><div className="flex items-start justify-between gap-3"><Kicker tone="muted" dot={false}>{label}</Kicker><span className={`grid h-8 w-8 place-items-center rounded-none ${tone}`}><Icon className="h-4 w-4" /></span></div><p className="mt-4 font-mono text-2xl font-bold tabular-nums tracking-tight">{value === null ? (ratesStatus === "loading" ? "Converting…" : "—") : formatMoney(value, displayCurrency)}</p></div>)}
+        {summaryCards.map(({ label, value, icon: Icon, tone }) => <div key={label} className="rounded-none border border-border bg-card p-4"><div className="flex items-start justify-between gap-3"><Kicker tone="muted" dot={false}>{label}</Kicker>{Icon ? <span className={`grid h-8 w-8 place-items-center rounded-none ${tone}`}><Icon className="h-4 w-4" /></span> : null}</div><p className="mt-4 font-mono text-2xl font-bold tabular-nums tracking-tight">{value === null ? (ratesStatus === "loading" ? "Converting…" : "—") : formatMoney(value, displayCurrency)}</p></div>)}
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="rounded-none border border-border bg-card p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><Kicker>Collection health</Kicker><h2 className="mt-1 text-xl font-semibold">{collectionRate === null ? "—" : `${collectionRate}%`} collected</h2><p className="mt-1 text-sm text-muted-foreground">Collected against issued invoice value, using server-side payment ledger totals.</p></div><Link href="/workflow/invoice-settings" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">Invoice settings <ArrowUpRight className="h-3.5 w-3.5" /></Link></div>
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><Kicker>Collection health</Kicker><h2 className="mt-1 text-xl font-semibold">{collectionRate === null ? "—" : `${collectionRate}%`} collected</h2><p className="mt-1 text-sm text-muted-foreground">Collected against issued invoice value, using server-side payment ledger totals.</p></div><Link href="/workflow/invoice-settings" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">Invoice settings <ArrowRight className="h-3.5 w-3.5" /></Link></div>
           <div className="mt-6 h-3 overflow-hidden rounded-none bg-muted"><div className="h-full rounded-none bg-success transition-all" style={{ width: `${Math.min(collectionRate || 0, 100)}%` }} /></div>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">{summaries.map((summary) => <div key={summary.currency} className="rounded-none border border-border/70 bg-background p-3"><div className="flex justify-between text-xs text-muted-foreground"><span>{summary.currency}</span><span>{summary.invoiceCount} invoices</span></div><p className="mt-2 font-mono text-sm font-semibold tabular-nums">{formatConverted(summary.collected, summary.currency) || `${summary.currency} ${summary.collected.toFixed(2)}`}</p><p className="mt-1 text-xs text-muted-foreground">{summary.collectionRate === null ? "No issued value" : `${summary.collectionRate}% collection rate`}</p></div>)}</div>
         </section>
