@@ -34,16 +34,13 @@ import {
   Clock3,
   Copy,
   Download,
-  ExternalLink,
   FileSignature,
-  History,
   Link2,
   Loader2,
   Pencil,
   Plus,
   RefreshCw,
   Send,
-  ShieldCheck,
   Trash2,
   UserRoundCheck,
   XCircle,
@@ -299,7 +296,7 @@ export default function ContractDetailPage() {
       )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/workflow/contracts" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Agreements</Link>
-        <div className="flex flex-wrap items-center gap-2"><StatusBadge kind="contract" value={contract.status} /><Badge variant="outline"><ShieldCheck className="h-3.5 w-3.5" /> Version {version?.version || "—"}</Badge></div>
+        <div className="flex flex-wrap items-center gap-2"><StatusBadge kind="contract" value={contract.status} /><Badge variant="outline">Version {version?.version || "—"}</Badge></div>
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -423,7 +420,7 @@ export default function ContractDetailPage() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><History className="h-4 w-4" /> Version & evidence history</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Version & evidence history</CardTitle></CardHeader>
             <CardContent className="flex flex-col gap-4 pt-0 sm:pt-0">
               <div className="space-y-2">{contract.versions.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 text-xs"><span className="font-semibold">Version {item.version} · {item.status}</span><span className="font-mono tabular-nums text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</span></div>)}</div>
               <div className="border-t border-border pt-3"><Kicker tone="muted" dot={false} className="mb-2">Recent Agreement evidence events</Kicker><div className="space-y-2">{contract.events.slice(0, 12).map((event) => <div key={event.id} className="flex items-start justify-between gap-3 text-xs"><span className="font-medium capitalize">{formatContractEventType(event.eventType)}</span><span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{new Date(event.createdAt).toLocaleString()}</span></div>)}</div></div>
@@ -523,7 +520,7 @@ function Editor({ contract, title, setTitle, currency, setCurrency, governingLaw
 }
 
 function PaymentPlan({ contract, busy, runAction }: { contract: Contract; busy: string | null; runAction: (key: string, url: string, method?: string, body?: unknown, preserveEditor?: boolean) => Promise<Record<string, unknown> | null> }) {
-  return <section><h2 className="mb-2 text-sm font-bold">Payment plan</h2>{contract.payment_plan.length === 0 ? <p className="text-sm text-muted-foreground">No automatic invoice triggers. Billing remains manual.</p> : <div className="divide-y divide-border rounded-none border border-border">{contract.payment_plan.map((item) => <div key={item.id} className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{item.label} · <span className="font-mono tabular-nums">{item.currency} {Number(item.amount).toLocaleString(localeForCurrency(item.currency))}</span></p><p className="mt-0.5 text-xs text-muted-foreground">{formatTrigger(item)} · invoice due in {item.due_days} days</p>{item.occurrence?.invoice ? <Link href={`/workflow/revenue?invoiceId=${encodeURIComponent(item.occurrence.invoice.id)}`} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">{item.occurrence.invoice.invoiceNumber} · {item.occurrence.invoice.status}<ExternalLink className="h-3 w-3" /></Link> : item.occurrence?.status === "awaiting_work_setup" ? <p className="mt-1 text-xs text-primary">Waiting for work setup before this accepted trigger can draft an invoice.</p> : item.occurrence?.status === "eligible" ? <p className="mt-1 text-xs text-warning">Eligible — run a billing check if the draft has not appeared.</p> : null}</div><div className="flex flex-wrap items-center gap-2">{item.milestone ? <Button size="sm" variant={item.milestone.completed ? "secondary" : "outline"} disabled={Boolean(busy) || contract.status !== "executed"} onClick={() => item.milestone && void runAction(`milestone-${item.milestone.id}`, `/api/workflow/milestones/${item.milestone.id}`, "PATCH", { completed: !item.milestone.completed })}>{item.milestone.completed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}{item.milestone.completed ? "Completed" : "Mark complete"}</Button> : null}<Badge variant={item.status === "draft_created" ? "success" : "outline"}>{item.status.replaceAll("_", " ")}</Badge></div></div>)}</div>}</section>;
+  return <section><h2 className="mb-2 text-sm font-bold">Payment plan</h2>{contract.payment_plan.length === 0 ? <p className="text-sm text-muted-foreground">No automatic invoice triggers. Billing remains manual.</p> : <div className="divide-y divide-border rounded-none border border-border">{contract.payment_plan.map((item) => <div key={item.id} className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{item.label} · <span className="font-mono tabular-nums">{item.currency} {Number(item.amount).toLocaleString(localeForCurrency(item.currency))}</span></p><p className="mt-0.5 text-xs text-muted-foreground">{formatTrigger(item)} · invoice due in {item.due_days} days</p>{item.occurrence?.invoice ? <Link href={`/workflow/revenue?invoiceId=${encodeURIComponent(item.occurrence.invoice.id)}`} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">{item.occurrence.invoice.invoiceNumber} · {item.occurrence.invoice.status}<ArrowRight className="h-3 w-3" /></Link> : item.occurrence?.status === "awaiting_work_setup" ? <p className="mt-1 text-xs text-primary">Waiting for work setup before this accepted trigger can draft an invoice.</p> : item.occurrence?.status === "eligible" ? <p className="mt-1 text-xs text-warning">Eligible — run a billing check if the draft has not appeared.</p> : null}</div><div className="flex flex-wrap items-center gap-2">{item.milestone ? <Button size="sm" variant={item.milestone.completed ? "secondary" : "outline"} disabled={Boolean(busy) || contract.status !== "executed"} onClick={() => item.milestone && void runAction(`milestone-${item.milestone.id}`, `/api/workflow/milestones/${item.milestone.id}`, "PATCH", { completed: !item.milestone.completed })}>{item.milestone.completed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}{item.milestone.completed ? "Completed" : "Mark complete"}</Button> : null}<Badge variant={item.status === "draft_created" ? "success" : "outline"}>{item.status.replaceAll("_", " ")}</Badge></div></div>)}</div>}</section>;
 }
 
 function LinkPanel({ label, url, onCopy }: { label: string; url: string; onCopy: (url: string) => void }) {

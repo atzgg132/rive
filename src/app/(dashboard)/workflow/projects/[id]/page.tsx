@@ -6,11 +6,8 @@ import {
   ArrowLeft,
   Calendar,
   DollarSign,
-  Tag,
   Loader2,
-  FileText,
   Clock,
-  CheckCircle,
   FileSignature,
   ExternalLink,
   CircleSlash2,
@@ -237,7 +234,6 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
               <div className="flex flex-wrap gap-2">
                 {project.tags.map((t: string, idx: number) => (
                   <Badge key={idx} variant="info">
-                    <Tag className="h-2.5 w-2.5" />
                     {t}
                   </Badge>
                 ))}
@@ -251,9 +247,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
 
           {/* Project Description */}
           <div className="bg-card p-6 rounded-none border border-border">
-            <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
-              <FileText className="h-5 w-5 text-primary" /> Project Brief
-            </h3>
+            <h3 className="text-lg font-bold text-foreground mb-4">Project Brief</h3>
             {project.description ? (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.description}</p>
             ) : (
@@ -266,7 +260,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
 
           {project.tasks?.length > 0 ? (
             <div className="bg-card p-6 rounded-none border border-border">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4"><Clock className="h-5 w-5 text-primary" /> Follow-up Tasks</h3>
+              <h3 className="text-lg font-bold text-foreground mb-4">Follow-up Tasks</h3>
               <div className="flex flex-col gap-2">{project.tasks.map((task) => <div id={`follow-up-task-${task.id}`} key={task.id} className="flex items-center justify-between gap-3 rounded-none border border-border p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground">{task.title}</p><p className="mt-1 text-xs text-muted-foreground">{task.status.replaceAll("_", " ")} · {task.dueDate ? `Due ${formatDate(task.dueDate)}` : "Unscheduled"}</p></div><span className="shrink-0 rounded-full border border-primary/20 px-2 py-1 text-[10px] font-bold uppercase text-primary">From enquiry</span></div>)}</div>
             </div>
           ) : null}
@@ -274,9 +268,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
           {/* Milestones */}
           <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-primary" /> Milestones
-              </h3>
+              <h3 className="text-lg font-bold text-foreground">Milestones</h3>
               <span className="text-xs text-muted-foreground">{project.milestones.filter((item) => item.completed).length}/{project.related_counts?.milestones ?? project.milestones.length} complete</span>
             </div>
             {project.milestones.length === 0 ? (
@@ -300,7 +292,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
           {/* Linked Agreements */}
           <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2"><FileSignature className="h-5 w-5 text-primary" /> Agreements</h3>
+              <h3 className="text-lg font-bold text-foreground">Agreements</h3>
               <Link href={`/workflow/contracts?projectId=${encodeURIComponent(project.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">View all</Link>
             </div>
             {project.contracts.length === 0 ? project.contractCoverage === "external" ? (
@@ -332,9 +324,7 @@ export default function ProjectProfilePage({ params }: { params: Promise<{ id: s
           {/* Linked Invoices */}
           <div className="bg-card p-6 rounded-none border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-success" /> Linked Invoices
-              </h3>
+              <h3 className="text-lg font-bold text-foreground">Linked Invoices</h3>
               <Link href={`/workflow/revenue?projectId=${encodeURIComponent(project.id)}`} className="text-xs font-semibold text-primary hover:bg-accent px-3 py-1.5 rounded-none transition-colors">
                 View all
               </Link>

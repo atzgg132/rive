@@ -11,13 +11,10 @@ import {
   ArrowRight,
   WalletCards,
   Clock3,
-  FileCheck2,
   FileSignature,
   Loader2,
-  MessageSquareText,
   Plus,
   Search,
-  Sparkles,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -259,10 +256,10 @@ function ContractsWorkspace() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard icon={Sparkles} label="Needs your action" value={counts.action} tone="primary" />
-        <SummaryCard icon={MessageSquareText} label="With clients" value={counts.review} tone="amber" />
-        <SummaryCard icon={FileSignature} label="Acceptance" value={counts.signing} tone="blue" />
-        <SummaryCard icon={FileCheck2} label="Accepted" value={counts.executed} tone="green" />
+        <SummaryCard label="Needs your action" value={counts.action} />
+        <SummaryCard label="With clients" value={counts.review} />
+        <SummaryCard label="Acceptance" value={counts.signing} />
+        <SummaryCard label="Accepted" value={counts.executed} />
       </div>
 
       {uncoveredProjects.length > 0 ? (
@@ -365,14 +362,8 @@ function ContractsWorkspace() {
   );
 }
 
-function SummaryCard({ icon: Icon, label, value, tone }: { icon: typeof FileSignature; label: string; value: number; tone: "primary" | "amber" | "blue" | "green" }) {
-  const tones = {
-    primary: "bg-primary/10 text-primary",
-    amber: "bg-warning/10 text-warning",
-    blue: "bg-info/10 text-info",
-    green: "bg-success/10 text-success",
-  };
-  return <div className="flex items-center gap-3 rounded-none border border-border bg-card p-4"><span className={`flex h-9 w-9 items-center justify-center rounded-none ${tones[tone]}`}><Icon className="h-4 w-4" /></span><div><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p></div></div>;
+function SummaryCard({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-none border border-border bg-card p-4"><p className="text-xl font-extrabold leading-none">{value}</p><p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p></div>;
 }
 
 function Metric({ icon: Icon, value, label }: { icon: typeof Users; value: string; label: string }) {

@@ -3,7 +3,7 @@
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, PageHeader } from "@/components/ui";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, Eye, ExternalLink, Globe2, Inbox, Layers, LayoutTemplate, BarChart3, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
+import { Check, Copy, Eye, ExternalLink, Inbox, Layers, LayoutTemplate, BarChart3, Quote, Sparkles, UserRound, FolderKanban, BriefcaseBusiness, Settings2 } from "lucide-react";
 import { isPortfolioUnstarted, type PortfolioContent, type PortfolioProject } from "@/utils/portfolio";
 import PortfolioAnalyticsPanel from "@/components/portfolio/PortfolioAnalyticsPanel";
 import PortfolioInquiriesPanel from "@/components/portfolio/PortfolioInquiriesPanel";
@@ -264,7 +264,7 @@ export default function PortfolioDashboardPage() {
     <div className="portfolio-editor-panels workspace-page gap-5">
       <PageHeader
         className="sm:flex-col xl:flex-row"
-        title={<span className="flex items-center gap-2"><Globe2 className="h-6 w-6 text-primary" /> Portfolio Studio</span>}
+        title="Portfolio Studio"
         description="Build a portfolio that makes your work easy to understand and easy to hire."
         actions={savedPublicUrl ? <a href={savedPublicUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-accent"><ExternalLink className="h-4 w-4" /> View live site</a> : undefined}
       />
@@ -332,7 +332,7 @@ export default function PortfolioDashboardPage() {
               { key: "profile", label: STUDIO_SECTION_LABELS.profile, sub: "Identity and contact", icon: UserRound },
               { key: "practices", label: STUDIO_SECTION_LABELS.practices, sub: content.practices.length > 0 ? `${content.practices.length} practices` : "Two disciplines?", icon: Layers },
               { key: "services", label: STUDIO_SECTION_LABELS.services, sub: `${content.services.length} services`, icon: BriefcaseBusiness },
-              { key: "proof", label: STUDIO_SECTION_LABELS.proof, sub: `${content.testimonials.length} added`, icon: Sparkles },
+              { key: "proof", label: STUDIO_SECTION_LABELS.proof, sub: `${content.testimonials.length} added`, icon: Quote },
               { key: "design", label: STUDIO_SECTION_LABELS.design, sub: "Theme and visibility", icon: Settings2 },
             ] as const).map(({ key, label, sub, icon: Icon }) => (
               <Button data-guide-target={key === "profile" ? "portfolio-profile" : key === "work" ? "portfolio-project" : undefined} data-portfolio-section={key} key={key} onClick={() => setEditorSection(key)} className={`grid min-h-14 w-full grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${editorSection === key ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-blue-300 dark:ring-slate-700" : "text-slate-600 hover:bg-white/70 dark:text-slate-400 dark:hover:bg-slate-800/70"}`}>
