@@ -171,8 +171,10 @@
   background: var(--inst-paper-2);
 }
 .inst-plate__frame { padding: clamp(0.5rem, 1.5vw, 1rem); }
-.inst-plate__detail { position: relative; max-height: clamp(28rem, 58vh, 36rem); overflow: hidden; }
-.inst-plate__detail::after { content: ""; position: absolute; inset-inline: 0; bottom: 0; height: 6rem; background: linear-gradient(to top, #f7f7f4 8%, transparent); pointer-events: none; }
+.inst-plate__frame--flush { padding: 0; overflow: hidden; }
+.inst-print { position: relative; display: block; aspect-ratio: 4 / 5; background: var(--inst-paper-2, #eeeee9); }
+.inst-prints { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1rem, 2vw, 1.75rem); align-items: start; }
+.inst-dossier { display: flex; flex-direction: column; gap: clamp(1.5rem, 3vw, 2.5rem); align-self: start; }
 .inst-plate__caption {
   display: flex;
   align-items: baseline;
@@ -358,7 +360,6 @@
 .inst-figures__grid > .inst-plate:first-child { grid-column: 1 / -1; }
 .inst-figures__grid--duo { align-items: start; }
 .inst-figures__grid--duo > .inst-plate:first-child { grid-column: auto; }
-.inst-figures__grid--duo > .inst-panel { position: sticky; top: calc(4.25rem + 1.5rem); }
 .inst-panel { border: 1.5px solid var(--inst-ink); padding: clamp(1.5rem, 3vw, 2.5rem); display: flex; flex-direction: column; align-items: flex-start; }
 .inst-panel__label { color: var(--inst-ink-faint); display: inline-flex; align-items: center; gap: 0.6em; margin-bottom: 1.5rem; }
 .inst-panel__title { font-size: clamp(1.4rem, 2.4vw, 2rem); font-weight: 650; letter-spacing: -0.015em; margin-bottom: 0.9rem; }
@@ -515,6 +516,7 @@
 .inst-register__name { font-size: 1.05rem; font-weight: 660; }
 .inst-register__detail { color: var(--inst-ink-soft); font-size: 0.95rem; line-height: 1.55; }
 .inst-register__detail em { font-style: normal; color: var(--inst-accent-ink); font-weight: 600; }
+.inst-register--dossier .inst-register__row { grid-template-columns: minmax(8.5rem, 11rem) 1fr; }
 
 /* ── Admissions (beta pricing) ─────────────────────────────────── */
 
@@ -739,7 +741,6 @@
   .inst-dept-row__plate { display: block; }
   .inst-figures__grid { grid-template-columns: 1fr; }
   .inst-figures__grid > .inst-plate:first-child { grid-column: auto; }
-  .inst-figures__grid--duo > .inst-panel { position: static; }
 }
 
 @media (max-width: 860px) {
