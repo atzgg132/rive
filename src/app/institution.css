@@ -136,7 +136,7 @@
   font-weight: 640;
   letter-spacing: 0.01em;
   text-decoration: none;
-  transition: transform 160ms var(--inst-ease), background-color 160ms var(--inst-ease), color 160ms var(--inst-ease), border-color 160ms var(--inst-ease);
+  transition: transform 160ms var(--inst-ease), background-color 160ms var(--inst-ease), color 160ms var(--inst-ease), border-color 160ms var(--inst-ease), box-shadow 160ms var(--inst-ease);
 }
 /* A slow sheen crosses the block like light on a foil seal — a standing
    invitation. On press the block stamps blue, like signing in ink. */
@@ -153,11 +153,17 @@
   0% { transform: translateX(-101%); }
   34%, 100% { transform: translateX(101%); }
 }
-.inst-btn:hover { transform: translateY(-1px); }
+/* Hover slides the duplicate copy out from behind — a blue plate offset
+   like the second leaf of a form. Pressing collapses it: the stamp lands. */
+.inst-btn:hover {
+  transform: translate(-2px, -3px);
+  box-shadow: 5px 5px 0 0 var(--inst-accent);
+}
 .inst-btn:hover::before { animation-duration: 1.4s; }
-.inst-btn:hover svg { transform: translateX(3px); color: var(--inst-accent); }
+.inst-btn:hover svg { transform: translateX(3px); color: var(--inst-accent-on-ink); }
 .inst-btn:active {
-  transform: translateY(1px) scale(0.98);
+  transform: translate(1px, 1px) scale(0.98);
+  box-shadow: 0 0 0 0 var(--inst-accent);
   background: var(--inst-accent);
   border-color: var(--inst-accent);
   color: var(--inst-paper);
