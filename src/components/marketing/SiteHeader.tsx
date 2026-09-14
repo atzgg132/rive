@@ -29,9 +29,8 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Primary navigation" className="inst-masthead__nav">
-          {marketingHeaderLinks.map((item, index) => (
+          {marketingHeaderLinks.map((item) => (
             <Link key={item.href} href={item.href} className="marketing-focus inst-masthead__link">
-              <span className="inst-mono">{String(index + 1).padStart(2, "0")}</span>
               {item.label}
             </Link>
           ))}
