@@ -61,17 +61,14 @@ test.describe("institution marketing experience", () => {
     await expect(preview.getByText(/Aster House/).first()).toBeVisible();
   });
 
-  test("the published record shows the whole public page beside its workspace file", async ({ page }) => {
+  test("the published record shows the whole public page beside its register entry", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
     const published = page.locator("section[aria-label='Published portfolio']");
-    const plates = published.locator(".inst-plate");
-    await expect(plates).toHaveCount(2);
-    const publicPlate = plates.nth(0);
+    const publicPlate = published.locator(".inst-plate");
+    await expect(publicPlate).toHaveCount(1);
     await expect(publicPlate).toContainText("Public page");
     await expect(publicPlate.locator(".inst-specimen:visible")).toHaveJSProperty("inert", true);
     await expect(publicPlate.locator(".portfolio-footer").first()).toContainText("Built with Rive");
-    await expect(plates.nth(1)).toContainText("Portfolio studio");
-    await expect(published.locator("[data-workspace-preview='portfolio']").first()).toBeAttached();
     await expect(published.getByTestId("portfolio-showcase")).toContainText("Settings");
   });
 

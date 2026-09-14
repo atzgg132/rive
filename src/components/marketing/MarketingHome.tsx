@@ -256,17 +256,6 @@ export function MarketingHome() {
             </RevealOnScroll>
             <div className="inst-file">
               <RevealOnScroll className="inst-reveal" delay={0.08}>
-                <figure className="inst-plate">
-                  <div className="inst-plate__frame">
-                    <ResponsiveWorkspacePreview view="portfolio" />
-                  </div>
-                  <figcaption className="inst-plate__caption">
-                    <span className="inst-mono">Fig. 05 — Portfolio studio</span>
-                    <span>In the workspace</span>
-                  </figcaption>
-                </figure>
-              </RevealOnScroll>
-              <RevealOnScroll className="inst-reveal" delay={0.14}>
                 <div className="inst-register inst-register--dossier" data-testid="portfolio-showcase">
                   <div className="inst-register__row"><span className="inst-mono"><InstMark mark="circle" accent />Portfolio</span><span className="inst-register__name">Maya Rao — independent product designer</span></div>
                   <div className="inst-register__row"><span className="inst-mono"><InstMark mark="square" />Filed under</span><span className="inst-register__name">Product design · Bengaluru, India</span></div>
