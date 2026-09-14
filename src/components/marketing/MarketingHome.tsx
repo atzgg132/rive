@@ -153,9 +153,9 @@ export function MarketingHome() {
       <section data-testid="marketing-hero" className="inst-titlepage">
         <div className="inst-container">
           <RevealOnScroll className="inst-reveal inst-titlepage__index" y={12}>
-            <span className="inst-mono"><InstMark mark="circle" accent />For independent businesses</span>
-            <span className="inst-mono">Workspace register — Vol. 01</span>
-            <span className="inst-mono">Open beta</span>
+            <span className="inst-mono"><InstMark mark="circle" accent />For freelancers & small practices</span>
+            <span className="inst-mono">Clients · Projects · Agreements · Invoices · Calendar · Portfolio</span>
+            <span className="inst-mono">Open beta — free, no card</span>
           </RevealOnScroll>
           <div className="inst-titlepage__body">
             <div className="inst-titlepage__lead">
