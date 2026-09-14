@@ -128,6 +128,7 @@ test.describe("institution marketing experience", () => {
     await expect(page.locator(".inst-admit__fee")).toContainText("Free");
     await expect(page.getByTestId("faq-grid").locator("details")).toHaveCount(5);
     await expect(page.getByRole("heading", { name: /Start your record./i })).toBeVisible();
+    await expect(page.locator(".inst-seal")).toBeVisible();
   });
 
   test("faq accordion keeps a single item open", async ({ page }) => {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { RecordArtifact } from "@/components/marketing/RecordArtifact";
+import { ClosingSeal } from "@/components/marketing/ClosingSeal";
 import { RecordJourney, type RegistryDepartment } from "@/components/marketing/RecordJourney";
 import { ManifestoLine } from "@/components/marketing/ManifestoLine";
 import { RevealOnScroll } from "@/components/marketing/RevealOnScroll";
@@ -344,12 +344,12 @@ export function MarketingHome() {
       <section className="inst-band inst-band--ink inst-closing marketing-deferred-section" aria-label="Begin">
         <div className="inst-container inst-closing__grid">
           <RevealOnScroll className="inst-reveal">
-            <p className="inst-mono"><InstMark mark="semi" accent />File no. 001 awaits a name</p>
-            <h2 className="inst-display inst-display--section" style={{ marginTop: "1rem" }}>
+            <p className="inst-mono"><InstMark mark="semi" accent />The next entry — field no. 002</p>
+            <h2 className="inst-display inst-display--closing" style={{ marginTop: "1rem" }}>
               Start your record.
             </h2>
             <p className="inst-body" style={{ marginTop: "1.25rem" }}>
-              Registration is free during the open beta. Bring a client; the record does the rest.
+              Registration is free during the open beta. Bring one client; the record does the rest.
             </p>
             <div className="inst-closing__action">
               <MarketingButton href="/register">Start free</MarketingButton>
@@ -357,7 +357,7 @@ export function MarketingHome() {
             </div>
           </RevealOnScroll>
           <RevealOnScroll className="inst-reveal" delay={0.08}>
-            <RecordArtifact phase={4} inline />
+            <ClosingSeal />
           </RevealOnScroll>
         </div>
       </section>

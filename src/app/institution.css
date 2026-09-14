@@ -674,7 +674,95 @@
 .inst-closing { padding-block: clamp(5rem, 13vh, 10rem); }
 .inst-closing__grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: clamp(2rem, 6vw, 5rem); }
 .inst-closing__action { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; margin-top: 2.5rem; }
-.inst-closing .inst-record { width: min(22rem, 100%); }
+.inst-display--closing { font-size: clamp(3rem, 6.5vw, 6rem); }
+
+/* ── The closing field — an abstract orrery of the register's marks. The
+   entrance is scrubbed by scroll via --p (set in ClosingSeal): the ledger
+   rail draws, the orbit rings ink in, the marks fly out to their tracks.
+   Once --p completes, .is-sealed hands the emblem to perpetual drift. */
+.inst-seal {
+  --p: 0;
+  --q-rail: clamp(0, var(--p) / 0.22, 1);
+  --q-ring: clamp(0, (var(--p) - 0.34) / 0.34, 1);
+  --q-core: clamp(0, (var(--p) - 0.8) / 0.2, 1);
+  position: relative;
+  width: clamp(17rem, 24vw, 24rem);
+  aspect-ratio: 1;
+}
+
+.inst-seal__glow {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(147 180 251 / 0.18), transparent 60%);
+  opacity: var(--q-ring);
+}
+.inst-seal.is-sealed .inst-seal__glow { animation: inst-seal-breathe 6s ease-in-out infinite alternate; }
+@keyframes inst-seal-breathe { from { opacity: .5; transform: scale(.96); } to { opacity: 1; transform: scale(1.05); } }
+
+.inst-seal__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.inst-seal__rail {
+  stroke: rgb(243 240 232 / 0.2);
+  stroke-width: 1;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--q-rail) * 100);
+}
+.inst-seal__ticks {
+  fill: none;
+  stroke: rgb(243 240 232 / 0.22);
+  stroke-width: 9;
+  stroke-dasharray: 1.2 8.8;
+  opacity: var(--q-ring);
+}
+.inst-seal__guide {
+  fill: none;
+  stroke: rgb(243 240 232 / 0.07);
+  stroke-width: 1;
+  stroke-dasharray: 1 7;
+  opacity: var(--q-ring);
+}
+
+.inst-seal__ring {
+  fill: none;
+  stroke: rgb(243 240 232 / 0.38);
+  stroke-width: 1;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--q-ring) * 100);
+}
+.inst-seal__ring-set { transform-box: view-box; transform-origin: center; }
+.inst-seal.is-sealed .inst-seal__ring-set { animation: inst-seal-spin var(--dur, 60s) linear infinite; }
+.inst-seal.is-sealed .inst-seal__ring-set--rev { animation-direction: reverse; }
+@keyframes inst-seal-spin { to { transform: rotate(360deg); } }
+
+.inst-seal__orbit-mark {
+  --q: clamp(0, (var(--p) - var(--d, 0.3)) / 0.24, 1);
+  fill: var(--inst-paper-on-ink);
+  opacity: var(--q);
+}
+.inst-seal__orbit-mark > * { transform: scale(var(--q)); transform-box: fill-box; transform-origin: center; }
+.inst-seal__orbit-mark--accent { fill: var(--inst-accent-on-ink); filter: drop-shadow(0 0 7px rgb(147 180 251 / 0.55)); }
+
+.inst-seal__core-halo { fill: rgb(147 180 251 / 0.16); opacity: var(--q-core); }
+.inst-seal__core-dot {
+  fill: var(--inst-accent-on-ink);
+  opacity: var(--q-core);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.inst-seal.is-sealed .inst-seal__core-dot { animation: inst-seal-pulse 3.4s ease-in-out infinite alternate; }
+@keyframes inst-seal-pulse { to { transform: scale(1.6); } }
+
+.inst-seal__shuttle {
+  fill: var(--inst-accent-on-ink);
+  opacity: var(--q-rail);
+}
+.inst-seal__shuttle { transform: translate(64px, 196px); }
+.inst-seal__shuttle--rev { transform: translate(340px, 197px); }
+.inst-seal.is-sealed .inst-seal__shuttle { animation: inst-seal-shuttle 9s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+.inst-seal.is-sealed .inst-seal__shuttle--rev { animation: inst-seal-shuttle-rev 13s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+@keyframes inst-seal-shuttle { from { transform: translate(64px, 196px); } to { transform: translate(336px, 196px); } }
+@keyframes inst-seal-shuttle-rev { from { transform: translate(340px, 197px); } to { transform: translate(60px, 197px); } }
 .inst-band--ink .inst-record { border-color: var(--inst-paper-on-ink); box-shadow: 0 14px 34px rgb(0 0 0 / 0.4); }
 .inst-band--ink .inst-record__foot { border-color: var(--inst-ink); }
 
@@ -871,6 +959,7 @@
   .inst-masthead__menu-btn { display: grid; }
   .inst-admit { grid-template-columns: 1fr; }
   .inst-closing__grid { grid-template-columns: 1fr; }
+  .inst-seal { width: min(15rem, 64vw); margin-inline: auto; }
   .inst-register__row { grid-template-columns: minmax(7rem, 9rem) 1fr; }
   .inst-register__detail { grid-column: 2; }
   .inst-colophon__nav { grid-template-columns: repeat(2, 1fr); }
@@ -900,4 +989,6 @@
   .inst-journey__rail { display: none; }
   .inst-dept-row__plate { display: block; }
   .inst-journey__rail .inst-record { transform: none; transition: none; }
+  .inst-seal { --p: 1 !important; }
+  .inst-seal__ring-set, .inst-seal__glow, .inst-seal__core-dot, .inst-seal__shuttle { animation: none !important; }
 }
