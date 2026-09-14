@@ -199,7 +199,7 @@ resource "aws_ssm_parameter" "admin_username" {
 # value would still count as configured and lock every admin out behind an
 # unknown code. Operator-managed like the rest of the admin credentials.
 resource "aws_ssm_parameter" "admin_totp_secret" {
-  for_each    = var.admin_totp_secret == "" ? toset([]) : local.environments
+  for_each    = nonsensitive(var.admin_totp_secret) == "" ? toset([]) : local.environments
   name        = "/rive/${each.key}/ADMIN_TOTP_SECRET"
   type        = "SecureString"
   value       = var.admin_totp_secret
