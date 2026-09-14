@@ -40,6 +40,30 @@ test.describe("institution marketing experience", () => {
     expect(errors).toEqual([]);
   });
 
+  test("read the register glides to the registry instead of jumping", async ({ page }) => {
+    const errors = captureRuntimeErrors(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/", { waitUntil: "load" });
+    const hero = page.getByTestId("marketing-hero");
+
+    await hero.getByRole("link", { name: "Read the register" }).click();
+
+    // Sample the travel: a native hash jump lands in one frame, so an
+    // intermediate scrollY strictly between 0 and the target proves the
+    // animated path ran.
+    const samples: number[] = [];
+    for (let i = 0; i < 18; i += 1) {
+      samples.push(await page.evaluate(() => window.scrollY));
+      await page.waitForTimeout(90);
+    }
+    const target = await page.locator("#registry").evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    const final = samples.at(-1) ?? 0;
+    expect(samples.some((y) => y > 4 && y < target - 200)).toBe(true);
+    expect(Math.abs(final - (target - 96))).toBeLessThan(24); // lands inside the 6rem scroll margin
+    await expect(page).toHaveURL(/#registry$/);
+    expect(errors).toEqual([]);
+  });
+
   test("the registry carries one record through the departments", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
     const journey = page.getByTestId("record-journey");
