@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowDown, ArrowRight, Check } from "lucide-react";
+import { FaqAccordion } from "@/components/marketing/FaqAccordion";
 import { HeroClientStage, ProductQuestionStage } from "@/components/marketing/WorkingEditionStage";
 import { PortfolioShowcase } from "@/components/marketing/PortfolioShowcase";
 import { EditorialLabel, MarketingButton } from "@/components/marketing/primitives";
@@ -14,7 +15,7 @@ const included = [
   "Clients, projects, tasks, and milestones",
   "Agreements and recorded acceptance",
   "Invoices, payment records, and expenses",
-  "Calendar and Apple Calendar feed",
+  "Calendar, Google Calendar sync, and Apple Calendar feed",
   "Portfolio publishing and enquiries",
 ] as const;
 
@@ -24,7 +25,7 @@ const questions = [
   { question: "Does Rive collect payments?", answer: "No. You can create invoices and record payments and expenses. Payment collection and transfers are not currently available." },
   { question: "What can I do with agreements?", answer: "Prepare an agreement, share it for review, record acceptance, and connect it to billing. Rive does not guarantee that an agreement is enforceable in every jurisdiction." },
   { question: "Can I import existing records?", answer: "CSV and XLSX imports support clients, projects, invoices, and expenses. Check the import page for current availability and limits." },
-  { question: "What about exports and integrations?", answer: "Full workspace export is not currently available. An Apple Calendar subscription feed is available; Google Calendar is not currently available." },
+  { question: "What about exports and integrations?", answer: "Full workspace export is not currently available. Google Calendar sync and a private Apple Calendar feed are both available." },
 ] as const;
 
 export function MarketingHome() {
@@ -87,9 +88,7 @@ export function MarketingHome() {
       <section id="faq" className="edition-faq-section">
         <div className="edition-container edition-faq-grid">
           <div><EditorialLabel>Straight answers</EditorialLabel><h2 className="edition-display">A few things worth knowing.</h2></div>
-          <div data-testid="faq-grid" className="edition-faq-list">
-            {questions.map((item, index) => <details key={item.question} open={index === 0}><summary><span>0{index + 1}</span><h3>{item.question}</h3><span aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}
-          </div>
+          <FaqAccordion items={questions} />
         </div>
       </section>
 

@@ -70,6 +70,17 @@ test.describe("working edition marketing experience", () => {
     await expect(page.getByRole("heading", { name: /Your next client project can start here./i })).toBeVisible();
   });
 
+  test("faq accordion keeps a single item open", async ({ page }) => {
+    await page.goto("/", { waitUntil: "load" });
+    const faqItems = page.getByTestId("faq-grid").locator("details");
+    await expect(faqItems.nth(0)).toHaveJSProperty("open", true);
+    await faqItems.nth(1).locator("summary").click();
+    await expect(faqItems.nth(1)).toHaveJSProperty("open", true);
+    await expect(faqItems.nth(0)).toHaveJSProperty("open", false);
+    await faqItems.nth(1).locator("summary").click();
+    await expect(faqItems.nth(1)).toHaveJSProperty("open", false);
+  });
+
   test("primary navigation exposes focused product and pricing routes", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const nav = page.getByRole("navigation", { name: "Primary navigation" });

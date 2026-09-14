@@ -51,7 +51,7 @@ export const roadmapContent: MarketingPageContent = {
       "Clients, projects, tasks, and milestones",
       "Agreements, review, and recorded acceptance",
       "Invoices, payment records, expenses, and multi-currency display",
-      "Calendar and a private Apple Calendar feed",
+      "Calendar with Google Calendar sync and a private Apple Calendar feed",
       "Portfolio publishing, analytics, and enquiries",
     ] },
     { eyebrow: "Being worked on", title: "Trust before breadth", bullets: [
@@ -79,7 +79,7 @@ export const changelogContent: MarketingPageContent = {
       { title: "Clients & delivery", body: "Manage clients, projects, tasks, and milestones with the dates and records connected to the work." },
       { title: "Agreements", body: "Prepare agreements, share them for review, record acceptance, and connect supported billing actions." },
       { title: "Invoices & expenses", body: "Create invoices, record payments, log expenses, and preserve native amounts across currencies." },
-      { title: "Calendar", body: "Review project and task dates in Rive and subscribe through a private Apple Calendar feed." },
+      { title: "Calendar", body: "Review project and task dates in Rive, keep them in sync with Google Calendar, or subscribe through a private Apple Calendar feed." },
     ] },
     { eyebrow: "Starting and showing", title: "Bring records in. Put selected work out.", cards: [
       { title: "Import", body: "Preview supported CSV and XLSX records, with relationship review before approval." },

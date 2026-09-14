@@ -26,7 +26,7 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
     chapters: [
       { eyebrow: "The relationship", title: "See what belongs to each client.", body: "Keep client records alongside the projects and business records connected to them. Open the client instead of reconstructing their work from memory." },
       { eyebrow: "The work", title: "Break the project into manageable work.", body: "Create tasks and milestones, set dates, and update progress as the engagement develops." },
-      { eyebrow: "The timeline", title: "Bring deadlines into view.", body: "Use Rive’s calendar to review project deadlines and tasks. Subscribe to the private Apple Calendar feed if you want those dates in Apple Calendar.", note: "Google Calendar availability depends on deployment configuration and is not promised on this page." },
+      { eyebrow: "The timeline", title: "Bring deadlines into view.", body: "Use Rive’s calendar to review project deadlines and tasks. Connect Google Calendar for two-way sync, or subscribe to the private Apple Calendar feed." },
     ],
     cta: "Start with the client you’re working with today.",
   },
