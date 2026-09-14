@@ -55,8 +55,9 @@ and is the anti-reference.
 
 ## Evidence on Hand
 
-Real workspace previews (`WorkspacePreview.tsx` seeded data — fictional studio,
-labeled as sample), `PortfolioShowcase`/`PortfolioPublication` (sample
+Real workspace previews (`WorkspacePreview.tsx` — the app's own UI primitives
+and page structures with seeded fictional-studio data, labeled as sample),
+`PortfolioShowcase`/`PortfolioPublication` (sample
 portfolio, must stay labeled). No verified testimonials, customer logos, or
 metrics — never fabricate them. Changelog is the honest progress record.
 

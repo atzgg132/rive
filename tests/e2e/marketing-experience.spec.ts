@@ -30,7 +30,7 @@ test.describe("institution marketing experience", () => {
     await page.goto("/", { waitUntil: "load" });
 
     const hero = page.getByTestId("marketing-hero");
-    await expect(hero.getByRole("heading", { name: /every client.*one record/is })).toBeVisible();
+    await expect(hero.getByRole("heading", { name: /every client[\s\S]*one record/i })).toBeVisible();
     await expect(hero).toContainText("freelancers and independent businesses");
     await expect(hero).toContainText("client, project, agreement, invoice, and deadline");
     await expect(hero.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
@@ -81,8 +81,8 @@ test.describe("institution marketing experience", () => {
     const figures = page.locator("section[aria-label='Workspace figures']");
     const preview = figures.locator("[data-workspace-preview]:visible").first();
     await expect(preview).toBeVisible();
-    await expect(preview.getByText("Search workspace…")).toBeVisible();
-    await expect(preview).toContainText("Revenue collected");
+    await expect(preview.getByText("Search workspace...")).toBeVisible();
+    await expect(preview).toContainText("Cash collected");
     await expect(preview.getByText(/Aster House/).first()).toBeVisible();
   });
 
