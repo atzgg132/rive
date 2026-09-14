@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { InstMark } from "@/components/marketing/primitives";
 import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
 import { PortfolioShowcase } from "@/components/marketing/PortfolioShowcase";
@@ -16,6 +18,7 @@ type ProductPageCopy = {
   chapters: ProductChapter[];
   clarification?: { title: string; body: string };
   cta: string;
+  next: { label: string; href: string };
 };
 
 const copy: Record<ProductPageKind, ProductPageCopy> = {
@@ -29,6 +32,7 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
       { eyebrow: "The timeline", title: "Bring deadlines into view.", body: "Use Rive’s calendar to review project deadlines and tasks. Connect Google Calendar for two-way sync, or subscribe to the private Apple Calendar feed." },
     ],
     cta: "Start with the client you’re working with today.",
+    next: { label: "Agreements & invoices", href: "/product/agreements-invoices" },
   },
   agreements: {
     eyebrow: "Agreements & invoices",
@@ -42,6 +46,7 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
     ],
     clarification: { title: "What recorded acceptance means", body: "Rive records the client’s acceptance through its agreement flow. This is not a promise of enforceability in every jurisdiction or a substitute for legal advice." },
     cta: "Bring the next agreement and invoice into one workspace.",
+    next: { label: "Portfolio Studio", href: "/product/portfolio" },
   },
   portfolio: {
     eyebrow: "Portfolio Studio",
@@ -53,6 +58,7 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
       { eyebrow: "The next client", title: "Give people a way to reach you.", body: "Let visitors enquire through your portfolio and review the analytics available in Rive." },
     ],
     cta: "Give your next client somewhere to look.",
+    next: { label: "Clients & projects", href: "/product/clients-projects" },
   },
 };
 
@@ -110,6 +116,14 @@ export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {
           </div>
         </section>
       ) : null}
+      <section className="inst-section" aria-label="Next entry">
+        <div className="inst-container">
+          <Link href={content.next.href} className="marketing-focus inst-next">
+            <span className="inst-mono">Next entry in the register</span>
+            <span className="inst-next__label">{content.next.label}<ArrowRight className="h-5 w-5" aria-hidden="true" /></span>
+          </Link>
+        </div>
+      </section>
       <ClosingCta headline={content.cta} href="/register" label="Create your free account" />
     </>
   );

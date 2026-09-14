@@ -115,6 +115,7 @@ test.describe("institution marketing experience", () => {
     await menuButton.click();
     const mobileNav = page.getByRole("navigation", { name: "Mobile navigation" });
     await expect(mobileNav).toBeVisible();
+    await expect(mobileNav.getByRole("link", { name: "Pricing" })).toHaveAttribute("href", "/pricing");
     await mobileNav.getByRole("link", { name: "Clients & projects" }).focus();
     await page.keyboard.press("Escape");
     await expect(mobileNav).toHaveCount(0);
@@ -145,9 +146,26 @@ test.describe("institution marketing experience", () => {
   test("primary navigation exposes focused product and pricing routes", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const nav = page.getByRole("navigation", { name: "Primary navigation" });
-    await expect(nav.getByRole("link", { name: /Product/ })).toBeVisible();
     await expect(nav.getByRole("link", { name: /Pricing/ })).toHaveAttribute("href", "/pricing");
-    await expect(nav.getByRole("link", { name: /About/ })).toHaveAttribute("href", "/about");
+    await nav.getByRole("button", { name: /Product/ }).click();
+    for (const [name, href] of [
+      ["Clients & projects", "/product/clients-projects"],
+      ["Agreements & invoices", "/product/agreements-invoices"],
+      ["Portfolio", "/product/portfolio"],
+      ["Import your data", "/migrate-to-rive"],
+    ] as const) {
+      await expect(nav.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
+    await page.keyboard.press("Escape");
+    await nav.getByRole("button", { name: /Institution/ }).click();
+    for (const [name, href] of [
+      ["About", "/about"],
+      ["Changelog", "/changelog"],
+      ["Roadmap", "/roadmap"],
+      ["Contact", "/contact"],
+    ] as const) {
+      await expect(nav.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
     const footer = page.locator("footer");
     await expect(footer.getByRole("link", { name: "Clients & projects" })).toHaveAttribute("href", "/product/clients-projects");
     await expect(footer.getByRole("link", { name: "Agreements & invoices" })).toHaveAttribute("href", "/product/agreements-invoices");
