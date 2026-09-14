@@ -72,8 +72,8 @@ export function ProductCalendar({ month, days, events }: ProductCalendarProps) {
         </div>
       </div>
       <div className="mt-3 hidden items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[0.55rem] text-blue-800 lg:flex">
-        <span className="font-bold">Apple Calendar feed</span>
-        <span className="rounded-full bg-white px-2 py-1 font-mono text-[0.45rem] font-bold uppercase tracking-[0.1em]">Subscribed</span>
+        <span className="font-bold">Google Calendar</span>
+        <span className="rounded-full bg-white px-2 py-1 font-mono text-[0.45rem] font-bold uppercase tracking-[0.1em]">Synced</span>
       </div>
     </ProductFrame>
   );
