@@ -327,12 +327,65 @@
 
 .inst-titlepage {
   position: relative;
+  overflow: hidden;
   padding-top: calc(4.25rem + clamp(3rem, 9vh, 6.5rem));
   padding-bottom: clamp(2.5rem, 6vh, 4.5rem);
   min-height: min(100svh, 62rem);
   display: flex;
   flex-direction: column;
 }
+.inst-titlepage > .inst-container { position: relative; z-index: 1; }
+
+/* The paper itself is alive: ledger rules feed slowly through the press,
+   and a hollow folio word drifts behind the statement like a watermark. */
+.inst-titlepage__bg { position: absolute; inset: 0; pointer-events: none; }
+.inst-titlepage__rules {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(to bottom, var(--inst-hairline) 0 1px, transparent 1px 3.5rem);
+  animation: inst-feed 24s linear infinite;
+}
+@keyframes inst-feed { to { background-position-y: 3.5rem; } }
+/* the ledger's blue margin line */
+.inst-titlepage__rules::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12%;
+  width: 1px;
+  background: color-mix(in srgb, var(--inst-accent) 22%, transparent);
+}
+.inst-titlepage__ghost {
+  position: absolute;
+  top: -4%;
+  left: -2%;
+  font-family: var(--inst-font);
+  font-weight: 800;
+  font-size: clamp(14rem, 32vw, 30rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgb(24 21 17 / 0.07);
+  animation: inst-ghost-drift 70s ease-in-out infinite alternate;
+}
+.inst-titlepage__ghost--small {
+  top: auto;
+  bottom: 10%;
+  left: auto;
+  right: -3%;
+  font-family: var(--inst-mono);
+  font-size: clamp(2.75rem, 6.5vw, 5.5rem);
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  -webkit-text-stroke: 1px rgb(24 21 17 / 0.08);
+  animation: inst-ghost-drift-rev 92s ease-in-out infinite alternate;
+}
+@keyframes inst-ghost-drift { from { transform: translateX(-3%); } to { transform: translateX(5%); } }
+@keyframes inst-ghost-drift-rev { from { transform: translateX(5%); } to { transform: translateX(-4%); } }
+
 .inst-titlepage__index {
   display: flex;
   align-items: baseline;
@@ -346,40 +399,26 @@
 .inst-titlepage__index .inst-mono { display: inline-flex; align-items: center; gap: 0.6em; }
 .inst-titlepage__body {
   flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 24rem);
-  align-content: center;
-  align-items: start;
-  column-gap: clamp(2rem, 5vw, 5rem);
-  row-gap: clamp(2rem, 5vh, 3.5rem);
-  padding-block: clamp(2rem, 5vh, 3.5rem);
-}
-.inst-titlepage__lead {
   display: flex;
   flex-direction: column;
-  gap: clamp(1.75rem, 4vh, 3rem);
-  min-width: 0;
+  justify-content: center;
+  gap: clamp(2rem, 5vh, 3.5rem);
+  padding-block: clamp(2rem, 5vh, 3.5rem);
 }
 .inst-titlepage__statement {
-  font-size: clamp(3rem, 8.5vw, 6rem);
-  max-width: 14ch;
+  font-size: clamp(3.25rem, 10.5vw, 8.5rem);
+  max-width: none;
 }
-.inst-titlepage__statement em { font-style: normal; color: var(--inst-accent-ink); }
+.inst-titlepage__line { display: block; }
+.inst-titlepage__line--i2 { padding-left: 0.9em; }
+.inst-titlepage__line--i3 { padding-left: 1.8em; }
+.inst-titlepage__line--pay { color: var(--inst-accent-ink); }
 .inst-titlepage__abstract {
   border-left: 2px solid var(--inst-rule);
   padding-left: 1.25rem;
 }
 .inst-titlepage__abstract p { font-size: 1.05rem; line-height: 1.6; color: var(--inst-ink-soft); max-width: 34ch; }
-.inst-titlepage__specimen {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  min-width: 0;
-}
-.inst-titlepage__specimen-tag,
-.inst-titlepage__specimen-note { color: var(--inst-ink-faint); }
 .inst-titlepage__foot {
-  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -527,82 +566,6 @@
 .inst-record__field { transition: background-color 300ms var(--inst-ease); }
 .inst-record__field[data-state="stamped"] { background: rgb(29 78 216 / 0.05); }
 
-/* ── The board: departures-flap register in the hero ───────────── */
-
-.inst-board {
-  border: 1.5px solid var(--inst-ink);
-  background: #fdfcf7;
-  box-shadow: 0 14px 34px rgb(24 21 17 / 0.14);
-  font-family: var(--inst-mono);
-  width: min(27rem, 100%);
-}
-.inst-board__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1.5px solid var(--inst-ink);
-  padding: 0.65rem 0.9rem;
-  color: var(--inst-ink);
-}
-.inst-board__row {
-  display: grid;
-  grid-template-columns: minmax(4.75rem, auto) 1fr;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.7rem 0.9rem;
-  border-bottom: 1px solid var(--inst-hairline);
-  transition: background-color 300ms var(--inst-ease);
-}
-.inst-board__row:last-child { border-bottom: 0; }
-.inst-board__label { color: var(--inst-ink-faint); font-size: 0.6rem; }
-.inst-board__drum {
-  display: flex;
-  justify-content: flex-end;
-  font-size: clamp(0.95rem, 1.7vw, 1.15rem);
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: 1;
-}
-.inst-board__cell {
-  position: relative;
-  width: 1ch;
-  height: 1em;
-  overflow: hidden;
-  border-left: 1px solid var(--inst-hairline);
-}
-.inst-board__cell:first-child { border-left: 0; }
-/* the flap's hinge line */
-.inst-board__cell::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: var(--inst-hairline);
-}
-.inst-board__col { display: block; will-change: transform; }
-.inst-board__glyph {
-  display: block;
-  height: 1em;
-  line-height: 1;
-  text-align: center;
-  color: var(--inst-ink);
-  transition: color 300ms var(--inst-ease);
-}
-.inst-board__row[data-filed="true"] { background: rgb(29 78 216 / 0.05); }
-.inst-board__row[data-filed="true"] .inst-board__glyph { color: var(--inst-accent-ink); }
-.inst-board__foot {
-  padding: 0.55rem 0.9rem;
-  border-top: 1.5px solid var(--inst-ink);
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--inst-ink-faint);
-}
-.inst-board__head.inst-mono,
-.inst-board__foot.inst-mono { font-size: 0.6rem; }
 
 /* Inline plate variant (mobile + reduced motion): static per-department. */
 .inst-record--inline { max-width: 24rem; box-shadow: none; }
@@ -867,10 +830,6 @@
 /* ── Responsive ────────────────────────────────────────────────── */
 
 @media (max-width: 1100px) {
-  .inst-titlepage__body { grid-template-columns: 1fr; }
-  .inst-titlepage__foot { order: 2; justify-content: flex-start; }
-  .inst-titlepage__specimen { order: 3; }
-  .inst-titlepage__specimen .inst-board { max-width: 24rem; }
   .inst-journey__grid { grid-template-columns: 1fr; }
   .inst-journey__rail { display: none; }
   .inst-dept-row__plate { display: block; }
@@ -907,9 +866,7 @@
   .inst-masthead__link::before, .inst-masthead__link::after { transition: none; }
   .inst-btn { transition: none; }
   .inst-btn::before { animation: none; }
-  .inst-board__col { transition: none !important; }
-  .inst-board__row { transition: none; }
-  .inst-board__glyph { transition: none; }
+  .inst-titlepage__rules, .inst-titlepage__ghost { animation: none; }
   .inst-enquiries details[open] > div { animation: none; }
   .inst-manifesto__fill { clip-path: none; position: static; }
   .inst-manifesto__base { display: none; }

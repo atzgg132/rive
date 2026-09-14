@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { RecordArtifact } from "@/components/marketing/RecordArtifact";
-import { TypeRegister } from "@/components/marketing/TypeRegister";
 import { RecordJourney, type RegistryDepartment } from "@/components/marketing/RecordJourney";
 import { ManifestoLine } from "@/components/marketing/ManifestoLine";
 import { RevealOnScroll } from "@/components/marketing/RevealOnScroll";
@@ -152,6 +151,11 @@ export function MarketingHome() {
     <div className="inst-home">
       {/* — Title page ———————————————————————————————————————— */}
       <section data-testid="marketing-hero" className="inst-titlepage">
+        <div className="inst-titlepage__bg" aria-hidden="true">
+          <div className="inst-titlepage__rules" />
+          <div className="inst-titlepage__ghost">Record.</div>
+          <div className="inst-titlepage__ghost inst-titlepage__ghost--small">Nº 001 —</div>
+        </div>
         <div className="inst-container">
           <RevealOnScroll className="inst-reveal inst-titlepage__index" y={12}>
             <span className="inst-mono"><InstMark mark="circle" accent />For freelancers & small practices</span>
@@ -159,26 +163,22 @@ export function MarketingHome() {
             <span className="inst-mono">Open beta — free, no card</span>
           </RevealOnScroll>
           <div className="inst-titlepage__body">
-            <div className="inst-titlepage__lead">
-              <RevealOnScroll className="inst-reveal" delay={0.05}>
-                <h1 className="inst-display inst-titlepage__statement">
-                  One <em>record</em><br />for the whole<br />business.
-                </h1>
-              </RevealOnScroll>
-              <RevealOnScroll className="inst-reveal inst-titlepage__abstract" delay={0.1} y={14}>
-                <p>
-                  Rive keeps every client, project, agreement, invoice, and deadline on a single
-                  record — the workspace for freelancers and independent businesses who manage
-                  several clients at once.
-                </p>
-              </RevealOnScroll>
-            </div>
-            <RevealOnScroll className="inst-reveal inst-titlepage__specimen" delay={0.12} y={18}>
-              <span className="inst-mono inst-titlepage__specimen-tag">Exhibit — the register in motion</span>
-              <TypeRegister />
-              <span className="inst-mono inst-titlepage__specimen-note">Every department ends up filed.</span>
+            <RevealOnScroll className="inst-reveal" delay={0.05}>
+              <h1 className="inst-display inst-titlepage__statement">
+                <span className="inst-titlepage__line">Every client,</span>
+                <span className="inst-titlepage__line inst-titlepage__line--i2">every invoice,</span>
+                <span className="inst-titlepage__line inst-titlepage__line--i3">every deadline —</span>
+                <span className="inst-titlepage__line inst-titlepage__line--pay">one record.</span>
+              </h1>
             </RevealOnScroll>
-            <RevealOnScroll className="inst-reveal inst-titlepage__foot" delay={0.18} y={14}>
+            <RevealOnScroll className="inst-reveal inst-titlepage__abstract" delay={0.12} y={14}>
+              <p>
+                Rive keeps every client, project, agreement, invoice, and deadline on a single
+                record — the workspace for freelancers and independent businesses who manage
+                several clients at once.
+              </p>
+            </RevealOnScroll>
+            <RevealOnScroll className="inst-reveal inst-titlepage__foot" delay={0.2} y={14}>
               <div className="inst-titlepage__actions">
                 <MarketingButton href="/register">Start free</MarketingButton>
                 <MarketingLink href="#registry">Read the register</MarketingLink>
