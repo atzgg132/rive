@@ -120,6 +120,8 @@
 
 /* Buttons: ink block = the institutional sign. No red buttons. */
 .inst-btn {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -134,17 +136,42 @@
   font-weight: 640;
   letter-spacing: 0.01em;
   text-decoration: none;
-  transition: transform 160ms var(--inst-ease), background-color 160ms var(--inst-ease), color 160ms var(--inst-ease);
+  transition: transform 160ms var(--inst-ease), background-color 160ms var(--inst-ease), color 160ms var(--inst-ease), border-color 160ms var(--inst-ease);
+}
+/* A slow sheen crosses the block like light on a foil seal — a standing
+   invitation. On press the block stamps blue, like signing in ink. */
+.inst-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, color-mix(in srgb, currentColor 26%, transparent) 50%, transparent 62%);
+  transform: translateX(-101%);
+  animation: inst-btn-sheen 3.8s var(--inst-ease) infinite;
+  pointer-events: none;
+}
+@keyframes inst-btn-sheen {
+  0% { transform: translateX(-101%); }
+  34%, 100% { transform: translateX(101%); }
 }
 .inst-btn:hover { transform: translateY(-1px); }
+.inst-btn:hover::before { animation-duration: 1.4s; }
 .inst-btn:hover svg { transform: translateX(3px); color: var(--inst-accent); }
+.inst-btn:active {
+  transform: translateY(1px) scale(0.98);
+  background: var(--inst-accent);
+  border-color: var(--inst-accent);
+  color: var(--inst-paper);
+}
+.inst-btn:active svg { color: var(--inst-paper); transform: translateX(3px); }
 .inst-btn svg { transition: transform 160ms var(--inst-ease), color 160ms var(--inst-ease); }
 .inst-btn--ghost { background: transparent; color: var(--inst-ink); }
 .inst-btn--ghost:hover { background: var(--inst-ink); color: var(--inst-paper); }
 .inst-btn--ghost:hover svg { color: var(--inst-accent); }
+.inst-btn--ghost:active { background: var(--inst-accent); border-color: var(--inst-accent); color: var(--inst-paper); }
 .inst-band--ink .inst-btn { border-color: var(--inst-paper-on-ink); background: var(--inst-paper-on-ink); color: var(--inst-ink); }
 .inst-band--ink .inst-btn--ghost { background: transparent; color: var(--inst-paper-on-ink); }
 .inst-band--ink .inst-btn--ghost:hover { background: var(--inst-paper-on-ink); color: var(--inst-ink); }
+.inst-band--ink .inst-btn:active { background: var(--inst-accent); border-color: var(--inst-accent); color: var(--inst-paper); }
 
 .inst-link {
   display: inline-flex;
@@ -796,6 +823,8 @@
   .inst-reveal { transition: none; }
   .inst-masthead__link { transition: none; }
   .inst-masthead__link::before, .inst-masthead__link::after { transition: none; }
+  .inst-btn { transition: none; }
+  .inst-btn::before { animation: none; }
   .inst-enquiries details[open] > div { animation: none; }
   .inst-manifesto__fill { clip-path: none; position: static; }
   .inst-manifesto__base { display: none; }
