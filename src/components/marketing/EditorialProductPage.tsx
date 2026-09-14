@@ -1,15 +1,19 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { InstMark } from "@/components/marketing/primitives";
 import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
-import { PortfolioShowcase } from "@/components/marketing/PortfolioShowcase";
+import { PortfolioSpecimen } from "@/components/marketing/PortfolioShowcase";
 import { type WorkspacePreviewView } from "@/components/marketing/WorkspacePreview";
 import { ResponsiveWorkspacePreview } from "@/components/marketing/ResponsiveWorkspacePreview";
+import { ResponsivePlate } from "@/components/marketing/ResponsivePlate";
+import { AcceptanceDocument } from "@/components/marketing/AcceptanceDocument";
+import { InvoiceDocument } from "@/components/marketing/InvoiceDocument";
 import { RevealOnScroll } from "@/components/marketing/RevealOnScroll";
 
 export type ProductPageKind = "clients" | "agreements" | "portfolio";
 
-type ProductChapter = { eyebrow: string; title: string; body: string; note?: string };
+type ProductChapter = { eyebrow: string; title: string; body: string; note?: string; plate?: string };
 
 type ProductPageCopy = {
   eyebrow: string;
@@ -40,8 +44,8 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
     intro: "Prepare agreements, share them for review, record acceptance, and create invoices linked to the client and project.",
     chapters: [
       { eyebrow: "Agreement", title: "Put the agreement in writing.", body: "Define the scope, terms, and payment schedule. Review the agreement before sharing it with your client." },
-      { eyebrow: "Review", title: "Give the client a clear review step.", body: "Share a review link and record acceptance through Rive’s agreement workflow." },
-      { eyebrow: "Invoice", title: "Prepare the invoice.", body: "Use supported agreement billing actions to create linked draft invoices. Review the details before sending." },
+      { eyebrow: "Review", title: "Give the client a clear review step.", body: "Share a review link and record acceptance through Rive’s agreement workflow.", plate: "Sent to the client" },
+      { eyebrow: "Invoice", title: "Prepare the invoice.", body: "Use supported agreement billing actions to create linked draft invoices. Review the details before sending.", plate: "Shared with the client" },
       { eyebrow: "Records", title: "Keep an eye on the money.", body: "Track invoices, record payments, and log expenses. Rive does not currently collect payments or transfer funds." },
     ],
     clarification: { title: "What recorded acceptance means", body: "Rive records the client’s acceptance through its agreement flow. This is not a promise of enforceability in every jurisdiction or a substitute for legal advice." },
@@ -54,7 +58,7 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
     intro: "Build a public portfolio in Rive. Publish selected projects, present your services, and receive enquiries from prospective clients.",
     chapters: [
       { eyebrow: "Selected work", title: "Choose what to publish.", body: "Select the projects you want to show and shape how they appear in your portfolio." },
-      { eyebrow: "Your practice", title: "Make your services easy to understand.", body: "Present your work and practices in a public site that helps visitors understand what you do." },
+      { eyebrow: "Your practice", title: "Make your services easy to understand.", body: "Present your work and practices in a public site that helps visitors understand what you do.", plate: "The live site" },
       { eyebrow: "The next client", title: "Give people a way to reach you.", body: "Let visitors enquire through your portfolio and review the analytics available in Rive." },
     ],
     cta: "Give your next client somewhere to look.",
@@ -62,15 +66,25 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
   },
 };
 
-function Visual({ kind, index }: { kind: ProductPageKind; index: number }) {
-  if (kind === "portfolio" && index === 2) return <PortfolioShowcase />;
-  const views: Record<ProductPageKind, WorkspacePreviewView[]> = {
-    clients: ["clients", "projects", "calendar"],
-    agreements: ["agreements", "agreements", "revenue", "revenue"],
-    portfolio: ["portfolio", "portfolio", "portfolio"],
-  };
-  return <ResponsiveWorkspacePreview view={views[kind][index] ?? views[kind][0]} />;
-}
+const wp = (view: WorkspacePreviewView) => <ResponsiveWorkspacePreview key={view} view={view} />;
+
+/* One artifact per chapter: workspace views show the operator's side; the
+   client-facing plates reproduce the real public surfaces — the acceptance
+   page, the shared invoice, the published site. */
+const ARTIFACTS: Record<ProductPageKind, ReactNode[]> = {
+  clients: [wp("clients"), wp("projects"), wp("calendar")],
+  agreements: [
+    wp("agreements"),
+    <ResponsivePlate key="acceptance" wide={{ w: 1024, h: 800 }} narrow={{ w: 460, h: 980 }}><AcceptanceDocument /></ResponsivePlate>,
+    <ResponsivePlate key="invoice" wide={{ w: 780, h: 900 }} narrow={{ w: 430, h: 1000 }}><InvoiceDocument /></ResponsivePlate>,
+    wp("revenue"),
+  ],
+  portfolio: [
+    wp("portfolio"),
+    <ResponsivePlate key="live-site" wide={{ w: 1024, h: 700 }} narrow={{ w: 430, h: 880 }}><PortfolioSpecimen templateKey="minimal-pro" /></ResponsivePlate>,
+    wp("enquiries"),
+  ],
+};
 
 export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {
   const content = copy[kind];
@@ -83,7 +97,7 @@ export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {
             <div className="inst-container">
               <div className="inst-dept">
                 <span className="inst-mono">{chapter.eyebrow}</span>
-                <span className="inst-mono">Plate from the workspace</span>
+                <span className="inst-mono">{chapter.plate ?? "Plate from the workspace"}</span>
               </div>
               <div className="inst-product-plate">
                 <RevealOnScroll className="inst-reveal">
@@ -95,7 +109,7 @@ export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {
                     </div>
                     <figure className="inst-plate">
                       <div className="inst-plate__frame">
-                        <Visual kind={kind} index={index} />
+                        {ARTIFACTS[kind][index]}
                       </div>
                     </figure>
                   </div>

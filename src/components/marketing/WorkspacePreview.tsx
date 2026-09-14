@@ -60,7 +60,7 @@ import { RiveLogo } from "@/components/RiveLogo";
 import type { FinancialChartInput } from "@/utils/financialChart";
 import type { BadgeVariant } from "@/components/ui/badge";
 
-export type WorkspacePreviewView = "dashboard" | "clients" | "projects" | "agreements" | "revenue" | "calendar" | "portfolio";
+export type WorkspacePreviewView = "dashboard" | "clients" | "projects" | "agreements" | "revenue" | "calendar" | "portfolio" | "enquiries";
 
 type ViewProps = { compact?: boolean };
 
@@ -221,7 +221,7 @@ export function WorkspaceShell({ view, children }: { view: WorkspacePreviewView;
         </div>
         <nav className="min-h-0 flex-1 space-y-1 px-3 py-5" aria-hidden="true">
           {NAV.map((item) => (
-            <NavItem key={item.id} active={item.id === view} label={item.label} Icon={item.Icon} />
+            <NavItem key={item.id} active={item.id === view || (view === "enquiries" && item.id === "portfolio")} label={item.label} Icon={item.Icon} />
           ))}
         </nav>
         <div className="shrink-0 border-t border-border px-1 py-4">
@@ -754,21 +754,7 @@ function PortfolioView({ compact }: ViewProps) {
         <Button variant="outline" size="sm"><Eye className="h-3.5 w-3.5" />Preview</Button>
         <Button variant="default" size="sm"><Check className="h-3.5 w-3.5" />Update live site</Button>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
-        <div className="flex gap-1">
-          {[
-            { label: "Editor", Icon: LayoutTemplate, active: true },
-            { label: "Analytics", Icon: BarChart3, active: false },
-            { label: "Enquiries", Icon: Inbox, active: false, count: 2 },
-          ].map((tab) => (
-            <span key={tab.label} className={`flex items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-semibold ${tab.active ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
-              <tab.Icon className="h-4 w-4" />{tab.label}
-              {tab.count ? <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-black tabular-nums text-primary-foreground">{tab.count}</span> : null}
-            </span>
-          ))}
-        </div>
-        <span className="flex items-center gap-2 text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success" /><b className="font-bold text-success">Published</b>· rive.site/p/maya-rao</span>
-      </div>
+      <PortfolioTabRow active="edit" />
       <div className={`mt-4 grid min-h-0 gap-0 overflow-hidden rounded-none border border-border bg-card ${compact ? "" : "lg:grid-cols-[210px_minmax(0,1fr)]"}`}>
         {!compact && (
           <aside className="border-r border-border bg-muted/35 p-4">
@@ -803,6 +789,89 @@ function PortfolioView({ compact }: ViewProps) {
   );
 }
 
+const enquiries = [
+  { projectType: "Product audit", name: "Diya Menon", email: "diya@fieldnotes.co", message: "We're preparing a relaunch and need a two-week research sprint — is that something you take on?", status: "Unread", tone: "default" as BadgeVariant, when: "Aug 11" },
+  { projectType: "Brand refresh", name: "Arjun Shah", email: "arjun@meridianlabs.in", message: "Saw the Northline work — could we talk about a similar system for us?", status: "Unread", tone: "default" as BadgeVariant, when: "Aug 10" },
+  { projectType: "E-commerce build", name: "Lena Okafor", email: "lena@studio-ok.com", message: "Shopfront redesign starting September. Budget in the ₹1.2–1.6L range.", status: "Replied", tone: "success" as BadgeVariant, when: "Aug 08" },
+  { projectType: "Wedding stationery site", name: "Priya Nair", email: "priya@nair.studio", message: "A small one-pager with a form — nothing fancy.", status: "Read", tone: "secondary" as BadgeVariant, when: "Aug 02" },
+];
+
+const enquiryFilters = [
+  { label: "All", count: 4, active: true },
+  { label: "Unread", count: 2, active: false },
+  { label: "Read", count: 0, active: false },
+  { label: "Replied", count: 0, active: false },
+  { label: "Archived", count: 0, active: false },
+];
+
+function PortfolioTabRow({ active }: { active: "edit" | "enquiries" }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
+      <div className="flex gap-1">
+        {[
+          { label: "Editor", Icon: LayoutTemplate, key: "edit" },
+          { label: "Analytics", Icon: BarChart3, key: "analytics" },
+          { label: "Enquiries", Icon: Inbox, key: "enquiries", count: 2 },
+        ].map((tab) => (
+          <span key={tab.label} className={`flex items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-semibold ${active === tab.key ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
+            <tab.Icon className="h-4 w-4" />{tab.label}
+            {tab.key === "enquiries" && tab.count ? <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-black tabular-nums text-primary-foreground">{tab.count}</span> : null}
+          </span>
+        ))}
+      </div>
+      <span className="flex items-center gap-2 text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success" /><b className="font-bold text-success">Published</b>· rive.site/p/maya-rao</span>
+    </div>
+  );
+}
+
+function EnquiriesView() {
+  return (
+    <>
+      <PageHeader
+        titleAs="div"
+        title="Portfolio Studio"
+        description="Build a portfolio that makes your work easy to understand and easy to hire."
+        actions={<Button variant="outline"><ExternalLink className="h-4 w-4" />View live site</Button>}
+      />
+      <PortfolioTabRow active="enquiries" />
+      <div className="mt-5 flex flex-col gap-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="font-bold text-foreground">Enquiries</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Every message from your public portfolio, saved here whether or not the email notification arrived.</p>
+          </div>
+          <span className="relative w-full lg:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input type="search" readOnly placeholder="Search name, email, or message" className="w-full rounded-xl border-border bg-background py-2.5 pl-9 pr-3 text-sm" />
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {enquiryFilters.map((filter) => (
+            <span key={filter.label} className={`rounded-full px-3 py-1.5 text-xs font-bold ${filter.active ? "bg-primary text-primary-foreground shadow-sm" : "border border-border bg-card text-muted-foreground"}`}>
+              {filter.label}{filter.count > 0 ? <span className="ml-1.5 tabular-nums opacity-70">{filter.count}</span> : null}
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2.5">
+          {enquiries.map((enquiry) => (
+            <div key={enquiry.email} className="flex items-start gap-4 rounded-2xl border border-border bg-card p-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-bold">{enquiry.projectType}</p>
+                  <Badge variant={enquiry.tone}>{enquiry.status}</Badge>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">{enquiry.name} · {enquiry.email}</p>
+                <p className="mt-2 line-clamp-2 text-sm leading-5 text-muted-foreground">{enquiry.message}</p>
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground">{enquiry.when}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 const views: Record<WorkspacePreviewView, ComponentType<ViewProps>> = {
   dashboard: DashboardView,
   clients: ClientsView,
@@ -811,6 +880,7 @@ const views: Record<WorkspacePreviewView, ComponentType<ViewProps>> = {
   revenue: RevenueView,
   calendar: CalendarView,
   portfolio: PortfolioView,
+  enquiries: EnquiriesView,
 };
 
 /** A single workspace view without chrome — the compact shell renders this. */

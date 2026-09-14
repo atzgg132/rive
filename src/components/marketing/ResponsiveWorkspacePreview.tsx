@@ -20,6 +20,7 @@ const DESKTOP_GEOMETRY: Record<WorkspacePreviewView, { w: number; h: number }> =
   projects: { w: 1440, h: 780 },
   agreements: { w: 1440, h: 760 },
   portfolio: { w: 1440, h: 720 },
+  enquiries: { w: 1440, h: 780 },
 };
 
 const COMPACT_GEOMETRY: Record<WorkspacePreviewView, { w: number; h: number }> = {
@@ -30,6 +31,7 @@ const COMPACT_GEOMETRY: Record<WorkspacePreviewView, { w: number; h: number }> =
   projects: { w: 390, h: 740 },
   agreements: { w: 390, h: 700 },
   portfolio: { w: 390, h: 720 },
+  enquiries: { w: 390, h: 780 },
 };
 
 const COMPACT_MAX_WIDTH = 560;

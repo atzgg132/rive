@@ -86,6 +86,23 @@ test.describe("institution marketing experience", () => {
     await expect(preview.getByText(/Aster House/).first()).toBeVisible();
   });
 
+  test("each product chapter shows a distinct artifact", async ({ page }) => {
+    const errors = captureRuntimeErrors(page);
+    await page.goto("/product/agreements-invoices", { waitUntil: "load" });
+    await expect(page.locator(".inst-plate")).toHaveCount(4);
+    await expect(page.locator("[data-workspace-preview='agreements']:visible")).toHaveCount(1);
+    await expect(page.locator("[data-workspace-preview='revenue']:visible")).toHaveCount(1);
+    await expect(page.getByTestId("acceptance-doc")).toHaveCount(1);
+    await expect(page.getByTestId("invoice-doc")).toHaveCount(1);
+    expect(errors).toEqual([]);
+
+    await page.goto("/product/portfolio", { waitUntil: "load" });
+    await expect(page.locator(".inst-plate")).toHaveCount(3);
+    await expect(page.locator("[data-workspace-preview='portfolio']:visible")).toHaveCount(1);
+    await expect(page.locator("[data-workspace-preview='enquiries']:visible")).toHaveCount(1);
+    expect(errors).toEqual([]);
+  });
+
   test("the published record shows the whole public page beside its register entry", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
     const published = page.locator("section[aria-label='Published portfolio']");
