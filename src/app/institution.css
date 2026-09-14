@@ -171,10 +171,9 @@
   background: var(--inst-paper-2);
 }
 .inst-plate__frame { padding: clamp(0.5rem, 1.5vw, 1rem); }
-.inst-plate__frame--flush { padding: 0; overflow: hidden; }
-.inst-print { position: relative; display: block; aspect-ratio: 4 / 5; background: var(--inst-paper-2, #eeeee9); }
-.inst-prints { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1rem, 2vw, 1.75rem); align-items: start; }
-.inst-dossier { display: flex; flex-direction: column; gap: clamp(1.5rem, 3vw, 2.5rem); align-self: start; }
+.inst-specimens { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 1.75rem); align-items: start; }
+.inst-specimen { position: relative; width: 100%; aspect-ratio: 3 / 4; overflow: hidden; }
+.inst-specimen__doc { position: absolute; top: 0; left: 0; transform-origin: top left; pointer-events: none; }
 .inst-plate__caption {
   display: flex;
   align-items: baseline;
@@ -741,6 +740,7 @@
   .inst-dept-row__plate { display: block; }
   .inst-figures__grid { grid-template-columns: 1fr; }
   .inst-figures__grid > .inst-plate:first-child { grid-column: auto; }
+  .inst-specimens { grid-template-columns: minmax(0, 1fr); max-width: 26rem; }
 }
 
 @media (max-width: 860px) {
