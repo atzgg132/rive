@@ -61,19 +61,17 @@ test.describe("institution marketing experience", () => {
     await expect(preview.getByText(/Aster House/).first()).toBeVisible();
   });
 
-  test("the published record sets one portfolio in three live templates", async ({ page }) => {
+  test("the published record shows the whole public page beside its workspace file", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
     const published = page.locator("section[aria-label='Published portfolio']");
-    const plates = published.locator(".inst-specimens .inst-plate");
-    await expect(plates).toHaveCount(3);
-    await expect(plates.nth(0)).toContainText("Minimal pro");
-    await expect(plates.nth(1)).toContainText("Visual studio");
-    await expect(plates.nth(2)).toContainText("Digital builder");
-    for (let index = 0; index < 3; index += 1) {
-      const frame = plates.nth(index).locator(".inst-specimen");
-      await expect(frame).toHaveJSProperty("inert", true);
-      await expect(frame.locator(".portfolio-footer")).toContainText("Built with Rive");
-    }
+    const plates = published.locator(".inst-plate");
+    await expect(plates).toHaveCount(2);
+    const publicPlate = plates.nth(0);
+    await expect(publicPlate).toContainText("Public page");
+    await expect(publicPlate.locator(".inst-specimen:visible")).toHaveJSProperty("inert", true);
+    await expect(publicPlate.locator(".portfolio-footer").first()).toContainText("Built with Rive");
+    await expect(plates.nth(1)).toContainText("Portfolio studio");
+    await expect(published.locator("[data-workspace-preview='portfolio']").first()).toBeAttached();
     await expect(published.getByTestId("portfolio-showcase")).toContainText("Settings");
   });
 

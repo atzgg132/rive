@@ -18,8 +18,13 @@ export function PortfolioShowcase() {
 
 /** One record set in one template — the same sample content rendered by the
  * real public renderer at that template's default accent. Used inside a
- * SpecimenFrame, so it stays a document: callers keep it inert. */
-export function PortfolioSpecimen({ templateKey }: { templateKey: (typeof PORTFOLIO_TEMPLATES)[number]["key"] }) {
+ * SpecimenFrame, so it stays a document: callers keep it inert.
+ * `opening` hides every toggleable section — a real configuration — so the
+ * plate carries the page's opening where the full document runs too long. */
+export function PortfolioSpecimen({ templateKey, opening = false }: { templateKey: (typeof PORTFOLIO_TEMPLATES)[number]["key"]; opening?: boolean }) {
   const accent = PORTFOLIO_TEMPLATES.find((template) => template.key === templateKey)?.accent ?? sampleTheme.accent;
-  return <PortfolioRenderer content={samplePortfolioContent} theme={{ ...sampleTheme, accent }} templateKey={templateKey} headingLevel="h3" />;
+  const content = opening
+    ? { ...samplePortfolioContent, sections: samplePortfolioContent.sections.map((section) => ({ ...section, visible: false })) }
+    : samplePortfolioContent;
+  return <PortfolioRenderer content={content} theme={{ ...sampleTheme, accent }} templateKey={templateKey} headingLevel="h3" />;
 }

@@ -6,7 +6,6 @@ import { RevealOnScroll } from "@/components/marketing/RevealOnScroll";
 import { ResponsiveWorkspacePreview } from "@/components/marketing/ResponsiveWorkspacePreview";
 import { PortfolioSpecimen } from "@/components/marketing/PortfolioShowcase";
 import { SpecimenFrame } from "@/components/marketing/SpecimenFrame";
-import { PORTFOLIO_TEMPLATES } from "@/utils/portfolio";
 import { FaqAccordion } from "@/components/marketing/FaqAccordion";
 import {
   DeptRule,
@@ -59,8 +58,6 @@ const FIGURES = [
   { view: "revenue", no: "Fig. 02", name: "Revenue & invoices", caption: "What has been invoiced, collected, and needs attention across every currency." },
   { view: "calendar", no: "Fig. 03", name: "The timeline", caption: "Project dates, Google Calendar sync, and a private Apple Calendar feed." },
 ] as const;
-
-const SPECIMEN_TEMPLATES: readonly (typeof PORTFOLIO_TEMPLATES)[number]["key"][] = ["minimal-pro", "visual-studio", "digital-builder"];
 
 const SPECIFICATION: readonly { term: string; name: string; detail: ReactNode }[] = [
   {
@@ -234,45 +231,61 @@ export function MarketingHome() {
       {/* — Dept. 03 · The published record ————————————————————— */}
       <section className="inst-section inst-figures marketing-deferred-section" aria-label="Published portfolio">
         <div className="inst-container">
-          <DeptRule index="03" name="The published record" note="One record — three of six publishable settings" />
+          <DeptRule index="03" name="The published record" note="Drafted in the workspace — set in public" />
           <h2 className="inst-display inst-display--section inst-section__head">The record, set in public.</h2>
-          <RevealOnScroll className="inst-reveal">
-            <div className="inst-specimens">
-              {SPECIMEN_TEMPLATES.map((key, index) => (
-                <figure key={key} className="inst-plate">
-                  <div className="inst-plate__frame">
+          <div className="inst-figures__grid inst-figures__grid--doc">
+            <RevealOnScroll className="inst-reveal">
+              <figure className="inst-plate">
+                <div className="inst-plate__frame">
+                  <div className="inst-doc inst-doc--full">
                     <SpecimenFrame>
-                      <PortfolioSpecimen templateKey={key} />
+                      <PortfolioSpecimen templateKey="minimal-pro" />
                     </SpecimenFrame>
                   </div>
+                  <div className="inst-doc inst-doc--opening">
+                    <SpecimenFrame>
+                      <PortfolioSpecimen templateKey="minimal-pro" opening />
+                    </SpecimenFrame>
+                  </div>
+                </div>
+                <figcaption className="inst-plate__caption">
+                  <span className="inst-mono">Fig. 04 — Public page</span>
+                  <span>Minimal pro · live render</span>
+                </figcaption>
+              </figure>
+            </RevealOnScroll>
+            <div className="inst-file">
+              <RevealOnScroll className="inst-reveal" delay={0.08}>
+                <figure className="inst-plate">
+                  <div className="inst-plate__frame">
+                    <ResponsiveWorkspacePreview view="portfolio" />
+                  </div>
                   <figcaption className="inst-plate__caption">
-                    <span className="inst-mono">Pl. {String(index + 1).padStart(2, "0")} — {PORTFOLIO_TEMPLATES.find((template) => template.key === key)?.name}</span>
-                    <span>Live render</span>
+                    <span className="inst-mono">Fig. 05 — Portfolio studio</span>
+                    <span>In the workspace</span>
                   </figcaption>
                 </figure>
-              ))}
+              </RevealOnScroll>
+              <RevealOnScroll className="inst-reveal" delay={0.14}>
+                <div className="inst-register inst-register--dossier" data-testid="portfolio-showcase">
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="circle" accent />Portfolio</span><span className="inst-register__name">Maya Rao — independent product designer</span></div>
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="square" />Filed under</span><span className="inst-register__name">Product design · Bengaluru, India</span></div>
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="triangle" />Status</span><span className="inst-register__name">Available for select engagements</span></div>
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="diamond" />Settings</span><span className="inst-register__name">6 templates — Minimal pro shown</span></div>
+                </div>
+              </RevealOnScroll>
+              <RevealOnScroll className="inst-reveal" delay={0.2}>
+                <div className="inst-panel">
+                  <span className="inst-mono inst-panel__label"><InstMark mark="circle" />Enquiries return to the record</span>
+                  <h3 className="inst-panel__title">The next client arrives where the last one was filed.</h3>
+                  <p className="inst-panel__body">
+                    Portfolio enquiries land in the same workspace as clients, projects, and invoices —
+                    so a new relationship starts on the record instead of in an inbox.
+                  </p>
+                  <MarketingLink href="/product/portfolio">Read the portfolio entry</MarketingLink>
+                </div>
+              </RevealOnScroll>
             </div>
-          </RevealOnScroll>
-          <div className="inst-figures__grid inst-figures__grid--duo" style={{ marginTop: "clamp(1.5rem, 3vw, 2.5rem)" }}>
-            <RevealOnScroll className="inst-reveal" delay={0.08}>
-              <div className="inst-register inst-register--dossier" data-testid="portfolio-showcase">
-                <div className="inst-register__row"><span className="inst-mono"><InstMark mark="circle" accent />Portfolio</span><span className="inst-register__name">Maya Rao — independent product designer</span></div>
-                <div className="inst-register__row"><span className="inst-mono"><InstMark mark="square" />Filed under</span><span className="inst-register__name">Product design · Bengaluru, India</span></div>
-                <div className="inst-register__row"><span className="inst-mono"><InstMark mark="triangle" />Status</span><span className="inst-register__name">Available for select engagements</span></div>
-                <div className="inst-register__row"><span className="inst-mono"><InstMark mark="diamond" />Settings</span><span className="inst-register__name">6 templates — three shown above</span></div>
-              </div>
-            </RevealOnScroll>
-            <RevealOnScroll className="inst-reveal" delay={0.14}>
-              <div className="inst-panel">
-                <span className="inst-mono inst-panel__label"><InstMark mark="circle" />Enquiries return to the record</span>
-                <h3 className="inst-panel__title">The next client arrives where the last one was filed.</h3>
-                <p className="inst-panel__body">
-                  Portfolio enquiries land in the same workspace as clients, projects, and invoices —
-                  so a new relationship starts on the record instead of in an inbox.
-                </p>
-                <MarketingLink href="/product/portfolio">Read the portfolio entry</MarketingLink>
-              </div>
-            </RevealOnScroll>
           </div>
         </div>
       </section>
