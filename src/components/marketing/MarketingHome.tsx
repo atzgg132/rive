@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { RecordArtifact } from "@/components/marketing/RecordArtifact";
+import { TypeRegister } from "@/components/marketing/TypeRegister";
 import { RecordJourney, type RegistryDepartment } from "@/components/marketing/RecordJourney";
 import { ManifestoLine } from "@/components/marketing/ManifestoLine";
 import { RevealOnScroll } from "@/components/marketing/RevealOnScroll";
@@ -173,9 +174,9 @@ export function MarketingHome() {
               </RevealOnScroll>
             </div>
             <RevealOnScroll className="inst-reveal inst-titlepage__specimen" delay={0.12} y={18}>
-              <span className="inst-mono inst-titlepage__specimen-tag">Specimen — Field no. 001</span>
-              <RecordArtifact phase={4} />
-              <span className="inst-mono inst-titlepage__specimen-note">Aster House — registered in full</span>
+              <span className="inst-mono inst-titlepage__specimen-tag">Exhibit — the register in motion</span>
+              <TypeRegister />
+              <span className="inst-mono inst-titlepage__specimen-note">Every department ends up filed.</span>
             </RevealOnScroll>
             <RevealOnScroll className="inst-reveal inst-titlepage__foot" delay={0.18} y={14}>
               <div className="inst-titlepage__actions">

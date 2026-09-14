@@ -376,7 +376,6 @@
   gap: 0.8rem;
   min-width: 0;
 }
-.inst-titlepage__specimen .inst-record { transform: rotate(-1deg); }
 .inst-titlepage__specimen-tag,
 .inst-titlepage__specimen-note { color: var(--inst-ink-faint); }
 .inst-titlepage__foot {
@@ -527,6 +526,83 @@
 .inst-record__foot .inst-mono { font-size: 0.6rem; }
 .inst-record__field { transition: background-color 300ms var(--inst-ease); }
 .inst-record__field[data-state="stamped"] { background: rgb(29 78 216 / 0.05); }
+
+/* ── The board: departures-flap register in the hero ───────────── */
+
+.inst-board {
+  border: 1.5px solid var(--inst-ink);
+  background: #fdfcf7;
+  box-shadow: 0 14px 34px rgb(24 21 17 / 0.14);
+  font-family: var(--inst-mono);
+  width: min(27rem, 100%);
+}
+.inst-board__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1.5px solid var(--inst-ink);
+  padding: 0.65rem 0.9rem;
+  color: var(--inst-ink);
+}
+.inst-board__row {
+  display: grid;
+  grid-template-columns: minmax(4.75rem, auto) 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--inst-hairline);
+  transition: background-color 300ms var(--inst-ease);
+}
+.inst-board__row:last-child { border-bottom: 0; }
+.inst-board__label { color: var(--inst-ink-faint); font-size: 0.6rem; }
+.inst-board__drum {
+  display: flex;
+  justify-content: flex-end;
+  font-size: clamp(0.95rem, 1.7vw, 1.15rem);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.inst-board__cell {
+  position: relative;
+  width: 1ch;
+  height: 1em;
+  overflow: hidden;
+  border-left: 1px solid var(--inst-hairline);
+}
+.inst-board__cell:first-child { border-left: 0; }
+/* the flap's hinge line */
+.inst-board__cell::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--inst-hairline);
+}
+.inst-board__col { display: block; will-change: transform; }
+.inst-board__glyph {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+  color: var(--inst-ink);
+  transition: color 300ms var(--inst-ease);
+}
+.inst-board__row[data-filed="true"] { background: rgb(29 78 216 / 0.05); }
+.inst-board__row[data-filed="true"] .inst-board__glyph { color: var(--inst-accent-ink); }
+.inst-board__foot {
+  padding: 0.55rem 0.9rem;
+  border-top: 1.5px solid var(--inst-ink);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--inst-ink-faint);
+}
+.inst-board__head.inst-mono,
+.inst-board__foot.inst-mono { font-size: 0.6rem; }
 
 /* Inline plate variant (mobile + reduced motion): static per-department. */
 .inst-record--inline { max-width: 24rem; box-shadow: none; }
@@ -794,7 +870,7 @@
   .inst-titlepage__body { grid-template-columns: 1fr; }
   .inst-titlepage__foot { order: 2; justify-content: flex-start; }
   .inst-titlepage__specimen { order: 3; }
-  .inst-titlepage__specimen .inst-record { transform: none; max-width: 24rem; }
+  .inst-titlepage__specimen .inst-board { max-width: 24rem; }
   .inst-journey__grid { grid-template-columns: 1fr; }
   .inst-journey__rail { display: none; }
   .inst-dept-row__plate { display: block; }
@@ -831,6 +907,9 @@
   .inst-masthead__link::before, .inst-masthead__link::after { transition: none; }
   .inst-btn { transition: none; }
   .inst-btn::before { animation: none; }
+  .inst-board__col { transition: none !important; }
+  .inst-board__row { transition: none; }
+  .inst-board__glyph { transition: none; }
   .inst-enquiries details[open] > div { animation: none; }
   .inst-manifesto__fill { clip-path: none; position: static; }
   .inst-manifesto__base { display: none; }

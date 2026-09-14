@@ -35,6 +35,7 @@ test.describe("institution marketing experience", () => {
     await expect(hero).toContainText("client, project, agreement, invoice, and deadline");
     await expect(hero.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
     await expect(hero).toContainText("No credit card required");
+    await expect(hero.getByTestId("type-register")).toBeVisible();
     await expect(page.getByText("Remit", { exact: true })).toHaveCount(0);
     expect(errors).toEqual([]);
   });
