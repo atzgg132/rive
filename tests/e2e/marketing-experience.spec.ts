@@ -198,6 +198,78 @@ test.describe("institution marketing experience", () => {
     });
   }
 
+  const overflowWidths = [320, 390, 768, 1280];
+  for (const route of marketingRoutes) {
+    test(`${route} does not overflow the viewport at popular device widths`, async ({ page }) => {
+      for (const width of overflowWidths) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto(route, { waitUntil: "load" });
+        // Sweep through so deferred sections render before measuring.
+        await page.evaluate(async () => {
+          await new Promise<void>((resolve) => {
+            let y = 0;
+            const step = () => {
+              y += 800;
+              window.scrollTo(0, y);
+              if (y < document.body.scrollHeight) setTimeout(step, 15); else resolve();
+            };
+            step();
+          });
+        });
+        const report = await page.evaluate(() => {
+          const vw = document.documentElement.clientWidth;
+          const docOverflow = document.documentElement.scrollWidth - vw;
+          const path = (el: Element) => {
+            const parts: string[] = [];
+            let node: Element | null = el;
+            while (node && node !== document.body && parts.length < 4) {
+              const cls = typeof node.className === "string" && node.className ? `.${node.className.split(" ")[0]}` : "";
+              parts.unshift(node.tagName.toLowerCase() + cls);
+              node = node.parentElement;
+            }
+            return parts.join(">");
+          };
+          const offenders: string[] = [];
+          for (const el of document.querySelectorAll("body *")) {
+            if (el.closest('[aria-hidden="true"],[inert]')) continue;
+            const rect = el.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) continue;
+            if (rect.right > vw + 1.5 || rect.left < -1.5) offenders.push(`${path(el)} L${Math.round(rect.left)} R${Math.round(rect.right)}`);
+          }
+          return { docOverflow, offenders: [...new Set(offenders)].slice(0, 5) };
+        });
+        expect({ width, ...report }).toEqual({ width, docOverflow: 0, offenders: [] });
+      }
+    });
+  }
+
+  test("open mobile navigation scrolls inside the fixed masthead and locks the page", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 640 });
+    await page.goto("/", { waitUntil: "load" });
+    await page.getByRole("button", { name: "Open navigation" }).click();
+    const nav = page.getByRole("navigation", { name: "Mobile navigation" });
+    await expect(nav).toBeVisible();
+    const lastLink = nav.getByRole("link", { name: "Contact" });
+    await lastLink.scrollIntoViewIfNeeded();
+    await expect(lastLink).toBeVisible();
+    await expect(nav).toContainText("Start free");
+    // Page behind the fixed header must not scroll while the menu is open.
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+  });
+
+  test("index dropdowns stay inside the viewport on small laptops", async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 700 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const nav = page.getByRole("navigation", { name: "Primary navigation" });
+    await nav.getByRole("button", { name: /Institution/ }).click();
+    const menu = nav.getByRole("link", { name: "Contact" });
+    await expect(menu).toBeVisible();
+    const box = await menu.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(901);
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+  });
+
   test("signup opens a focused overlay and preserves the account form", async ({ page }) => {
     await page.addInitScript(() => window.localStorage.setItem("rive-color-theme", "dark"));
     await page.goto("/", { waitUntil: "load" });

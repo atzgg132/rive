@@ -12,6 +12,16 @@ export function SiteHeader() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
+  /* The open menu lives inside the fixed masthead — lock the page behind
+     it so the body can't scroll the nav out of reach. */
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => { root.style.overflow = previous; };
+  }, [mobileOpen]);
+
   useEffect(() => {
     if (!mobileOpen) return;
     const close = (event: KeyboardEvent) => {

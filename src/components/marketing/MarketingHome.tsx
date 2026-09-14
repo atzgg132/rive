@@ -184,7 +184,7 @@ export function MarketingHome() {
                 <MarketingLink href="#registry">Read the register</MarketingLink>
               </div>
               <p className="inst-titlepage__assurance inst-mono">
-                <InstMark mark="square" accent />Free during beta. No credit card required.
+                <InstMark mark="square" accent /><span>Free during beta. No credit card required.</span>
               </p>
             </RevealOnScroll>
           </div>

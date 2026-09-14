@@ -824,14 +824,16 @@ function PortfolioTabRow({ active }: { active: "edit" | "enquiries" }) {
   );
 }
 
-function EnquiriesView() {
+function EnquiriesView({ compact }: ViewProps) {
+  const shownEnquiries = compact ? enquiries.slice(0, 3) : enquiries;
+  const shownFilters = compact ? enquiryFilters.slice(0, 3) : enquiryFilters;
   return (
     <>
       <PageHeader
         titleAs="div"
         title="Portfolio Studio"
         description="Build a portfolio that makes your work easy to understand and easy to hire."
-        actions={<Button variant="outline"><ExternalLink className="h-4 w-4" />View live site</Button>}
+        actions={!compact && <Button variant="outline"><ExternalLink className="h-4 w-4" />View live site</Button>}
       />
       <PortfolioTabRow active="enquiries" />
       <div className="mt-5 flex flex-col gap-4">
@@ -840,20 +842,22 @@ function EnquiriesView() {
             <p className="font-bold text-foreground">Enquiries</p>
             <p className="mt-0.5 text-xs text-muted-foreground">Every message from your public portfolio, saved here whether or not the email notification arrived.</p>
           </div>
-          <span className="relative w-full lg:w-72">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input type="search" readOnly placeholder="Search name, email, or message" className="w-full rounded-xl border-border bg-background py-2.5 pl-9 pr-3 text-sm" />
-          </span>
+          {!compact && (
+            <span className="relative w-full lg:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input type="search" readOnly placeholder="Search name, email, or message" className="w-full rounded-xl border-border bg-background py-2.5 pl-9 pr-3 text-sm" />
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {enquiryFilters.map((filter) => (
+          {shownFilters.map((filter) => (
             <span key={filter.label} className={`rounded-full px-3 py-1.5 text-xs font-bold ${filter.active ? "bg-primary text-primary-foreground shadow-sm" : "border border-border bg-card text-muted-foreground"}`}>
               {filter.label}{filter.count > 0 ? <span className="ml-1.5 tabular-nums opacity-70">{filter.count}</span> : null}
             </span>
           ))}
         </div>
         <div className="flex flex-col gap-2.5">
-          {enquiries.map((enquiry) => (
+          {shownEnquiries.map((enquiry) => (
             <div key={enquiry.email} className="flex items-start gap-4 rounded-2xl border border-border bg-card p-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
