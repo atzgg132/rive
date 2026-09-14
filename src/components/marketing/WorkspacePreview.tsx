@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
   Clock3,
   Command,
   DollarSign,
@@ -25,9 +26,11 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   ListTodo,
+  LogOut,
   Mail,
   Moon,
   MoreVertical,
+  PanelLeftClose,
   Plus,
   Receipt,
   Search,
@@ -83,6 +86,20 @@ const dashboardSignals = [
   { tag: "Enquiry", tone: "warning", title: "New enquiry via portfolio", detail: "Product audit · came through rive.site", at: "Aug 11, 09:15" },
   { tag: "Client", tone: "info", title: "Meridian Labs added to the record", detail: "1 active project", at: "Aug 09, 14:31" },
 ] satisfies { tag: string; tone: BadgeVariant; title: string; detail: string; at: string }[];
+
+const dashboardInsights: {
+  label: string;
+  value: string;
+  sub: string;
+  Icon?: LucideIcon;
+  tone?: "success" | "warning" | "primary";
+  big?: boolean;
+}[] = [
+  { label: "Collection rate", value: "69%", sub: "All-time share of invoiced value collected" },
+  { label: "Profit margin", value: "82%", sub: "All time, after logged expenses", tone: "success" },
+  { label: "Overdue", value: "₹36,500", sub: "2 invoices need attention", Icon: AlertTriangle, tone: "warning" },
+  { label: "Next 14 days", value: "Meridian brand system", sub: "3 upcoming projects", Icon: CalendarDays, tone: "primary", big: true },
+];
 
 const dashboardChart: FinancialChartInput[] = [
   { month: "2026-03", revenue: 98000, expenses: 9400 },
@@ -197,29 +214,31 @@ export function WorkspaceShell({ view, children }: { view: WorkspacePreviewView;
   return (
     <div className="flex h-full bg-background text-foreground">
       <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-card">
-        <div className="flex h-16 shrink-0 items-center border-b border-border px-4">
-          <RiveLogo height={24} />
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-4">
+          <RiveLogo height={26} />
+          <div className="min-w-0 flex-1" />
+          <PanelLeftClose className="h-4 w-4 shrink-0 text-muted-foreground" />
         </div>
-        <div className="shrink-0 p-3">
-          <Button variant="inverse" className="w-full gap-2">
-            <Plus className="h-4 w-4" />
-            New client work
-          </Button>
-        </div>
-        <nav className="flex-1 space-y-1 px-3" aria-hidden="true">
+        <nav className="min-h-0 flex-1 space-y-1 px-3 py-5" aria-hidden="true">
           {NAV.map((item) => (
             <NavItem key={item.id} active={item.id === view} label={item.label} Icon={item.Icon} />
           ))}
         </nav>
-        <div className="shrink-0 border-t border-border px-3 py-2">
-          <div className="flex items-center gap-3">
-            <Avatar size="md" aria-hidden="true"><span>MR</span></Avatar>
-            <div className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold">Maya Rao</span>
-              <span className="block truncate text-xs text-muted-foreground">maya@mayarao.design</span>
+        <div className="shrink-0 border-t border-border px-1 py-4">
+          <div className="px-3 py-2">
+            <div className="flex items-center gap-3">
+              <Avatar size="md" aria-hidden="true"><span>MR</span></Avatar>
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">Maya Rao</span>
+                <span className="block truncate text-xs text-muted-foreground">maya@mayarao.design</span>
+              </div>
             </div>
+            <Badge variant="outline" className="ml-12 mt-2 capitalize">Free</Badge>
           </div>
-          <Badge variant="outline" className="ml-12 mt-2 capitalize">Free</Badge>
+          <span className="flex w-full items-center justify-start gap-2 px-3 py-2 text-sm font-medium text-destructive">
+            <LogOut className="h-5 w-5" />
+            Sign out
+          </span>
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -237,10 +256,12 @@ export function WorkspaceShell({ view, children }: { view: WorkspacePreviewView;
             <Button variant="inverse" className="gap-2 whitespace-nowrap"><Plus className="h-4 w-4" />New client work</Button>
             <span className="flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">INR · Indian rupee<ChevronDown className="h-3.5 w-3.5" /></span>
             <Moon className="h-5 w-5 text-muted-foreground" />
+            <CircleHelp className="h-5 w-5 text-muted-foreground" />
             <span className="relative">
               <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-primary" />
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
             </span>
+            <span className="h-7 w-px bg-border" />
           </div>
         </header>
         <main className="min-h-0 flex-1 overflow-hidden p-6">{children}</main>
@@ -273,22 +294,37 @@ function DashboardView({ compact }: ViewProps) {
           </>
         }
       />
-      <div className="mt-7 grid grid-cols-2 items-stretch gap-4 xl:grid-cols-4">
-        <MetricCard label="Cash collected" value="₹2,84,500" sub="₹1,26,500 still owed" />
+      <div className="mt-7 grid grid-cols-2 items-stretch gap-6 xl:grid-cols-4">
+        <MetricCard label="Cash collected" value="₹2,84,500" sub="+12.4% vs last month to day 21 · ₹1,26,500 still owed" />
         <MetricCard label="Active projects" value="4" sub="Right now — unaffected by the period" />
         <MetricCard label="Expenses" value="₹38,240" sub="All-time logged" />
         <MetricCard label="Net" value="₹2,46,260" sub="Cash received minus expenses" />
       </div>
+      <section className={`mt-6 grid items-stretch gap-6 ${compact ? "grid-cols-2" : "grid-cols-2 xl:grid-cols-4"}`}>
+        {(compact ? dashboardInsights.slice(0, 2) : dashboardInsights).map((insight) => (
+          <Card key={insight.label} className="flex h-full min-h-28 flex-col rounded-none border-border bg-card p-4">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              {insight.Icon ? <insight.Icon className={`h-3.5 w-3.5 ${insight.tone === "warning" ? "text-warning" : "text-primary"}`} /> : null}
+              {insight.label}
+            </p>
+            <div className="mt-auto min-w-0 pt-2">
+              <p className={`font-mono text-xl font-black tabular-nums ${insight.big ? "truncate text-sm font-black" : ""} ${insight.tone === "success" ? "text-success" : "text-foreground"}`}>{insight.value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{insight.sub}</p>
+            </div>
+          </Card>
+        ))}
+      </section>
       {!compact && (
         <>
           <div className="mt-6"><AnalyticsCharts data={[...dashboardChart]} currency="INR" /></div>
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="flex flex-col gap-4 rounded-none border border-border bg-card p-5 lg:col-span-2">
+          <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="flex flex-col gap-5 rounded-none border border-border bg-card p-6 lg:col-span-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold">Signals</h3>
                 <Badge>Updates automatically</Badge>
               </div>
-              <div className="flex flex-col gap-3">
+              <p className="-mt-3 text-xs text-muted-foreground">What happened while you were away — an invoice opened, a payment landed, an enquiry arrived.</p>
+              <div className="flex flex-col gap-4">
                 {dashboardSignals.map((signal) => (
                   <div key={signal.title} className="flex items-center justify-between gap-3 rounded-none border border-border bg-card p-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -789,7 +825,7 @@ export function WorkspaceView({ view, compact = false }: { view: WorkspacePrevie
  * it onto the institution palette. Inert: it is a reproduction, not a demo. */
 export function WorkspacePreview({ view, className = "" }: { view: WorkspacePreviewView; className?: string }) {
   return (
-    <div className={`workspace-preview ${className}`} data-workspace-preview={view} role="img" aria-label="Rive product preview">
+    <div className={`workspace-preview h-full overflow-hidden ${className}`} data-workspace-preview={view} role="img" aria-label="Rive product preview">
       <WorkspaceShell view={view}>
         <WorkspaceView view={view} />
       </WorkspaceShell>

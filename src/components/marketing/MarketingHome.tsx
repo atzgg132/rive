@@ -54,9 +54,9 @@ const DEPARTMENTS: readonly RegistryDepartment[] = [
 ];
 
 const FIGURES = [
-  { view: "dashboard", no: "Fig. 01", name: "The overview", caption: "Cash in, costs out, and the signals worth acting on — one morning read." },
-  { view: "revenue", no: "Fig. 02", name: "Revenue & invoices", caption: "What has been invoiced, collected, and needs attention across every currency." },
-  { view: "calendar", no: "Fig. 03", name: "The timeline", caption: "Project dates, Google Calendar sync, and a private Apple Calendar feed." },
+  { view: "dashboard", caption: "Cash in, costs out, and the signals worth acting on — one morning read." },
+  { view: "revenue", caption: "What has been invoiced, collected, and needs attention across every currency." },
+  { view: "calendar", caption: "Project dates, Google Calendar sync, and a private Apple Calendar feed." },
 ] as const;
 
 const SPECIFICATION: readonly { term: string; name: string; detail: ReactNode }[] = [
@@ -207,7 +207,6 @@ export function MarketingHome() {
                     <ResponsiveWorkspacePreview view={figure.view} />
                   </div>
                   <figcaption className="inst-plate__caption">
-                    <span className="inst-mono">{figure.no} — {figure.name}</span>
                     <span>{figure.caption}</span>
                   </figcaption>
                 </RevealOnScroll>
@@ -250,7 +249,6 @@ export function MarketingHome() {
                   </div>
                 </div>
                 <figcaption className="inst-plate__caption">
-                  <span className="inst-mono">Fig. 04 — Public page</span>
                   <span>Minimal pro · live render</span>
                 </figcaption>
               </figure>

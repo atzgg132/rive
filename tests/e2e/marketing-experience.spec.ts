@@ -91,7 +91,7 @@ test.describe("institution marketing experience", () => {
     const published = page.locator("section[aria-label='Published portfolio']");
     const publicPlate = published.locator(".inst-plate");
     await expect(publicPlate).toHaveCount(1);
-    await expect(publicPlate).toContainText("Public page");
+    await expect(publicPlate).toContainText("Minimal pro · live render");
     await expect(publicPlate.locator(".inst-specimen:visible")).toHaveJSProperty("inert", true);
     await expect(publicPlate.locator(".portfolio-footer").first()).toContainText("Built with Rive");
     await expect(published.getByTestId("portfolio-showcase")).toContainText("Settings");

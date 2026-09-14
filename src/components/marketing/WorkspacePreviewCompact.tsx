@@ -1,4 +1,4 @@
-import { CircleHelp, Menu, Search } from "lucide-react";
+import { CircleHelp, Menu, Moon, Search } from "lucide-react";
 import { RiveLogo } from "@/components/RiveLogo";
 import { WorkspaceView, type WorkspacePreviewView } from "./WorkspacePreview";
 
@@ -11,7 +11,9 @@ export function WorkspacePreviewCompact({ view, className = "" }: { view: Worksp
       <div className="flex h-full flex-col bg-background text-foreground">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4">
           <RiveLogo height={24} />
-          <div className="flex items-center gap-4 text-muted-foreground">
+          <div className="flex items-center gap-3.5 text-muted-foreground">
+            <span className="text-xs font-semibold">INR</span>
+            <Moon className="h-5 w-5" />
             <Search className="h-5 w-5" />
             <CircleHelp className="h-5 w-5" />
             <Menu className="h-5 w-5" />

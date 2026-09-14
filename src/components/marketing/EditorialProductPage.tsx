@@ -76,7 +76,7 @@ export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {
           <section key={chapter.title} className="inst-section" aria-label={chapter.title}>
             <div className="inst-container">
               <div className="inst-dept">
-                <span className="inst-mono">Fig. {String(index + 1).padStart(2, "0")} — {chapter.eyebrow}</span>
+                <span className="inst-mono">{chapter.eyebrow}</span>
                 <span className="inst-mono">Plate from the workspace</span>
               </div>
               <div className="inst-product-plate">
