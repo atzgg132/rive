@@ -57,7 +57,7 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
 };
 
 function Visual({ kind, index }: { kind: ProductPageKind; index: number }) {
-  if (kind === "portfolio" && index === 2) return <PortfolioShowcase />;
+  if (kind === "portfolio" && index === 2) return <div className="inst-plate__detail"><PortfolioShowcase /></div>;
   const views: Record<ProductPageKind, WorkspacePreviewView[]> = {
     clients: ["clients", "projects", "calendar"],
     agreements: ["agreements", "agreements", "revenue", "revenue"],

@@ -236,10 +236,12 @@ export function MarketingHome() {
             <figure className="inst-plate">
               <RevealOnScroll className="inst-reveal">
                 <div className="inst-plate__frame">
-                  <PortfolioShowcase />
+                  <div className="inst-plate__detail">
+                    <PortfolioShowcase />
+                  </div>
                 </div>
                 <figcaption className="inst-plate__caption">
-                  <span className="inst-mono">Fig. 04 — Portfolio</span>
+                  <span className="inst-mono">Fig. 04 — Portfolio, detail</span>
                   <span>Theme and layout are the studio&rsquo;s own.</span>
                 </figcaption>
               </RevealOnScroll>

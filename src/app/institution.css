@@ -171,6 +171,8 @@
   background: var(--inst-paper-2);
 }
 .inst-plate__frame { padding: clamp(0.5rem, 1.5vw, 1rem); }
+.inst-plate__detail { position: relative; max-height: clamp(28rem, 58vh, 36rem); overflow: hidden; }
+.inst-plate__detail::after { content: ""; position: absolute; inset-inline: 0; bottom: 0; height: 6rem; background: linear-gradient(to top, #f7f7f4 8%, transparent); pointer-events: none; }
 .inst-plate__caption {
   display: flex;
   align-items: baseline;
