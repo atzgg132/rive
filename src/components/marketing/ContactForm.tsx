@@ -55,7 +55,7 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
     return (
       <div className="grid min-h-[31rem] place-items-center border border-[var(--inst-ink)] bg-[var(--inst-paper-2)] p-8 text-center">
         <div>
-          <span className="inst-mono" style={{ color: "var(--inst-ink-soft)" }}><span aria-hidden="true" className="inst-mark inst-mark--circle inst-mark--red" style={{ marginRight: "0.6em" }} />Filed</span>
+          <span className="inst-mono" style={{ color: "var(--inst-ink-soft)" }}><span aria-hidden="true" className="inst-mark inst-mark--circle inst-mark--accent" style={{ marginRight: "0.6em" }} />Filed</span>
           <h2 className="mt-4 text-2xl font-bold text-[var(--inst-ink)]">{copy.successTitle}</h2>
           <p className="mt-3 text-sm text-[var(--inst-ink-soft)]">{copy.successBody}</p>
         </div>
@@ -86,7 +86,7 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
         {copy.messageLabel}
         <textarea required minLength={10} name="message" rows={7} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} className={`${fieldClassName} resize-y py-3`} placeholder={copy.messagePlaceholder} />
       </label>
-      {status === "error" ? <p role="alert" className="border border-[var(--inst-red)] p-3 text-sm text-[var(--inst-red-ink)]">{error}</p> : null}
+      {status === "error" ? <p role="alert" className="border border-[var(--inst-danger)] p-3 text-sm text-[var(--inst-danger)]">{error}</p> : null}
       <button type="submit" disabled={status === "loading"} className="marketing-focus inst-btn disabled:translate-y-0 disabled:opacity-60">
         {status === "loading" ? <><Loader2 className="h-4 w-4 animate-spin" />{copy.submittingLabel}</> : <>{copy.submitLabel}<Send className="h-4 w-4" /></>}
       </button>

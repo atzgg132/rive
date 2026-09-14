@@ -103,7 +103,7 @@ export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {
         <section className="inst-section" aria-label="Clarification">
           <div className="inst-container">
             <div className="inst-panel">
-              <span className="inst-mono inst-panel__label"><InstMark mark="triangle" red />On the record</span>
+              <span className="inst-mono inst-panel__label"><InstMark mark="triangle" accent />On the record</span>
               <h2 className="inst-panel__title">{content.clarification.title}</h2>
               <p className="inst-panel__body" style={{ marginBottom: 0 }}>{content.clarification.body}</p>
             </div>

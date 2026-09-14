@@ -26,7 +26,7 @@ export default function PricingPage() {
         <div className="inst-container inst-admit">
           <div className="inst-admit__fee">
             <div className="inst-admit__fee-head">
-              <span className="inst-mono"><InstMark mark="square" red />Open beta</span>
+              <span className="inst-mono"><InstMark mark="square" accent />Open beta</span>
               <span className="inst-mono">No card</span>
             </div>
             <span className="inst-admit__fee-value">Free</span>
@@ -41,7 +41,7 @@ export default function PricingPage() {
               {included.map((item, index) => (
                 <li key={item}>
                   <span className="inst-mono">{String(index + 1).padStart(2, "0")}</span>
-                  <Check className="h-4 w-4" aria-hidden="true" style={{ color: "var(--inst-red)" }} />
+                  <Check className="h-4 w-4" aria-hidden="true" style={{ color: "var(--inst-accent)" }} />
                   {item}
                 </li>
               ))}

@@ -13,7 +13,7 @@ export type RecordPhase = 0 | 1 | 2 | 3 | 4;
 
 /** The Record — a registry card that accumulates one field per department.
  * `phase` is how many departments it has passed (0 = empty file). The
- * agreement field lands as a red stamp; everything else registers in ink. */
+ * agreement field lands as a blue stamp; everything else registers in ink. */
 export function RecordArtifact({ phase, inline = false, className }: { phase: number; inline?: boolean; className?: string }) {
   return (
     <div className={cn("inst-record", inline && "inst-record--inline", className)} data-phase={phase} aria-label="Sample client record, accumulating fields as the page progresses" role="img">
@@ -27,7 +27,7 @@ export function RecordArtifact({ phase, inline = false, className }: { phase: nu
           const stamped = filled && field.key === "agreement";
           return (
             <div key={field.key} className="inst-record__field" data-state={filled ? (stamped ? "stamped" : "filled") : "pending"}>
-              <span className="inst-mono"><InstMark mark={field.mark} red={stamped} />{field.label}</span>
+              <span className="inst-mono"><InstMark mark={field.mark} accent={stamped} />{field.label}</span>
               <span className="inst-record__value">{filled ? field.value : "—"}</span>
             </div>
           );

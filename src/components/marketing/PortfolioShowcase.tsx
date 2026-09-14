@@ -3,7 +3,7 @@ import { samplePortfolioContent } from "@/content/marketing/portfolio";
 import type { PortfolioTheme } from "@/utils/portfolio";
 
 const sampleTheme: PortfolioTheme = {
-  accent: "#d0341c",
+  accent: "#1d4ed8",
   mode: "light",
   radius: "soft",
 };

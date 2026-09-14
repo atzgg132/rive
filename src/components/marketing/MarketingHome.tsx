@@ -152,33 +152,38 @@ export function MarketingHome() {
       <section data-testid="marketing-hero" className="inst-titlepage">
         <div className="inst-container">
           <RevealOnScroll className="inst-reveal inst-titlepage__index" y={12}>
-            <span className="inst-mono"><InstMark mark="circle" red />For independent businesses</span>
+            <span className="inst-mono"><InstMark mark="circle" accent />For independent businesses</span>
             <span className="inst-mono">Workspace register — Vol. 01</span>
             <span className="inst-mono">Open beta</span>
           </RevealOnScroll>
           <div className="inst-titlepage__body">
-            <RevealOnScroll className="inst-reveal" delay={0.05}>
-              <h1 className="inst-display inst-titlepage__statement">
-                One record<br />for the whole<br />business.
-              </h1>
-            </RevealOnScroll>
-            <RevealOnScroll className="inst-reveal inst-titlepage__foot" delay={0.12} y={16}>
-              <div className="inst-titlepage__abstract">
+            <div className="inst-titlepage__lead">
+              <RevealOnScroll className="inst-reveal" delay={0.05}>
+                <h1 className="inst-display inst-titlepage__statement">
+                  One <em>record</em><br />for the whole<br />business.
+                </h1>
+              </RevealOnScroll>
+              <RevealOnScroll className="inst-reveal inst-titlepage__abstract" delay={0.1} y={14}>
                 <p>
                   Rive keeps every client, project, agreement, invoice, and deadline on a single
                   record — the workspace for freelancers and independent businesses who manage
                   several clients at once.
                 </p>
+              </RevealOnScroll>
+            </div>
+            <RevealOnScroll className="inst-reveal inst-titlepage__specimen" delay={0.12} y={18}>
+              <span className="inst-mono inst-titlepage__specimen-tag">Specimen — Field no. 001</span>
+              <RecordArtifact phase={4} />
+              <span className="inst-mono inst-titlepage__specimen-note">Aster House — registered in full</span>
+            </RevealOnScroll>
+            <RevealOnScroll className="inst-reveal inst-titlepage__foot" delay={0.18} y={14}>
+              <div className="inst-titlepage__actions">
+                <MarketingButton href="/register">Start free</MarketingButton>
+                <MarketingLink href="#registry">Read the register</MarketingLink>
               </div>
-              <div>
-                <div className="inst-titlepage__actions">
-                  <MarketingButton href="/register">Start free</MarketingButton>
-                  <MarketingLink href="#registry">Read the register</MarketingLink>
-                </div>
-                <p className="inst-titlepage__assurance inst-mono">
-                  <InstMark mark="square" red />Free during beta. No credit card required.
-                </p>
-              </div>
+              <p className="inst-titlepage__assurance inst-mono">
+                <InstMark mark="square" accent />Free during beta. No credit card required.
+              </p>
             </RevealOnScroll>
           </div>
         </div>
@@ -213,7 +218,7 @@ export function MarketingHome() {
       {/* — Manifesto —————————————————————————————————————————— */}
       <section className="inst-band inst-band--ink inst-manifesto marketing-deferred-section" aria-label="Statement">
         <div className="inst-container">
-          <p className="inst-mono inst-manifesto__kicker"><InstMark mark="semi" red />The office of one</p>
+          <p className="inst-mono inst-manifesto__kicker"><InstMark mark="semi" accent />The office of one</p>
           <ManifestoLine text="The work is the record. The record is the business." />
           <p className="inst-manifesto__note">
             An independent business is a long document — who you work for, what you promised,
@@ -255,7 +260,7 @@ export function MarketingHome() {
       {/* — Dept. 04 · Specification ——————————————————————————— */}
       <section className="inst-section marketing-deferred-section" aria-label="Specification">
         <div className="inst-container">
-          <DeptRule index="04" name="Specification" note="Red ink marks a boundary, not a sales line" />
+          <DeptRule index="04" name="Specification" note="Blue ink marks a boundary, not a sales line" />
           <h2 className="inst-display inst-display--section inst-section__head">Capabilities and limits, on the record.</h2>
           <RevealOnScroll className="inst-reveal">
             <div className="inst-register">
@@ -276,7 +281,7 @@ export function MarketingHome() {
             <RevealOnScroll className="inst-reveal">
               <div className="inst-admit__fee">
                 <div className="inst-admit__fee-head">
-                  <span className="inst-mono"><InstMark mark="square" red />Fee schedule</span>
+                  <span className="inst-mono"><InstMark mark="square" accent />Fee schedule</span>
                   <span className="inst-mono">Beta</span>
                 </div>
                 <span className="inst-admit__fee-value">Free</span>
@@ -318,7 +323,7 @@ export function MarketingHome() {
       <section className="inst-band inst-band--ink inst-closing marketing-deferred-section" aria-label="Begin">
         <div className="inst-container inst-closing__grid">
           <RevealOnScroll className="inst-reveal">
-            <p className="inst-mono"><InstMark mark="semi" red />File no. 001 awaits a name</p>
+            <p className="inst-mono"><InstMark mark="semi" accent />File no. 001 awaits a name</p>
             <h2 className="inst-display inst-display--section" style={{ marginTop: "1rem" }}>
               Start your record.
             </h2>

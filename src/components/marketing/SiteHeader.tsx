@@ -25,7 +25,7 @@ export function SiteHeader() {
     <header data-testid="site-header" className="inst-masthead">
       <div className="inst-masthead__inner">
         <Link href="/" className="marketing-focus inline-flex" aria-label="Rive home" onClick={() => setMobileOpen(false)}>
-          <RiveLogo height={26} color="#181511" accentColor="#d0341c" />
+          <RiveLogo height={26} color="#181511" />
         </Link>
 
         <nav aria-label="Primary navigation" className="inst-masthead__nav">

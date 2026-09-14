@@ -11,7 +11,7 @@ export default function ContactPage() {
     <section className="inst-reading">
       <div className="inst-container">
         <div className="inst-reading__head">
-          <span className="inst-mono"><InstMark mark="circle" red />{contactContent.eyebrow}</span>
+          <span className="inst-mono"><InstMark mark="circle" accent />{contactContent.eyebrow}</span>
           <h1 className="inst-display" style={{ marginTop: "1.25rem" }}>{contactContent.title}</h1>
           <p className="inst-body">{contactContent.intro}</p>
         </div>

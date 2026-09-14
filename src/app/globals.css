@@ -179,13 +179,13 @@ section[id] {
   --secondary-foreground: 24 21 17;
   --muted: 234 230 217;
   --muted-foreground: 85 80 63;
-  --accent: 208 52 28;
+  --accent: 29 78 216;
   --accent-foreground: 247 245 237;
   --border: 24 21 17;
   --input: 24 21 17;
-  --ring: 208 52 28;
+  --ring: 29 78 216;
   --brand-wordmark: 24 21 17;
-  --brand-accent: 208 52 28;
+  --brand-accent: 29 78 216;
   --shadow-card: 0 1px 0 rgb(24 21 17 / 0.05), 0 18px 50px rgb(24 21 17 / 0.08);
   --shadow-overlay: 0 28px 80px rgb(24 21 17 / 0.18);
 
@@ -193,18 +193,18 @@ section[id] {
   --surface-raised: #fdfcf7;
   --surface-glass: rgb(24 21 17 / 0.04);
   --stroke-hairline: var(--inst-hairline);
-  --stroke-lit: rgb(208 52 28 / 0.35);
+  --stroke-lit: rgb(29 78 216 / 0.35);
   --stroke-highlight: rgb(255 255 255 / 0.7);
-  --brand-600: #a8281a;
-  --brand-500: #d0341c;
-  --brand-400: #d0341c;
-  --brand-cyan: #a8281a;
-  --glow-primary: radial-gradient(circle at center, rgb(208 52 28 / 0.08) 0%, rgb(208 52 28 / 0.035) 42%, transparent 70%);
+  --brand-600: #1e40af;
+  --brand-500: #1d4ed8;
+  --brand-400: #1d4ed8;
+  --brand-cyan: #1e40af;
+  --glow-primary: radial-gradient(circle at center, rgb(29 78 216 / 0.08) 0%, rgb(29 78 216 / 0.035) 42%, transparent 70%);
   --noise-opacity: 0.03;
   --grid-line: rgb(24 21 17 / 0.055);
   --hero-word-from: #181511;
-  --hero-word-via: #d0341c;
-  --hero-word-to: #a8281a;
+  --hero-word-via: #1d4ed8;
+  --hero-word-to: #1e40af;
   --bg-primary: #f7f5ed;
   --bg-secondary: #fdfcf7;
   --text-primary: #181511;
@@ -549,12 +549,12 @@ h1, h2 {
    quiet signal. Most of the long cycle is deliberately motionless. */
 @keyframes riveLogoSignal {
   0%, 72%, 88%, 100% {
-    filter: drop-shadow(0 0 0 rgb(208 52 28 / 0));
+    filter: drop-shadow(0 0 0 rgb(29 78 216 / 0));
     opacity: 1;
     transform: translateY(0) scale(1);
   }
   79% {
-    filter: drop-shadow(0 0 3px rgb(208 52 28 / 0.3));
+    filter: drop-shadow(0 0 3px rgb(29 78 216 / 0.3));
     opacity: 0.9;
     transform: translateY(-0.035em) scale(1.08);
   }

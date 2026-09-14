@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 export type RecordMark = "circle" | "square" | "triangle" | "diamond" | "semi";
 
 /** Geometric department mark — the institution's only ornament. */
-export function InstMark({ mark, red = false, className }: { mark: RecordMark; red?: boolean; className?: string }) {
-  return <span aria-hidden="true" className={cn("inst-mark", `inst-mark--${mark}`, red && "inst-mark--red", className)} />;
+export function InstMark({ mark, accent = false, className }: { mark: RecordMark; accent?: boolean; className?: string }) {
+  return <span aria-hidden="true" className={cn("inst-mark", `inst-mark--${mark}`, accent && "inst-mark--accent", className)} />;
 }
 
 /** Department rule — the heavy 2px rule carrying section signage. */
@@ -21,7 +21,7 @@ export function DeptRule({ index, name, note, className }: { index: string; name
 }
 
 /** One row of the specification register: capability, its name, and the
- * honest detail (limits rendered in red ink via <em>). */
+ * honest detail (limits rendered in blue ink via <em>). */
 export function RegisterRow({ term, name, detail }: { term: ReactNode; name: ReactNode; detail: ReactNode }) {
   return (
     <div className="inst-register__row">

@@ -7,12 +7,12 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div data-surface="marketing" className="inst-standalone-auth">
       <header>
-        <Link href="/" className="marketing-focus inline-flex" aria-label="Rive home"><RiveLogo height={28} color="#181511" accentColor="#d0341c" /></Link>
+        <Link href="/" className="marketing-focus inline-flex" aria-label="Rive home"><RiveLogo height={28} color="#181511" /></Link>
         <Link href="/login" className="marketing-focus">Log in</Link>
       </header>
       <main>
         <section className="inst-standalone-auth__art">
-          <p className="inst-mono"><InstMark mark="circle" red />Rive account</p>
+          <p className="inst-mono"><InstMark mark="circle" accent />Rive account</p>
           <h2>Your business,<br />back on the record.</h2>
           <p className="inst-mono">Secure account access</p>
         </section>

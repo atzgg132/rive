@@ -63,7 +63,7 @@ export default async function MigrateToRivePage() {
                 ))}
               </div>
               <div className="inst-panel" style={{ marginTop: "1.75rem" }}>
-                <span className="inst-mono inst-panel__label"><InstMark mark="triangle" red />Boundaries stated up front</span>
+                <span className="inst-mono inst-panel__label"><InstMark mark="triangle" accent />Boundaries stated up front</span>
                 <p className="inst-panel__body" style={{ marginBottom: 0 }}>
                   Importing is not a direct integration with another business tool. Vendor-specific
                   compatibility is not guaranteed. Imported records remain after commit — retrying an

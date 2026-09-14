@@ -30,7 +30,7 @@ export function AuthOverlay({ view, params, startPending, busy, onOpenChange, on
             {dedicated ? (
               <div className="inst-auth-art">
                 <div className="inst-auth-art__mast">
-                  <RiveLogo height={26} color="#181511" accentColor="#d0341c" />
+                  <RiveLogo height={26} color="#181511" />
                   <span className="inst-mono">{copy.kicker}</span>
                 </div>
                 <div>
@@ -38,7 +38,7 @@ export function AuthOverlay({ view, params, startPending, busy, onOpenChange, on
                   <p className="inst-auth-art__body">{copy.body}</p>
                 </div>
                 <RecordArtifact phase={4} inline className="inst-auth-art__record" />
-                <p className="inst-mono"><InstMark mark="circle" red />Free during open beta. No credit card.</p>
+                <p className="inst-mono"><InstMark mark="circle" accent />Free during open beta. No credit card.</p>
               </div>
             ) : (
               <BaseDialog.Close disabled={busy} className="marketing-focus inst-auth-close" aria-label="Close"><X className="h-4 w-4" /></BaseDialog.Close>

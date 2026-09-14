@@ -11,13 +11,13 @@ export function SiteFooter() {
         <div className="inst-colophon__top">
           <div className="inst-colophon__lead">
             <Link href="/" className="marketing-focus inline-flex" aria-label="Rive home">
-              <RiveLogo height={34} color="#181511" accentColor="#d0341c" />
+              <RiveLogo height={34} color="#181511" />
             </Link>
             <p>{footerCopy.description}</p>
           </div>
           <div>
             <span className="inst-colophon__status inst-mono">
-              <InstMark mark="circle" red />{footerCopy.status}
+              <InstMark mark="circle" accent />{footerCopy.status}
             </span>
           </div>
         </div>

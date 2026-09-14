@@ -14,7 +14,7 @@ export function ReadingHero({ eyebrow, title, intro }: { eyebrow: string; title:
   return (
     <section className="inst-reading">
       <div className="inst-container inst-reading__head">
-        <span className="inst-mono"><InstMark mark="circle" red />{eyebrow}</span>
+        <span className="inst-mono"><InstMark mark="circle" accent />{eyebrow}</span>
         <h1 className="inst-display" style={{ marginTop: "1.25rem" }}>{title}</h1>
         {intro ? <p className="inst-body">{intro}</p> : null}
       </div>
@@ -89,7 +89,7 @@ export function ProseShell({ eyebrow, title, children, updated }: { eyebrow: str
     <section className="inst-reading">
       <div className="inst-container">
         <div className="inst-reading__head">
-          <span className="inst-mono"><InstMark mark="circle" red />{eyebrow}</span>
+          <span className="inst-mono"><InstMark mark="circle" accent />{eyebrow}</span>
           <h1 className="inst-display" style={{ marginTop: "1.25rem" }}>{title}</h1>
           {updated ? <p className="inst-mono" style={{ marginTop: "1.25rem", color: "var(--inst-ink-faint)" }}>{updated}</p> : null}
         </div>
