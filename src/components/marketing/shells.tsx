@@ -47,16 +47,16 @@ export function MarketingPage({ content }: { content: MarketingPageContent }) {
         {content.sections.map((section, sectionIndex) => (
           <section key={section.title} className="inst-section">
             <div className="inst-container">
-              <DeptRule index={String(sectionIndex + 1).padStart(2, "0")} name={section.eyebrow ?? `Entry ${sectionIndex + 1}`} />
+              <DeptRule name={section.eyebrow ?? `Entry ${sectionIndex + 1}`} />
               <div className="inst-entry">
                 <h2 className="inst-display inst-display--sub inst-entry__title">{section.title}</h2>
                 <div className="inst-entry__body">
                   {section.body ? <p className="inst-body">{section.body}</p> : null}
                   {section.cards?.length ? (
                     <div className="inst-entry__cards">
-                      {section.cards.map((card, index) => (
+                      {section.cards.map((card) => (
                         <article key={card.title} className="inst-panel">
-                          <span className="inst-mono inst-panel__label">{String(index + 1).padStart(2, "0")}{card.meta ? ` — ${card.meta}` : ""}</span>
+                          {card.meta ? <span className="inst-mono inst-panel__label">{card.meta}</span> : null}
                           <h3 className="inst-entry__card-title">{card.title}</h3>
                           <p className="inst-entry__card-body">{card.body}</p>
                           {card.href ? <Link href={card.href} className="marketing-focus inst-link">Read more <ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link> : null}
@@ -66,7 +66,7 @@ export function MarketingPage({ content }: { content: MarketingPageContent }) {
                   ) : null}
                   {section.bullets?.length ? (
                     <ol className="inst-admit__list">
-                      {section.bullets.map((bullet, index) => <li key={bullet}><span className="inst-mono">{String(index + 1).padStart(2, "0")}</span><p>{bullet}</p></li>)}
+                      {section.bullets.map((bullet) => <li key={bullet}><span className="inst-mono" aria-hidden="true">—</span><p>{bullet}</p></li>)}
                     </ol>
                   ) : null}
                 </div>

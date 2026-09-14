@@ -38,9 +38,8 @@ export default function PricingPage() {
           <div>
             <h2 className="inst-display inst-display--sub">One workspace for the person running the business.</h2>
             <ul className="inst-admit__list">
-              {included.map((item, index) => (
+              {included.map((item) => (
                 <li key={item}>
-                  <span className="inst-mono">{String(index + 1).padStart(2, "0")}</span>
                   <Check className="h-4 w-4" aria-hidden="true" style={{ color: "var(--inst-accent)" }} />
                   {item}
                 </li>

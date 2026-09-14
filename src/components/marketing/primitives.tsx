@@ -11,10 +11,10 @@ export function InstMark({ mark, accent = false, className }: { mark: RecordMark
 }
 
 /** Department rule — the heavy 2px rule carrying section signage. */
-export function DeptRule({ index, name, note, className }: { index: string; name: string; note?: string; className?: string }) {
+export function DeptRule({ name, note, className }: { name: string; note?: string; className?: string }) {
   return (
     <div className={cn("inst-dept", className)}>
-      <span className="inst-mono">Dept. {index} — {name}</span>
+      <span className="inst-mono">{name}</span>
       {note ? <span className="inst-mono">{note}</span> : null}
     </div>
   );
@@ -91,8 +91,8 @@ export function LogoMarquee({ items, label }: { items: readonly string[]; label:
 export function FeatureList({ items, className }: { items: readonly string[]; className?: string }) {
   return (
     <ul className={cn("inst-admit__list", className)}>
-      {items.map((item, index) => (
-        <li key={item}><span className="inst-mono">{String(index + 1).padStart(2, "0")}</span>{item}</li>
+      {items.map((item) => (
+        <li key={item}><span className="inst-mono" aria-hidden="true">—</span>{item}</li>
       ))}
     </ul>
   );

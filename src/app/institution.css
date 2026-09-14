@@ -572,7 +572,6 @@
 }
 .inst-dept-row__fig .inst-mark { width: 0.85rem; height: 0.85rem; color: var(--inst-ink); }
 .inst-dept-row[data-current="true"] .inst-dept-row__fig .inst-mark { color: var(--inst-accent); }
-.inst-dept-row__fig .inst-mono { font-size: 0.625rem; }
 .inst-dept-row__copy h3 { font-size: clamp(1.5rem, 2.6vw, 2.1rem); }
 .inst-dept-row__copy p { margin-top: 0.75rem; max-width: 46ch; color: var(--inst-ink-soft); line-height: 1.6; }
 .inst-dept-row__copy .inst-link { margin-top: 1rem; }

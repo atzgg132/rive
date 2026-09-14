@@ -23,9 +23,9 @@ export function SiteFooter() {
         </div>
 
         <nav className="inst-colophon__nav" aria-label="Footer navigation">
-          {footerNav.map((group, groupIndex) => (
+          {footerNav.map((group) => (
             <div key={group.label}>
-              <span className="inst-mono">{String(groupIndex + 1).padStart(2, "0")} / {group.label}</span>
+              <span className="inst-mono">{group.label}</span>
               <ul>
                 {group.items.map((item) => (
                   <li key={item.href}>

@@ -170,9 +170,9 @@ const studioSections = [
 ] as const;
 
 const studioWork = [
-  { index: "01", title: "Website launch", meta: "Aster House · Product design", visibility: "Public", tone: "success" as BadgeVariant },
-  { index: "02", title: "Brand system", meta: "Northline Studio · Brand identity", visibility: "Public", tone: "success" as BadgeVariant },
-  { index: "03", title: "Research sprint", meta: "Field Notes · UX research", visibility: "Private", tone: "muted" as BadgeVariant },
+  { title: "Website launch", meta: "Aster House · Product design", visibility: "Public", tone: "success" as BadgeVariant },
+  { title: "Brand system", meta: "Northline Studio · Brand identity", visibility: "Public", tone: "success" as BadgeVariant },
+  { title: "Research sprint", meta: "Field Notes · UX research", visibility: "Private", tone: "muted" as BadgeVariant },
 ] as const;
 
 export function initials(name: string) {
@@ -787,8 +787,7 @@ function PortfolioView({ compact }: ViewProps) {
           <h3 className="mt-1 text-lg font-extrabold tracking-tight">Choose the work that represents you.</h3>
           <div className="mt-4 flex flex-col gap-2.5">
             {studioWork.map((work) => (
-              <div key={work.index} className="flex items-center gap-3 rounded-none border border-border p-3">
-                <span className="font-mono text-xs font-extrabold tabular-nums text-primary">{work.index}</span>
+              <div key={work.title} className="flex items-center gap-3 rounded-none border border-border p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{work.title}</p>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">{work.meta}</p>

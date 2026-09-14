@@ -154,7 +154,7 @@ export function MarketingHome() {
         <div className="inst-titlepage__bg" aria-hidden="true">
           <div className="inst-titlepage__rules" />
           <div className="inst-titlepage__ghost">Record.</div>
-          <div className="inst-titlepage__ghost inst-titlepage__ghost--small">Nº 001 —</div>
+          <div className="inst-titlepage__ghost inst-titlepage__ghost--small">FILED —</div>
         </div>
         <div className="inst-container">
           <RevealOnScroll className="inst-reveal inst-titlepage__index" y={12}>
@@ -197,7 +197,7 @@ export function MarketingHome() {
       {/* — Dept. 02 · Figures ————————————————————————————————— */}
       <section className="inst-section inst-figures marketing-deferred-section" aria-label="Workspace figures">
         <div className="inst-container">
-          <DeptRule index="02" name="Figures" note="Plates from the real workspace · sample studio" />
+          <DeptRule name="Figures" note="Plates from the real workspace · sample studio" />
           <h2 className="inst-display inst-display--section inst-section__head">The workspace, on record.</h2>
           <div className="inst-figures__grid">
             {FIGURES.map((figure, index) => (
@@ -231,7 +231,7 @@ export function MarketingHome() {
       {/* — Dept. 03 · The published record ————————————————————— */}
       <section className="inst-section inst-figures marketing-deferred-section" aria-label="Published portfolio">
         <div className="inst-container">
-          <DeptRule index="03" name="The published record" note="Drafted in the workspace — set in public" />
+          <DeptRule name="The published record" note="Drafted in the workspace — set in public" />
           <h2 className="inst-display inst-display--section inst-section__head">The record, set in public.</h2>
           <div className="inst-figures__grid inst-figures__grid--doc">
             <RevealOnScroll className="inst-reveal">
@@ -281,7 +281,7 @@ export function MarketingHome() {
       {/* — Dept. 04 · Specification ——————————————————————————— */}
       <section className="inst-section marketing-deferred-section" aria-label="Specification">
         <div className="inst-container">
-          <DeptRule index="04" name="Specification" note="Blue ink marks a boundary, not a sales line" />
+          <DeptRule name="Specification" note="Blue ink marks a boundary, not a sales line" />
           <h2 className="inst-display inst-display--section inst-section__head">Capabilities and limits, on the record.</h2>
           <RevealOnScroll className="inst-reveal">
             <div className="inst-register">
@@ -296,7 +296,7 @@ export function MarketingHome() {
       {/* — Dept. 05 · Admissions ————————————————————————————— */}
       <section className="inst-section marketing-deferred-section" aria-label="Admissions">
         <div className="inst-container">
-          <DeptRule index="05" name="Admissions" note="Open registration during the beta" />
+          <DeptRule name="Admissions" note="Open registration during the beta" />
           <h2 className="inst-display inst-display--section inst-section__head">No fee. No card. One operator.</h2>
           <div className="inst-admit">
             <RevealOnScroll className="inst-reveal">
@@ -315,9 +315,9 @@ export function MarketingHome() {
             <RevealOnScroll className="inst-reveal" delay={0.06}>
               <div>
                 <ul className="inst-admit__list">
-                  {ADMISSIONS_INCLUDES.map((item, index) => (
+                  {ADMISSIONS_INCLUDES.map((item) => (
                     <li key={item}>
-                      <span className="inst-mono">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="inst-mono" aria-hidden="true">—</span>
                       {item}
                     </li>
                   ))}
@@ -334,7 +334,7 @@ export function MarketingHome() {
       {/* — Dept. 06 · Enquiries ——————————————————————————————— */}
       <section className="inst-section marketing-deferred-section" aria-label="Enquiries">
         <div className="inst-container">
-          <DeptRule index="06" name="Enquiries" note="Answered on the record" />
+          <DeptRule name="Enquiries" note="Answered on the record" />
           <h2 className="inst-display inst-display--section inst-section__head">Questions asked most.</h2>
           <FaqAccordion items={ENQUIRIES} />
         </div>
@@ -344,7 +344,7 @@ export function MarketingHome() {
       <section className="inst-band inst-band--ink inst-closing marketing-deferred-section" aria-label="Begin">
         <div className="inst-container inst-closing__grid">
           <RevealOnScroll className="inst-reveal">
-            <p className="inst-mono"><InstMark mark="semi" accent />The next entry — field no. 002</p>
+            <p className="inst-mono"><InstMark mark="semi" accent />The next entry</p>
             <h2 className="inst-display inst-display--closing" style={{ marginTop: "1rem" }}>
               Start your record.
             </h2>

@@ -74,7 +74,7 @@ export function RecordJourney({ departments }: RecordJourneyProps) {
   return (
     <section ref={sectionRef} id="registry" data-testid="record-journey" className="inst-section inst-journey marketing-deferred-section">
       <div className="inst-container">
-        <DeptRule index="01" name="The registry" note="Sample record shown" />
+        <DeptRule name="The registry" note="Sample record shown" />
         <h2 className="inst-display inst-display--section inst-section__head">One file, every department.</h2>
         <div className="inst-journey__grid">
           <div className="inst-journey__depts">
@@ -89,7 +89,6 @@ export function RecordJourney({ departments }: RecordJourneyProps) {
               >
                 <div className="inst-dept-row__fig" aria-hidden="true">
                   <InstMark mark={dept.mark} />
-                  <span className="inst-mono">0{index + 1}</span>
                 </div>
                 <div className="inst-dept-row__copy">
                   <h3>{dept.name}</h3>
