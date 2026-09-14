@@ -402,10 +402,10 @@ test("active navigation and primary badges meet the contrast target", () => {
   assert.match(css, /\[data-dashboard-shell\] a\.bg-accent\.text-primary[\s\S]*color: rgb\(var\(--accent-foreground\)\)/);
 });
 
-test("auth fields keep the edition border alpha across the shared input utility", () => {
+test("auth fields keep the institution border alpha across the shared input utility", () => {
   const css = readFileSync(join(ROOT, "src/app/globals.css"), "utf8");
   assert.match(css, /\[data-surface="marketing"\] \[data-surface="auth-overlay"\] \.border-input/);
-  assert.match(css, /--input: 12 30 54;/);
+  assert.match(css, /--input: 24 21 17;/);
   assert.match(css, /--input-alpha: 0\.2;/);
-  assert.match(css, /border-color: var\(--edition-line\);/);
+  assert.match(css, /border-color: var\(--inst-hairline\);/);
 });

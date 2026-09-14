@@ -1,9 +1,9 @@
-import Link from "next/link";
-import { ArrowRight, Check } from "lucide-react";
-import { PortfolioPublication } from "@/components/marketing/WorkingEditionStage";
+import { InstMark } from "@/components/marketing/primitives";
+import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
+import { PortfolioShowcase } from "@/components/marketing/PortfolioShowcase";
 import { type WorkspacePreviewView } from "@/components/marketing/WorkspacePreview";
 import { ResponsiveWorkspacePreview } from "@/components/marketing/ResponsiveWorkspacePreview";
-import { EditorialLabel, MarketingButton } from "@/components/marketing/primitives";
+import { RevealOnScroll } from "@/components/marketing/RevealOnScroll";
 
 export type ProductPageKind = "clients" | "agreements" | "portfolio";
 
@@ -57,7 +57,7 @@ const copy: Record<ProductPageKind, ProductPageCopy> = {
 };
 
 function Visual({ kind, index }: { kind: ProductPageKind; index: number }) {
-  if (kind === "portfolio" && index === 2) return <PortfolioPublication />;
+  if (kind === "portfolio" && index === 2) return <PortfolioShowcase />;
   const views: Record<ProductPageKind, WorkspacePreviewView[]> = {
     clients: ["clients", "projects", "calendar"],
     agreements: ["agreements", "agreements", "revenue", "revenue"],
@@ -70,14 +70,47 @@ export function EditorialProductPage({ kind }: { kind: ProductPageKind }) {
   const content = copy[kind];
   return (
     <>
-      <section className="edition-product-hero"><div className="edition-container"><EditorialLabel>{content.eyebrow}</EditorialLabel><h1 className="edition-display">{content.title}</h1><div><p>{content.intro}</p><MarketingButton href="/register">Start free</MarketingButton></div></div></section>
-      <div className="edition-product-chapters">
+      <ReadingHero eyebrow={content.eyebrow} title={content.title} intro={content.intro} />
+      <div>
         {content.chapters.map((chapter, index) => (
-          <section key={chapter.title} className="edition-product-chapter"><div className="edition-container"><div className="edition-product-chapter__copy"><EditorialLabel inverse>{chapter.eyebrow}</EditorialLabel><h2 className="edition-display">{chapter.title}</h2><p>{chapter.body}</p>{chapter.note ? <small>{chapter.note}</small> : null}</div><div className="edition-product-stage"><Visual kind={kind} index={index} /></div></div></section>
+          <section key={chapter.title} className="inst-section" aria-label={chapter.title}>
+            <div className="inst-container">
+              <div className="inst-dept">
+                <span className="inst-mono">Fig. {String(index + 1).padStart(2, "0")} — {chapter.eyebrow}</span>
+                <span className="inst-mono">Plate from the workspace</span>
+              </div>
+              <div className="inst-product-plate">
+                <RevealOnScroll className="inst-reveal">
+                  <div className="inst-entry">
+                    <div>
+                      <h2 className="inst-display inst-display--sub inst-entry__title">{chapter.title}</h2>
+                      <p className="inst-body" style={{ marginTop: "1rem" }}>{chapter.body}</p>
+                      {chapter.note ? <p className="inst-admit__note">{chapter.note}</p> : null}
+                    </div>
+                    <figure className="inst-plate">
+                      <div className="inst-plate__frame">
+                        <Visual kind={kind} index={index} />
+                      </div>
+                    </figure>
+                  </div>
+                </RevealOnScroll>
+              </div>
+            </div>
+          </section>
         ))}
       </div>
-      {content.clarification ? <section className="edition-clarification"><div className="edition-container"><Check className="h-6 w-6" /><h2>{content.clarification.title}</h2><p>{content.clarification.body}</p></div></section> : null}
-      <section className="edition-page-cta"><div className="edition-container"><h2 className="edition-display">{content.cta}</h2><div><MarketingButton href="/register">Create your free account</MarketingButton><Link href="/#product" className="marketing-focus edition-text-link">See the product overview <ArrowRight className="h-4 w-4" /></Link></div></div></section>
+      {content.clarification ? (
+        <section className="inst-section" aria-label="Clarification">
+          <div className="inst-container">
+            <div className="inst-panel">
+              <span className="inst-mono inst-panel__label"><InstMark mark="triangle" red />On the record</span>
+              <h2 className="inst-panel__title">{content.clarification.title}</h2>
+              <p className="inst-panel__body" style={{ marginBottom: 0 }}>{content.clarification.body}</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+      <ClosingCta headline={content.cta} href="/register" label="Create your free account" />
     </>
   );
 }

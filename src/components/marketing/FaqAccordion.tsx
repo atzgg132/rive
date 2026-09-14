@@ -80,15 +80,15 @@ export function FaqAccordion({ items }: { items: readonly FaqItem[] }) {
   }
 
   return (
-    <div data-testid="faq-grid" className="edition-faq-list" ref={listRef}>
+    <div data-testid="faq-grid" className="inst-enquiries" ref={listRef}>
       {items.map((item, index) => (
         <details key={item.question} open={index === 0}>
           <summary onClick={handleSummaryClick}>
-            <span>0{index + 1}</span>
+            <span className="inst-mono">0{index + 1}</span>
             <h3>{item.question}</h3>
-            <span aria-hidden="true">+</span>
+            <span className="inst-enquiries__glyph" aria-hidden="true">+</span>
           </summary>
-          <p>{item.answer}</p>
+          <div>{item.answer}</div>
         </details>
       ))}
     </div>

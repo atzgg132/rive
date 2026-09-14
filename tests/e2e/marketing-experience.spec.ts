@@ -23,51 +23,75 @@ const marketingRoutes = [
   "/cookies",
 ] as const;
 
-test.describe("working edition marketing experience", () => {
+test.describe("institution marketing experience", () => {
   test("the first screen explains the audience, product, and offer", async ({ page }) => {
     const errors = captureRuntimeErrors(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/", { waitUntil: "load" });
 
     const hero = page.getByTestId("marketing-hero");
-    await expect(hero.getByRole("heading", { name: /Multiple clients. One clear picture./i })).toBeVisible();
-    await expect(hero).toContainText("independent businesses managing multiple clients");
-    await expect(hero).toContainText("clients, projects, agreements, invoices, and expenses");
+    await expect(hero.getByRole("heading", { name: /One record for the whole business./i })).toBeVisible();
+    await expect(hero).toContainText("freelancers and independent businesses");
+    await expect(hero).toContainText("client, project, agreement, invoice, and deadline");
     await expect(hero.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
     await expect(hero).toContainText("No credit card required");
     await expect(page.getByText("Remit", { exact: true })).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 
-  test("the hero shows a faithful Rive workspace rather than invented browser chrome", async ({ page }) => {
+  test("the registry carries one record through the departments", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
-    const stage = page.getByTestId("hero-client-stage");
-    await expect(stage).toContainText("Inside Rive");
-    const preview = stage.locator("[data-workspace-preview]:visible");
+    const journey = page.getByTestId("record-journey");
+    await expect(journey.getByRole("heading", { name: "One file, every department." })).toBeVisible();
+    const record = journey.locator(".inst-journey__rail .inst-record");
+    await expect(record).toBeVisible();
+    await expect(record).toContainText("Aster House");
+    await journey.locator(".inst-dept-row").nth(3).scrollIntoViewIfNeeded();
+    await expect(record).toContainText("Terms accepted");
+    await expect(record).toContainText("INV-024");
+  });
+
+  test("real workspace plates document the product", async ({ page }) => {
+    await page.goto("/", { waitUntil: "load" });
+    const figures = page.locator("section[aria-label='Workspace figures']");
+    const preview = figures.locator("[data-workspace-preview]:visible").first();
     await expect(preview).toBeVisible();
     await expect(preview.getByText("Search workspace…")).toBeVisible();
     await expect(preview).toContainText("Revenue collected");
-    await expect(preview.getByText(/Aster House/)).toBeVisible();
-    await expect(stage.getByText("rive.work", { exact: true })).toHaveCount(0);
+    await expect(preview.getByText(/Aster House/).first()).toBeVisible();
   });
 
-  test("product questions are keyboard-reachable and disclose capability boundaries", async ({ page }) => {
-    await page.goto("/#product", { waitUntil: "load" });
-    await expect(page.getByRole("heading", { name: "What needs your attention?" })).toBeVisible();
-    const outstanding = page.getByRole("tab", { name: /What’s outstanding/ });
-    await outstanding.click();
-    await expect(outstanding).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("heading", { name: "Keep an eye on the money." })).toBeVisible();
-    await expect(page.getByText(/does not currently collect or transfer funds/i)).toBeVisible();
+  test("the specification discloses capability boundaries", async ({ page }) => {
+    await page.goto("/", { waitUntil: "load" });
+    const spec = page.locator("section[aria-label='Specification']");
+    await expect(spec.getByText(/does not collect or transfer funds/i)).toBeVisible();
+    await expect(spec.getByText(/not a guarantee of enforceability/i)).toBeVisible();
+    await expect(spec.getByText(/Shared team access is not available yet/i)).toBeVisible();
+  });
+
+  test("closed mobile navigation stays out of the tab order and Escape restores focus", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "load" });
+    const menuButton = page.getByRole("button", { name: "Open navigation" });
+    await menuButton.focus();
+    await page.keyboard.press("Tab");
+    await expect(page.getByTestId("marketing-hero").getByRole("link", { name: "Start free", exact: true })).toBeFocused();
+    await menuButton.click();
+    const mobileNav = page.getByRole("navigation", { name: "Mobile navigation" });
+    await expect(mobileNav).toBeVisible();
+    await mobileNav.getByRole("link", { name: "Clients & projects" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(mobileNav).toHaveCount(0);
+    await expect(menuButton).toBeFocused();
   });
 
   test("the homepage carries the full narrative without hiding the signup case below the fold", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Make room for the work you want to show." })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Start with one client. Not a migration project." })).toBeVisible();
-    await expect(page.locator("#pricing")).toContainText("Free");
-    await expect(page.getByTestId("faq-grid").locator("details")).toHaveCount(6);
-    await expect(page.getByRole("heading", { name: /Your next client project can start here./i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "The record, set in public." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "No fee. No card. One operator." })).toBeVisible();
+    await expect(page.locator(".inst-admit__fee")).toContainText("Free");
+    await expect(page.getByTestId("faq-grid").locator("details")).toHaveCount(5);
+    await expect(page.getByRole("heading", { name: /Start your record./i })).toBeVisible();
   });
 
   test("faq accordion keeps a single item open", async ({ page }) => {
@@ -84,9 +108,9 @@ test.describe("working edition marketing experience", () => {
   test("primary navigation exposes focused product and pricing routes", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const nav = page.getByRole("navigation", { name: "Primary navigation" });
-    await expect(nav.getByRole("link", { name: "Product", exact: true })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Pricing", exact: true })).toHaveAttribute("href", "/pricing");
-    await expect(nav.getByRole("link", { name: "About", exact: true })).toHaveAttribute("href", "/about");
+    await expect(nav.getByRole("link", { name: /Product/ })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /Pricing/ })).toHaveAttribute("href", "/pricing");
+    await expect(nav.getByRole("link", { name: /About/ })).toHaveAttribute("href", "/about");
     const footer = page.locator("footer");
     await expect(footer.getByRole("link", { name: "Clients & projects" })).toHaveAttribute("href", "/product/clients-projects");
     await expect(footer.getByRole("link", { name: "Agreements & invoices" })).toHaveAttribute("href", "/product/agreements-invoices");
@@ -130,11 +154,14 @@ test.describe("working edition marketing experience", () => {
   test("reduced motion keeps all core content and controls available", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "load" });
-    await expect(page.getByTestId("hero-client-stage")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "What needs your attention?" })).toBeVisible();
+    const journey = page.getByTestId("record-journey");
+    // Inline plates carry every record state; the sticky rail is retired.
+    await expect(journey.locator(".inst-dept-row__plate .inst-record")).toHaveCount(5);
+    await expect(journey.locator(".inst-journey__rail")).toBeHidden();
+    await expect(page.getByRole("heading", { name: "One file, every department." })).toBeVisible();
     await expect(page.getByTestId("portfolio-showcase")).toBeVisible();
-    const animation = await page.locator(".edition-question-visual").evaluate((node) => getComputedStyle(node).animationName);
-    expect(animation).toBe("none");
+    const clip = await page.locator(".inst-manifesto__fill").evaluate((node) => getComputedStyle(node).position);
+    expect(clip).toBe("static");
   });
 
   test("marketing metadata and organization schema describe Rive", async ({ page }) => {

@@ -31,7 +31,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div data-surface="marketing" className="marketing-root">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <a href="#main-content" className="marketing-focus edition-skip-link">Skip to content</a>
+      <a href="#main-content" className="marketing-focus inst-skip-link">Skip to content</a>
       <SiteHeader />
       <main id="main-content" className="relative min-h-screen min-w-0">{children}</main>
       <SiteFooter />

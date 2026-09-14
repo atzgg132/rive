@@ -1,36 +1,47 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { footerCopy, footerNav } from "@/content/marketing/nav";
 import { RiveLogo } from "@/components/RiveLogo";
+import { InstMark } from "@/components/marketing/primitives";
 
 export function SiteFooter() {
   return (
-    <footer className="edition-footer">
-      <div className="edition-container">
-        <div className="edition-footer__lead">
-          <Link href="/" className="marketing-focus inline-flex" aria-label="Rive home"><RiveLogo height={42} /></Link>
-          <p>{footerCopy.description}</p>
-          <span>{footerCopy.status}</span>
+    <footer className="inst-colophon">
+      <div className="inst-container">
+        <div className="inst-colophon__top">
+          <div className="inst-colophon__lead">
+            <Link href="/" className="marketing-focus inline-flex" aria-label="Rive home">
+              <RiveLogo height={34} color="#181511" accentColor="#d0341c" />
+            </Link>
+            <p>{footerCopy.description}</p>
+          </div>
+          <div>
+            <span className="inst-colophon__status inst-mono">
+              <InstMark mark="circle" red />{footerCopy.status}
+            </span>
+          </div>
         </div>
-        <div className="edition-footer__nav">
-          {footerNav.map((group) => (
+
+        <nav className="inst-colophon__nav" aria-label="Footer navigation">
+          {footerNav.map((group, groupIndex) => (
             <div key={group.label}>
-              <h2>{group.label}</h2>
+              <span className="inst-mono">{String(groupIndex + 1).padStart(2, "0")} / {group.label}</span>
               <ul>
                 {group.items.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href} className="marketing-focus">
-                      {item.label}<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    <Link href={item.href} className="marketing-focus inline-flex items-center gap-1.5">
+                      {item.label}<ArrowUpRight className="h-3 w-3" aria-hidden="true" />
                     </Link>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
-        </div>
-        <div className="edition-footer__base">
-          <p>© {new Date().getFullYear()} {footerCopy.copyright}</p>
-          <p>Built for the people running the work.</p>
+        </nav>
+
+        <div className="inst-colophon__base">
+          <p className="inst-mono">© {new Date().getFullYear()} {footerCopy.copyright}</p>
+          <p className="inst-mono">Set in Archivo & Martian Mono</p>
         </div>
       </div>
     </footer>

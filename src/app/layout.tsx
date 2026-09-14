@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./institution.css";
 import { FontPreloads } from "@/components/FontPreloads";
 import PageViewTracker from "@/components/PageViewTracker";
 import { AuthOverlayProvider } from "@/components/auth/AuthOverlayProvider";

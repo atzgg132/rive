@@ -422,8 +422,8 @@ export function WorkspacePreview({ view, className = "" }: { view: WorkspacePrev
           <header>
             <div><h2>{page.title}</h2><p>{page.description}</p></div>
             <div className="wp-actions">
-              {page.secondary && page.SecondaryIcon ? <button type="button" className="wp-btn-ghost"><page.SecondaryIcon />{page.secondary}</button> : null}
-              <button type="button"><page.ActionIcon />{page.action}</button>
+              {page.secondary && page.SecondaryIcon ? <button type="button" tabIndex={-1} className="wp-btn-ghost"><page.SecondaryIcon />{page.secondary}</button> : null}
+              <button type="button" tabIndex={-1}><page.ActionIcon />{page.action}</button>
             </div>
           </header>
           <ViewContent />
