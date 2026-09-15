@@ -24,8 +24,9 @@ subjective design decisions.
 
 Three kinds of branches exist:
 
-- **`main`** — production. Accepts merge-commit PRs from `dev` only, after
-  `dev.rive.work` is verified. Nothing is committed or pushed to it directly.
+- **`main`** — production. Accepts merge-commit PRs from `dev` (batched
+  promotion, after dev.rive.work is verified) or `hotfix/` branches only.
+  Nothing is committed or pushed to it directly.
 - **`dev`** — staging / integration. Accepts squash-merge PRs from typed work
   branches only. Pushing `dev` deploys https://dev.rive.work, which runs the
   same browser suite `main` does. Keep `dev` shippable at all times.
