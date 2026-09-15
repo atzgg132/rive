@@ -219,7 +219,7 @@ export function WorkspaceShell({ view, children }: { view: WorkspacePreviewView;
           <div className="min-w-0 flex-1" />
           <PanelLeftClose className="h-4 w-4 shrink-0 text-muted-foreground" />
         </div>
-        <nav className="min-h-0 flex-1 space-y-1 px-3 py-5" aria-hidden="true">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-hidden px-3 py-5" aria-hidden="true">
           {NAV.map((item) => (
             <NavItem key={item.id} active={item.id === view || (view === "enquiries" && item.id === "portfolio")} label={item.label} Icon={item.Icon} />
           ))}
@@ -242,8 +242,8 @@ export function WorkspaceShell({ view, children }: { view: WorkspacePreviewView;
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-          <Button variant="outline" size="sm" className="w-72 justify-between text-muted-foreground hover:translate-y-0 hover:border-border hover:bg-card hover:text-foreground">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-card px-6">
+          <Button variant="outline" size="sm" className="w-72 min-w-0 shrink justify-between text-muted-foreground hover:translate-y-0 hover:border-border hover:bg-card hover:text-foreground">
             <span className="flex items-center gap-2 overflow-hidden">
               <Search className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate whitespace-nowrap">Search workspace...</span>
@@ -252,9 +252,9 @@ export function WorkspaceShell({ view, children }: { view: WorkspacePreviewView;
               <Command className="h-2.5 w-2.5" /> K
             </span>
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <Button variant="inverse" className="gap-2 whitespace-nowrap"><Plus className="h-4 w-4" />New client work</Button>
-            <span className="flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">INR · Indian rupee<ChevronDown className="h-3.5 w-3.5" /></span>
+            <span className="flex items-center gap-1.5 rounded-none border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">INR<span className="wp-hide-md"> · Indian rupee</span><ChevronDown className="h-3.5 w-3.5" /></span>
             <Moon className="h-5 w-5 text-muted-foreground" />
             <CircleHelp className="h-5 w-5 text-muted-foreground" />
             <span className="relative">
@@ -280,6 +280,7 @@ function DashboardView({ compact }: ViewProps) {
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Overview"
         description="Cash in, costs out, and the signals worth acting on."
         actions={
@@ -294,13 +295,13 @@ function DashboardView({ compact }: ViewProps) {
           </>
         }
       />
-      <div className="mt-7 grid grid-cols-2 items-stretch gap-6 xl:grid-cols-4">
+      <div className="wp-metrics--four mt-7 items-stretch">
         <MetricCard label="Cash collected" value="₹2,84,500" sub="+12.4% vs last month to day 21 · ₹1,26,500 still owed" />
         <MetricCard label="Active projects" value="4" sub="Right now — unaffected by the period" />
         <MetricCard label="Expenses" value="₹38,240" sub="All-time logged" />
         <MetricCard label="Net" value="₹2,46,260" sub="Cash received minus expenses" />
       </div>
-      <section className={`mt-6 grid items-stretch gap-6 ${compact ? "grid-cols-2" : "grid-cols-2 xl:grid-cols-4"}`}>
+      <section className="wp-metrics--four mt-6 items-stretch">
         {(compact ? dashboardInsights.slice(0, 2) : dashboardInsights).map((insight) => (
           <Card key={insight.label} className="flex h-full min-h-28 flex-col rounded-none border-border bg-card p-4">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
@@ -316,9 +317,9 @@ function DashboardView({ compact }: ViewProps) {
       </section>
       {!compact && (
         <>
-          <div className="mt-6"><AnalyticsCharts data={[...dashboardChart]} currency="INR" /></div>
-          <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div className="flex flex-col gap-5 rounded-none border border-border bg-card p-6 lg:col-span-2">
+          <div className="wp-chart mt-6"><AnalyticsCharts data={[...dashboardChart]} currency="INR" /></div>
+          <div className="wp-split wp-split--dash mt-6">
+            <div className="flex flex-col gap-5 rounded-none border border-border bg-card p-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold">Signals</h3>
                 <Badge>Updates automatically</Badge>
@@ -388,18 +389,19 @@ function ClientsView({ compact }: ViewProps) {
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Clients"
         description="Keep contact details, projects, invoices, and relationship history together."
         actions={<Button variant="default"><Plus className="h-4 w-4" />Add client</Button>}
       />
-      <div className="mt-5 flex items-center justify-between gap-3">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input readOnly value="" placeholder="Search by name, email, company..." className="pl-9" aria-label="Search clients" />
         </div>
         <span className="flex shrink-0 items-center gap-2 rounded-none border border-border bg-card px-3 py-2 text-xs font-semibold"><span className="text-muted-foreground">Status</span>All clients<ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /></span>
       </div>
-      <div className={`mt-5 grid grid-cols-1 gap-4 ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+      <div className="wp-cards mt-5">
         {clients.map((client) => (
           <div key={client.name} className="relative flex flex-col justify-between rounded-none border border-border bg-card p-5">
             <div className="mb-4 flex items-start justify-between gap-4 pr-6">
@@ -433,6 +435,7 @@ function ProjectsView({ compact }: ViewProps) {
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Projects"
         description="Keep delivery moving with clear milestones, budgets, tasks, and deadlines."
         actions={
@@ -442,7 +445,7 @@ function ProjectsView({ compact }: ViewProps) {
           </>
         }
       />
-      <div className="mt-5 flex items-center justify-between gap-3">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input readOnly value="" placeholder="Search by title, description..." className="pl-9" aria-label="Search projects" />
@@ -468,7 +471,7 @@ function ProjectsView({ compact }: ViewProps) {
             {group.projects.map((project) => (
               <article key={project.title} className="group relative rounded-none border border-border bg-card py-3 pl-5 pr-4">
                 <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${project.rail}`} />
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="wp-row">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="truncate text-sm font-semibold">{project.title}</h3>
@@ -502,11 +505,12 @@ function AgreementsView({ compact }: ViewProps) {
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Agreements"
         description="Draft, review, accept, and bill from one agreement using the client and project details already in Rive."
         actions={<Button variant="default"><Plus className="h-4 w-4" />New Agreement</Button>}
       />
-      <div className={`mt-5 grid gap-3 ${compact ? "grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-4"}`}>
+      <div className="wp-metrics--four mt-5">
         {(compact ? agreementSummary.slice(0, 2) : agreementSummary).map((item) => (
           <div key={item.label} className="rounded-none border border-border bg-card p-4">
             <Kicker tone="muted" dot={false}>{item.label}</Kicker>
@@ -516,7 +520,7 @@ function AgreementsView({ compact }: ViewProps) {
       </div>
       {!compact && (
         <Card className="mt-4 border-primary/20 bg-primary/[0.035]">
-          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="wp-row wp-row--center p-4">
             <div className="flex min-w-0 items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
               <div>
@@ -528,7 +532,7 @@ function AgreementsView({ compact }: ViewProps) {
           </CardContent>
         </Card>
       )}
-      <div className={`mt-4 grid gap-4 ${compact ? "grid-cols-1" : "sm:grid-cols-2 xl:grid-cols-3"}`}>
+      <div className="wp-cards mt-4">
         {cards.map((contract) => (
           <Card key={contract.title} className="h-full">
             <CardContent className="flex h-full flex-col gap-4 p-5">
@@ -560,23 +564,24 @@ function RevenueView({ compact }: ViewProps) {
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Revenue & invoices"
         description="A reliable view of what has been invoiced, collected, and needs attention across every currency."
         actions={<Button variant="default"><Plus className="h-4 w-4" />Create invoice</Button>}
       />
-      <div className={`mt-5 grid gap-3 ${compact ? "grid-cols-1" : "sm:grid-cols-2 xl:grid-cols-5"}`}>
+      <div className="wp-metrics--five mt-5">
         {summary.map(({ label, value, Icon }) => (
           <div key={label} className="rounded-none border border-border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
               <Kicker tone="muted" dot={false}>{label}</Kicker>
               <span className="grid h-8 w-8 place-items-center rounded-none bg-muted text-muted-foreground"><Icon className="h-4 w-4" /></span>
             </div>
-            <p className="mt-4 font-mono text-2xl font-bold tabular-nums tracking-tight">{value}</p>
+            <p className="mt-4 truncate font-mono text-2xl font-bold tabular-nums tracking-tight" title={value}>{value}</p>
           </div>
         ))}
       </div>
       {!compact && (
-        <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="wp-split mt-5">
           <section className="rounded-none border border-border bg-card p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -604,11 +609,11 @@ function RevenueView({ compact }: ViewProps) {
                 <span className="bg-destructive/60" style={{ width: "22%" }} />
                 <span className="bg-destructive" style={{ width: "16%" }} />
               </div>
-              <div className="mt-3 grid grid-cols-4 gap-2 whitespace-nowrap text-xs text-muted-foreground">
-                <span>1–30<br /><strong className="font-mono tabular-nums text-foreground">14,000</strong></span>
-                <span>31–60<br /><strong className="font-mono tabular-nums text-foreground">8,700</strong></span>
-                <span>61–90<br /><strong className="font-mono tabular-nums text-foreground">8,000</strong></span>
-                <span>90+<br /><strong className="font-mono tabular-nums text-foreground">5,800</strong></span>
+              <div className="mt-3 grid grid-cols-4 gap-2 text-xs text-muted-foreground">
+                <span className="min-w-0">1–30<br /><strong className="font-mono tabular-nums text-foreground">14,000</strong></span>
+                <span className="min-w-0">31–60<br /><strong className="font-mono tabular-nums text-foreground">8,700</strong></span>
+                <span className="min-w-0">61–90<br /><strong className="font-mono tabular-nums text-foreground">8,000</strong></span>
+                <span className="min-w-0">90+<br /><strong className="font-mono tabular-nums text-foreground">5,800</strong></span>
               </div>
             </div>
           </section>
@@ -628,12 +633,13 @@ function RevenueView({ compact }: ViewProps) {
             <span className="flex items-center gap-2 rounded-none border border-border bg-card px-3 py-2 text-xs font-semibold"><span className="text-muted-foreground">Status</span>All<ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /></span>
           </div>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-5 py-3">Invoice</th>
-              {!compact && <th className="px-5 py-3">Client / project</th>}
-              {!compact && <th className="px-5 py-3">Due</th>}
+              <th className="wp-col-opt px-5 py-3">Client / project</th>
+              <th className="wp-col-opt px-5 py-3">Due</th>
               <th className="px-5 py-3 text-right">Amount due</th>
               <th className="px-5 py-3">Status</th>
             </tr>
@@ -645,19 +651,18 @@ function RevenueView({ compact }: ViewProps) {
                   <span className="font-mono font-semibold tabular-nums">{invoice.number}</span>
                   <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{invoice.issued}</p>
                 </td>
-                {!compact && (
-                  <td className="px-5 py-4">
-                    <p className="font-medium">{invoice.client}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{invoice.project}</p>
-                  </td>
-                )}
-                {!compact && <td className="px-5 py-4 font-mono tabular-nums text-muted-foreground">{invoice.due}</td>}
+                <td className="wp-col-opt px-5 py-4">
+                  <p className="font-medium">{invoice.client}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{invoice.project}</p>
+                </td>
+                <td className="wp-col-opt px-5 py-4 font-mono tabular-nums text-muted-foreground">{invoice.due}</td>
                 <td className="px-5 py-4 text-right font-mono font-semibold tabular-nums">{invoice.amount}</td>
                 <td className="px-5 py-4"><StatusBadge kind="invoice" value={invoice.status} /></td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </section>
     </>
   );
@@ -669,6 +674,7 @@ function CalendarView({ compact }: ViewProps) {
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Your work, on one timeline"
         description="Plan meetings and focus time alongside project deadlines, tasks, milestones, and invoice due dates."
         actions={
@@ -695,16 +701,16 @@ function CalendarView({ compact }: ViewProps) {
           options={[{ id: "month", label: "month" }, { id: "week", label: "week" }, { id: "agenda", label: "agenda" }]}
         />
       </div>
-      <div className={`grid divide-x divide-border overflow-hidden rounded-none border border-border bg-card ${compact ? "grid-cols-5" : "grid-cols-7"}`}>
+      <div className="wp-cal overflow-hidden rounded-none border border-border bg-card">
         {days.map((day) => (
-          <div key={day.num} className={`min-w-0 p-2 ${compact ? "min-h-[10rem]" : "min-h-[15rem]"}`}>
-            <div className={`mb-2 flex flex-col items-center gap-1 ${day.today ? "text-primary" : "text-muted-foreground"}`}>
+          <div key={day.num} className="wp-cal-day">
+            <div className={`wp-cal-head ${day.today ? "text-primary" : "text-muted-foreground"}`}>
               <span className="text-[0.625rem] font-extrabold uppercase tracking-wider">{day.name}</span>
               <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${day.today ? "bg-primary text-primary-foreground" : ""}`}>{day.num}</span>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="wp-cal-events">
               {day.events.map((event) => (
-                <span key={event.title} className={`block rounded-none border border-l-2 px-1.5 py-1 text-[0.6875rem] font-semibold leading-4 ${eventTone[event.tone]}`}>
+                <span key={event.title} className={`block min-w-0 rounded-none border border-l-2 px-1.5 py-1 text-[0.6875rem] font-semibold leading-4 ${eventTone[event.tone]}`}>
                   <span className="block text-[0.5625rem] font-extrabold opacity-75">{event.time}</span>
                   {event.title}
                 </span>
@@ -722,7 +728,7 @@ function CalendarView({ compact }: ViewProps) {
             </div>
             <Button variant="outline" size="sm" className="inline-flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" />Add task</Button>
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="wp-cards mt-3">
             {[{ title: "Prepare Meridian proposal", meta: "45 min" }, { title: "Send invoice reminder", meta: "15 min" }].map((task) => (
               <div key={task.title} className="flex items-center gap-3 rounded-none border border-border p-3">
                 <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
@@ -740,11 +746,12 @@ function CalendarView({ compact }: ViewProps) {
   );
 }
 
-function PortfolioView({ compact }: ViewProps) {
+function PortfolioView() {
   return (
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Portfolio Studio"
         description="Build a portfolio that makes your work easy to understand and easy to hire."
         actions={<Button variant="outline"><ExternalLink className="h-4 w-4" />View live site</Button>}
@@ -755,9 +762,9 @@ function PortfolioView({ compact }: ViewProps) {
         <Button variant="default" size="sm"><Check className="h-3.5 w-3.5" />Update live site</Button>
       </div>
       <PortfolioTabRow active="edit" />
-      <div className={`mt-4 grid min-h-0 gap-0 overflow-hidden rounded-none border border-border bg-card ${compact ? "" : "lg:grid-cols-[210px_minmax(0,1fr)]"}`}>
-        {!compact && (
-          <aside className="border-r border-border bg-muted/35 p-4">
+      <div className="wp-split wp-split--editor mt-4 min-h-0 gap-0 overflow-hidden rounded-none border border-border bg-card">
+        {
+          <aside className="wp-editor-side border-r border-border bg-muted/35 p-4">
             <nav className="flex flex-col gap-1">
               {studioSections.map((section) => (
                 <span key={section.label} className={`flex items-center gap-3 rounded-none px-3 py-2.5 ${section.active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}>
@@ -767,7 +774,7 @@ function PortfolioView({ compact }: ViewProps) {
               ))}
             </nav>
           </aside>
-        )}
+        }
         <div className="min-w-0 p-5">
           <Kicker>Selected work</Kicker>
           <h3 className="mt-1 text-lg font-extrabold tracking-tight">Choose the work that represents you.</h3>
@@ -831,23 +838,22 @@ function EnquiriesView({ compact }: ViewProps) {
     <>
       <PageHeader
         titleAs="div"
+        className="wp-head"
         title="Portfolio Studio"
         description="Build a portfolio that makes your work easy to understand and easy to hire."
         actions={!compact && <Button variant="outline"><ExternalLink className="h-4 w-4" />View live site</Button>}
       />
       <PortfolioTabRow active="enquiries" />
       <div className="mt-5 flex flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="wp-head flex gap-3">
           <div className="min-w-0">
             <p className="font-bold text-foreground">Enquiries</p>
             <p className="mt-0.5 text-xs text-muted-foreground">Every message from your public portfolio, saved here whether or not the email notification arrived.</p>
           </div>
-          {!compact && (
-            <span className="relative w-full lg:w-72">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input type="search" readOnly placeholder="Search name, email, or message" className="w-full rounded-xl border-border bg-background py-2.5 pl-9 pr-3 text-sm" />
-            </span>
-          )}
+          <span className="wp-search relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input type="search" readOnly placeholder="Search name, email, or message" className="w-full rounded-xl border-border bg-background py-2.5 pl-9 pr-3 text-sm" />
+          </span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {shownFilters.map((filter) => (

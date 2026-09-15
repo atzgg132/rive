@@ -7,7 +7,7 @@ import { WorkspaceView, type WorkspacePreviewView } from "./WorkspacePreview";
 
 export function WorkspacePreviewCompact({ view, className = "" }: { view: WorkspacePreviewView; className?: string }) {
   return (
-    <div className={`workspace-preview ${className}`} data-workspace-preview={view} role="img" aria-label="Rive product preview">
+    <div className={`workspace-preview h-full overflow-hidden ${className}`} data-workspace-preview={view} role="img" aria-label="Rive product preview">
       <div className="flex h-full flex-col bg-background text-foreground">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4">
           <RiveLogo height={24} />

@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { Check, FileSpreadsheet, ShieldCheck } from "lucide-react";
-import { InstMark, MarketingButton } from "@/components/marketing/primitives";
+import { MarketingButton } from "@/components/marketing/primitives";
 import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 import { marketingMetadata } from "@/lib/marketingMetadata";
@@ -56,14 +56,14 @@ export default async function MigrateToRivePage() {
               <div className="inst-register">
                 {limits.map((limit) => (
                   <div key={limit} className="inst-register__row">
-                    <span className="inst-mono"><InstMark mark="square" />Limit</span>
+                    <span className="inst-mono">Limit</span>
                     <span className="inst-register__name">{limit}</span>
                     <span className="inst-register__detail" />
                   </div>
                 ))}
               </div>
               <div className="inst-panel" style={{ marginTop: "1.75rem" }}>
-                <span className="inst-mono inst-panel__label"><InstMark mark="triangle" accent />Boundaries stated up front</span>
+                <span className="inst-mono inst-panel__label">Boundaries stated up front</span>
                 <p className="inst-panel__body" style={{ marginBottom: 0 }}>
                   Importing is not a direct integration with another business tool. Vendor-specific
                   compatibility is not guaranteed. Imported records remain after commit — retrying an

@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RecordArtifact, RECORD_FIELDS, type RecordPhase } from "@/components/marketing/RecordArtifact";
-import { DeptRule, InstMark } from "@/components/marketing/primitives";
+import { DeptRule } from "@/components/marketing/primitives";
 import { useMarketingReducedMotion } from "@/components/marketing/useMarketingReducedMotion";
 
 export type RegistryDepartment = {
   key: string;
-  mark: "circle" | "square" | "triangle" | "diamond" | "semi";
   name: string;
   summary: string;
   detail: string;
@@ -87,9 +86,6 @@ export function RecordJourney({ departments }: RecordJourneyProps) {
                 className="inst-dept-row"
                 data-current={phase === index}
               >
-                <div className="inst-dept-row__fig" aria-hidden="true">
-                  <InstMark mark={dept.mark} />
-                </div>
                 <div className="inst-dept-row__copy">
                   <h3>{dept.name}</h3>
                   <p><strong>{dept.summary}</strong> {dept.detail}</p>

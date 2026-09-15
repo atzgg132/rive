@@ -9,7 +9,6 @@ import { SpecimenFrame } from "@/components/marketing/SpecimenFrame";
 import { FaqAccordion } from "@/components/marketing/FaqAccordion";
 import {
   DeptRule,
-  InstMark,
   MarketingButton,
   MarketingLink,
   RegisterRow,
@@ -18,35 +17,30 @@ import {
 const DEPARTMENTS: readonly RegistryDepartment[] = [
   {
     key: "client",
-    mark: "circle",
     name: "Client",
     summary: "The relationship goes on file first.",
     detail: "Contact details, notes, and every piece of work attach to the same client — not scattered across inboxes and spreadsheets.",
   },
   {
     key: "project",
-    mark: "square",
     name: "Project",
     summary: "The work attaches to the relationship.",
     detail: "Tasks, milestones, deadlines, and budget sit on the client's record, so the plan and the history stay in one place.",
   },
   {
     key: "agreement",
-    mark: "triangle",
     name: "Agreement",
     summary: "The promise lands in writing.",
     detail: "Scope and terms are sent for review, and acceptance is recorded against the project it covers.",
   },
   {
     key: "invoice",
-    mark: "diamond",
     name: "Invoice",
     summary: "The money points back to the work.",
     detail: "Invoices, recorded payments, and expenses stay linked to the client and project they belong to.",
   },
   {
     key: "proof",
-    mark: "semi",
     name: "Proof",
     summary: "The record goes public.",
     detail: "Finished work publishes to a portfolio that brings the next enquiry back onto the same record.",
@@ -158,7 +152,7 @@ export function MarketingHome() {
         </div>
         <div className="inst-container">
           <RevealOnScroll className="inst-reveal inst-titlepage__index" y={12}>
-            <span className="inst-mono"><InstMark mark="circle" accent />For freelancers & small practices</span>
+            <span className="inst-mono">For freelancers &amp; small practices</span>
             <span className="inst-mono">Clients · Projects · Agreements · Invoices · Calendar · Portfolio</span>
             <span className="inst-mono">Open beta — free, no card</span>
           </RevealOnScroll>
@@ -184,7 +178,7 @@ export function MarketingHome() {
                 <MarketingLink href="#registry">Read the register</MarketingLink>
               </div>
               <p className="inst-titlepage__assurance inst-mono">
-                <InstMark mark="square" accent /><span>Free during beta. No credit card required.</span>
+                <span>Free during beta. No credit card required.</span>
               </p>
             </RevealOnScroll>
           </div>
@@ -219,7 +213,7 @@ export function MarketingHome() {
       {/* — Manifesto —————————————————————————————————————————— */}
       <section className="inst-band inst-band--ink inst-manifesto marketing-deferred-section" aria-label="Statement">
         <div className="inst-container">
-          <p className="inst-mono inst-manifesto__kicker"><InstMark mark="semi" accent />The office of one</p>
+          <p className="inst-mono inst-manifesto__kicker">The office of one</p>
           <ManifestoLine text="The work is the record. The record is the business." />
           <p className="inst-manifesto__note">
             An independent business is a long document — who you work for, what you promised,
@@ -256,15 +250,15 @@ export function MarketingHome() {
             <div className="inst-file">
               <RevealOnScroll className="inst-reveal" delay={0.08}>
                 <div className="inst-register inst-register--dossier" data-testid="portfolio-showcase">
-                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="circle" accent />Portfolio</span><span className="inst-register__name">Maya Rao — independent product designer</span></div>
-                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="square" />Filed under</span><span className="inst-register__name">Product design · Bengaluru, India</span></div>
-                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="triangle" />Status</span><span className="inst-register__name">Available for select engagements</span></div>
-                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="diamond" />Settings</span><span className="inst-register__name">6 templates — Minimal pro shown</span></div>
+                  <div className="inst-register__row"><span className="inst-mono">Portfolio</span><span className="inst-register__name">Maya Rao — independent product designer</span></div>
+                  <div className="inst-register__row"><span className="inst-mono">Filed under</span><span className="inst-register__name">Product design · Bengaluru, India</span></div>
+                  <div className="inst-register__row"><span className="inst-mono">Status</span><span className="inst-register__name">Available for select engagements</span></div>
+                  <div className="inst-register__row"><span className="inst-mono">Settings</span><span className="inst-register__name">6 templates — Minimal pro shown</span></div>
                 </div>
               </RevealOnScroll>
               <RevealOnScroll className="inst-reveal" delay={0.2}>
                 <div className="inst-panel">
-                  <span className="inst-mono inst-panel__label"><InstMark mark="circle" />Enquiries return to the record</span>
+                  <span className="inst-mono inst-panel__label">Enquiries return to the record</span>
                   <h3 className="inst-panel__title">The next client arrives where the last one was filed.</h3>
                   <p className="inst-panel__body">
                     Portfolio enquiries land in the same workspace as clients, projects, and invoices —
@@ -302,7 +296,7 @@ export function MarketingHome() {
             <RevealOnScroll className="inst-reveal">
               <div className="inst-admit__fee">
                 <div className="inst-admit__fee-head">
-                  <span className="inst-mono"><InstMark mark="square" accent />Fee schedule</span>
+                  <span className="inst-mono">Fee schedule</span>
                   <span className="inst-mono">Beta</span>
                 </div>
                 <span className="inst-admit__fee-value">Free</span>
@@ -344,7 +338,7 @@ export function MarketingHome() {
       <section className="inst-band inst-band--ink inst-closing marketing-deferred-section" aria-label="Begin">
         <div className="inst-container inst-closing__grid">
           <RevealOnScroll className="inst-reveal">
-            <p className="inst-mono"><InstMark mark="semi" accent />The next entry</p>
+            <p className="inst-mono">The next entry</p>
             <h2 className="inst-display inst-display--closing" style={{ marginTop: "1rem" }}>
               Start your record.
             </h2>

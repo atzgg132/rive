@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const routes = ["/", "/product/clients-projects", "/product/agreements-invoices", "/product/portfolio", "/pricing", "/migrate-to-rive", "/about", "/changelog", "/contact", "/cookies", "/privacy", "/roadmap", "/terms", "/login", "/register"] as const;
 
-for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 900 }, { width: 1280, height: 720 }, { width: 1440, height: 900 }]) {
+for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 900 }, { width: 834, height: 1112 }, { width: 1024, height: 768 }, { width: 1280, height: 720 }, { width: 1440, height: 900 }]) {
   test(`marketing routes avoid horizontal overflow at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     for (const route of routes) {
@@ -39,6 +39,48 @@ test("mobile navigation keeps account actions and product routes available", asy
   await expect(nav.getByRole("link", { name: "Clients & projects" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Log in", exact: true })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
+});
+
+const plateRoutes = ["/", "/product/clients-projects", "/product/agreements-invoices", "/product/portfolio"] as const;
+
+for (const route of plateRoutes) {
+  test(`workspace plates contain their UI at every width — ${route}`, async ({ page }) => {
+    for (const width of [390, 768, 1024, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(route, { waitUntil: "load" });
+      await page.locator(".app-window").first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(400);
+      const docs = page.locator(".app-window__doc, .app-window__fluid-doc, .inst-specimen__doc");
+      expect(await docs.count(), `${route} @ ${width}px mounts plates`).toBeGreaterThan(0);
+      const violations = await page.evaluate(() => {
+        return [...document.querySelectorAll(".app-window__doc, .app-window__fluid-doc, .inst-specimen__doc")].flatMap((doc, i) => {
+          const label = doc.querySelector("[data-workspace-preview]")?.getAttribute("data-workspace-preview") ?? doc.firstElementChild?.getAttribute("data-testid") ?? `doc-${i}`;
+          const problems: string[] = [];
+          if (doc.scrollWidth > doc.clientWidth + 1) problems.push(`${label}: doc scrollWidth ${doc.scrollWidth} > clientWidth ${doc.clientWidth}`);
+          for (const el of doc.querySelectorAll("*")) {
+            if (el.children.length > 0 || el.clientWidth === 0) continue;
+            const style = getComputedStyle(el);
+            if (style.overflowX === "visible" && el.scrollWidth > el.clientWidth + 1) {
+              problems.push(`${label}: text escapes its box in <${el.tagName.toLowerCase()}> ${String(el.getAttribute("class")).slice(0, 60)}`);
+            }
+          }
+          return problems.slice(0, 4);
+        });
+      });
+      expect(violations, `${route} @ ${width}px`).toEqual([]);
+    }
+  });
+}
+
+test("marketing labels render without decorative marks", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const route of ["/", "/product/clients-projects", "/pricing", "/contact"]) {
+    await page.goto(route, { waitUntil: "load" });
+    const stray = await page.evaluate(
+      () => [...document.querySelectorAll(".inst-mono .inst-mark")].filter((m) => !m.closest(".inst-record")).length,
+    );
+    expect(stray, route).toBe(0);
+  }
 });
 
 test("product register and portfolio publication stack on mobile", async ({ page }) => {

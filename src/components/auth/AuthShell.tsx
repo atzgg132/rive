@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { InstMark } from "@/components/marketing/primitives";
 import RiveLogo from "@/components/RiveLogo";
 
 export function AuthShell({ children }: { children: ReactNode }) {
@@ -12,7 +11,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       </header>
       <main>
         <section className="inst-standalone-auth__art">
-          <p className="inst-mono"><InstMark mark="circle" accent />Rive account</p>
+          <p className="inst-mono">Rive account</p>
           <h2>Your business,<br />back on the record.</h2>
           <p className="inst-mono">Secure account access</p>
         </section>

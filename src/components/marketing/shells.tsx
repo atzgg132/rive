@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowUpRight } from "lucide-react";
 import type { MarketingPageContent } from "@/content/marketing/pages";
 import { cn } from "@/lib/utils";
-import { DeptRule, InstMark, MarketingButton } from "@/components/marketing/primitives";
+import { DeptRule, MarketingButton } from "@/components/marketing/primitives";
 
 export function SectionShell({ children, id, className, innerClassName, clipX = true }: { children: ReactNode; id?: string; className?: string; innerClassName?: string; clipX?: boolean }) {
   return <section id={id} className={cn("inst-section", className)}><div className={cn("inst-container min-w-0", clipX && "overflow-x-clip", innerClassName)}>{children}</div></section>;
@@ -14,7 +14,7 @@ export function ReadingHero({ eyebrow, title, intro }: { eyebrow: string; title:
   return (
     <section className="inst-reading">
       <div className="inst-container inst-reading__head">
-        <span className="inst-mono"><InstMark mark="circle" accent />{eyebrow}</span>
+        <span className="inst-mono">{eyebrow}</span>
         <h1 className="inst-display" style={{ marginTop: "1.25rem" }}>{title}</h1>
         {intro ? <p className="inst-body">{intro}</p> : null}
       </div>
@@ -89,7 +89,7 @@ export function ProseShell({ eyebrow, title, children, updated }: { eyebrow: str
     <section className="inst-reading">
       <div className="inst-container">
         <div className="inst-reading__head">
-          <span className="inst-mono"><InstMark mark="circle" accent />{eyebrow}</span>
+          <span className="inst-mono">{eyebrow}</span>
           <h1 className="inst-display" style={{ marginTop: "1.25rem" }}>{title}</h1>
           {updated ? <p className="inst-mono" style={{ marginTop: "1.25rem", color: "var(--inst-ink-faint)" }}>{updated}</p> : null}
         </div>

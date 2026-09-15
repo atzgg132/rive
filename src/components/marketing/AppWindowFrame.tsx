@@ -59,3 +59,22 @@ export function AppWindowFrame({
     </div>
   );
 }
+
+/** A window whose document fills the frame at real size — no scaling. The
+ * doc is a size container, so the wp-* rules inside lay out against the
+ * doc's own width. The aspect ratio sets how much of the view is in-frame. */
+export function FluidAppWindow({
+  children,
+  aspect,
+  className = "",
+}: {
+  children: ReactNode;
+  aspect: number;
+  className?: string;
+}) {
+  return (
+    <div className={`app-window ${className}`} style={{ aspectRatio: String(aspect) }} aria-hidden="true" inert>
+      <div className="app-window__fluid-doc">{children}</div>
+    </div>
+  );
+}

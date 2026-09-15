@@ -30,7 +30,7 @@ export function AcceptanceDocument() {
         <p className="mt-1 text-xs text-muted-foreground">Governing law: India</p>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="wp-doc-split">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><FileSignature className="h-5 w-5 text-primary" /> Read before recording acceptance</CardTitle>
@@ -52,7 +52,7 @@ export function AcceptanceDocument() {
               <p className="mb-2 text-sm font-bold">Payment plan</p>
               <div className="divide-y divide-border rounded-none border border-border">
                 {paymentPlan.map((item) => (
-                  <div key={item.label} className="grid gap-1 p-3 text-sm sm:grid-cols-[1fr_auto]">
+                  <div key={item.label} className="wp-cols-auto p-3 text-sm">
                     <div><p className="font-semibold">{item.label}</p><p className="text-xs text-muted-foreground">{item.detail}</p></div>
                     <p className="font-mono font-bold tabular-nums">{item.amount}</p>
                   </div>
