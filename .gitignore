@@ -38,6 +38,7 @@ npm-debug.log*
 # editor / agent tooling
 .cursor/
 .hermes/
+.impeccable/
 *.swp
 
 # Terraform

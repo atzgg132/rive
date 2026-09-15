@@ -1,26 +1,36 @@
----
-description: Only main and dev exist; all work is committed on dev; main is merge-only
-alwaysApply: true
----
-
 # Branch policy (hard)
 
-This repository has **exactly two branches**: `main` and `dev`. Never create another branch — not with `git checkout -b`, `git switch -c`, GitHub, a worktree, a cloud agent, or a PR workflow.
+Three kinds of branches: `main` (production), `dev` (staging), and short-lived
+typed work branches — `feature/`, `fix/`, `chore/`, `hotfix/`, `docs/`,
+`sync/`. Never create a branch outside the typed set — not a scratch branch,
+a worktree, or a cloud-agent branch.
 
-## Work only on `dev`
+## Work happens on a typed branch off `dev`
 
-1. `git checkout dev` and `git pull --ff-only origin dev`.
-2. Commit and `git push origin dev` on that branch.
-3. A push to `dev` deploys to https://dev.rive.work.
+1. `git checkout dev && git pull --ff-only origin dev`.
+2. `git checkout -b feature/<slug>` (or `fix/`, `chore/`, `docs/`).
+3. Commit and push the work branch — `Quality` runs the full suite on it.
+4. Open a PR to `dev`. Branch-policy requires the `type/slug` name.
+5. **Squash merge** — one commit per feature on `dev`; head auto-deletes.
+6. The merge push deploys https://dev.rive.work — the pre-production gate.
 
-Do not open a feature PR. There is no third branch to PR from.
+Do not commit directly to `dev`. Do not open a feature PR to `main`.
 
 ## `main` is production, merge-only
 
 - Never commit, push, force-push, amend, or cherry-pick onto `main`.
-- The only update path is a **merge commit** PR: `dev` → `main`, after `dev.rive.work` is good.
+- The only update path is a **merge commit** PR: `dev` → `main`, after
+  dev.rive.work is verified.
 - `git push origin main` is forbidden even when the tree looks correct.
 
-## If you are not on `dev`
+## Hotfixes
 
-Check out `dev` and continue there. Do not branch off to "keep main clean" — `dev` is that gate.
+`hotfix/<slug>` branches off `main` → PR to `main` → merge commit. Then
+back-merge: `sync/main-back` off `main` → PR to `dev` → squash merge, so
+staging never drifts behind production.
+
+## Enforcement gap
+
+The repo is private on a plan without branch protection — `main` and `dev`
+cannot be locked to PR-only. The `branch-policy.yml` checks plus this rule
+are the enforcement. Follow it anyway.

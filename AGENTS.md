@@ -20,31 +20,60 @@ subjective design decisions.
 <!-- BEGIN:release-conventions -->
 # Shipping
 
-## Only `main` and `dev`. All work happens on `dev`.
+## Branch model: work branches → `dev` → `main`
 
-This repository has exactly two branches. Never create another one.
+Three kinds of branches exist:
 
-`dev` is the working branch. Commit and push there — not on a feature branch,
-not on a hotfix branch, not on a cloud-agent branch. Pushing `dev` deploys to
-https://dev.rive.work. That environment is the pre-production gate and runs the
-same browser suite `main` does.
+- **`main`** — production. Accepts merge-commit PRs from `dev` only, after
+  `dev.rive.work` is verified. Nothing is committed or pushed to it directly.
+- **`dev`** — staging / integration. Accepts squash-merge PRs from typed work
+  branches only. Pushing `dev` deploys https://dev.rive.work, which runs the
+  same browser suite `main` does. Keep `dev` shippable at all times.
+- **Typed work branches** — `feature/<slug>`, `fix/<slug>`, `chore/<slug>`,
+  `hotfix/<slug>`, `docs/<slug>`. Short-lived, branch off `dev`, deleted on
+  merge. `sync/<slug>` is reserved for `main` → `dev` back-merges.
 
-`main` is production. Nothing is committed or pushed to it. The only update
-path is a merge-commit pull request from `dev` to `main` after `dev.rive.work`
-is good. Even a one-line urgent fix goes this route.
+### The lifecycle
 
-Do not cherry-pick a commit onto `main` to ship it sooner. The cherry-pick
-creates a second commit with the same content under a different SHA, so `main`
-and `dev` both carry the change and neither history matches the other. It merges
-cleanly the first time and gets harder to reason about with every repeat — and
-it silently skips the `dev` deploy that would have caught an environment problem.
+1. `git checkout dev && git pull --ff-only origin dev`, then branch:
+   `git checkout -b feature/<slug>`.
+2. Commit and push the work branch. The `Quality` workflow runs the full
+   verify suite on the push and on the PR.
+3. Open a PR to `dev`. The branch-policy check requires a `type/slug` name.
+   Self-merge is allowed; migrations, security, payments, and public-token
+   work ask for a second pair of eyes by convention, not by gate.
+4. **Squash merge** — one commit per feature on `dev`. A bad feature is
+   `git revert <sha>`, not archaeology. Head branches auto-delete on merge.
+5. The squash-merge push deploys `dev.rive.work`. Verify there before
+   promoting.
+6. Promote in batches: merge-commit PR `dev` → `main`. Features ride together;
+   the merge boundary is the release audit trail.
 
-If `dev` carries work you are not ready to promote, that is a reason to finish
-or revert that work, not a reason to route around `dev`.
+### Hotfixes
 
-Do not create git worktrees or extra branches for a tooling session, whatever
-tool it is (`git checkout -b`, `-w`/worktree flags, cloud-agent branches).
-Stay on `dev`.
+Branch `hotfix/<slug>` off `main`, PR to `main`, merge-commit. Then back-merge
+so staging never drifts behind production: branch `sync/main-back` off
+`main`, PR to `dev`, squash merge.
+
+### Rules that do not change
+
+Do not cherry-pick onto `main` — a second commit with the same content under
+a different SHA diverges the histories and silently skips the `dev` deploy
+that would have caught an environment problem.
+
+If `dev` carries work you are not ready to promote, finish or revert it —
+do not route around `dev`.
+
+Do not create git worktrees or branches outside the typed set — every branch
+is `feature|fix|chore|hotfix|docs|sync/<slug>` off `dev` (or `main` for
+hotfixes). Tooling sessions get a `chore/` branch like everything else.
+
+### Known gap
+
+This repo is private on a plan without GitHub branch protection, so `main`
+and `dev` cannot be technically locked to PR-only. Enforcement is the
+`branch-policy.yml` workflow plus this convention. If direct pushes become a
+problem, GitHub Pro adds required reviews and status checks.
 
 ## Screenshot baselines
 
