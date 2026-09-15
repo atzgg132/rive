@@ -23,17 +23,19 @@ for (const route of publicRoutes) {
 test("marketing describes available capabilities without demo or payment theatre", async ({ page }) => {
   await page.goto("/", { waitUntil: "load" });
   await expect(page.getByText("Watch Demo", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "What needs your attention?" })).toBeVisible();
   await expect(page.getByText("Remit", { exact: true })).toHaveCount(0);
-  await expect(page.getByText(/does not currently collect or transfer funds/i)).toHaveCount(0);
-  await page.getByRole("tab", { name: /What’s outstanding/ }).click();
-  await expect(page.getByText(/does not currently collect or transfer funds/i)).toBeVisible();
+  const funds = page.getByText(/does not collect or transfer funds/i).first();
+  await funds.scrollIntoViewIfNeeded();
+  await expect(funds).toBeVisible();
+  const capability = page.getByText("Money on the record", { exact: true });
+  await capability.scrollIntoViewIfNeeded();
+  await expect(capability).toBeVisible();
 });
 
 test("pricing states account, beta, and export boundaries", async ({ page }) => {
   await page.goto("/pricing", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Free during beta. Clear about what’s included./i })).toBeVisible();
-  await expect(page.getByText(/one operator per account/i)).toBeVisible();
+  await expect(page.getByText(/one operator per account/i).first()).toBeVisible();
   await expect(page.getByText(/Full workspace export is not currently available/i)).toBeVisible();
 });
 

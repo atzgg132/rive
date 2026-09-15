@@ -14,15 +14,16 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
   });
 }
 
-test("mobile hero preserves message, product glimpse, and CTA", async ({ page }) => {
+test("mobile hero preserves message, line integrity, and CTA", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/", { waitUntil: "load" });
   const hero = page.getByTestId("marketing-hero");
-  await expect(hero.getByRole("heading", { name: /Multiple clients. One clear picture./i })).toBeVisible();
+  await expect(hero.getByRole("heading", { name: /one record/i })).toBeVisible();
   await expect(hero.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
-  await expect(hero.getByTestId("hero-client-stage")).toBeVisible();
-  const size = await hero.locator("h1").evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
-  expect(size).toBeGreaterThanOrEqual(48);
+  const wrapped = await hero.locator(".inst-titlepage__line").evaluateAll((nodes) =>
+    nodes.filter((n) => n.getBoundingClientRect().height > parseFloat(getComputedStyle(n).lineHeight) * 1.6).length,
+  );
+  expect(wrapped).toBe(0);
 });
 
 test("mobile navigation keeps account actions and product routes available", async ({ page }) => {
@@ -40,12 +41,12 @@ test("mobile navigation keeps account actions and product routes available", asy
   await expect(nav.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
 });
 
-test("product questions and portfolio publication stack on mobile", async ({ page }) => {
+test("product register and portfolio publication stack on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/#product", { waitUntil: "load" });
-  await expect(page.getByRole("tab", { name: /What’s due/ })).toBeVisible();
-  await page.getByRole("tab", { name: /What’s outstanding/ }).click();
-  await expect(page.getByText(/does not currently collect or transfer funds/i)).toBeVisible();
+  await page.goto("/", { waitUntil: "load" });
+  const funds = page.getByText(/does not collect or transfer funds/i).first();
+  await funds.scrollIntoViewIfNeeded();
+  await expect(funds).toBeVisible();
   await page.getByTestId("portfolio-showcase").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("portfolio-showcase")).toBeVisible();
 });
@@ -65,7 +66,7 @@ test("hero headline is not clipped on a scaled 1080p laptop", async ({ page }) =
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/", { waitUntil: "load" });
   const hero = page.getByTestId("marketing-hero");
-  const heading = hero.getByRole("heading", { name: /Multiple clients. One clear picture./i });
+  const heading = hero.getByRole("heading", { name: /one record/i });
   await expect(heading).toBeVisible();
   const box = await heading.boundingBox();
   expect(box?.y).toBeGreaterThanOrEqual(0);
@@ -73,5 +74,5 @@ test("hero headline is not clipped on a scaled 1080p laptop", async ({ page }) =
   await expect(firstLine).toBeVisible();
   const firstBox = await firstLine.boundingBox();
   expect(firstBox?.y).toBeGreaterThanOrEqual(0);
-  await expect(hero.getByTestId("hero-client-stage")).toBeVisible();
+  await expect(hero.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
 });
