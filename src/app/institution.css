@@ -1042,9 +1042,17 @@
   .inst-titlepage__actions { gap: 0.75rem; }
 }
 
+/* Below wide desktop the em indents at the clamped font size push
+   "every deadline —" past the container and it wraps mid-phrase —
+   so the stagger becomes viewport-proportional until it fits again. */
+@media (max-width: 75rem) {
+  .inst-titlepage__line--i2 { padding-left: min(0.9em, 3vw); }
+  .inst-titlepage__line--i3 { padding-left: min(1.8em, 6vw); }
+}
+
 @media (max-width: 40rem) {
-  .inst-titlepage__line--i2 { padding-left: 0.55em; }
-  .inst-titlepage__line--i3 { padding-left: 1.1em; }
+  /* The 2.5rem floor alone overflows a 320px container. */
+  .inst-titlepage__statement { font-size: clamp(1.9rem, min(10vw, 12.5svh), 8.5rem); }
 }
 
 /* The index strip needs ~1110px to sit on one line; below that the
