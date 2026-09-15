@@ -10,16 +10,17 @@ permissions:
 jobs:
   only-dev:
     # Production is promote-only: nothing reaches main except a merge-commit
-    # PR carrying the already-staged contents of dev.
+    # PR carrying the already-staged contents of dev — or a hotfix branch,
+    # which must then be back-merged to dev via sync/.
     if: github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
-      - name: Require pull requests to main to come from dev
+      - name: Require pull requests to main to come from dev or a hotfix
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          if [ "$HEAD_REF" != "dev" ]; then
-            echo "::error::main only accepts merge PRs from the dev branch (got '$HEAD_REF')."
+          if [ "$HEAD_REF" != "dev" ] && ! echo "$HEAD_REF" | grep -qE '^hotfix/.+'; then
+            echo "::error::main only accepts merge PRs from dev or a hotfix/ branch (got '$HEAD_REF')."
             exit 1
           fi
 
