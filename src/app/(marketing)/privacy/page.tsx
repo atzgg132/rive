@@ -3,7 +3,7 @@ import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Rive privacy policy", "How Rive handles and protects personal and workspace data.", "/privacy");
 
-const fontD = { fontFamily: "var(--edition-display)" };
+const fontD = { fontFamily: "var(--inst-font)" };
 const font  = { fontFamily: "var(--font-body)" };
 
 const toc = [
@@ -23,8 +23,8 @@ const toc = [
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <div id={id} className="mb-10 scroll-mt-28">
-      <h2 className="mb-3 border-b border-[var(--stroke-hairline)] pb-2 text-xl font-bold text-foreground" style={fontD}>{title}</h2>
-      <div className="space-y-3 text-sm leading-relaxed text-muted-foreground" style={font}>{children}</div>
+      <h2 className="mb-3 border-b border-[var(--inst-hairline)] pb-2 text-xl font-bold text-[var(--inst-ink)]" style={fontD}>{title}</h2>
+      <div className="space-y-3 text-sm leading-relaxed text-[var(--inst-ink-soft)]" style={font}>{children}</div>
     </div>
   );
 }
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
 
               <Section id="contact" title="11. Contact us">
                 <p>For any privacy-related questions, requests, or concerns — including Google user data — email <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a>.</p>
-                <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-foreground">
+                <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-[var(--inst-ink)]">
                   <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a></p>
                   <p className="mt-1"><strong>Response time:</strong> Within 72 hours</p>
                 </div>

@@ -1,6 +1,6 @@
 import { ArrowUpRight, Mail } from "lucide-react";
 import { ContactForm } from "@/components/marketing/ContactForm";
-import { EditorialLabel } from "@/components/marketing/primitives";
+import { InstMark } from "@/components/marketing/primitives";
 import { contactContent } from "@/content/marketing/resources";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
@@ -8,6 +8,28 @@ export const metadata = marketingMetadata("Contact Rive", "Ask a product questio
 
 export default function ContactPage() {
   return (
-    <section className="edition-contact-page"><div className="edition-container"><div className="edition-contact-heading"><EditorialLabel>{contactContent.eyebrow}</EditorialLabel><h1 className="edition-display">{contactContent.title}</h1><p>{contactContent.intro}</p></div><div className="edition-contact-grid"><div className="edition-contact-form"><ContactForm copy={contactContent.form} /></div><aside><Mail className="h-5 w-5" /><h2>{contactContent.asideTitle}</h2><a href={`mailto:${contactContent.email}`} className="marketing-focus">{contactContent.email}<ArrowUpRight className="h-4 w-4" /></a><p>{contactContent.asideBody}</p></aside></div></div></section>
+    <section className="inst-reading">
+      <div className="inst-container">
+        <div className="inst-reading__head">
+          <span className="inst-mono"><InstMark mark="circle" accent />{contactContent.eyebrow}</span>
+          <h1 className="inst-display" style={{ marginTop: "1.25rem" }}>{contactContent.title}</h1>
+          <p className="inst-body">{contactContent.intro}</p>
+        </div>
+        <div className="inst-reading__body inst-contact-grid">
+          <div className="inst-panel" style={{ padding: "clamp(1.5rem, 3vw, 2.5rem)" }}>
+            <ContactForm copy={contactContent.form} />
+          </div>
+          <aside className="inst-panel">
+            <span className="inst-mono inst-panel__label"><InstMark mark="diamond" />Direct line</span>
+            <Mail className="h-5 w-5" aria-hidden="true" style={{ color: "var(--inst-ink)" }} />
+            <h2 className="inst-panel__title" style={{ marginTop: "1rem" }}>{contactContent.asideTitle}</h2>
+            <a href={`mailto:${contactContent.email}`} className="marketing-focus inst-link">
+              {contactContent.email}<ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            </a>
+            <p className="inst-panel__body" style={{ marginTop: "1.25rem", marginBottom: 0 }}>{contactContent.asideBody}</p>
+          </aside>
+        </div>
+      </div>
+    </section>
   );
 }

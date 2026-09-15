@@ -3,7 +3,7 @@ import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Rive cookie policy", "How Rive uses cookies and local storage.", "/cookies");
 
-const fontD = { fontFamily: "var(--edition-display)" };
+const fontD = { fontFamily: "var(--inst-font)" };
 const font  = { fontFamily: "var(--font-body)" };
 
 const toc = [
@@ -18,8 +18,8 @@ const toc = [
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <div id={id} className="mb-10 scroll-mt-28">
-      <h2 className="mb-3 border-b border-[var(--stroke-hairline)] pb-2 text-xl font-bold text-foreground" style={fontD}>{title}</h2>
-      <div className="space-y-3 text-sm leading-relaxed text-muted-foreground" style={font}>{children}</div>
+      <h2 className="mb-3 border-b border-[var(--inst-hairline)] pb-2 text-xl font-bold text-[var(--inst-ink)]" style={fontD}>{title}</h2>
+      <div className="space-y-3 text-sm leading-relaxed text-[var(--inst-ink-soft)]" style={font}>{children}</div>
     </div>
   );
 }
@@ -46,12 +46,12 @@ export default function CookiesPage() {
               <Section id="types" title="2. Cookies we use">
                 <div className="flex flex-col gap-4">
                   {cookieTypes.map(ct => (
-                    <div key={ct.name} className="rounded-xl border border-[var(--stroke-hairline)] bg-[var(--surface-glass)] p-4">
+                    <div key={ct.name} className="rounded-xl border border-[var(--inst-hairline)] bg-[var(--surface-glass)] p-4">
                       <div className="mb-1.5 flex items-center justify-between">
-                        <span className="text-sm font-bold capitalize text-foreground" style={fontD}>{ct.name}</span>
+                        <span className="text-sm font-bold capitalize text-[var(--inst-ink)]" style={fontD}>{ct.name}</span>
                         <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary" style={font}>{ct.label}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground" style={font}>{ct.desc}</p>
+                      <p className="text-sm text-[var(--inst-ink-soft)]" style={font}>{ct.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -80,7 +80,7 @@ export default function CookiesPage() {
 
               <Section id="contact" title="6. Contact us">
                 <p>If you have questions about our use of cookies:</p>
-                <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-foreground">
+                <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-[var(--inst-ink)]">
                   <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a></p>
                   <p className="mt-1"><strong>Response time:</strong> Within 72 hours</p>
                 </div>

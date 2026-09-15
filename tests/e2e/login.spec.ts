@@ -132,7 +132,7 @@ test("a completed operator follows a safe next path", async ({ page }) => {
 test("log in from the marketing header opens the focused auth overlay", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/", { waitUntil: "load" });
-  await page.getByTestId("site-header").locator(".edition-login").click();
+  await page.getByTestId("site-header").locator(".inst-masthead__login").click();
   await expect(page).toHaveURL(/\?auth=login/);
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByTestId("login-submit")).toBeEnabled();

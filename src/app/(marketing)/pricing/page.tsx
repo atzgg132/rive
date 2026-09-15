@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
-import { EditorialLabel, MarketingButton } from "@/components/marketing/primitives";
+import { InstMark, MarketingButton } from "@/components/marketing/primitives";
+import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Rive pricing — Free during open beta", "Create a Rive account without a credit card and use one complete workspace free during open beta.", "/pricing");
@@ -16,10 +17,53 @@ const questions = [
 export default function PricingPage() {
   return (
     <>
-      <section className="edition-pricing-page"><div className="edition-container"><EditorialLabel>Pricing</EditorialLabel><h1 className="edition-display">Free during beta.<br /><em>Clear about what’s included.</em></h1><p>Create a Rive account without a credit card. Use the current workspace while the product is in open beta.</p></div></section>
-      <section className="edition-plan"><div className="edition-container edition-plan__grid"><div><span>Open beta</span><strong className="edition-display">Free</strong><p>during open beta</p><MarketingButton href="/register">Create your free account</MarketingButton></div><div><h2>One workspace for the person running the business.</h2><ul>{included.map((item) => <li key={item}><Check className="h-4 w-4" />{item}</li>)}</ul></div></div></section>
-      <section className="edition-pricing-questions"><div className="edition-container"><EditorialLabel>Before you start</EditorialLabel><div>{questions.map(([question, answer], index) => <article key={question}><span>0{index + 1}</span><h2>{question}</h2><p>{answer}</p></article>)}</div></div></section>
-      <section className="edition-page-cta"><div className="edition-container"><h2 className="edition-display">Use Rive with real work.</h2><div><p>Start with one client. No credit card required.</p><MarketingButton href="/register">Start free</MarketingButton></div></div></section>
+      <ReadingHero
+        eyebrow="Fee schedule"
+        title={<>Free during beta.<br />Clear about what&rsquo;s included.</>}
+        intro="Create a Rive account without a credit card. Use the current workspace while the product is in open beta."
+      />
+      <section className="inst-section" aria-label="The plan">
+        <div className="inst-container inst-admit">
+          <div className="inst-admit__fee">
+            <div className="inst-admit__fee-head">
+              <span className="inst-mono"><InstMark mark="square" accent />Open beta</span>
+              <span className="inst-mono">No card</span>
+            </div>
+            <span className="inst-admit__fee-value">Free</span>
+            <span className="inst-admit__fee-sub">One complete workspace during open beta.</span>
+            <div className="inst-admit__fee-foot">
+              <MarketingButton href="/register">Create your free account</MarketingButton>
+            </div>
+          </div>
+          <div>
+            <h2 className="inst-display inst-display--sub">One workspace for the person running the business.</h2>
+            <ul className="inst-admit__list">
+              {included.map((item) => (
+                <li key={item}>
+                  <Check className="h-4 w-4" aria-hidden="true" style={{ color: "var(--inst-accent)" }} />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="inst-admit__note">One operator per account. Shared team access is not available yet.</p>
+          </div>
+        </div>
+      </section>
+      <section className="inst-section" aria-label="Before you start">
+        <div className="inst-container">
+          <div className="inst-dept"><span className="inst-mono">Before you start</span><span className="inst-mono">On the record</span></div>
+          <div className="inst-register" style={{ borderTop: 0, marginTop: "1rem" }}>
+            {questions.map(([question, answer], index) => (
+              <div key={question} className="inst-register__row">
+                <span className="inst-mono">Q{index + 1}</span>
+                <span className="inst-register__name">{question}</span>
+                <span className="inst-register__detail">{answer}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      <ClosingCta headline="Use Rive with real work." note="Start with one client. No credit card required." href="/register" label="Start free" />
     </>
   );
 }

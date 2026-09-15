@@ -24,14 +24,21 @@ const companyItems: MarketingNavItem[] = [
 ];
 
 export const marketingNav: MarketingNavGroup[] = [
-  { label: "Product", items: productItems },
+  {
+    label: "Product",
+    items: [...productItems, { label: "Pricing", href: "/pricing", description: "Free during open beta" }],
+  },
   { label: "Company", items: companyItems },
 ];
 
-export const marketingHeaderLinks: MarketingNavItem[] = [
-  { label: "Product", href: "/#product" },
+export type MarketingNavEntry =
+  | MarketingNavItem
+  | { label: string; items: MarketingNavItem[] };
+
+export const marketingHeaderNav: MarketingNavEntry[] = [
+  { label: "Product", items: productItems },
   { label: "Pricing", href: "/pricing" },
-  { label: "About", href: "/about" },
+  { label: "Institution", items: companyItems },
 ];
 
 export const footerNav: MarketingNavGroup[] = [

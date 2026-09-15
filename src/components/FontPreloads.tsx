@@ -4,7 +4,9 @@ import { preload } from "react-dom";
    (TTFB), not only <link> tags after the HTML body. Outfit is the hero/LCP
    face; Mono is labels and stays low-priority so it cannot win the first hop. */
 const FONT_PRELOADS = [
+  { href: "/fonts/archivo-marketing.woff2", fetchPriority: "high" },
   { href: "/fonts/outfit-marketing.woff2", fetchPriority: "high" },
+  { href: "/fonts/martian-mono-marketing.woff2", fetchPriority: "low" },
   { href: "/fonts/jetbrains-mono-marketing.woff2", fetchPriority: "low" },
 ] as const;
 

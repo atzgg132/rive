@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Check, Loader2, Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import HoneypotField, { usePublicFormOpenedAt } from "@/components/HoneypotField";
 
 type ContactFormCopy = {
@@ -20,7 +20,7 @@ type ContactFormCopy = {
   readonly fallbackError: string;
 };
 
-const fieldClassName = "marketing-focus min-h-14 w-full border border-[var(--edition-line)] bg-[var(--edition-paper-bright)] px-4 text-base text-[var(--edition-ink)] outline-none transition placeholder:text-[var(--edition-muted)] hover:border-[var(--edition-blue)] focus:border-[var(--edition-blue)]";
+const fieldClassName = "marketing-focus min-h-14 w-full border border-[var(--inst-hairline)] bg-[var(--inst-paper)] px-4 text-base text-[var(--inst-ink)] outline-none transition placeholder:text-[var(--inst-ink-faint)] hover:border-[var(--inst-ink)] focus:border-[var(--inst-ink)]";
 
 export function ContactForm({ copy }: { copy: ContactFormCopy }) {
   const { startedAtRef, websiteRef } = usePublicFormOpenedAt();
@@ -53,11 +53,11 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
 
   if (status === "done") {
     return (
-      <div className="grid min-h-[31rem] place-items-center rounded-[1.6rem] border border-success/20 bg-success/10 p-8 text-center">
+      <div className="grid min-h-[31rem] place-items-center border border-[var(--inst-ink)] bg-[var(--inst-paper-2)] p-8 text-center">
         <div>
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-success/20 bg-success/10 text-success"><Check className="h-6 w-6" /></span>
-          <h2 className="mt-6 text-2xl font-black text-foreground">{copy.successTitle}</h2>
-          <p className="mt-3 text-sm text-muted-foreground">{copy.successBody}</p>
+          <span className="inst-mono" style={{ color: "var(--inst-ink-soft)" }}><span aria-hidden="true" className="inst-mark inst-mark--circle inst-mark--accent" style={{ marginRight: "0.6em" }} />Filed</span>
+          <h2 className="mt-4 text-2xl font-bold text-[var(--inst-ink)]">{copy.successTitle}</h2>
+          <p className="mt-3 text-sm text-[var(--inst-ink-soft)]">{copy.successBody}</p>
         </div>
       </div>
     );
@@ -67,28 +67,28 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
     <form onSubmit={handleSubmit} className="grid gap-5" noValidate={false}>
       <HoneypotField inputRef={websiteRef} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
+        <label className="grid gap-2 text-sm font-bold text-[var(--inst-ink)]">
           {copy.nameLabel}
           <input required name="name" autoComplete="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={fieldClassName} placeholder={copy.namePlaceholder} />
         </label>
-        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
+        <label className="grid gap-2 text-sm font-bold text-[var(--inst-ink)]">
           {copy.emailLabel}
           <input required name="email" type="email" autoComplete="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={fieldClassName} placeholder={copy.emailPlaceholder} />
         </label>
       </div>
-        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
+        <label className="grid gap-2 text-sm font-bold text-[var(--inst-ink)]">
         {copy.subjectLabel}
         <select name="subject" value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} className={fieldClassName}>
-          {copy.subjects.map((subject) => <option key={subject} value={subject} className="bg-[var(--surface-raised)]">{subject}</option>)}
+          {copy.subjects.map((subject) => <option key={subject} value={subject} className="bg-[var(--inst-paper)]">{subject}</option>)}
         </select>
       </label>
-        <label className="grid gap-2 text-sm font-bold text-[var(--edition-ink)]">
+        <label className="grid gap-2 text-sm font-bold text-[var(--inst-ink)]">
         {copy.messageLabel}
         <textarea required minLength={10} name="message" rows={7} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} className={`${fieldClassName} resize-y py-3`} placeholder={copy.messagePlaceholder} />
       </label>
-      {status === "error" ? <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
-      <button type="submit" disabled={status === "loading"} className="marketing-focus inline-flex min-h-14 items-center justify-center gap-2 border border-[var(--edition-blue)] bg-[var(--edition-blue)] px-6 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[var(--edition-blue-dark)] disabled:translate-y-0 disabled:opacity-60">
-        {status === "loading" ? <><Loader2 className="h-4 w-4 animate-spin" />{copy.submittingLabel}</> : <><Send className="h-4 w-4" />{copy.submitLabel}</>}
+      {status === "error" ? <p role="alert" className="border border-[var(--inst-danger)] p-3 text-sm text-[var(--inst-danger)]">{error}</p> : null}
+      <button type="submit" disabled={status === "loading"} className="marketing-focus inst-btn disabled:translate-y-0 disabled:opacity-60">
+        {status === "loading" ? <><Loader2 className="h-4 w-4 animate-spin" />{copy.submittingLabel}</> : <>{copy.submitLabel}<Send className="h-4 w-4" /></>}
       </button>
     </form>
   );

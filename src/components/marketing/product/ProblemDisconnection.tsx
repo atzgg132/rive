@@ -19,9 +19,9 @@ export function ProblemDisconnection({ kicker, title, note, records }: ProblemDi
         <p className="text-xl font-black tracking-[-0.035em] text-foreground">{title}</p>
         <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{note}</p>
         <ol className="mt-6 divide-y divide-[color:var(--stroke-hairline)] border-y border-[var(--stroke-hairline)]">
-          {records.map((record, index) => (
+          {records.map((record) => (
             <li key={record.label} className="grid grid-cols-[auto_1fr] items-baseline gap-3 py-2.5 lg:grid-cols-[5.5rem_1fr_9.5rem] lg:py-3.5">
-              <span className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground lg:text-[0.58rem]">{String(index + 1).padStart(2, "0")} {record.label}</span>
+              <span className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground lg:text-[0.58rem]">{record.label}</span>
               <span className="min-w-0">
                 <span className="block text-sm font-bold tracking-[-0.02em] text-foreground">{record.name}</span>
                 <span className="mt-1 hidden text-[0.7rem] text-muted-foreground lg:block">{record.place}</span>

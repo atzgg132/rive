@@ -8,6 +8,9 @@ export interface PageHeaderProps
   description?: React.ReactNode;
   actions?: React.ReactNode;
   kicker?: string;
+  /** Heading element for the title — defaults to h1. Inert reproductions
+   * (marketing previews) pass a non-heading element so the page keeps one h1. */
+  titleAs?: "h1" | "h2" | "h3" | "div";
 }
 
 export function PageHeader({
@@ -16,6 +19,7 @@ export function PageHeader({
   actions,
   kicker,
   className,
+  titleAs: TitleTag = "h1",
   ...props
 }: PageHeaderProps) {
   return (
@@ -28,9 +32,9 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {kicker ? <Kicker className="mb-2">{kicker}</Kicker> : null}
-        <h1 className="text-[1.75rem] font-extrabold leading-[1.02] tracking-[-0.04em] text-foreground sm:text-[2rem]">
+        <TitleTag className="text-[1.75rem] font-extrabold leading-[1.02] tracking-[-0.04em] text-foreground sm:text-[2rem]">
           {title}
-        </h1>
+        </TitleTag>
         {description ? (
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-muted-foreground">
             {description}

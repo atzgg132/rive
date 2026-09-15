@@ -62,9 +62,9 @@ export function ProductPortfolioStudio(props: ProductPortfolioStudioProps) {
                   <div
                     className={`h-12 rounded-md ${
                       index === 0
-                        ? "bg-gradient-to-br from-blue-700 to-cyan-400"
+                        ? "bg-gradient-to-br from-blue-700 to-blue-300"
                         : index === 1
-                          ? "bg-gradient-to-br from-indigo-700 to-blue-300"
+                          ? "bg-gradient-to-br from-orange-600 to-amber-300"
                           : "bg-gradient-to-br from-slate-800 to-blue-600"
                     }`}
                   />

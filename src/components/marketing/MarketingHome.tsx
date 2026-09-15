@@ -1,100 +1,366 @@
-import Link from "next/link";
-import { ArrowDown, ArrowRight, Check } from "lucide-react";
+import type { ReactNode } from "react";
+import { ClosingSeal } from "@/components/marketing/ClosingSeal";
+import { RecordJourney, type RegistryDepartment } from "@/components/marketing/RecordJourney";
+import { ManifestoLine } from "@/components/marketing/ManifestoLine";
+import { RevealOnScroll } from "@/components/marketing/RevealOnScroll";
+import { ResponsiveWorkspacePreview } from "@/components/marketing/ResponsiveWorkspacePreview";
+import { PortfolioSpecimen } from "@/components/marketing/PortfolioShowcase";
+import { SpecimenFrame } from "@/components/marketing/SpecimenFrame";
 import { FaqAccordion } from "@/components/marketing/FaqAccordion";
-import { HeroClientStage, ProductQuestionStage } from "@/components/marketing/WorkingEditionStage";
-import { PortfolioShowcase } from "@/components/marketing/PortfolioShowcase";
-import { EditorialLabel, MarketingButton } from "@/components/marketing/primitives";
+import {
+  DeptRule,
+  InstMark,
+  MarketingButton,
+  MarketingLink,
+  RegisterRow,
+} from "@/components/marketing/primitives";
 
-const startSteps = [
-  { number: "01", title: "Add a client", body: "Keep their details in one place." },
-  { number: "02", title: "Create a project", body: "Give the work a name and track its deadlines." },
-  { number: "03", title: "Use it for the next job", body: "Add the agreement, invoice, or expense you need." },
+const DEPARTMENTS: readonly RegistryDepartment[] = [
+  {
+    key: "client",
+    mark: "circle",
+    name: "Client",
+    summary: "The relationship goes on file first.",
+    detail: "Contact details, notes, and every piece of work attach to the same client — not scattered across inboxes and spreadsheets.",
+  },
+  {
+    key: "project",
+    mark: "square",
+    name: "Project",
+    summary: "The work attaches to the relationship.",
+    detail: "Tasks, milestones, deadlines, and budget sit on the client's record, so the plan and the history stay in one place.",
+  },
+  {
+    key: "agreement",
+    mark: "triangle",
+    name: "Agreement",
+    summary: "The promise lands in writing.",
+    detail: "Scope and terms are sent for review, and acceptance is recorded against the project it covers.",
+  },
+  {
+    key: "invoice",
+    mark: "diamond",
+    name: "Invoice",
+    summary: "The money points back to the work.",
+    detail: "Invoices, recorded payments, and expenses stay linked to the client and project they belong to.",
+  },
+  {
+    key: "proof",
+    mark: "semi",
+    name: "Proof",
+    summary: "The record goes public.",
+    detail: "Finished work publishes to a portfolio that brings the next enquiry back onto the same record.",
+  },
+];
+
+const FIGURES = [
+  { view: "dashboard", caption: "Cash in, costs out, and the signals worth acting on — one morning read." },
+  { view: "revenue", caption: "What has been invoiced, collected, and needs attention across every currency." },
+  { view: "calendar", caption: "Project dates, Google Calendar sync, and a private Apple Calendar feed." },
 ] as const;
 
-const included = [
+const SPECIFICATION: readonly { term: string; name: string; detail: ReactNode }[] = [
+  {
+    term: "Clients & projects",
+    name: "A relationship, not a row",
+    detail: "Client details, project plans, tasks, milestones, and budgets stay attached to each other.",
+  },
+  {
+    term: "Agreements",
+    name: "Terms with a recorded answer",
+    detail: (
+      <>
+        Draft, send, and record acceptance against the work.{" "}
+        <em>Recorded acceptance is not a guarantee of enforceability in every jurisdiction.</em>
+      </>
+    ),
+  },
+  {
+    term: "Invoices & expenses",
+    name: "Money on the record",
+    detail: (
+      <>
+        Issue invoices, log payments, and track expenses per client and project.{" "}
+        <em>Rive records money. It does not collect or transfer funds.</em>
+      </>
+    ),
+  },
+  {
+    term: "Calendar",
+    name: "The dates in view",
+    detail: "A workspace calendar with Google Calendar sync and a private feed for Apple Calendar.",
+  },
+  {
+    term: "Portfolio",
+    name: "The public face",
+    detail: "Publish finished work and receive enquiries on the same record as the rest of the business.",
+  },
+  {
+    term: "Import",
+    name: "Bring the old file",
+    detail: "CSV and XLSX import for supported records, so the record starts with history attached.",
+  },
+  {
+    term: "Operator",
+    name: "Built for one",
+    detail: (
+      <>
+        One operator per account. <em>Shared team access is not available yet.</em>
+      </>
+    ),
+  },
+];
+
+const ADMISSIONS_INCLUDES = [
   "Clients, projects, tasks, and milestones",
-  "Agreements and recorded acceptance",
+  "Agreements with recorded acceptance",
   "Invoices, payment records, and expenses",
-  "Calendar, Google Calendar sync, and Apple Calendar feed",
+  "Calendar with Google sync and Apple feed",
   "Portfolio publishing and enquiries",
-] as const;
+];
 
-const questions = [
-  { question: "Who is Rive for?", answer: "Rive is for freelancers and independent service businesses managing several clients. It can also suit a small-studio owner who manages the operation personally." },
-  { question: "Can my team share a workspace?", answer: "Not yet. Rive currently supports one operator per account, without shared team roles or permissions." },
-  { question: "Does Rive collect payments?", answer: "No. You can create invoices and record payments and expenses. Payment collection and transfers are not currently available." },
-  { question: "What can I do with agreements?", answer: "Prepare an agreement, share it for review, record acceptance, and connect it to billing. Rive does not guarantee that an agreement is enforceable in every jurisdiction." },
-  { question: "Can I import existing records?", answer: "CSV and XLSX imports support clients, projects, invoices, and expenses. Check the import page for current availability and limits." },
-  { question: "What about exports and integrations?", answer: "Full workspace export is not currently available. Google Calendar sync and a private Apple Calendar feed are both available." },
-] as const;
+const ENQUIRIES = [
+  {
+    question: "What does Rive cost?",
+    answer: "Rive is free during the open beta. No credit card is required to register.",
+  },
+  {
+    question: "Does Rive collect payments for me?",
+    answer: "No. Rive records invoices, payments, and expenses so the money side of the work stays on the record. It does not collect or transfer funds.",
+  },
+  {
+    question: "Is an accepted agreement legally binding?",
+    answer: "Rive records the terms and the acceptance. Whether that is enforceable depends on your jurisdiction, and it is not a guarantee in every one.",
+  },
+  {
+    question: "Can my team use one account?",
+    answer: "Not yet. Rive currently supports one operator per account; shared team access is not available.",
+  },
+  {
+    question: "Can I bring existing data?",
+    answer: "Yes. CSV and XLSX import is supported for the records Rive handles, so the record can start with your history attached.",
+  },
+];
 
+/** Homepage — "The Institution of One". The page reads like a public
+ * register: a title page, a registry that files the business onto one
+ * record, figure plates of the real workspace, a specification of
+ * capabilities and limits, admissions, enquiries, and a closing plate. */
 export function MarketingHome() {
   return (
-    <>
-      <section data-testid="marketing-hero" className="edition-hero">
-        <div className="edition-container edition-hero__grid">
-          <div className="edition-hero__copy">
-            <EditorialLabel>For independent businesses managing multiple clients</EditorialLabel>
-            <h1 className="edition-display"><span>Multiple clients.</span><span>One clear picture.</span></h1>
-            <p className="marketing-hero-body">One workspace for clients, projects, agreements, invoices, and expenses. Rive keeps track of what’s due, what’s agreed, and what’s outstanding.</p>
-            <div className="edition-hero__actions">
-              <MarketingButton href="/register">Start free</MarketingButton>
-              <Link href="#product" className="marketing-focus edition-text-link">Explore the product <ArrowDown className="h-4 w-4" aria-hidden="true" /></Link>
+    <div className="inst-home">
+      {/* — Title page ———————————————————————————————————————— */}
+      <section data-testid="marketing-hero" className="inst-titlepage">
+        <div className="inst-titlepage__bg" aria-hidden="true">
+          <div className="inst-titlepage__rules" />
+          <div className="inst-titlepage__ghost">Record.</div>
+          <div className="inst-titlepage__ghost inst-titlepage__ghost--small">FILED —</div>
+        </div>
+        <div className="inst-container">
+          <RevealOnScroll className="inst-reveal inst-titlepage__index" y={12}>
+            <span className="inst-mono"><InstMark mark="circle" accent />For freelancers & small practices</span>
+            <span className="inst-mono">Clients · Projects · Agreements · Invoices · Calendar · Portfolio</span>
+            <span className="inst-mono">Open beta — free, no card</span>
+          </RevealOnScroll>
+          <div className="inst-titlepage__body">
+            <RevealOnScroll className="inst-reveal" delay={0.05}>
+              <h1 className="inst-display inst-titlepage__statement">
+                <span className="inst-titlepage__line">Every client,</span>
+                <span className="inst-titlepage__line inst-titlepage__line--i2">every invoice,</span>
+                <span className="inst-titlepage__line inst-titlepage__line--i3">every deadline —</span>
+                <span className="inst-titlepage__line inst-titlepage__line--pay">one record.</span>
+              </h1>
+            </RevealOnScroll>
+            <RevealOnScroll className="inst-reveal inst-titlepage__abstract" delay={0.12} y={14}>
+              <p>
+                Rive keeps every client, project, agreement, invoice, and deadline on a single
+                record — the workspace for freelancers and independent businesses who manage
+                several clients at once.
+              </p>
+            </RevealOnScroll>
+            <RevealOnScroll className="inst-reveal inst-titlepage__foot" delay={0.2} y={14}>
+              <div className="inst-titlepage__actions">
+                <MarketingButton href="/register">Start free</MarketingButton>
+                <MarketingLink href="#registry">Read the register</MarketingLink>
+              </div>
+              <p className="inst-titlepage__assurance inst-mono">
+                <InstMark mark="square" accent /><span>Free during beta. No credit card required.</span>
+              </p>
+            </RevealOnScroll>
+          </div>
+        </div>
+      </section>
+
+      {/* — Dept. 01 · The registry ———————————————————————————— */}
+      <RecordJourney departments={DEPARTMENTS} />
+
+      {/* — Dept. 02 · Figures ————————————————————————————————— */}
+      <section className="inst-section inst-figures marketing-deferred-section" aria-label="Workspace figures">
+        <div className="inst-container">
+          <DeptRule name="Figures" note="Plates from the real workspace · sample studio" />
+          <h2 className="inst-display inst-display--section inst-section__head">The workspace, on record.</h2>
+          <div className="inst-figures__grid">
+            {FIGURES.map((figure, index) => (
+              <figure key={figure.view} className="inst-plate">
+                <RevealOnScroll className="inst-reveal" delay={index * 0.06}>
+                  <div className="inst-plate__frame">
+                    <ResponsiveWorkspacePreview view={figure.view} />
+                  </div>
+                  <figcaption className="inst-plate__caption">
+                    <span>{figure.caption}</span>
+                  </figcaption>
+                </RevealOnScroll>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* — Manifesto —————————————————————————————————————————— */}
+      <section className="inst-band inst-band--ink inst-manifesto marketing-deferred-section" aria-label="Statement">
+        <div className="inst-container">
+          <p className="inst-mono inst-manifesto__kicker"><InstMark mark="semi" accent />The office of one</p>
+          <ManifestoLine text="The work is the record. The record is the business." />
+          <p className="inst-manifesto__note">
+            An independent business is a long document — who you work for, what you promised,
+            what you charged, what you made. Rive keeps it in one hand.
+          </p>
+        </div>
+      </section>
+
+      {/* — Dept. 03 · The published record ————————————————————— */}
+      <section className="inst-section inst-figures marketing-deferred-section" aria-label="Published portfolio">
+        <div className="inst-container">
+          <DeptRule name="The published record" note="Drafted in the workspace — set in public" />
+          <h2 className="inst-display inst-display--section inst-section__head">The record, set in public.</h2>
+          <div className="inst-figures__grid inst-figures__grid--doc">
+            <RevealOnScroll className="inst-reveal">
+              <figure className="inst-plate">
+                <div className="inst-plate__frame">
+                  <div className="inst-doc inst-doc--full">
+                    <SpecimenFrame>
+                      <PortfolioSpecimen templateKey="minimal-pro" />
+                    </SpecimenFrame>
+                  </div>
+                  <div className="inst-doc inst-doc--opening">
+                    <SpecimenFrame>
+                      <PortfolioSpecimen templateKey="minimal-pro" opening />
+                    </SpecimenFrame>
+                  </div>
+                </div>
+                <figcaption className="inst-plate__caption">
+                  <span>Minimal pro · live render</span>
+                </figcaption>
+              </figure>
+            </RevealOnScroll>
+            <div className="inst-file">
+              <RevealOnScroll className="inst-reveal" delay={0.08}>
+                <div className="inst-register inst-register--dossier" data-testid="portfolio-showcase">
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="circle" accent />Portfolio</span><span className="inst-register__name">Maya Rao — independent product designer</span></div>
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="square" />Filed under</span><span className="inst-register__name">Product design · Bengaluru, India</span></div>
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="triangle" />Status</span><span className="inst-register__name">Available for select engagements</span></div>
+                  <div className="inst-register__row"><span className="inst-mono"><InstMark mark="diamond" />Settings</span><span className="inst-register__name">6 templates — Minimal pro shown</span></div>
+                </div>
+              </RevealOnScroll>
+              <RevealOnScroll className="inst-reveal" delay={0.2}>
+                <div className="inst-panel">
+                  <span className="inst-mono inst-panel__label"><InstMark mark="circle" />Enquiries return to the record</span>
+                  <h3 className="inst-panel__title">The next client arrives where the last one was filed.</h3>
+                  <p className="inst-panel__body">
+                    Portfolio enquiries land in the same workspace as clients, projects, and invoices —
+                    so a new relationship starts on the record instead of in an inbox.
+                  </p>
+                  <MarketingLink href="/product/portfolio">Read the portfolio entry</MarketingLink>
+                </div>
+              </RevealOnScroll>
             </div>
-            <p className="edition-assurance"><Check className="h-4 w-4" aria-hidden="true" /> Free during beta. No credit card required.</p>
-          </div>
-          <HeroClientStage />
-        </div>
-      </section>
-
-      <section id="product" className="edition-product-section">
-        <div className="edition-container">
-          <div className="edition-product-intro"><EditorialLabel inverse>Inside Rive</EditorialLabel><h2 className="edition-display">What needs your attention?</h2><p>A deadline, an agreement, an invoice. Find the details in the same place you manage the client.</p></div>
-          <ProductQuestionStage />
-        </div>
-      </section>
-
-      <section className="edition-portfolio-section">
-        <div className="edition-container">
-          <div className="edition-section-heading"><EditorialLabel>Portfolio Studio</EditorialLabel><h2 className="edition-display">Make room for the work you want to show.</h2><div><p>Build a public portfolio in Rive. Choose the projects to publish, present your services, and give prospective clients a way to enquire.</p><Link href="/product/portfolio" className="marketing-focus edition-text-link">Explore Portfolio Studio <ArrowRight className="h-4 w-4" /></Link></div></div>
-          <PortfolioShowcase />
-          <p className="edition-figure-caption">Example portfolio · Built with Rive · Sample work</p>
-        </div>
-      </section>
-
-      <section className="edition-start-section">
-        <div className="edition-container">
-          <div className="edition-section-heading edition-section-heading--compact"><EditorialLabel>Starting is deliberately small</EditorialLabel><h2 className="edition-display">Start with one client. Not a migration project.</h2><p>You don’t need to reorganize your whole business to try Rive. Add one client, create a project, and use it for a real piece of work.</p></div>
-          <ol className="edition-steps">
-            {startSteps.map((step) => <li key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}
-          </ol>
-          <div className="edition-start-actions"><MarketingButton href="/register">Start free</MarketingButton><Link href="/migrate-to-rive" className="marketing-focus edition-text-link">Have existing records? Explore importing <ArrowRight className="h-4 w-4" /></Link></div>
-        </div>
-      </section>
-
-      <section id="pricing" className="edition-pricing-section">
-        <div className="edition-container edition-pricing-grid">
-          <div><EditorialLabel>Open beta</EditorialLabel><h2 className="edition-display">Try Rive with real work.</h2><div className="edition-price"><strong>Free</strong><span>during open beta</span></div></div>
-          <div className="edition-pricing-detail">
-            <p>Create a Rive account without a credit card. Use the current workspace while the product is in open beta.</p>
-            <ul>{included.map((item) => <li key={item}><Check className="h-4 w-4" aria-hidden="true" />{item}</li>)}</ul>
-            <div className="edition-boundary"><strong>Account scope</strong><p>One account for the person running the business. Shared team access is not available yet.</p></div>
-            <MarketingButton href="/register">Create your free account</MarketingButton>
-            <Link href="/pricing" className="marketing-focus edition-text-link">See pricing & beta details <ArrowRight className="h-4 w-4" /></Link>
           </div>
         </div>
       </section>
 
-      <section id="faq" className="edition-faq-section">
-        <div className="edition-container edition-faq-grid">
-          <div><EditorialLabel>Straight answers</EditorialLabel><h2 className="edition-display">A few things worth knowing.</h2></div>
-          <FaqAccordion items={questions} />
+      {/* — Dept. 04 · Specification ——————————————————————————— */}
+      <section className="inst-section marketing-deferred-section" aria-label="Specification">
+        <div className="inst-container">
+          <DeptRule name="Specification" note="Blue ink marks a boundary, not a sales line" />
+          <h2 className="inst-display inst-display--section inst-section__head">Capabilities and limits, on the record.</h2>
+          <RevealOnScroll className="inst-reveal">
+            <div className="inst-register">
+              {SPECIFICATION.map((row) => (
+                <RegisterRow key={row.term} term={row.term} name={row.name} detail={row.detail} />
+              ))}
+            </div>
+          </RevealOnScroll>
         </div>
       </section>
 
-      <section className="edition-closing-section">
-        <div className="edition-container"><EditorialLabel inverse>Open beta</EditorialLabel><h2 className="edition-display">Your next client project<br />can start here.</h2><div className="edition-closing-action"><p>Create your account, add a client, and put Rive to work.</p><MarketingButton href="/register" variant="primary">Start free</MarketingButton><small>Free during beta. No credit card required.</small></div></div>
+      {/* — Dept. 05 · Admissions ————————————————————————————— */}
+      <section className="inst-section marketing-deferred-section" aria-label="Admissions">
+        <div className="inst-container">
+          <DeptRule name="Admissions" note="Open registration during the beta" />
+          <h2 className="inst-display inst-display--section inst-section__head">No fee. No card. One operator.</h2>
+          <div className="inst-admit">
+            <RevealOnScroll className="inst-reveal">
+              <div className="inst-admit__fee">
+                <div className="inst-admit__fee-head">
+                  <span className="inst-mono"><InstMark mark="square" accent />Fee schedule</span>
+                  <span className="inst-mono">Beta</span>
+                </div>
+                <span className="inst-admit__fee-value">Free</span>
+                <span className="inst-admit__fee-sub">During open beta — no credit card required.</span>
+                <div className="inst-admit__fee-foot">
+                  <MarketingButton href="/register">Register the practice</MarketingButton>
+                </div>
+              </div>
+            </RevealOnScroll>
+            <RevealOnScroll className="inst-reveal" delay={0.06}>
+              <div>
+                <ul className="inst-admit__list">
+                  {ADMISSIONS_INCLUDES.map((item) => (
+                    <li key={item}>
+                      <span className="inst-mono" aria-hidden="true">—</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="inst-admit__note">
+                  One operator per account. Shared team access is not available yet.
+                </p>
+              </div>
+            </RevealOnScroll>
+          </div>
+        </div>
       </section>
-    </>
+
+      {/* — Dept. 06 · Enquiries ——————————————————————————————— */}
+      <section className="inst-section marketing-deferred-section" aria-label="Enquiries">
+        <div className="inst-container">
+          <DeptRule name="Enquiries" note="Answered on the record" />
+          <h2 className="inst-display inst-display--section inst-section__head">Questions asked most.</h2>
+          <FaqAccordion items={ENQUIRIES} />
+        </div>
+      </section>
+
+      {/* — Closing plate —————————————————————————————————————— */}
+      <section className="inst-band inst-band--ink inst-closing marketing-deferred-section" aria-label="Begin">
+        <div className="inst-container inst-closing__grid">
+          <RevealOnScroll className="inst-reveal">
+            <p className="inst-mono"><InstMark mark="semi" accent />The next entry</p>
+            <h2 className="inst-display inst-display--closing" style={{ marginTop: "1rem" }}>
+              Start your record.
+            </h2>
+            <p className="inst-body" style={{ marginTop: "1.25rem" }}>
+              Registration is free during the open beta. Bring one client; the record does the rest.
+            </p>
+            <div className="inst-closing__action">
+              <MarketingButton href="/register">Start free</MarketingButton>
+              <MarketingLink href="/product/clients-projects">Read the register</MarketingLink>
+            </div>
+          </RevealOnScroll>
+          <RevealOnScroll className="inst-reveal" delay={0.08}>
+            <ClosingSeal />
+          </RevealOnScroll>
+        </div>
+      </section>
+    </div>
   );
 }

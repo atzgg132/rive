@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
+import { SmoothAnchors } from "@/components/marketing/SmoothAnchors";
 import { PRODUCTION_ORIGIN } from "@/lib/siteMetadata";
 
 type JsonLdNode =
@@ -31,8 +32,9 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div data-surface="marketing" className="marketing-root">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <a href="#main-content" className="marketing-focus edition-skip-link">Skip to content</a>
+      <a href="#main-content" className="marketing-focus inst-skip-link">Skip to content</a>
       <SiteHeader />
+      <SmoothAnchors />
       <main id="main-content" className="relative min-h-screen min-w-0">{children}</main>
       <SiteFooter />
     </div>

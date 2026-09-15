@@ -31,7 +31,7 @@ type Props = {
   /** Live preview only: swap the in-iframe practice view without leaving `/portfolio-preview`. */
   onSelectPractice?: (slug: string | undefined) => void;
   /** Use an h2 for the headline when the preview is embedded inside another page that already owns the h1. */
-  headingLevel?: "h1" | "h2";
+  headingLevel?: "h1" | "h2" | "h3";
 };
 
 type TemplateProfile = {
