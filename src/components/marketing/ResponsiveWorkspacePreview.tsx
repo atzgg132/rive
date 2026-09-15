@@ -3,76 +3,55 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { WorkspacePreview, type WorkspacePreviewView } from "@/components/marketing/WorkspacePreview";
 import { WorkspacePreviewCompact } from "@/components/marketing/WorkspacePreviewCompact";
-import { AppWindowFrame } from "@/components/marketing/AppWindowFrame";
+import { FluidAppWindow } from "@/components/marketing/AppWindowFrame";
 
-/* Fixed-geometry app windows, scaled to the plate. The variant follows the
-   plate's own width — not the viewport — matching the app's own breakpoints:
-   a narrow plate gets the real mobile shell, a mid plate the real tablet
-   layout (sidebar in, lg: grids collapsed), a wide plate the full desktop
-   window. Heights are per view so the identifying content — metric row,
-   first table rows, today's events — lands inside the window. */
+/* Fluid app windows — the document renders at the plate's real width and
+   its internals answer to that width via container queries. The only choice
+   made here is the shell: below the app's own md boundary the plate gets
+   the real mobile header, above it the sidebar + topbar. Aspect ratios are
+   per view so the identifying content — metric row, first rows, today's
+   events — lands inside the window. */
 
-const DESKTOP_GEOMETRY: Record<WorkspacePreviewView, { w: number; h: number }> = {
-  dashboard: { w: 1440, h: 880 },
-  revenue: { w: 1440, h: 950 },
-  calendar: { w: 1440, h: 680 },
-  clients: { w: 1440, h: 700 },
-  projects: { w: 1440, h: 780 },
-  agreements: { w: 1440, h: 760 },
-  portfolio: { w: 1440, h: 720 },
-  enquiries: { w: 1440, h: 780 },
+const COMPACT_MAX_WIDTH = 768;
+
+/* Window aspect per view, bucketed by the doc's real width. Each band picks
+   an aspect at or just above width/content-height, so the window clips the
+   view like a real viewport instead of leaving dead paper below the UI. */
+const ASPECTS: Record<WorkspacePreviewView, { max: number; aspect: number }[]> = {
+  dashboard: [{ max: 560, aspect: 0.5 }, { max: 768, aspect: 1.1 }, { max: Infinity, aspect: 1.55 }],
+  revenue: [{ max: 560, aspect: 0.5 }, { max: 768, aspect: 0.6 }, { max: Infinity, aspect: 1.5 }],
+  calendar: [{ max: 560, aspect: 0.55 }, { max: 768, aspect: 0.95 }, { max: Infinity, aspect: 1.45 }],
+  clients: [{ max: 560, aspect: 0.55 }, { max: 768, aspect: 0.9 }, { max: Infinity, aspect: 1.6 }],
+  projects: [{ max: 560, aspect: 0.5 }, { max: 768, aspect: 0.9 }, { max: Infinity, aspect: 1.5 }],
+  agreements: [{ max: 560, aspect: 0.55 }, { max: 768, aspect: 0.7 }, { max: Infinity, aspect: 1.6 }],
+  portfolio: [{ max: 560, aspect: 0.5 }, { max: 768, aspect: 1.0 }, { max: Infinity, aspect: 1.5 }],
+  enquiries: [{ max: 560, aspect: 0.52 }, { max: 768, aspect: 1.05 }, { max: Infinity, aspect: 1.6 }],
 };
 
-/* 920px doc — the app's real tablet layout: the desktop shell stays, but
-   lg:/xl: grids collapse the way they do on a small laptop. */
-const MID_GEOMETRY: Record<WorkspacePreviewView, { w: number; h: number }> = {
-  dashboard: { w: 920, h: 960 },
-  revenue: { w: 920, h: 1040 },
-  calendar: { w: 920, h: 720 },
-  clients: { w: 920, h: 780 },
-  projects: { w: 920, h: 860 },
-  agreements: { w: 920, h: 840 },
-  portfolio: { w: 920, h: 780 },
-  enquiries: { w: 920, h: 840 },
-};
-
-const COMPACT_GEOMETRY: Record<WorkspacePreviewView, { w: number; h: number }> = {
-  dashboard: { w: 390, h: 760 },
-  revenue: { w: 390, h: 780 },
-  calendar: { w: 390, h: 740 },
-  clients: { w: 390, h: 720 },
-  projects: { w: 390, h: 740 },
-  agreements: { w: 390, h: 700 },
-  portfolio: { w: 390, h: 720 },
-  enquiries: { w: 390, h: 640 },
-};
-
-const COMPACT_MAX_WIDTH = 480;
-const MID_MAX_WIDTH = 1024;
+function aspectFor(view: WorkspacePreviewView, width: number) {
+  return ASPECTS[view].find((band) => width < band.max)?.aspect ?? 1.5;
+}
 
 export function ResponsiveWorkspacePreview({ view, className = "" }: { view: WorkspacePreviewView; className?: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [tier, setTier] = useState<"compact" | "mid" | "desktop">("desktop");
+  const [width, setWidth] = useState(0);
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const measure = () => {
-      const w = el.clientWidth;
-      setTier(w < COMPACT_MAX_WIDTH ? "compact" : w < MID_MAX_WIDTH ? "mid" : "desktop");
-    };
+    const measure = () => setWidth(el.clientWidth);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  const geometry = (tier === "compact" ? COMPACT_GEOMETRY : tier === "mid" ? MID_GEOMETRY : DESKTOP_GEOMETRY)[view];
+  const compact = width > 0 && width < COMPACT_MAX_WIDTH;
   return (
     <div ref={wrapRef} className={className}>
-      <AppWindowFrame docWidth={geometry.w} docHeight={geometry.h}>
-        {tier === "compact" ? <WorkspacePreviewCompact view={view} /> : <WorkspacePreview view={view} />}
-      </AppWindowFrame>
+      <FluidAppWindow aspect={aspectFor(view, width)}>
+        {compact ? <WorkspacePreviewCompact view={view} /> : <WorkspacePreview view={view} />}
+      </FluidAppWindow>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { ArrowUpRight, Mail } from "lucide-react";
 import { ContactForm } from "@/components/marketing/ContactForm";
-import { InstMark } from "@/components/marketing/primitives";
 import { contactContent } from "@/content/marketing/resources";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
@@ -11,7 +10,7 @@ export default function ContactPage() {
     <section className="inst-reading">
       <div className="inst-container">
         <div className="inst-reading__head">
-          <span className="inst-mono"><InstMark mark="circle" accent />{contactContent.eyebrow}</span>
+          <span className="inst-mono">{contactContent.eyebrow}</span>
           <h1 className="inst-display" style={{ marginTop: "1.25rem" }}>{contactContent.title}</h1>
           <p className="inst-body">{contactContent.intro}</p>
         </div>
@@ -20,7 +19,7 @@ export default function ContactPage() {
             <ContactForm copy={contactContent.form} />
           </div>
           <aside className="inst-panel">
-            <span className="inst-mono inst-panel__label"><InstMark mark="diamond" />Direct line</span>
+            <span className="inst-mono inst-panel__label">Direct line</span>
             <Mail className="h-5 w-5" aria-hidden="true" style={{ color: "var(--inst-ink)" }} />
             <h2 className="inst-panel__title" style={{ marginTop: "1rem" }}>{contactContent.asideTitle}</h2>
             <a href={`mailto:${contactContent.email}`} className="marketing-focus inst-link">

@@ -8,7 +8,6 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { authViewFromPathname, type AuthParams, type AuthView } from "@/components/auth/authIntent";
 import { RecordArtifact } from "@/components/marketing/RecordArtifact";
-import { InstMark } from "@/components/marketing/primitives";
 import { RiveLogo } from "@/components/RiveLogo";
 
 const routeCopy = {
@@ -38,7 +37,7 @@ export function AuthOverlay({ view, params, startPending, busy, onOpenChange, on
                   <p className="inst-auth-art__body">{copy.body}</p>
                 </div>
                 <RecordArtifact phase={4} inline className="inst-auth-art__record" />
-                <p className="inst-mono"><InstMark mark="circle" accent />Free during open beta. No credit card.</p>
+                <p className="inst-mono">Free during open beta. No credit card.</p>
               </div>
             ) : (
               <BaseDialog.Close disabled={busy} className="marketing-focus inst-auth-close" aria-label="Close"><X className="h-4 w-4" /></BaseDialog.Close>

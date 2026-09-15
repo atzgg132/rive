@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { InstMark, MarketingButton } from "@/components/marketing/primitives";
+import { MarketingButton } from "@/components/marketing/primitives";
 import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
@@ -26,7 +26,7 @@ export default function PricingPage() {
         <div className="inst-container inst-admit">
           <div className="inst-admit__fee">
             <div className="inst-admit__fee-head">
-              <span className="inst-mono"><InstMark mark="square" accent />Open beta</span>
+              <span className="inst-mono">Open beta</span>
               <span className="inst-mono">No card</span>
             </div>
             <span className="inst-admit__fee-value">Free</span>

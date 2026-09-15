@@ -16,7 +16,7 @@ export function MetricCard({ label, value, sub, className }: MetricCardProps) {
       <Kicker tone="muted" dot={false}>
         {label}
       </Kicker>
-      <p className="mt-3 font-mono text-2xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-3 truncate font-mono text-2xl font-semibold tabular-nums" title={typeof value === "string" ? value : undefined}>{value}</p>
       {sub ? <p className="mt-1 text-xs text-muted-foreground">{sub}</p> : null}
     </Card>
   );

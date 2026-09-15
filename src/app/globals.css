@@ -697,11 +697,112 @@ h1, h2 {
 
 /* Scaled app-window plates — the real workspace UI, reproduced in miniature.
    Each view is composed from the app's own @/components/ui primitives; this
-   file only carries the frame: a fixed-geometry window scaled to the plate,
-   fully inert, gated between the desktop and mobile shells. */
+   file only carries the frame: a window holding a document, fully inert. */
 
 .app-window { position: relative; overflow: hidden; }
 .app-window__doc { position: absolute; top: 0; left: 0; transform-origin: top left; }
+
+/* Fluid documents fill the frame at real size — no scaling. Every container
+   query below answers to the document's own width, never the browser
+   viewport, so the reproduction lays out for the space it actually has.
+   (The fixed __doc is a container too, so document plates behave the same.) */
+.app-window__doc,
+.app-window__fluid-doc { container-type: inline-size; }
+.app-window__fluid-doc { position: absolute; inset: 0; overflow: hidden; }
+
+/* Page header: actions sit beside the title once the doc has room, and wrap
+   to their own line rather than crushing the title when they don't. */
+.app-window .wp-head { flex-direction: column; }
+@container (min-width: 40rem) {
+  .app-window .wp-head { flex-direction: row; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; }
+}
+
+/* Intrinsic grids — columns appear as the doc gains room, no breakpoints. */
+.app-window .wp-metrics { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+.app-window .wp-cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+
+/* Fixed-count metric strips — even rows at every width, never an orphan
+   card on its own line. */
+.app-window .wp-metrics--four { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app-window .wp-metrics--five { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 30rem) {
+  .app-window .wp-metrics--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (min-width: 44rem) {
+  .app-window .wp-metrics--five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (min-width: 60rem) {
+  .app-window .wp-metrics--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .app-window .wp-metrics--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+/* Two-pane splits, each at the doc width where its content stays readable. */
+.app-window .wp-split { display: grid; gap: 1.25rem; }
+@container (min-width: 52.5rem) {
+  .app-window .wp-split { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }
+}
+@container (min-width: 50rem) {
+  .app-window .wp-split--dash { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+}
+@container (min-width: 46rem) {
+  .app-window .wp-split--editor { grid-template-columns: 13.125rem minmax(0, 1fr); }
+  .app-window .wp-editor-side { display: block; }
+}
+.app-window .wp-editor-side { display: none; }
+
+/* The analytics chart needs ~36rem of main column — hide it below that
+   rather than let it clip sideways inside the window. */
+.app-window .wp-chart { display: none; }
+@container (min-width: 60rem) { .app-window .wp-chart { display: block; } }
+
+/* Secondary table columns yield to the essential ones on narrow docs. */
+.app-window .wp-col-opt { display: none; }
+@container (min-width: 44rem) { .app-window .wp-col-opt { display: table-cell; } }
+
+/* Stacked-then-inline rows (project cards, alert banners). */
+.app-window .wp-row { display: flex; flex-direction: column; gap: 0.5rem; }
+@container (min-width: 36rem) {
+  .app-window .wp-row { flex-direction: row; align-items: flex-start; justify-content: space-between; }
+  .app-window .wp-row--center { align-items: center; }
+}
+
+/* Fields that are full-width when stacked, fixed when beside a title. */
+.app-window .wp-search { width: 100%; }
+@container (min-width: 40rem) { .app-window .wp-search { width: 18rem; } }
+
+/* Chrome details that only fit on wider docs. */
+@container (max-width: 54rem) { .app-window .wp-hide-md { display: none; } }
+
+/* Document plates (acceptance page, shared invoice): same principle —
+   layout answers to the fixed doc width inside the plate. */
+.app-window .wp-doc-split { display: grid; gap: 1.5rem; }
+@container (min-width: 55rem) {
+  .app-window .wp-doc-split { grid-template-columns: minmax(0, 1fr) 20rem; }
+}
+.app-window .wp-cols-auto,
+.app-window .wp-cols-2 { display: grid; gap: 0.25rem; }
+@container (min-width: 35rem) {
+  .app-window .wp-cols-auto { grid-template-columns: minmax(0, 1fr) auto; }
+  .app-window .wp-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-window .wp-px10 { padding-inline: 2.5rem; }
+  .app-window .wp-minw-52 { min-width: 13rem; }
+}
+
+/* Calendar: agenda rows on narrow docs, the seven-column week above. */
+.app-window .wp-cal { display: flex; flex-direction: column; }
+.app-window .wp-cal-day { display: flex; align-items: flex-start; gap: 0.75rem; min-width: 0; padding: 0.625rem 0.75rem; border-top: 1px solid rgb(var(--border) / var(--border-alpha)); }
+.app-window .wp-cal-day:first-child { border-top: 0; }
+.app-window .wp-cal-head { display: flex; flex: 0 0 4.25rem; align-items: baseline; gap: 0.375rem; }
+.app-window .wp-cal-events { display: flex; flex: 1; flex-wrap: wrap; gap: 0.375rem; min-width: 0; }
+.app-window .wp-cal-events > span { flex: 1 1 9rem; }
+@container (min-width: 35rem) {
+  .app-window .wp-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .app-window .wp-cal-day { flex-direction: column; gap: 0; min-height: 15rem; padding: 0.5rem; border-top: 0; border-left: 1px solid rgb(var(--border) / var(--border-alpha)); }
+  .app-window .wp-cal-day:first-child { border-left: 0; }
+  .app-window .wp-cal-head { flex: none; flex-direction: column; align-items: center; gap: 0.25rem; width: auto; margin-bottom: 0.5rem; }
+  .app-window .wp-cal-events { flex-direction: column; flex-wrap: nowrap; }
+  .app-window .wp-cal-events > span { flex: none; }
+}
 
 
 

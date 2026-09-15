@@ -30,20 +30,20 @@ export function InvoiceDocument() {
           </div>
         </div>
 
-        <div className="grid gap-8 px-6 py-8 sm:grid-cols-[1fr_auto] sm:px-10">
+        <div className="wp-cols-auto gap-8 px-6 py-8 wp-px10">
           <div>
             <Kicker tone="muted">Bill to</Kicker>
             <p className="mt-2 text-lg font-semibold">Aster House</p>
             <p className="text-sm text-muted-foreground">asterhouse.co</p>
             <p className="mt-5 text-sm text-muted-foreground">Project <span className="font-medium text-foreground">Website launch</span></p>
           </div>
-          <div className="border border-border bg-muted p-6 sm:min-w-52">
+          <div className="wp-minw-52 border border-border bg-muted p-6">
             <Kicker>Amount due</Kicker>
             <p className="mt-2 font-mono text-3xl font-semibold tabular-nums">₹90,000</p>
           </div>
         </div>
 
-        <div className="px-6 sm:px-10">
+        <div className="wp-px10 px-6">
           <div className="rounded-none border border-border">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Description</th><th className="px-4 py-3 text-right">Qty</th><th className="px-4 py-3 text-right">Rate</th><th className="px-4 py-3 text-right">Amount</th></tr></thead>
@@ -56,11 +56,11 @@ export function InvoiceDocument() {
           </div>
         </div>
 
-        <div className="grid gap-5 px-6 py-8 sm:grid-cols-2 sm:px-10">
+        <div className="wp-cols-2 gap-5 px-6 py-8 wp-px10">
           <div><Kicker tone="muted">Notes</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">Thank you — final files release on payment.</p></div>
           <div><Kicker tone="muted">Payment information</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">Bank transfer or UPI to maya@upi · reference INV-024.</p></div>
         </div>
-        <div className="border-t border-border px-6 py-5 text-center text-xs text-muted-foreground sm:px-10">This invoice was shared securely by Maya Rao Studio. Verify payment details with the sender before transferring funds. · <span className="text-primary">rive.</span></div>
+        <div className="wp-px10 border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">This invoice was shared securely by Maya Rao Studio. Verify payment details with the sender before transferring funds. · <span className="text-primary">rive.</span></div>
       </Card>
     </div>
   );

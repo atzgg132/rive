@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { footerCopy, footerNav } from "@/content/marketing/nav";
 import { RiveLogo } from "@/components/RiveLogo";
-import { InstMark } from "@/components/marketing/primitives";
 
 export function SiteFooter() {
   return (
@@ -17,7 +16,7 @@ export function SiteFooter() {
           </div>
           <div>
             <span className="inst-colophon__status inst-mono">
-              <InstMark mark="circle" accent />{footerCopy.status}
+              {footerCopy.status}
             </span>
           </div>
         </div>

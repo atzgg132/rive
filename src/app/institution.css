@@ -562,26 +562,17 @@
 .inst-journey__depts { display: grid; }
 .inst-dept-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem 2rem;
   padding: clamp(1.75rem, 4vh, 3rem) 0;
   border-top: 1px solid var(--inst-hairline);
 }
 .inst-dept-row:first-child { border-top: 0; }
-.inst-dept-row__fig {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-  padding-top: 0.3rem;
-  color: var(--inst-ink-faint);
-}
-.inst-dept-row__fig .inst-mark { width: 0.85rem; height: 0.85rem; color: var(--inst-ink); }
-.inst-dept-row[data-current="true"] .inst-dept-row__fig .inst-mark { color: var(--inst-accent); }
-.inst-dept-row__copy h3 { font-size: clamp(1.5rem, 2.6vw, 2.1rem); }
+.inst-dept-row[data-current="true"] .inst-dept-row__copy h3 { color: var(--inst-accent); }
+.inst-dept-row__copy h3 { font-size: clamp(1.5rem, 2.6vw, 2.1rem); transition: color 0.3s ease; }
 .inst-dept-row__copy p { margin-top: 0.75rem; max-width: 46ch; color: var(--inst-ink-soft); line-height: 1.6; }
 .inst-dept-row__copy .inst-link { margin-top: 1rem; }
-.inst-dept-row__plate { grid-column: 2; margin-top: 1.25rem; max-width: 40rem; }
+.inst-dept-row__plate { margin-top: 1.25rem; max-width: 40rem; }
 
 .inst-journey__rail { position: sticky; top: calc(4.25rem + 1.5rem); }
 
