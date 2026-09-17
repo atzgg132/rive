@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { normalizeEmailAddress } from "@/lib/email-address";
 
 /**
  * Validation, abuse limits, and lifecycle rules for portfolio enquiries.
@@ -6,8 +7,6 @@ import { createHash } from "crypto";
  * Kept free of database and request imports so the rules can be exercised
  * directly. The route composes them; nothing here decides policy on its own.
  */
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Rejected before the body is read, let alone parsed. The largest legitimate
@@ -103,7 +102,7 @@ export function validateInquirySubmission(body: unknown): InquiryValidation {
   if (text(input.website)) return { ok: false, reason: "honeypot" };
 
   const name = text(input.name);
-  const email = text(input.email).toLowerCase();
+  const email = normalizeEmailAddress(text(input.email)) || "";
   const projectType = text(input.projectType);
   const message = text(input.message);
   const sourceProjectId = text(input.sourceProjectId);
@@ -111,8 +110,7 @@ export function validateInquirySubmission(body: unknown): InquiryValidation {
   if (
     name.length < INQUIRY_FIELD_LIMITS.name.min ||
     name.length > INQUIRY_FIELD_LIMITS.name.max ||
-    !EMAIL_PATTERN.test(email) ||
-    email.length > INQUIRY_FIELD_LIMITS.email.max ||
+    !email ||
     projectType.length < INQUIRY_FIELD_LIMITS.projectType.min ||
     projectType.length > INQUIRY_FIELD_LIMITS.projectType.max ||
     message.length < INQUIRY_FIELD_LIMITS.message.min ||

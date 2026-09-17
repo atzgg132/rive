@@ -8,9 +8,12 @@
 # template — changes nothing that is currently serving traffic. This script is
 # how a routing change actually reaches the host.
 #
-# Caddy runs with `admin off`, so there is no admin API to reload through: the
-# proxy container has to restart, which refuses connections for a second or two.
-# The script validates the new config before restarting, verifies production
+# Caddy runs with `admin off`, so there is no admin API to reload through. The
+# Caddyfile resolves upstream ports from environment variables at adapt time,
+# and `docker restart` would reuse the container's original environment — so
+# the proxy is recreated against /opt/rive/proxy-upstreams.env instead, which
+# refuses connections for a second or two. The script validates the new config
+# (with the current upstreams loaded) before recreating, verifies production
 # answers afterwards, and restores the previous file if either check fails.
 #
 # Usage:  scripts/apply-caddy-config.sh [instance-id]
@@ -33,22 +36,52 @@ ENCODED="$(base64 -w0 <"$CADDYFILE" 2>/dev/null || base64 <"$CADDYFILE" | tr -d 
 PAYLOAD="$(REGION="$REGION" ENCODED="$ENCODED" python3 - <<'PY'
 import json, os
 encoded = os.environ["ENCODED"]
+region = os.environ["REGION"]
 commands = [
     "set -uo pipefail",
     "STAMP=$(date +%s)",
     "cp /opt/rive/Caddyfile /opt/rive/Caddyfile.bak.$STAMP",
     f"printf '%s' '{encoded}' | base64 -d > /opt/rive/Caddyfile",
-    "if ! docker exec rive-proxy caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile; then "
+    # Upstream env file may not exist on a host that predates it; the Caddyfile
+    # defaults cover that case.
+    "[ -f /opt/rive/proxy-upstreams.env ] || "
+    "printf 'RIVE_PROD_UPSTREAM=127.0.0.1:3000\\nRIVE_DEV_UPSTREAM=127.0.0.1:3002\\n' "
+    "> /opt/rive/proxy-upstreams.env",
+    "if ! docker run --rm --env-file /opt/rive/proxy-upstreams.env "
+    "-v /opt/rive/Caddyfile:/etc/caddy/Caddyfile:ro caddy:2.10-alpine "
+    "validate --adapter caddyfile --config /etc/caddy/Caddyfile; then "
     "echo VALIDATE_FAILED_RESTORING; cp /opt/rive/Caddyfile.bak.$STAMP /opt/rive/Caddyfile; exit 1; fi",
     "echo VALIDATE_OK",
-    "docker restart rive-proxy",
+    "docker rm -f rive-proxy",
+    "docker run -d --name rive-proxy --restart unless-stopped --network host "
+    "--env-file /opt/rive/proxy-upstreams.env "
+    "-v /opt/rive/Caddyfile:/etc/caddy/Caddyfile:ro "
+    "-v /opt/rive/caddy/data:/data -v /opt/rive/caddy/config:/config "
+    "--log-driver awslogs "
+    f"--log-opt awslogs-region={region} "
+    "--log-opt awslogs-group=/rive/proxy --log-opt awslogs-stream=rive-proxy "
+    "--log-opt awslogs-create-group=true caddy:2.10-alpine",
     "sleep 8",
-    "if ! curl -sf -o /dev/null http://127.0.0.1:3000/api/ready; then "
+    # The live upstream port may be the alternate after a blue/green deploy, so
+    # verify through whatever the env file currently points Caddy at.
+    "PROD_PORT=$(sed -n 's/^RIVE_PROD_UPSTREAM=.*://p' /opt/rive/proxy-upstreams.env)",
+    "PROD_PORT=${PROD_PORT:-3000}",
+    "if ! curl -sf --max-time 5 -o /dev/null http://127.0.0.1:$PROD_PORT/api/ready; then "
     "echo PROD_UNHEALTHY_RESTORING; cp /opt/rive/Caddyfile.bak.$STAMP /opt/rive/Caddyfile; "
-    "docker restart rive-proxy; exit 1; fi",
+    "docker rm -f rive-proxy; "
+    "docker run -d --name rive-proxy --restart unless-stopped --network host "
+    "--env-file /opt/rive/proxy-upstreams.env "
+    "-v /opt/rive/Caddyfile:/etc/caddy/Caddyfile:ro "
+    "-v /opt/rive/caddy/data:/data -v /opt/rive/caddy/config:/config "
+    "--log-driver awslogs "
+    f"--log-opt awslogs-region={region} "
+    "--log-opt awslogs-group=/rive/proxy --log-opt awslogs-stream=rive-proxy "
+    "--log-opt awslogs-create-group=true caddy:2.10-alpine; exit 1; fi",
     "echo PROD_HEALTHY",
-    "curl -s -o /dev/null -w 'prod=%{http_code} ' http://127.0.0.1:3000/api/ready",
-    "curl -s -o /dev/null -w 'dev=%{http_code}\\n' http://127.0.0.1:3002/api/ready",
+    "curl -s --max-time 5 -o /dev/null -w 'prod=%{http_code} ' http://127.0.0.1:$PROD_PORT/api/ready",
+    "DEV_PORT=$(sed -n 's/^RIVE_DEV_UPSTREAM=.*://p' /opt/rive/proxy-upstreams.env)",
+    "curl -s --max-time 5 -o /dev/null -w 'dev=%{http_code}\\n' "
+    "http://127.0.0.1:${DEV_PORT:-3002}/api/ready",
 ]
 print(json.dumps({"commands": commands}))
 PY

@@ -7,10 +7,7 @@ import {
   saveWorkSetupPreview,
   serializeProjectGeneration,
 } from "@/utils/projectGeneration";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,8 +18,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!rateLimit(`work-setup-preview:${session.userId}:${id}`, 30, 60 * 60 * 1000)) {
       return NextResponse.json({ success: false, message: "Too many work setup previews. Try again later.", code: "rate_limited" }, { status: 429 });
     }
-    const body = await req.json().catch(() => null);
-    const rawPlan = isRecord(body) && Object.prototype.hasOwnProperty.call(body, "plan") ? body.plan : body;
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
+    const rawPlan = Object.prototype.hasOwnProperty.call(body, "plan") ? body.plan : body;
     const result = await saveWorkSetupPreview(session.userId, id, rawPlan);
     return NextResponse.json({
       success: true,

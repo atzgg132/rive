@@ -7,13 +7,17 @@ import { durableRateLimit } from "@/utils/durableRateLimit";
 import { getRequestIp } from "@/utils/rateLimit";
 import { hashRequestValue } from "@/utils/contracts";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { normalizeEmailAddress } from "@/lib/email-address";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest) {
   const genericResponse = () => NextResponse.json({ success: true, message: "If an account needs verification, a fresh link is on its way." });
   try {
-    const body = await req.json().catch(() => ({}));
-    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (!/^\S+@\S+\.\S+$/.test(email)) return genericResponse();
+    const parsedBody = await readJsonBody(req, { allowEmpty: true });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
+    const email = normalizeEmailAddress(body?.email) || "";
+    if (!email) return genericResponse();
 
     const ip = getRequestIp(req);
     const allowed = await durableRateLimit(`auth:verify-resend:${hashRequestValue(ip)}:${hashRequestValue(email)}`, 3, 15 * 60 * 1000);

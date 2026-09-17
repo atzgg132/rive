@@ -20,6 +20,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The mock module substituted for @/utils/db so tests can drive commit. */
 const mockDbUrl = pathToFileURL(join(root, "tests", "helpers", "prisma-mock.mjs")).href;
 
+const nextServerUrl = pathToFileURL(join(root, "tests", "helpers", "next-server-shim.mjs")).href;
+
 const CANDIDATE_EXTENSIONS = [".ts", ".tsx", ".mjs", ".js", ".mts", ".json"];
 
 /** Resolve a path to an existing file, trying candidate extensions. */
@@ -35,6 +37,10 @@ function resolveWithExtensions(absPath) {
 export function resolve(specifier, context, nextResolve) {
   if (specifier === "server-only") {
     return { url: stubUrl, shortCircuit: true };
+  }
+
+  if (specifier === "next/server") {
+    return { url: nextServerUrl, shortCircuit: true };
   }
 
   // Substitute the mock db module for the real one so no pg Pool is created.

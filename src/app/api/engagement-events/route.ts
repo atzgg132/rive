@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { getSessionUser } from "@/utils/userAuth";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 const ALLOWED_EVENTS: Set<string> = new Set([
   PRODUCT_EVENTS.engagementFlowStarted,
@@ -16,7 +17,9 @@ function clean(value: unknown, max: number): string {
 export async function POST(request: NextRequest) {
   const session = await getSessionUser(request);
   if (!session) return NextResponse.json({ success: false }, { status: 401 });
-  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const parsedBody = await readJsonBody(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const eventName = clean(body?.eventName, 80);
   const flowId = clean(body?.flowId, 80);
   const entryPoint = body?.entryPoint === "onboarding" ? "onboarding" : body?.entryPoint === "workspace" ? "workspace" : body?.entryPoint === "inquiry" ? "inquiry" : "";

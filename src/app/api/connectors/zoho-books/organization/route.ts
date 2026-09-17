@@ -4,6 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { confirmZohoOrganization } from "@/utils/zohoBooks";
 import { zohoBooksAvailable } from "@/utils/connectorConfig";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /**
  * Confirm which Zoho Books organization this connection maps to.
@@ -26,7 +27,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Too many attempts. Try again shortly." }, { status: 429 });
   }
 
-  const body = await req.json().catch(() => null);
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const connectionId = typeof body?.connectionId === "string" ? body.connectionId : "";
   const organizationId = typeof body?.organizationId === "string" ? body.organizationId : "";
   if (!connectionId || !organizationId) {

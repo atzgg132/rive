@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { monthlyCohortRows } from "@/utils/revenueTrend";
-import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
+import { presentedInvoiceStatus } from "@/utils/invoiceLifecycle";
 import { ISSUED_STATUSES, collectedAmount, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
 
 type CurrencySummary = {
@@ -145,7 +145,6 @@ function summaryDayToInstant(year: number, month: number, day: number, timeZone:
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  await refreshOverdueInvoices(session.userId);
 
   try {
     const now = new Date();
@@ -286,7 +285,7 @@ export async function GET(req: NextRequest) {
 
         const overdueDays = daysPastDue(invoice.dueDate, now);
         if (invoice.status === "overdue" || (overdueDays !== null && outstanding > 0)) {
-          retainAttention(attention, { id: invoice.id, invoiceNumber: invoice.invoiceNumber, currency, status: invoice.status, outstanding, dueDate: invoice.dueDate?.toISOString() || null, client: invoice.client?.name || null, reason: "Payment is overdue" });
+          retainAttention(attention, { id: invoice.id, invoiceNumber: invoice.invoiceNumber, currency, status: presentedInvoiceStatus(invoice.status, invoice.dueDate, now), outstanding, dueDate: invoice.dueDate?.toISOString() || null, client: invoice.client?.name || null, reason: "Payment is overdue" });
         } else if (invoice.status === "draft" && (!invoice.client || !invoice.dueDate)) {
           retainAttention(attention, { id: invoice.id, invoiceNumber: invoice.invoiceNumber, currency, status: invoice.status, outstanding: total, dueDate: invoice.dueDate?.toISOString() || null, client: invoice.client?.name || null, reason: !invoice.client ? "Add a client before sending" : "Add a due date before sending" });
         }

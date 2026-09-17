@@ -30,6 +30,13 @@ const compiledRoute = ts.transpileModule(routeSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
+const compile = (relativePath) =>
+  ts.transpileModule(readFileSync(new URL(relativePath, import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+
+const idempotencyCompiled = compile("../../src/utils/idempotency.ts");
+
 const RUN = Date.now().toString(36);
 const OWNER_EMAIL = "w01-pay@test.invalid";
 const OTHER_EMAIL = "w01-pay-other@test.invalid";
@@ -50,24 +57,49 @@ class FrozenDate extends Date {
   }
 }
 
+function sandboxRequire(name) {
+  if (name === "@/utils/db") return { prisma, Prisma: require("@prisma/client").Prisma };
+  if (name === "@/utils/userAuth") return { getSessionUser: async () => (session.userId ? { userId: session.userId } : null) };
+  if (name === "@/utils/productEvents") {
+    return {
+      PRODUCT_EVENTS: { paymentRecorded: "payment_recorded" },
+      recordProductEvent: async (event) => { productEvents.push(event); },
+    };
+  }
+  if (name === "@/utils/invoiceMath") return { currencyFractionDigits };
+  // The real boundary is covered by api-boundary.test.mjs; the sandbox
+  // only needs a passthrough for well-formed JSON request bodies.
+  if (name === "@/utils/apiBoundary") return { readJsonBody: async (request) => ({ ok: true, body: await request.json() }) };
+  // These tests exercise real idempotency semantics (replay, conflict,
+  // fencing), so the module itself is transpiled and evaluated here rather
+  // than stubbed.
+  if (name === "@/utils/idempotency") return loadIdempotency();
+  return require(name);
+}
+
+let idempotencyExports = null;
+function loadIdempotency() {
+  if (!idempotencyExports) {
+    idempotencyExports = {};
+    runInNewContext(idempotencyCompiled, {
+      exports: idempotencyExports,
+      console,
+      Date: FrozenDate,
+      setTimeout,
+      require: sandboxRequire,
+    });
+  }
+  return idempotencyExports;
+}
+
 function loadHandler() {
   const handlerExports = {};
   runInNewContext(compiledRoute, {
     exports: handlerExports,
     console,
     Date: FrozenDate,
-    require: (name) => {
-      if (name === "@/utils/db") return { prisma, Prisma: require("@prisma/client").Prisma };
-      if (name === "@/utils/userAuth") return { getSessionUser: async () => (session.userId ? { userId: session.userId } : null) };
-      if (name === "@/utils/productEvents") {
-        return {
-          PRODUCT_EVENTS: { paymentRecorded: "payment_recorded" },
-          recordProductEvent: async (event) => { productEvents.push(event); },
-        };
-      }
-      if (name === "@/utils/invoiceMath") return { currencyFractionDigits };
-      return require(name);
-    },
+    setTimeout,
+    require: sandboxRequire,
   });
   return handlerExports;
 }

@@ -5,6 +5,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 import { markMigrationObjectVerified, migrationObjectKey, presignMigrationUpload, verifyMigrationObject } from "@/utils/migration/uploads";
 import { MIGRATION_LIMITS } from "@/lib/migration/config";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -96,11 +97,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   const applied = await prisma.migrationOperation.count({ where: { importJobId: id, status: "applied" } });
   if (applied > 0) return NextResponse.json({ success: false, message: "Files cannot change after commit begins." }, { status: 409 });
 
-  const body = await req.json().catch(() => null) as Record<string, unknown> | null;
-  const name = typeof body?.name === "string" ? body.name.trim().slice(0, 240) : "";
-  const mimeType = typeof body?.mimeType === "string" ? body.mimeType.trim().toLowerCase().slice(0, 160) : "";
-  const sizeBytes = Number(body?.sizeBytes);
-  const checksum = typeof body?.checksum === "string" ? body.checksum.trim().toLowerCase() : "";
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
+  const name = typeof body.name === "string" ? body.name.trim().slice(0, 240) : "";
+  const mimeType = typeof body.mimeType === "string" ? body.mimeType.trim().toLowerCase().slice(0, 160) : "";
+  const sizeBytes = Number(body.sizeBytes);
+  const checksum = typeof body.checksum === "string" ? body.checksum.trim().toLowerCase() : "";
   if (!/\.(csv|xlsx)$/i.test(name) || !Number.isInteger(sizeBytes) || sizeBytes < 1
     || sizeBytes > MIGRATION_LIMITS.maxFileBytes || !/^[a-f0-9]{64}$/.test(checksum)) {
     return NextResponse.json({ success: false, message: "Choose a CSV or XLSX file up to 5 MB." }, { status: 400 });

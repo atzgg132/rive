@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
-import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
+import { canonicalTimeZone, isDateOnly } from "@/utils/calendar";
 import { isValidOnboardingAvatarUrl, mergePortfolioContent } from "@/utils/portfolio";
 import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
@@ -12,8 +12,10 @@ import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_STARTING_PATHS } from "@/lib/activation";
 import { nextInvoiceNumber } from "@/utils/invoiceNumber";
+import { normalizeEmailAddress } from "@/lib/email-address";
 import { contractsAvailable } from "@/utils/contracts";
 import { engagementFlowAvailable } from "@/utils/engagements";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
@@ -83,10 +85,9 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return unauthorized();
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return NextResponse.json({ success: false, message: "A valid request body is required." }, { status: 400 });
-  }
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
 
   const data: Record<string, unknown> = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim().slice(0, 120);
@@ -113,8 +114,11 @@ export async function PATCH(req: NextRequest) {
     data.businessTypes = [body.businessType];
   }
   if (typeof body.currency === "string" && /^[A-Z]{3}$/.test(body.currency)) data.currency = body.currency;
-  if (typeof body.timeZone === "string" && isValidTimeZone(body.timeZone)) data.timeZone = body.timeZone;
-  if (Number.isInteger(body.step) && body.step >= 0 && body.step <= 5) data.onboardingStep = body.step;
+  if (typeof body.timeZone === "string") {
+    const timeZone = canonicalTimeZone(body.timeZone);
+    if (timeZone) data.timeZone = timeZone;
+  }
+  if (typeof body.step === "number" && Number.isInteger(body.step) && body.step >= 0 && body.step <= 5) data.onboardingStep = body.step;
   if (body.status === "in_progress" || body.status === "complete" || body.status === "skipped") {
     data.onboardingStatus = body.status;
   }
@@ -199,7 +203,7 @@ export async function PATCH(req: NextRequest) {
       ensurePrefilledPortfolio(session.userId),
     ]);
   }
-  if (body.step > 0 || body.status === "in_progress") {
+  if (Number(body.step) > 0 || body.status === "in_progress") {
     await recordActivationEvent(session.userId, ACTIVATION_EVENTS.onboardingStarted, { step: Number(body.step) || 0 });
     await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.onboardingStarted, module: "onboarding", properties: { step: Number(body.step) || 0 } });
   }
@@ -221,14 +225,21 @@ export async function POST(req: NextRequest) {
   if (!rateLimit(`onboarding-quickstart:${session.userId}:${getRequestIp(req)}`, 10, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many attempts. Please try again later." }, { status: 429 });
   }
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object" || body.mode !== "quickstart") {
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
+  if (body.mode !== "quickstart") {
     return NextResponse.json({ success: false, message: "A valid quick-start request is required." }, { status: 400 });
   }
   const clientName = typeof body.clientName === "string" ? body.clientName.trim() : "";
   const projectTitle = typeof body.projectTitle === "string" ? body.projectTitle.trim() : "";
   if (!clientName || !projectTitle) {
     return NextResponse.json({ success: false, message: "Client and project names are required." }, { status: 400 });
+  }
+  const clientEmailInput = typeof body.clientEmail === "string" ? body.clientEmail.trim() : "";
+  const clientEmail = clientEmailInput ? normalizeEmailAddress(clientEmailInput) : null;
+  if (clientEmailInput && !clientEmail) {
+    return NextResponse.json({ success: false, message: "Use a valid client email." }, { status: 400 });
   }
   const dueDate = typeof body.dueDate === "string" && isDateOnly(body.dueDate)
     ? new Date(`${body.dueDate}T12:00:00Z`)
@@ -241,7 +252,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: session.userId,
         name: clientName.slice(0, 160),
-        email: typeof body.clientEmail === "string" && /^\S+@\S+\.\S+$/.test(body.clientEmail.trim()) ? body.clientEmail.trim().toLowerCase() : null,
+        email: clientEmail,
         avatarColor: "#2563EB",
         tags: [],
         dataOrigin: "user",

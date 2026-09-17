@@ -1,10 +1,10 @@
 import crypto from "crypto";
 import { prisma } from "@/utils/db";
-import { addDays, isDateOnly, isValidTimeZone } from "@/lib/calendar-time";
+import { addDays, canonicalTimeZone, isDateOnly, isValidTimeZone } from "@/lib/calendar-time";
 
 // The pure zone/date helpers live in src/lib/calendar-time.ts so client
 // components can use them too; re-exported here for existing server callers.
-export { addDays, isDateOnly, isValidTimeZone };
+export { addDays, canonicalTimeZone, isDateOnly, isValidTimeZone };
 
 export type CalendarEventDto = {
   id: string;
@@ -69,7 +69,7 @@ export async function ensureDefaultCalendar(userId: string, timeZone = "UTC") {
         userId,
         name: "My calendar",
         color: "#2563EB",
-        timeZone: isValidTimeZone(timeZone) ? timeZone : "UTC",
+        timeZone: canonicalTimeZone(timeZone) ?? "UTC",
         isDefault: true,
       },
       update: { isDefault: true },

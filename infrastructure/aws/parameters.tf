@@ -16,6 +16,12 @@ resource "random_password" "cron" {
   special  = false
 }
 
+resource "random_password" "email_outbox" {
+  for_each = local.environments
+  length   = 48
+  special  = false
+}
+
 locals {
   environment_parameters = merge([
     for environment in local.environments : {
@@ -25,7 +31,6 @@ locals {
       "${environment}/DATABASE_POOL_MAX"                = environment == "prod" ? "12" : "4"
       "${environment}/DATABASE_SSL_REJECT_UNAUTHORIZED" = "true"
       "${environment}/SESSION_SECRET"                   = random_password.session[environment].result
-      "${environment}/CALENDAR_ENCRYPTION_KEY"          = random_password.calendar[environment].result
       "${environment}/CRON_SECRET"                      = random_password.cron[environment].result
       "${environment}/CONTRACTS_ENABLED"                = "true"
       "${environment}/ESIGN_PROVIDER"                   = "rive"
@@ -79,6 +84,22 @@ locals {
     "prod/ZOHO_BOOKS_CLIENT_ID"          = var.zoho_books_client_id
     "prod/ZOHO_BOOKS_CLIENT_SECRET"      = var.zoho_books_client_secret
   }
+
+  # Rotating credentials bootstrap once, then remain operator-owned. Setting a
+  # new current key plus the old value under PREVIOUS lets queued ciphertext be
+  # read while new writes use the new key.
+  rotating_parameters = merge([
+    for environment in local.environments : {
+      "${environment}/EMAIL_OUTBOX_KEY"                    = random_password.email_outbox[environment].result
+      "${environment}/EMAIL_OUTBOX_KEY_ID"                 = "v2"
+      "${environment}/EMAIL_OUTBOX_KEY_PREVIOUS"           = random_password.session[environment].result
+      "${environment}/EMAIL_OUTBOX_KEY_PREVIOUS_ID"        = "v1"
+      "${environment}/CALENDAR_ENCRYPTION_KEY"             = random_password.calendar[environment].result
+      "${environment}/CALENDAR_ENCRYPTION_KEY_ID"          = "v1"
+      "${environment}/CALENDAR_ENCRYPTION_KEY_PREVIOUS"    = ""
+      "${environment}/CALENDAR_ENCRYPTION_KEY_PREVIOUS_ID" = "v0"
+    }
+  ]...)
 }
 
 moved {
@@ -94,7 +115,7 @@ moved {
 resource "aws_ssm_parameter" "environment" {
   for_each = local.environment_parameters
   name     = "/rive/${each.key}"
-  type     = can(regex("SECRET|PASSWORD|DATABASE|CALENDAR_ENCRYPTION", each.key)) ? "SecureString" : "String"
+  type     = can(regex("SECRET|PASSWORD|DATABASE|CALENDAR_ENCRYPTION|EMAIL_OUTBOX_KEY(_PREVIOUS)?$", each.key)) ? "SecureString" : "String"
   value    = each.value
 }
 
@@ -102,6 +123,17 @@ resource "aws_ssm_parameter" "operator_managed" {
   for_each = local.operator_managed_parameters
   name     = "/rive/${each.key}"
   type     = can(regex("SECRET|PASSWORD|_PASS$", each.key)) ? "SecureString" : "String"
+  value    = each.value
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "rotating" {
+  for_each = local.rotating_parameters
+  name     = "/rive/${each.key}"
+  type     = can(regex("(EMAIL_OUTBOX_KEY|CALENDAR_ENCRYPTION_KEY)(_PREVIOUS)?$", each.key)) ? "SecureString" : "String"
   value    = each.value
 
   lifecycle {
@@ -169,6 +201,16 @@ moved {
 moved {
   from = aws_ssm_parameter.environment["prod/ZOHO_BOOKS_CLIENT_SECRET"]
   to   = aws_ssm_parameter.operator_managed["prod/ZOHO_BOOKS_CLIENT_SECRET"]
+}
+
+moved {
+  from = aws_ssm_parameter.environment["dev/CALENDAR_ENCRYPTION_KEY"]
+  to   = aws_ssm_parameter.rotating["dev/CALENDAR_ENCRYPTION_KEY"]
+}
+
+moved {
+  from = aws_ssm_parameter.environment["prod/CALENDAR_ENCRYPTION_KEY"]
+  to   = aws_ssm_parameter.rotating["prod/CALENDAR_ENCRYPTION_KEY"]
 }
 
 resource "aws_ssm_parameter" "admin_password_hash" {

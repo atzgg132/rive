@@ -2,18 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { isDisplayCurrency } from "@/lib/currency";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function PATCH(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  const displayCurrency = typeof body?.displayCurrency === "string" ? body.displayCurrency.trim().toUpperCase() : null;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
+  const displayCurrency = typeof body.displayCurrency === "string" ? body.displayCurrency.trim().toUpperCase() : null;
   if (!isDisplayCurrency(displayCurrency)) {
     return NextResponse.json({ success: false, message: "Choose a supported display currency." }, { status: 400 });
   }
 
-  const requestedSelection = body?.selection;
+  const requestedSelection = body.selection;
   if (requestedSelection !== undefined && requestedSelection !== "explicit" && requestedSelection !== "detected") {
     return NextResponse.json({ success: false, message: "Choose an explicit or detected currency selection." }, { status: 400 });
   }

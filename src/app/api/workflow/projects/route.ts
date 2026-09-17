@@ -7,6 +7,7 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { projectProofOffer } from "@/utils/portfolio";
 import { PROJECT_PRIORITY_SET, PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
 import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 // Shared with the migration engine so imported projects can never carry a
 // status this endpoint would reject.
@@ -286,11 +287,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const parsedBody = await req.json().catch(() => null);
-    if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
-      return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
-    }
-    const { 
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const {
       title, 
       description, 
       client_id, 
@@ -302,7 +301,7 @@ export async function POST(req: NextRequest) {
       currency, 
       tags, 
       milestones 
-    } = parsedBody as Record<string, unknown>;
+    } = parsedBody.body;
 
     const cleanTitle = cleanText(title, 180);
     if (!cleanTitle) {
@@ -412,11 +411,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => null);
-    if (!isRecord(body)) {
-      return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
-    }
-    const { 
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
+    const {
       id,
       title, 
       description, 

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { migrationEngineAvailable } from "@/utils/migration/config";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const { id } = await context.params;
-  const body = await req.json().catch(() => null) as Record<string, unknown> | null;
+  const parsedBody = await readJsonBody(req, { allowEmpty: true });
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const contactAllowed = body?.contactAllowed === true;
   const reference = `RIVE-MIG-${id.slice(-8).toUpperCase()}`;
 

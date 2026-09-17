@@ -13,6 +13,7 @@ import {
   transitionContractStatus,
 } from "@/utils/contracts";
 import { sendContractVoidRequestedEmail } from "@/utils/email";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 // Two-party void for an EXECUTED Agreement. Either party may request; the OTHER
 // party must confirm. The existing DELETE /contracts/[id] still voids
@@ -34,9 +35,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
     const ip = getRequestIp(req);
-    const body = await req.json().catch(() => null) as { action?: unknown; note?: unknown } | null;
-    const action = typeof body?.action === "string" ? body.action : "";
-    const note = clean(body?.note, 2_000);
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { action?: unknown; note?: unknown };
+    const action = typeof body.action === "string" ? body.action : "";
+    const note = clean(body.note, 2_000);
     const requesterRole = "owner";
 
     const contract = await prisma.contract.findFirst({

@@ -16,17 +16,23 @@ const EMBED_FRAME_HOSTS = [
   "https://player-widget.mixcloud.com",
 ];
 
-/* Deliberately omits default-src and script-src. Next injects inline bootstrap
-   scripts, so locking those down needs nonce plumbing and a full runtime test
-   pass; shipping a broad script policy now would either break the app or be
-   security theatre. These directives are the ones that constrain the surface
-   this app actually exposes — user-supplied media, embeds, and forms — and
-   none of them can break first-party rendering. */
+/* A nonce policy would force every marketing page to render dynamically, so
+   this keeps static output and blocks third-party script hosts while allowing
+   Next's inline bootstraps. Development additionally needs eval for React's
+   debugging transforms. */
+const scriptSrc = `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`;
 const contentSecurityPolicy = [
+  "default-src 'self'",
+  scriptSrc,
+  "style-src 'self' 'unsafe-inline'",
   `frame-src 'self' ${EMBED_FRAME_HOSTS.join(" ")}`,
   // Portfolio owners may reference any HTTPS image host, plus inline uploads.
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https:",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -39,7 +45,13 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
   { key: "X-Accel-Buffering", value: "no" },
+];
+
+const sensitiveRouteHeaders = [
+  { key: "Referrer-Policy", value: "no-referrer" },
+  { key: "Cache-Control", value: "private, no-store" },
 ];
 
 const nextConfig: NextConfig = {
@@ -55,6 +67,13 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      { source: "/sign", headers: sensitiveRouteHeaders },
+      { source: "/sign/:token", headers: sensitiveRouteHeaders },
+      { source: "/review", headers: sensitiveRouteHeaders },
+      { source: "/review/:token", headers: sensitiveRouteHeaders },
+      { source: "/invoice/:token", headers: sensitiveRouteHeaders },
+      { source: "/api/public/invoices/:path*", headers: sensitiveRouteHeaders },
+      { source: "/api/public/contracts/:path*", headers: sensitiveRouteHeaders },
       {
         source: "/fonts/:path*",
         headers: [

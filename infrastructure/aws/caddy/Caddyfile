@@ -8,15 +8,44 @@
 # user_data changes so an edit here never replaces production. Changing routing
 # on the live host therefore means running the script — editing this file alone
 # changes nothing that is currently serving traffic.
+#
+# Upstream ports resolve from the proxy container's environment at adapt time
+# ({$VAR:default}); deploy-runtime.sh flips them through
+# /opt/rive/proxy-upstreams.env during blue/green cutover. With the variables
+# unset the defaults keep the historical ports, so an older host that never got
+# the env file still validates and serves identically.
 
 {
   email hello@rive.work
   admin off
 }
 
+(safe_access_log) {
+  log {
+    output stdout
+    format filter {
+      wrap json
+      fields {
+        request>headers>Authorization delete
+        request>headers>Cookie delete
+        resp_headers>Set-Cookie delete
+        request>uri regexp "^/(sign|review|invoice)/[^/?#]+" "/${1}/[token]"
+        request>uri regexp "^/api/public/invoices/[^/?#]+" "/api/public/invoices/[token]"
+        request>uri regexp "^/api/public/contracts/(review|sign|artifact|void)/[^/?#]+" "/api/public/contracts/${1}/[token]"
+        request>uri regexp "\\?.*$" ""
+        request>headers>Referer regexp "(https?://[^/]+)/(sign|review|invoice)/[^?#\"]+" "${1}/${2}/[token]"
+        request>headers>Referer regexp "(https?://[^/]+)/api/public/invoices/[^?#\"]+" "${1}/api/public/invoices/[token]"
+        request>headers>Referer regexp "(https?://[^/]+)/api/public/contracts/(review|sign|artifact|void)/[^?#\"]+" "${1}/api/public/contracts/${2}/[token]"
+        request>headers>Referer regexp "\\?.*$" ""
+      }
+    }
+  }
+}
+
 # Sessions cookies are host-only by design, so a login on the apex would not be
 # sent to www. Redirect rather than serving the app on both names.
 rive.work {
+  import safe_access_log
   redir https://www.rive.work{uri} permanent
 }
 
@@ -33,14 +62,16 @@ rive.work {
 
 www.rive.work {
   encode zstd gzip
-  reverse_proxy 127.0.0.1:3000 {
+  import safe_access_log
+  reverse_proxy {$RIVE_PROD_UPSTREAM:127.0.0.1:3000} {
     import client_address
   }
 }
 
 dev.rive.work {
   encode zstd gzip
-  reverse_proxy 127.0.0.1:3002 {
+  import safe_access_log
+  reverse_proxy {$RIVE_DEV_UPSTREAM:127.0.0.1:3002} {
     import client_address
   }
 }

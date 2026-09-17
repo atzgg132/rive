@@ -436,7 +436,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
       )}
 
       <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-6 sm:px-10 lg:px-14">
-        <a href="#top" className="min-w-0 truncate text-base font-black tracking-[-0.03em] text-[var(--portfolio-ink)]">
+        <a href="#top" title={content.name || "Your portfolio"} className="min-w-0 truncate text-base font-black tracking-[-0.03em] text-[var(--portfolio-ink)]">
           {content.name || "Your portfolio"}
           <span className="text-[var(--portfolio-accent)]">.</span>
         </a>
@@ -531,7 +531,7 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/5" />
                     <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
                       <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/70">Portfolio of</p>
-                      <p className="mt-2 truncate text-2xl font-black tracking-[-0.045em] sm:text-3xl">{content.name}</p>
+                      <p title={content.name} className="mt-2 min-w-0 truncate text-2xl font-black tracking-[-0.045em] sm:text-3xl">{content.name}</p>
                     </div>
                   </div>
                 </div>
@@ -548,8 +548,11 @@ export default function PortfolioRenderer({ content, theme, templateKey, portfol
               [content.location || "Worldwide", "Where I work"],
               [content.availability || "Open to work", "Current status"],
             ].map(([value, label]) => (
-              <div key={label} className="px-4 py-6 first:pl-0 sm:px-6 lg:py-8">
-                <p className="truncate text-lg font-black text-[var(--portfolio-ink)]">{value}</p>
+              <div key={label} className="min-w-0 px-4 py-6 first:pl-0 sm:px-6 lg:py-8">
+                {/* No truncation here: location and availability are the answers
+                    this strip exists to give, and a clipped "Bengaluru, Ind…" is
+                    worse than a second line. The counts are short either way. */}
+                <p title={value} className="break-words text-lg font-black leading-6 text-[var(--portfolio-ink)]">{value}</p>
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--portfolio-muted)]">{label}</p>
               </div>
             ))}

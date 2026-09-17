@@ -65,6 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activation, setActivation] = useState<ActivationPlan | null>(null);
+  const [guidanceLayerActive, setGuidanceLayerActive] = useState(false);
   const [isMac, setIsMac] = useState(true);
   const [notifications, setNotifications] = useState<WorkspaceNotification[]>([]);
   const searchTriggerRef = useRef<HTMLButtonElement>(null);
@@ -313,7 +314,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
             <CurrencySwitcher />
             <ThemeToggle />
-            <GuidedExperience activation={activation} pathname={pathname} onActivationChange={setActivation} />
+            <GuidedExperience activation={activation} pathname={pathname} onActivationChange={setActivation} onLayerVisibilityChange={setGuidanceLayerActive} />
             <div className="relative">
               <Button
                 variant="ghost"
@@ -358,7 +359,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         engagementFlowEnabled={engagementFlowEnabled}
         returnFocusRef={searchTriggerRef}
       />
-      {user ? <div className="fixed bottom-4 right-4 z-40"><FeedbackWidget {...feedbackContext} /></div> : null}
+      {user && !guidanceLayerActive ? <div className="fixed bottom-4 right-4 z-40" data-testid="feedback-launcher"><FeedbackWidget {...feedbackContext} /></div> : null}
     </div>
     </CurrencyProvider>
     </FeatureAvailabilityProvider>

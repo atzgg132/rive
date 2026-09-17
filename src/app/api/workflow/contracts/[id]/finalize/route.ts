@@ -4,6 +4,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { assertContractsEnabled, transitionContractStatus } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -11,10 +12,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const parsedBody = await req.json().catch(() => ({}));
-    const body = parsedBody && typeof parsedBody === "object" && !Array.isArray(parsedBody)
-      ? parsedBody as { acknowledgeOpenComments?: boolean }
-      : {};
+    const parsedBody = await readJsonBody(req, { allowEmpty: true });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { acknowledgeOpenComments?: boolean };
 
     const contract = await prisma.contract.findFirst({
       where: { id, userId: session.userId },

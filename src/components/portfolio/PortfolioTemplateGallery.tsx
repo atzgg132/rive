@@ -67,7 +67,7 @@ function TemplateCard({
        inside a button. The click target is the overlaid button at the end. */
     <div
       data-portfolio-template={template.key}
-      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border text-left transition ${
+      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-none border text-left transition ${
         selected
           ? "border-primary ring-2 ring-primary/30"
           : "border-border hover:border-primary/50"
@@ -110,15 +110,15 @@ function TemplateCard({
         )}
       </div>
       <div className="min-w-0 p-4">
-        <div className="text-sm font-bold text-foreground dark:text-slate-100">{template.name}</div>
-        <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{template.description}</div>
+        <div className="text-sm font-bold text-foreground">{template.name}</div>
+        <div className="mt-1 text-xs leading-5 text-muted-foreground">{template.description}</div>
       </div>
       <button
         type="button"
         onClick={onSelect}
         aria-pressed={selected}
         aria-label={`Use the ${template.name} template — ${template.description}`}
-        className="absolute inset-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="absolute inset-0 rounded-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       />
     </div>
   );
@@ -153,7 +153,7 @@ export default function PortfolioTemplateGallery({
         ))}
       </div>
       {!hasWork && (
-        <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">
           These fill in with your own work as you add it. Add a project under Selected work to see how each template treats it.
         </p>
       )}

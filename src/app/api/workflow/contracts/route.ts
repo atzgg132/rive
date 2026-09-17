@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { readIdempotentResult, recordIdempotentResult } from "@/utils/idempotency";
+import { internalErrorResponse, jsonErrorResponse, readJsonBody } from "@/utils/apiBoundary";
+import {
+  claimIdempotencyKey,
+  completeIdempotencyRecord,
+  failIdempotencyRecord,
+  hashRequestPayload,
+  idempotentReplayJson,
+  InvalidIdempotencyKeyError,
+  normalizeIdempotencyKey,
+} from "@/utils/idempotency";
 import {
   contractsAvailable,
   CONTRACT_MAX_TITLE_LENGTH,
@@ -164,6 +173,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  let claim: Awaited<ReturnType<typeof claimIdempotencyKey>> | null = null;
   try {
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -171,8 +181,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Agreements are not available in this environment." }, { status: 503 });
     }
 
-    const body = await req.json().catch(() => null) as Record<string, unknown> | null;
-    if (!body) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
 
     const title = clean(body.title, CONTRACT_MAX_TITLE_LENGTH);
     const clientId = clean(body.clientId ?? body.client_id, 80);
@@ -183,19 +194,16 @@ export async function POST(req: NextRequest) {
     // Idempotency: a client-supplied request id turns a double-click or a
     // retry after a dropped response into one creation instead of a duplicate
     // draft. The header is the conventional place; the body field is accepted
-    // too so the contract composer needs no special header handling.
-    const requestId = clean(
-      req.headers.get("Idempotency-Key") ?? (body.requestId as string | undefined) ?? "",
-      80,
-    );
-    if (requestId && requestId.length > 0) {
-      const prior = readIdempotentResult(session.userId, requestId);
-      if (prior) {
-        return NextResponse.json(
-          { success: true, contractId: prior.contractId, versionId: prior.versionId, message: "This request was already handled." },
-          { status: 200 },
-        );
+    // too so the contract composer needs no special header handling. Keys are
+    // validated, never truncated — a malformed key is a 400, not a collision.
+    let idempotencyKey: string | null;
+    try {
+      idempotencyKey = normalizeIdempotencyKey(req.headers.get("Idempotency-Key") ?? body.requestId);
+    } catch (error) {
+      if (error instanceof InvalidIdempotencyKeyError) {
+        return jsonErrorResponse(req, 400, error.code, error.message);
       }
+      throw error;
     }
 
     const [owner, client] = await Promise.all([
@@ -221,7 +229,12 @@ export async function POST(req: NextRequest) {
     });
     const rawPlan = Array.isArray(body.paymentPlan) ? body.paymentPlan : [];
     if (rawPlan.length > 25) return NextResponse.json({ success: false, message: "An Agreement can have at most 25 payment plan items." }, { status: 400 });
-    const plan = rawPlan.map((item, index) => validatePaymentPlanItem(item, index));
+    let plan: ReturnType<typeof validatePaymentPlanItem>[];
+    try {
+      plan = rawPlan.map((item, index) => validatePaymentPlanItem(item, index));
+    } catch (error) {
+      return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Invalid payment plan." }, { status: 400 });
+    }
     if (plan.some((item) => item.currency !== currency)) {
       return NextResponse.json({ success: false, message: "Every payment must use the Agreement currency." }, { status: 400 });
     }
@@ -244,8 +257,30 @@ export async function POST(req: NextRequest) {
 
     const governingLaw = clean(body.governingLaw ?? "India", 160) || "India";
     const jurisdiction = clean(body.jurisdiction, 160) || null;
+
+    // Claim the key only once the request is known to be executable: a
+    // validation failure burns no key, and a corrected retry proceeds.
+    if (idempotencyKey) {
+      claim = await claimIdempotencyKey({
+        userId: session.userId,
+        operation: "agreement_draft.create",
+        key: idempotencyKey,
+        requestHash: hashRequestPayload(body),
+        // Same wait rationale as invoice creation: a double-submitted draft
+        // replays the first attempt's receipt rather than erroring.
+        waitForCompletionMs: 5_000,
+      });
+      if (claim.kind === "conflict") {
+        return jsonErrorResponse(req, 409, "idempotency_conflict", "This request id was already used for a different Agreement draft. Use a new request id for new content.");
+      }
+      if (claim.kind === "in_progress") {
+        return jsonErrorResponse(req, 409, "idempotency_in_progress", "This Agreement request is still being processed. Retry with the same request id.");
+      }
+      if (claim.kind === "replay") return idempotentReplayJson(claim);
+    }
+
     const created = await prisma.$transaction(async (tx) => {
-      return createAgreementDraft(tx, {
+      const draft = await createAgreementDraft(tx, {
         owner: { id: owner.id, name: owner.name || owner.email, email: owner.email },
         client,
         project,
@@ -256,20 +291,22 @@ export async function POST(req: NextRequest) {
         sections,
         paymentPlan: plan,
       });
+      if (claim?.kind === "claimed") {
+        // Complete the durable record in the same transaction: the draft and
+        // its replayable receipt commit or roll back together.
+        await completeIdempotencyRecord(tx, claim.recordId, claim.claimedAt, {
+          httpStatus: 201,
+          body: { success: true, contractId: draft.contractId, versionId: draft.versionId, message: "Agreement draft created." },
+          entityType: "contract",
+          entityId: draft.contractId,
+        });
+      }
+      return draft;
     });
-
-    // Record the idempotency result only after the creation actually
-    // succeeded, so a failed attempt is retriable.
-    if (requestId && requestId.length > 0) {
-      recordIdempotentResult(session.userId, requestId, {
-        contractId: created.contractId,
-        versionId: created.versionId,
-      });
-    }
 
     return NextResponse.json({ success: true, contractId: created.contractId, versionId: created.versionId, message: "Agreement draft created." }, { status: 201 });
   } catch (error) {
-    console.error("Contract create error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to create Agreement." }, { status: 400 });
+    if (claim?.kind === "claimed") await failIdempotencyRecord(claim.recordId, claim.claimedAt).catch(() => undefined);
+    return internalErrorResponse(req, "agreement_draft_create_failed", error, "Unable to create Agreement.");
   }
 }

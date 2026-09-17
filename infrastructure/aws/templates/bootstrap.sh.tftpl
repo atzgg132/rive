@@ -5,8 +5,22 @@ REGION="${region}"
 REPOSITORY_URL="${repository_url}"
 mkdir -p /opt/rive/env /opt/rive/caddy/data /opt/rive/caddy/config
 
-dnf install -y docker jq postgresql15
+dnf install -y docker jq postgresql15 amazon-cloudwatch-agent cronie
+
+# Bounded local logs are the fallback for every container that does not opt
+# into awslogs explicitly (the app and proxy containers do).
+cat >/etc/docker/daemon.json <<'JSON'
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+JSON
+
 systemctl enable --now docker
+systemctl enable --now crond
 usermod -aG docker ec2-user
 
 if ! swapon --show | grep -q /swapfile; then
@@ -18,92 +32,102 @@ if ! swapon --show | grep -q /swapfile; then
 fi
 
 # Routing lives in caddy/Caddyfile so the bootstrap and the live host share one
-# source. This branch only runs when an instance is built from scratch; changing
-# routing on the running host is scripts/apply-caddy-config.sh.
+# source. The upstream ports resolve from these variables at proxy start;
+# deploy-runtime.sh rewrites this file during a deploy to flip them.
+cat >/opt/rive/proxy-upstreams.env <<'EOF'
+RIVE_PROD_UPSTREAM=127.0.0.1:3000
+RIVE_DEV_UPSTREAM=127.0.0.1:3002
+EOF
+
 cat >/opt/rive/Caddyfile <<'CADDY'
 ${caddyfile}
 CADDY
+
+# Host telemetry for the CWAgent alarms (disk/mem/swap as InstanceId-only
+# metrics) plus a cron monitor that reports docker restart-count deltas.
+cat >/opt/rive/cloudwatch-agent.json <<'JSON'
+{
+  "agent": {
+    "metrics_collection_interval": 60
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "$${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "disk": {
+        "measurement": ["used_percent"],
+        "resources": ["/"],
+        "aggregation_dimensions": [["InstanceId"]]
+      },
+      "mem": {
+        "measurement": ["used_percent"],
+        "aggregation_dimensions": [["InstanceId"]]
+      },
+      "swap": {
+        "measurement": ["used_percent"],
+        "aggregation_dimensions": [["InstanceId"]]
+      }
+    }
+  }
+}
+JSON
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -s -c file:/opt/rive/cloudwatch-agent.json
+
+cat >/opt/rive/container-restart-monitor.sh <<'EOF'
+#!/bin/bash
+set -uo pipefail
+STATE=/opt/rive/restart-monitor.state
+touch "$STATE"
+TOTAL=0
+NEW=""
+while read -r NAME; do
+  COUNT=$(docker inspect -f '{{.RestartCount}}' "$NAME" 2>/dev/null || echo 0)
+  PREV=$(awk -v n="$NAME" '$1==n {print $2}' "$STATE" 2>/dev/null)
+  PREV="$${PREV:-0}"
+  if [ "$COUNT" -gt "$PREV" ]; then
+    TOTAL=$((TOTAL + COUNT - PREV))
+  fi
+  NEW="$${NEW}$NAME $COUNT\n"
+done <<'LIST'
+rive-prod
+rive-dev
+rive-proxy
+LIST
+printf '%b' "$NEW" >"$STATE"
+TOKEN=$(curl -s -m 2 -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' http://169.254.169.254/latest/api/token)
+IID=$(curl -s -m 2 -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+aws cloudwatch put-metric-data --region "${region}" --namespace Rive/Host \
+  --metric-name ContainerRestarts --value "$TOTAL" \
+  --dimensions "InstanceId=$IID" >/dev/null 2>&1 || true
+EOF
+chmod 750 /opt/rive/container-restart-monitor.sh
+printf '* * * * * root /opt/rive/container-restart-monitor.sh\n' >/etc/cron.d/rive-restart-monitor
 
 docker rm -f rive-proxy >/dev/null 2>&1 || true
 docker run -d \
   --name rive-proxy \
   --restart unless-stopped \
   --network host \
+  --env-file /opt/rive/proxy-upstreams.env \
   -v /opt/rive/Caddyfile:/etc/caddy/Caddyfile:ro \
   -v /opt/rive/caddy/data:/data \
   -v /opt/rive/caddy/config:/config \
+  --log-driver awslogs \
+  --log-opt "awslogs-region=${region}" \
+  --log-opt awslogs-group=/rive/proxy \
+  --log-opt awslogs-stream=rive-proxy \
+  --log-opt awslogs-create-group=true \
   caddy:2.10-alpine
 
-cat >/opt/rive/deploy.sh <<'DEPLOY'
-#!/bin/bash
-set -euo pipefail
-
-ENVIRONMENT="$1"
-IMAGE="$2"
-REGION="${region}"
-REPOSITORY_URL="${repository_url}"
-
-case "$ENVIRONMENT" in
-  prod) PORT=3000; MEMORY="${prod_memory}" ;;
-  dev) PORT=3002; MEMORY="${dev_memory}" ;;
-  *) echo "Unknown environment: $ENVIRONMENT" >&2; exit 2 ;;
-esac
-
-ENV_FILE="/opt/rive/env/$ENVIRONMENT.env"
-TMP_FILE="$ENV_FILE.tmp"
-umask 077
-: >"$TMP_FILE"
-
-aws ssm get-parameters-by-path \
-  --region "$REGION" \
-  --path "/rive/$ENVIRONMENT/" \
-  --recursive \
-  --with-decryption \
-  --output json |
-  jq -r '.Parameters[] | select(.Name | endswith("/DB_PASSWORD") | not) | [(.Name | split("/") | last), .Value] | @tsv' |
-  while IFS=$'\t' read -r key value; do
-    printf '%s=%s\n' "$key" "$value" >>"$TMP_FILE"
-  done
-
-printf 'DEPLOYMENT_VERSION=%s\n' "$IMAGE" >>"$TMP_FILE"
-mv "$TMP_FILE" "$ENV_FILE"
-
-aws ecr get-login-password --region "$REGION" |
-  docker login --username AWS --password-stdin "$${REPOSITORY_URL%%/*}"
-docker image prune -af >/dev/null 2>&1 || true
-docker pull "$REPOSITORY_URL:$IMAGE"
-docker pull "$REPOSITORY_URL:$IMAGE-migrate"
-
-docker run --rm \
-  --name "rive-$ENVIRONMENT-migrate" \
-  --network host \
-  --env-file "$ENV_FILE" \
-  "$REPOSITORY_URL:$IMAGE-migrate"
-
-CONTAINER="rive-$ENVIRONMENT"
-docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-docker run -d \
-  --name "$CONTAINER" \
-  --restart unless-stopped \
-  --memory "$MEMORY" \
-  --stop-timeout 30 \
-  -p "127.0.0.1:$PORT:3000" \
-  --env-file "$ENV_FILE" \
-  "$REPOSITORY_URL:$IMAGE"
-
-for attempt in $(seq 1 30); do
-  if curl --fail --silent "http://127.0.0.1:$PORT/api/ready" >/dev/null; then
-    docker image prune -f >/dev/null
-    echo "$ENVIRONMENT deployed successfully"
-    exit 0
-  fi
-  sleep 2
-done
-
-docker logs --tail 100 "$CONTAINER"
-exit 1
+# The deploy contract is repository-owned (scripts/deploy-runtime.sh). The copy
+# below is the first-boot fallback; every deploy re-uploads the reviewed
+# version, so this only matters until the first pipeline run on a fresh host.
+cat >/opt/rive/deploy-runtime.sh <<'DEPLOY'
+${deploy_runtime}
 DEPLOY
-chmod 750 /opt/rive/deploy.sh
+chmod 750 /opt/rive/deploy-runtime.sh
 
 MASTER_SECRET=""
 for attempt in $(seq 1 60); do

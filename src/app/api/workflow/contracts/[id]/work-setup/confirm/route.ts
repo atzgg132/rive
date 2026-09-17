@@ -9,6 +9,7 @@ import {
   confirmWorkSetup,
   serializeProjectGeneration,
 } from "@/utils/projectGeneration";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -20,10 +21,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: "Too many work setup confirmations. Try again later.", code: "rate_limited" }, { status: 429 });
     }
     const idempotencyKey = req.headers.get("Idempotency-Key") || "";
-    const body = await req.json().catch(() => null) as Record<string, unknown> | null;
-    const previewHash = typeof body?.previewHash === "string"
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
+    const previewHash = typeof body.previewHash === "string"
       ? body.previewHash.trim()
-      : typeof body?.preview_hash === "string"
+      : typeof body.preview_hash === "string"
         ? body.preview_hash.trim()
         : "";
     const result = await confirmWorkSetup(session.userId, id, previewHash, idempotencyKey);

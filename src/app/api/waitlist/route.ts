@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
+import { normalizeEmailAddress } from "@/lib/email-address";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,17 +13,13 @@ export async function POST(req: NextRequest) {
         { status: 429 },
       );
     }
-    let payload: { email?: unknown; type?: unknown };
-    try {
-      payload = await req.json();
-    } catch {
-      return NextResponse.json({ success: false, message: "Request body must be valid JSON." }, { status: 400 });
-    }
-    const { email, type } = payload;
-    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { email, type } = parsedBody.body;
+    const normalizedEmail = normalizeEmailAddress(email);
     const allowedTypes = new Set(["waitlist", "login", "remit"]);
     const normalizedType = typeof type === "string" && allowedTypes.has(type) ? type : null;
-    if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !normalizedType) {
+    if (!normalizedEmail || !normalizedType) {
       return NextResponse.json({ success: false, message: "Missing required fields." }, { status: 400 });
     }
 

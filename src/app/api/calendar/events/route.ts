@@ -1,33 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { ensureDefaultCalendar, getCalendarEvents, isDateOnly, isValidTimeZone } from "@/utils/calendar";
+import { canonicalTimeZone, ensureDefaultCalendar, getCalendarEvents, isDateOnly } from "@/utils/calendar";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
-import { pushEventToGoogle } from "@/utils/googleCalendar";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
+import { enqueueCalendarSync, processCalendarSyncOutbox } from "@/utils/calendarOutbox";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 async function syncCalendarMutation(userId: string, eventId: string, operation: "create" | "update" | "delete") {
   if (!googleCalendarAvailable()) return false;
-  const job = await prisma.calendarSyncOutbox.create({
-    data: { userId, eventId, operation, provider: "google" },
-  });
   try {
-    const synced = await pushEventToGoogle(eventId, operation);
-    await prisma.calendarSyncOutbox.update({
-      where: { id: job.id },
-      data: { status: "completed", attempts: 1, processedAt: new Date() },
-    });
-    return synced;
+    const jobId = await enqueueCalendarSync(userId, eventId, operation);
+    const result = await processCalendarSyncOutbox({ jobId });
+    // "synced" means the push actually completed at Google. A false return
+    // leaves the outbox row pending so the cron worker retries it instead of
+    // the old behaviour, which marked false pushes completed.
+    return result.completed === 1;
   } catch (error) {
-    await prisma.calendarSyncOutbox.update({
-      where: { id: job.id },
-      data: {
-        attempts: 1,
-        availableAt: new Date(Date.now() + 60_000),
-        lastError: error instanceof Error ? error.message.slice(0, 500) : "Synchronization failed",
-      },
-    });
+    console.error("Calendar sync enqueue/process failed:", error);
     return false;
   }
 }
@@ -46,7 +37,7 @@ function parseEventInput(body: Record<string, unknown>) {
   const allDay = body.allDay === true;
   // Null = not provided/invalid; callers decide the default (UTC on create,
   // the existing value on update) so an update can't silently reset the zone.
-  const timeZone = typeof body.timeZone === "string" && isValidTimeZone(body.timeZone) ? body.timeZone : null;
+  const timeZone = typeof body.timeZone === "string" ? canonicalTimeZone(body.timeZone) : null;
   if (!title) return { error: "Event title is required." } as const;
 
   if (allDay) {
@@ -81,7 +72,9 @@ export async function POST(req: NextRequest) {
   if (!rateLimit(`calendar-create:${session.userId}:${getRequestIp(req)}`, 120, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many calendar changes. Please try again shortly." }, { status: 429 });
   }
-  const body = (await req.json()) as Record<string, unknown>;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const parsed = parseEventInput(body);
   if ("error" in parsed) return NextResponse.json({ success: false, message: parsed.error }, { status: 400 });
   const fallback = await ensureDefaultCalendar(session.userId, parsed.data.timeZone || "UTC");
@@ -121,7 +114,9 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const body = (await req.json()) as Record<string, unknown>;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const id = typeof body.id === "string" ? body.id : "";
   const existing = await prisma.calendarEvent.findFirst({ where: { id, userId: session.userId, deletedAt: null } });
   if (!existing) return NextResponse.json({ success: false, message: "Event not found." }, { status: 404 });

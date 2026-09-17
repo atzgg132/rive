@@ -5,6 +5,7 @@ import { isBlankPortfolioProject, isPortfolioProjectMeaningful, mergePortfolioCo
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { API_BODY_LARGE_MAX_BYTES, readJsonBody } from "@/utils/apiBoundary";
 
 class PortfolioConflictError extends Error {
   constructor() {
@@ -38,7 +39,9 @@ export async function POST(req: NextRequest) {
   if (!session) return unauthorized();
 
   try {
-    const body = await req.json().catch(() => ({}));
+    const parsedBody = await readJsonBody(req, { allowEmpty: true });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const result = await ensurePrefilledPortfolio(session.userId, {
       requestedSlug: typeof body.slug === "string" ? body.slug : "",
       templateKey: typeof body.templateKey === "string" ? body.templateKey : "minimal-pro",
@@ -58,8 +61,9 @@ export async function PATCH(req: NextRequest) {
   if (!session) return unauthorized();
 
   try {
-    const body = await req.json();
-    if (JSON.stringify(body).length > 10_000_000) return NextResponse.json({ success: false, message: "Portfolio payload is too large." }, { status: 413 });
+    const parsedBody = await readJsonBody(req, { maxBytes: API_BODY_LARGE_MAX_BYTES });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const current = await prisma.portfolio.findUnique({ where: { userId: session.userId } });
     if (!current) return NextResponse.json({ success: false, message: "Create a portfolio first." }, { status: 404 });
     if (body.revision !== undefined && Number(body.revision) !== current.revision) {
@@ -114,7 +118,7 @@ export async function PATCH(req: NextRequest) {
     if (body.theme !== undefined) {
       const themeError = validatePortfolioTheme(body.theme);
       if (themeError) return NextResponse.json({ success: false, message: themeError }, { status: 400 });
-      data.theme = { ...current.theme as object, ...body.theme };
+      data.theme = { ...current.theme as object, ...body.theme as object };
     }
     if (body.templateKey !== undefined && typeof body.templateKey === "string") data.templateKey = body.templateKey;
     if (body.seo !== undefined) data.seo = body.seo;

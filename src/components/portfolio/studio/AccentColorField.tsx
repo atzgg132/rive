@@ -39,7 +39,7 @@ export default function AccentColorField({ value, onChange, label = "Accent" }: 
       <div className="flex items-center gap-3">
         <label
           htmlFor={colorId}
-          className="relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 shadow-sm dark:border-slate-700"
+          className="relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-none border border-input"
           style={{ backgroundColor: hex }}
           title="Choose accent colour"
         >
@@ -86,7 +86,7 @@ export default function AccentColorField({ value, onChange, label = "Accent" }: 
               aria-pressed={selected}
               title={accent}
               onClick={() => commit(accent)}
-              className={`h-7 w-7 rounded-full border border-black/10 shadow-sm transition dark:border-white/15 ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : "hover:scale-105"}`}
+              className={`h-7 w-7 rounded-full border border-foreground/10 transition ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : "hover:scale-105"}`}
               style={{ backgroundColor: accent }}
             />
           );
@@ -94,8 +94,8 @@ export default function AccentColorField({ value, onChange, label = "Accent" }: 
       </div>
       <p
         data-accent-sample
-        className="inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-bold text-white"
-        style={{ backgroundColor: hex }}
+        className="inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-bold"
+        style={{ backgroundColor: hex, color: "#fff" }}
       >
         Accent applies here
       </p>

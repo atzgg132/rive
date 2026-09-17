@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { beforeEach } from "node:test";
 
 import { prisma } from "../helpers/prisma-mock.mjs";
-import { refreshOverdueInvoices } from "../../src/utils/invoiceLifecycle.ts";
+import { presentedInvoiceStatus, refreshOverdueInvoices } from "../../src/utils/invoiceLifecycle.ts";
 import {
   STALE_SENDING_MS,
   hasIssuedInvoiceArtifact,
@@ -123,6 +123,15 @@ test("lifecycle marks sent past due as overdue and leaves partially_paid", async
   assert.equal(updated, 1);
   assert.equal(prisma.__db.invoice.find((row) => row.id === "open-sent").status, "overdue");
   assert.equal(prisma.__db.invoice.find((row) => row.id === "open-partial").status, "partially_paid");
+});
+
+test("presentation derives overdue without mutating sent or viewed rows", () => {
+  const past = new Date("2026-01-01T00:00:00.000Z");
+  const now = new Date("2026-01-02T00:00:00.000Z");
+  assert.equal(presentedInvoiceStatus("sent", past, now), "overdue");
+  assert.equal(presentedInvoiceStatus("viewed", past, now), "overdue");
+  assert.equal(presentedInvoiceStatus("partially_paid", past, now), "partially_paid");
+  assert.equal(presentedInvoiceStatus("sent", null, now), "sent");
 });
 
 test("hasIssuedInvoiceArtifact requires the immutable public snapshot", () => {

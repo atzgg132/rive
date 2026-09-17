@@ -4,14 +4,16 @@ import { getSessionUser } from "@/utils/userAuth";
 import { processContractBilling } from "@/utils/contractBilling";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { projectProofOffer } from "@/utils/portfolio";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const body = await req.json().catch(() => null) as { title?: unknown; dueDate?: unknown; completed?: unknown; acknowledgeContractSnapshot?: unknown } | null;
-    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { title?: unknown; dueDate?: unknown; completed?: unknown; acknowledgeContractSnapshot?: unknown };
     const hasTitle = Object.prototype.hasOwnProperty.call(body, "title");
     const hasDueDate = Object.prototype.hasOwnProperty.call(body, "dueDate");
     const hasCompleted = Object.prototype.hasOwnProperty.call(body, "completed");

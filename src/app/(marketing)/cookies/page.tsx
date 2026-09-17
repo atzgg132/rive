@@ -25,14 +25,14 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 const cookieTypes = [
-  { name: "Essential",    desc: "Required for the website to function. These cannot be disabled. They include session management and security tokens.", label: "Always active" },
-  { name: "Analytics",    desc: "Used to understand how visitors interact with the site. We use Vercel Analytics, which is privacy-first and uses no persistent cookies.", label: "No cookies set" },
-  { name: "Preferences",  desc: "Remember your settings and preferences across visits, such as language and theme. These are optional and minimal.", label: "Optional" },
+  { name: "Essential",    desc: "Authentication and security session cookies required for the site to function. These cannot be disabled.", label: "Always active" },
+  { name: "Analytics",    desc: "rive_anonymous_id, rive_analytics_session, and rive_attribution are first-party session cookies used for page, funnel, and acquisition measurement. They expire when your browser session ends and do not track you across other websites.", label: "Session cookies" },
+  { name: "Preferences",  desc: "Theme and unfinished editor recovery can use local browser storage until changed, saved, or discarded.", label: "Optional" },
 ];
 
 export default function CookiesPage() {
   return (
-    <ProseShell eyebrow="LEGAL" title="Cookie Policy" updated="Last updated · July 13, 2026">
+    <ProseShell eyebrow="LEGAL" title="Cookie Policy" updated="Last updated · September 17, 2026">
         <div className="flex flex-col gap-8 md:flex-row md:gap-12">
           <LegalToc items={toc} />
           <div className="min-w-0 max-w-2xl flex-1 overflow-x-clip">
@@ -70,7 +70,7 @@ export default function CookiesPage() {
               </Section>
 
               <Section id="third" title="4. Third-party cookies">
-                <p>We use <strong>Vercel Analytics</strong> for privacy-friendly, aggregated website statistics. Vercel Analytics is designed to be cookieless and does not track individual users across sessions or websites.</p>
+                <p>Rive uses first-party analytics stored in Rive&apos;s own database. We do not use Vercel Analytics, advertising pixels, or cross-site tracking cookies.</p>
                 <p>We do not use advertising networks, retargeting platforms, or social-media tracking pixels.</p>
               </Section>
 

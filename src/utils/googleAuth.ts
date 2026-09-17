@@ -5,6 +5,10 @@ import { GOOGLE_LOGIN_SCOPES } from "@/utils/googleScopes";
 
 export { GOOGLE_LOGIN_SCOPES };
 
+// Server-side outbound caps so a hung Google endpoint can't pin a request.
+const GOOGLE_OAUTH_TIMEOUT_MS = 10_000;
+const GOOGLE_API_TIMEOUT_MS = 15_000;
+
 function googleLoginConfig() {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
@@ -81,6 +85,7 @@ export async function exchangeGoogleLoginCode(code: string): Promise<{ accessTok
       redirect_uri: config.redirectUri,
       grant_type: "authorization_code",
     }),
+    signal: AbortSignal.timeout(GOOGLE_OAUTH_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`Google login token exchange failed (${response.status}).`);
   const payload = await response.json() as { access_token?: string };
@@ -98,6 +103,7 @@ export type GoogleLoginProfile = {
 export async function getGoogleLoginProfile(accessToken: string): Promise<GoogleLoginProfile> {
   const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(GOOGLE_API_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error("Could not read the Google account.");
   const payload = await response.json() as {

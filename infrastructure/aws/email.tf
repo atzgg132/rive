@@ -31,3 +31,17 @@ resource "aws_sesv2_configuration_set_event_destination" "events" {
     }
   }
 }
+
+resource "aws_sns_topic_subscription" "email_events_job_runner" {
+  topic_arn = aws_sns_topic.email_events.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.job_runner.arn
+}
+
+resource "aws_lambda_permission" "email_events" {
+  statement_id  = "AllowSesEmailEvents"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.job_runner.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.email_events.arn
+}

@@ -6,6 +6,7 @@ import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(request: NextRequest) {
   const session = await getSessionUser(request);
@@ -14,9 +15,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: "Too many attempts. Please try again later.", code: "rate_limited" }, { status: 429 });
   }
 
+  const parsedBody = await readJsonBody(request);
+  if (!parsedBody.ok) return parsedBody.response;
+
   let input;
   try {
-    input = parseStartEngagementInput(await request.json().catch(() => null));
+    input = parseStartEngagementInput(parsedBody.body);
     const result = await createClientEngagement(session.userId, input);
     const eventSource = input.entryPoint === "inquiry" ? "portfolio_inquiry" : "engagement_flow";
     const eventRequestId = input.sourceInquiryId || input.flowId;

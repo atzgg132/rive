@@ -31,6 +31,118 @@ does not modify public DNS.
   recovery email on older stacks. Use `console` for an explicitly non-delivering
   local provider; SES account/sandbox restrictions still apply.
 
+## Alerting
+
+Every CloudWatch alarm publishes to the `rive-operations-alerts` SNS topic,
+which emails `billing_alert_email`. **Confirm the SNS subscription** after the
+first apply that creates it — AWS sends a confirmation link and delivers
+nothing until it is clicked.
+
+Two exceptions worth knowing:
+
+- Route53 health checks (`www.rive.work` and `dev.rive.work` `/api/ready`)
+  publish metrics only in us-east-1, so a mirrored
+  `rive-operations-alerts` topic and subscription exist there behind the
+  `aws.us_east_1` provider. That subscription needs its own confirmation.
+- Host disk/memory/swap and container-restart alarms fire on *missing* data
+  too, because silence means the CloudWatch agent or the restart monitor cron
+  died, not that the host is quiet. They will show INSUFFICIENT_DATA until the
+  host-side pieces below exist.
+
+Covered signals: Lambda errors/throttles/p95 duration on the job runner,
+per-rule EventBridge `FailedInvocations`, both migration DLQs, EC2 status
+checks and CPU, host disk/memory/swap/container restarts, RDS
+storage/CPU/connections plus failure and backup events routed through
+EventBridge, Route53 public readiness, S3 asset growth, and the email-outbox
+backlog metrics.
+
+The email backlog alarms read `Rive/Application` metrics produced by log
+metric filters on `/rive/app/{prod,dev}`. The emitter contract is the app's
+`logMetric(name, value)` (src/utils/logger.ts), which writes a JSON line with
+top-level `metricName`/`metricValue` fields; the filters match
+`$.metricName` and extract `$.metricValue`. Missing data is not alarming for
+these two — the fields only exist once the emitting build is deployed.
+
+## Central logs
+
+App containers log to `/rive/app/{prod,dev}` and the Caddy proxy to
+`/rive/proxy` through Docker `awslogs` (30-day retention). Caddy emits JSON
+access logs on stdout with bearer-token paths templated and URL queries and
+referer query strings removed. Docker's `json-file` daemon default is bounded
+at 10 MiB x 3 files for anything else, including the one-shot migration
+containers.
+
+## Human operator roles
+
+Four MFA-gated roles exist for people; all require `MultiFactorAuthPresent`
+with an auth age under one hour and cap sessions at 3600 seconds. Their ARNs
+are in the `operator_role_arns` output.
+
+| Role | Purpose |
+| --- | --- |
+| `rive-operator-readonly` | Read-only console/CLI access (ReadOnlyAccess). |
+| `rive-deploy-operator` | Same permissions as `rive-github-deploy`, for running the deploy path by hand. |
+| `rive-db-diagnostic` | RDS/CloudWatch/Logs describes, SSM port-forward sessions to the host, and read access to `/rive/*` parameters. |
+| `rive-break-glass` | AdministratorAccess for incidents only. |
+
+## Deploy contract and rollback
+
+`scripts/deploy-runtime.sh` runs on the host on every deploy (uploaded by
+`scripts/deploy-to-host.sh` from the workflow, so the reviewed version is what
+executes). It refreshes the env file, runs migrations, then boots a
+*candidate* app container on the alternate port — prod flips between
+3000/3100, dev between 3002/3102. Only after the candidate answers
+`/api/ready` does it rewrite `/opt/rive/proxy-upstreams.env`, recreate
+`rive-proxy` against the canonical Caddyfile, and verify readiness through the
+public domain. A failure before or during cutover restores the previous
+upstream file and removes the candidate; the old container keeps serving.
+
+On success the outgoing container is renamed to `rive-<env>-previous` and left
+stopped. Instant rollback (on the host, through Session Manager):
+
+```bash
+docker stop rive-prod && docker rename rive-prod rive-prod-broken
+docker rename rive-prod-previous rive-prod && docker start rive-prod
+# flip the port back in /opt/rive/proxy-upstreams.env, then recreate the proxy:
+docker rm -f rive-proxy
+docker run -d --name rive-proxy --restart unless-stopped --network host \
+  --env-file /opt/rive/proxy-upstreams.env \
+  -v /opt/rive/Caddyfile:/etc/caddy/Caddyfile:ro \
+  -v /opt/rive/caddy/data:/data -v /opt/rive/caddy/config:/config \
+  --log-driver awslogs --log-opt awslogs-region=ap-south-1 \
+  --log-opt awslogs-group=/rive/proxy --log-opt awslogs-stream=rive-proxy \
+  caddy:2.10-alpine
+```
+
+## Updating an already-running host
+
+`aws_instance.app` ignores `user_data`, so the pieces the bootstrap installs on
+new hosts need one manual pass on the current host. In order:
+
+1. Apply the Terraform, then confirm **both** SNS subscription emails.
+2. Run `scripts/apply-caddy-config.sh` — it seeds
+   `/opt/rive/proxy-upstreams.env` with the current ports and recreates
+   `rive-proxy` with awslogs.
+3. Install host telemetry through Session Manager (or send-command) as root:
+
+   ```bash
+   dnf install -y amazon-cloudwatch-agent cronie && systemctl enable --now crond
+   ```
+
+   then copy the `cloudwatch-agent.json` and `container-restart-monitor.sh`
+   blocks plus the `/etc/cron.d/rive-restart-monitor` line out of
+   `infrastructure/aws/templates/bootstrap.sh.tftpl` and run the
+   `amazon-cloudwatch-agent-ctl -a fetch-config` command shown there.
+4. Optionally write `/etc/docker/daemon.json` from the same template and
+   `systemctl restart docker` in a maintenance window — it restarts every
+   container, and app/proxy/migration containers already carry explicit log
+   drivers, so this only bounds ad-hoc container logs.
+5. Nothing else: `deploy-runtime.sh` and the canonical Caddyfile are uploaded
+   by the deploy workflow itself.
+
+Until steps 2–3 land, the CWAgent and restart alarms report INSUFFICIENT_DATA;
+that state is itself the reminder.
+
 ## Terraform
 
 > **APPLY PROTOCOL:** the state-reconciliation freeze was lifted on 2026-08-30
@@ -180,6 +292,9 @@ Preserve all MX, SPF, DMARC, Google verification, and existing mail records.
 
 ## Rollback
 
-Application rollback redeploys the previous Git SHA through the workflow.
-Database rollback uses an RDS snapshot or, preferably, a tested forward
-migration. Neon and Vercel are no longer part of the runtime architecture.
+The fastest rollback is the stopped `rive-<env>-previous` container kept from
+the last deploy — see "Deploy contract and rollback" above. For an older
+release, redeploy the previous Git SHA through the workflow; the candidate
+cutover makes even that path zero-downtime. Database rollback uses an RDS
+snapshot or, preferably, a tested forward migration. Neon and Vercel are no
+longer part of the runtime architecture.

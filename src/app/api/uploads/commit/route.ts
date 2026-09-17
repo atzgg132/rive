@@ -10,6 +10,7 @@ import {
   keyExtension,
   matchesContentSignature,
 } from "@/utils/portfolioMedia";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /**
  * Confirm an upload before it becomes usable.
@@ -34,7 +35,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Object storage is not configured in this environment." }, { status: 503 });
   }
 
-  const body = await request.json().catch(() => null);
+  const parsedBody = await readJsonBody(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const key = typeof body?.key === "string" ? body.key : "";
   if (!key || !MANAGED_ASSET_KEY.test(key)) {
     return NextResponse.json({ message: "That upload could not be confirmed." }, { status: 400 });
@@ -98,7 +101,9 @@ export async function DELETE(request: NextRequest) {
   const session = await getSessionUser(request);
   if (!session) return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
 
-  const body = await request.json().catch(() => null);
+  const parsedBody = await readJsonBody(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const key = typeof body?.key === "string" ? body.key : "";
   if (!key || !MANAGED_ASSET_KEY.test(key)) {
     return NextResponse.json({ message: "That upload could not be released." }, { status: 400 });

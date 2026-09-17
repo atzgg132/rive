@@ -21,11 +21,11 @@ export type EmailType =
   | "invoice_ready"
   | "invoice_sent";
 
-export type EmailResult = {
-  sent: boolean;
-  messageId?: string;
-  reason?: "not_configured" | "delivery_failed";
-};
+export type EmailFailureReason = "not_configured" | "transient_failure" | "permanent_failure";
+
+export type EmailResult =
+  | { sent: true; messageId: string }
+  | { sent: false; reason: EmailFailureReason; retryable: boolean; providerCode?: string };
 
 type EmailProvider = "disabled" | "console" | "smtp" | "zoho" | "ses";
 
@@ -163,35 +163,35 @@ function baseTemplate({
   const safeRecipient = escapeHtml(recipient);
   const button =
     action && actionUrl
-      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:30px 0 28px"><tr><td style="border-radius:12px;background:#1D4ED8">
-          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:14px 24px;color:#ffffff;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;border-radius:12px">${escapeHtml(action)} &rarr;</a>
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:30px 0 28px"><tr><td style="background:#181511">
+          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:14px 24px;color:#F7F5ED;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;border-left:4px solid #1D4ED8">${escapeHtml(action)} &rarr;</a>
         </td></tr></table>
-        <p style="margin:0 0 24px;color:#64748B;font-size:12px;line-height:18px;word-break:break-all">If the button does not work, paste this link into your browser:<br><a href="${escapeHtml(actionUrl)}" style="color:#1D4ED8;text-decoration:underline">${escapeHtml(actionUrl)}</a></p>`
+        <p style="margin:0 0 24px;color:#6F6757;font-size:12px;line-height:18px;word-break:break-all">If the button does not work, paste this link into your browser:<br><a href="${escapeHtml(actionUrl)}" style="color:#1D4ED8;text-decoration:underline">${escapeHtml(actionUrl)}</a></p>`
       : "";
 
   return `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(title)}</title></head>
-<body style="margin:0;background:#F4F7FB;color:#0C1E36;font-family:Arial,'Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased">
+<body style="margin:0;background:#F7F5ED;color:#181511;font-family:Arial,'Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(intro)}</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F7FB">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5ED">
     <tr><td align="center" style="padding:40px 16px">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
-        <tr><td style="padding:0 4px 24px;font-size:28px;font-weight:800;letter-spacing:-1px;color:#0C1E36">rive<span style="color:#1D4ED8">.</span></td></tr>
-        <tr><td style="overflow:hidden;border:1px solid #DDE7F2;border-radius:20px;background:#FFFFFF">
+        <tr><td style="padding:0 4px 24px;font-size:28px;font-weight:800;letter-spacing:-1px;color:#181511">rive<span style="color:#1D4ED8">.</span></td></tr>
+        <tr><td style="border:2px solid #181511;background:#FDFCF7">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="padding:8px;background:linear-gradient(90deg,#1D4ED8,#60A5FA)"></td></tr>
+            <tr><td style="height:4px;background:#1D4ED8;font-size:0;line-height:0">&nbsp;</td></tr>
             <tr><td style="padding:38px 38px 34px">
               <p style="margin:0 0 12px;color:#1D4ED8;font-size:11px;line-height:16px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase">${escapeHtml(eyebrow)}</p>
-              <h1 style="margin:0 0 18px;color:#0C1E36;font-size:32px;line-height:38px;letter-spacing:-1px">${escapeHtml(title)}</h1>
-              <p style="margin:0 0 20px;color:#42556F;font-size:16px;line-height:26px">${escapeHtml(intro)}</p>
+              <h1 style="margin:0 0 18px;color:#181511;font-size:32px;line-height:38px;letter-spacing:-1px">${escapeHtml(title)}</h1>
+              <p style="margin:0 0 20px;color:#55503F;font-size:16px;line-height:26px">${escapeHtml(intro)}</p>
               ${body}
               ${button}
-              ${aside ? `<div style="margin-top:26px;padding:18px 20px;border:1px solid #DDE7F2;border-radius:14px;background:#F7FAFD;color:#42556F;font-size:13px;line-height:21px">${aside}</div>` : ""}
+              ${aside ? `<div style="margin-top:26px;padding:18px 20px;border:1px solid #DDD6C7;border-left:4px solid #1D4ED8;background:#F1EDE2;color:#55503F;font-size:13px;line-height:21px">${aside}</div>` : ""}
             </td></tr>
           </table>
         </td></tr>
-        <tr><td style="padding:24px 8px 0;color:#718096;font-size:12px;line-height:19px">
+        <tr><td style="padding:24px 8px 0;color:#6F6757;font-size:12px;line-height:19px">
           <p style="margin:0 0 6px">Questions? Reply to this email or write to <a href="mailto:hello@rive.work" style="color:#1D4ED8;text-decoration:none">hello@rive.work</a>.</p>
           <p style="margin:0">&copy; ${new Date().getFullYear()} rive. &middot; Bengaluru, India<br>This message was sent to ${safeRecipient}.</p>
         </td></tr>
@@ -201,6 +201,49 @@ function baseTemplate({
 </body>
 </html>`;
 }
+
+export function sanitizeEmailDiagnostic(value: string): string {
+  return value
+    .replace(/\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/\S+/g, (url) =>
+      /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s/@]+:[^\s/@]*@/.test(url) ? "[redacted-url]" : url)
+    .replace(/\S*@\S*/g, "[redacted-email]")
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+
+function classifyEmailProviderError(error: unknown): {
+  reason: "transient_failure" | "permanent_failure";
+  retryable: boolean;
+  providerCode?: string;
+  diagnostic: string;
+} {
+  const record = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const responseCode = typeof record.responseCode === "number" ? record.responseCode : null;
+  const code = typeof record.code === "string" ? record.code : "";
+  const name = typeof record.name === "string" ? record.name : "";
+
+  const permanentProviderCode = [code, name].some(
+    (candidate) => /^(MessageRejected|InvalidParameterValue|InvalidParameter)(Exception)?$/.test(candidate),
+  );
+  const permanent = permanentProviderCode || (responseCode !== null && responseCode >= 500 && responseCode <= 599);
+  const rawCode = responseCode !== null ? String(responseCode) : code || name;
+  const providerCode = rawCode ? rawCode.slice(0, 80) : undefined;
+  const message = error instanceof Error ? error.message : String(error || "Unknown delivery error");
+
+  return {
+    reason: permanent ? "permanent_failure" : "transient_failure",
+    retryable: !permanent,
+    ...(providerCode ? { providerCode } : {}),
+    diagnostic: sanitizeEmailDiagnostic(message),
+  };
+}
+
+export const __emailTestInternals = {
+  classifyEmailProviderError,
+  sanitizeEmailDiagnostic,
+} as const;
 
 async function deliver({
   to,
@@ -240,7 +283,7 @@ async function deliver({
         },
       })
       .catch((error) => console.error("email: failed to record skipped delivery", error));
-    return { sent: false, reason: "not_configured" };
+    return { sent: false, reason: "not_configured", retryable: true };
   }
 
   try {
@@ -274,6 +317,9 @@ async function deliver({
             text,
           })
         ).messageId;
+    if (typeof messageId !== "string" || !messageId.trim()) {
+      throw new Error("Email provider returned no message identifier.");
+    }
     await prisma.emailDelivery
       .create({
         data: {
@@ -286,14 +332,19 @@ async function deliver({
       .catch((error) => console.error("email: failed to record successful delivery", error));
     return { sent: true, messageId };
   } catch (error) {
-    const message = error instanceof Error ? error.message.slice(0, 500) : "Unknown delivery error";
-    console.error(`email: ${type} delivery failed`, error);
+    const classified = classifyEmailProviderError(error);
+    console.error(`email: ${type} delivery failed (${classified.reason}${classified.providerCode ? ` ${classified.providerCode}` : ""})`, error);
     await prisma.emailDelivery
       .create({
-        data: { recipient: to, type, status: "failed", error: message },
+        data: { recipient: to, type, status: "failed", error: classified.diagnostic },
       })
       .catch((logError) => console.error("email: failed to record delivery error", logError));
-    return { sent: false, reason: "delivery_failed" };
+    return {
+      sent: false,
+      reason: classified.reason,
+      retryable: classified.retryable,
+      ...(classified.providerCode ? { providerCode: classified.providerCode } : {}),
+    };
   }
 }
 
@@ -304,8 +355,8 @@ export function sendWaitlistJoinedEmail(to: string, type: string): Promise<Email
     ? "Thanks for raising your hand for Remit. We’ll write when early access is ready for you."
     : "Thanks for joining Rive. We’ll review early-access requests in small batches.";
   const body = remit
-    ? `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Remit is being designed to make cross-border payments less painful for independent professionals. We are still building it, so we will only email you when there is a meaningful product update or an invitation to try it.</p>`
-    : `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Rive brings the operational side of independent work together: clients, projects, invoices, expenses, and a public portfolio. If your access is approved, you’ll receive a secure, personal registration link from us.</p>`;
+    ? `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Remit is being designed to make cross-border payments less painful for independent professionals. We are still building it, so we will only email you when there is a meaningful product update or an invitation to try it.</p>`
+    : `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Rive brings the operational side of independent work together: clients, projects, invoices, expenses, and a public portfolio. If your access is approved, you’ll receive a secure, personal registration link from us.</p>`;
 
   return deliver({
     to,
@@ -335,10 +386,10 @@ export function sendWaitlistInviteEmail(to: string, token: string): Promise<Emai
       eyebrow: "you’re invited",
       title: "Your workspace is ready.",
       intro: "We’d love to welcome you into rive. early access.",
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Create your account with the secure link below. Your workspace will open immediately, with everything ready for you to start organising clients, work, finances, and your portfolio.</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Create your account with the secure link below. Your workspace will open immediately, with everything ready for you to start organising clients, work, finances, and your portfolio.</p>`,
       action: "Create my workspace",
       actionUrl: inviteUrl,
-      aside: "<strong style=\"color:#0C1E36\">This invitation is personal.</strong> It expires in 7 days and can be used once. If it expires, reply to this email and we’ll help.",
+      aside: "<strong style=\"color:#181511\">This invitation is personal.</strong> It expires in 7 days and can be used once. If it expires, reply to this email and we’ll help.",
       recipient: to,
     }),
     text: `Your rive. workspace is ready.\n\nCreate your account using this personal link (valid for 7 days):\n${inviteUrl}\n\nQuestions? hello@rive.work`,
@@ -356,9 +407,9 @@ export function sendRegistrationCompleteEmail(to: string, name: string): Promise
       title: `Good to have you here, ${firstName}.`,
       intro: "Your workspace is live. Start with the part of your business that feels the messiest today.",
       body: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 0">
-        <tr><td style="padding:9px 0;color:#42556F;font-size:15px"><strong style="color:#0C1E36">01</strong>&nbsp;&nbsp;Add a client and the work you’re doing together.</td></tr>
-        <tr><td style="padding:9px 0;color:#42556F;font-size:15px"><strong style="color:#0C1E36">02</strong>&nbsp;&nbsp;Track an invoice or expense to see your numbers clearly.</td></tr>
-        <tr><td style="padding:9px 0;color:#42556F;font-size:15px"><strong style="color:#0C1E36">03</strong>&nbsp;&nbsp;Shape and publish your portfolio when you’re ready.</td></tr>
+        <tr><td style="padding:9px 0;color:#55503F;font-size:15px"><strong style="color:#181511">01</strong>&nbsp;&nbsp;Add a client and the work you’re doing together.</td></tr>
+        <tr><td style="padding:9px 0;color:#55503F;font-size:15px"><strong style="color:#181511">02</strong>&nbsp;&nbsp;Track an invoice or expense to see your numbers clearly.</td></tr>
+        <tr><td style="padding:9px 0;color:#55503F;font-size:15px"><strong style="color:#181511">03</strong>&nbsp;&nbsp;Shape and publish your portfolio when you’re ready.</td></tr>
       </table>`,
       action: "Open my dashboard",
       actionUrl: `${appUrl}/dashboard`,
@@ -379,7 +430,7 @@ export function buildPasswordResetEmail(to: string, token: string): PreparedEmai
       eyebrow: "password reset",
       title: "Let’s get you back in.",
       intro: "We received a request to reset the password for your rive. account.",
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Use the secure button below to choose a new password. For your protection, the link expires in 60 minutes and works only once.</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Use the secure button below to choose a new password. For your protection, the link expires in 60 minutes and works only once.</p>`,
       action: "Choose a new password",
       actionUrl: resetUrl,
       aside: "Didn’t request this? You can safely ignore this email. Your current password will continue to work.",
@@ -393,8 +444,8 @@ export function sendPasswordResetEmail(to: string, token: string): Promise<Email
   return deliver(buildPasswordResetEmail(to, token));
 }
 
-export function sendPasswordChangedEmail(to: string): Promise<EmailResult> {
-  return deliver({
+export function buildPasswordChangedEmail(to: string): PreparedEmail {
+  return {
     to,
     type: "password_changed",
     subject: "Your rive. password was changed",
@@ -402,24 +453,28 @@ export function sendPasswordChangedEmail(to: string): Promise<EmailResult> {
       eyebrow: "security notice",
       title: "Your password was changed.",
       intro: "The password for your rive. account has just been updated.",
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">If you made this change, there’s nothing else to do. You can sign in with your new password immediately.</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">If you made this change, there’s nothing else to do. You can sign in with your new password immediately.</p>`,
       action: "Sign in to rive.",
       actionUrl: `${appUrl}/login`,
       aside: "If this wasn’t you, contact hello@rive.work immediately so we can help secure your account.",
       recipient: to,
     }),
     text: `Your rive. password was changed.\n\nIf this was you, no action is needed. If not, contact hello@rive.work immediately.`,
-  });
+  };
 }
 
-export function sendLoginSuccessEmail(to: string): Promise<EmailResult> {
+export function sendPasswordChangedEmail(to: string): Promise<EmailResult> {
+  return deliver(buildPasswordChangedEmail(to));
+}
+
+export function buildLoginSuccessEmail(to: string): PreparedEmail {
   const signedInAt = new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Asia/Kolkata",
   }).format(new Date());
 
-  return deliver({
+  return {
     to,
     type: "login_success",
     subject: "New sign-in to your rive. account",
@@ -427,28 +482,32 @@ export function sendLoginSuccessEmail(to: string): Promise<EmailResult> {
       eyebrow: "security notice",
       title: "A new sign-in was completed.",
       intro: `Your rive. account was signed in to on ${signedInAt} IST.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">If this was you, no action is needed. We send this note so unusual access never goes unnoticed.</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">If this was you, no action is needed. We send this note so unusual access never goes unnoticed.</p>`,
       action: "Open my dashboard",
       actionUrl: `${appUrl}/dashboard`,
       aside: "Don’t recognise this sign-in? Reset your password immediately, then contact hello@rive.work so we can help review the account.",
       recipient: to,
     }),
     text: `New sign-in to your rive. account on ${signedInAt} IST.\n\nIf this was you, no action is needed. If not, reset your password immediately: ${appUrl}/forgot-password`,
-  });
+  };
 }
 
-export function sendContactMessageEmail(input: {
+export function sendLoginSuccessEmail(to: string): Promise<EmailResult> {
+  return deliver(buildLoginSuccessEmail(to));
+}
+
+export function buildContactMessageEmail(input: {
   name: string;
   email: string;
   subject: string;
   message: string;
-}): Promise<EmailResult> {
+}): PreparedEmail {
   const safeName = escapeHtml(input.name);
   const safeEmail = escapeHtml(input.email);
   const safeSubject = escapeHtml(input.subject);
   const safeMessage = escapeHtml(input.message).replace(/\n/g, "<br>");
 
-  return deliver({
+  return {
     to: "hello@rive.work",
     type: "contact_message",
     subject: `[rive. contact] ${input.subject}`,
@@ -457,16 +516,17 @@ export function sendContactMessageEmail(input: {
       title: input.subject,
       intro: `${input.name} sent a message through rive.work.`,
       body: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">From:</strong> ${safeName} &lt;${safeEmail}&gt;</td></tr>
-        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">Subject:</strong> ${safeSubject}</td></tr>
-        <tr><td style="padding:18px 0 0;color:#42556F;font-size:15px;line-height:25px">${safeMessage}</td></tr>
+        <tr><td style="padding:8px 0;color:#55503F;font-size:14px"><strong style="color:#181511">From:</strong> ${safeName} &lt;${safeEmail}&gt;</td></tr>
+        <tr><td style="padding:8px 0;color:#55503F;font-size:14px"><strong style="color:#181511">Subject:</strong> ${safeSubject}</td></tr>
+        <tr><td style="padding:18px 0 0;color:#55503F;font-size:15px;line-height:25px">${safeMessage}</td></tr>
       </table>`,
       action: "Reply to sender",
       actionUrl: `mailto:${encodeURIComponent(input.email)}`,
       recipient: "hello@rive.work",
     }),
     text: `${input.subject}\n\nFrom: ${input.name} <${input.email}>\n\n${input.message}`,
-  });
+    replyToAddress: input.email,
+  };
 }
 
 /**
@@ -490,7 +550,7 @@ export function buildPortfolioInquiryEmail(input: {
   const safeMessage = escapeHtml(input.message).replace(/\n/g, "<br>");
   const sourceTitle = input.sourceProjectTitle?.trim();
   const sourceRow = sourceTitle
-    ? `<tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">Reading:</strong> ${escapeHtml(sourceTitle)}</td></tr>`
+    ? `<tr><td style="padding:8px 0;color:#55503F;font-size:14px"><strong style="color:#181511">Reading:</strong> ${escapeHtml(sourceTitle)}</td></tr>`
     : "";
 
   return {
@@ -503,10 +563,10 @@ export function buildPortfolioInquiryEmail(input: {
       title: `${input.visitorName} would like to work with you.`,
       intro: `A prospective client sent an enquiry through ${input.portfolioName}'s Rive portfolio.`,
       body: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">From:</strong> ${safeVisitorName} &lt;${safeVisitorEmail}&gt;</td></tr>
-        <tr><td style="padding:8px 0;color:#42556F;font-size:14px"><strong style="color:#0C1E36">Project:</strong> ${safeProjectType}</td></tr>
+        <tr><td style="padding:8px 0;color:#55503F;font-size:14px"><strong style="color:#181511">From:</strong> ${safeVisitorName} &lt;${safeVisitorEmail}&gt;</td></tr>
+        <tr><td style="padding:8px 0;color:#55503F;font-size:14px"><strong style="color:#181511">Project:</strong> ${safeProjectType}</td></tr>
         ${sourceRow}
-        <tr><td style="padding:18px 0 0;color:#42556F;font-size:15px;line-height:25px">${safeMessage}</td></tr>
+        <tr><td style="padding:18px 0 0;color:#55503F;font-size:15px;line-height:25px">${safeMessage}</td></tr>
       </table>`,
       action: "Reply to enquiry",
       actionUrl: `mailto:${encodeURIComponent(input.visitorEmail)}`,
@@ -514,6 +574,35 @@ export function buildPortfolioInquiryEmail(input: {
       recipient: input.to,
     }),
     text: `New portfolio enquiry\n\nFrom: ${input.visitorName} <${input.visitorEmail}>\nProject: ${input.projectType}${sourceTitle ? `\nReading: ${sourceTitle}` : ""}\n\n${input.message}`,
+  };
+}
+
+export function buildContractReviewEmail(input: {
+  to: string;
+  clientName: string;
+  ownerName: string;
+  contractTitle: string;
+  reviewUrl: string;
+  expiresAt: Date;
+}): PreparedEmail {
+  const safeOwner = escapeHtml(input.ownerName);
+  const safeTitle = escapeHtml(input.contractTitle);
+  const expiry = input.expiresAt.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
+  return {
+    to: input.to,
+    type: "contract_review",
+    subject: `${input.ownerName} shared an Agreement for review`,
+    html: baseTemplate({
+      eyebrow: "Agreement review",
+      title: `${safeOwner} shared a draft Agreement with you.`,
+      intro: `Please review “${safeTitle}” and leave comments or suggested edits before anyone records acceptance.`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">This is a review link, not an acceptance request. The Agreement will not be marked accepted until the parties review the final version and complete the separate recorded-acceptance step.</p>`,
+      action: "Review Agreement",
+      actionUrl: input.reviewUrl,
+      aside: `This link expires on ${expiry} (IST). If you were not expecting this message, do not record acceptance; contact ${safeOwner} through a trusted channel.`,
+      recipient: input.to,
+    }),
+    text: `${input.ownerName} shared “${input.contractTitle}” for review.\n\nReview it here: ${input.reviewUrl}\n\nThis link expires on ${expiry} IST. This is not an acceptance request.`,
   };
 }
 
@@ -525,25 +614,7 @@ export function sendContractReviewEmail(input: {
   reviewUrl: string;
   expiresAt: Date;
 }): Promise<EmailResult> {
-  const safeOwner = escapeHtml(input.ownerName);
-  const safeTitle = escapeHtml(input.contractTitle);
-  const expiry = input.expiresAt.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
-  return deliver({
-    to: input.to,
-    type: "contract_review",
-    subject: `${input.ownerName} shared an Agreement for review`,
-    html: baseTemplate({
-      eyebrow: "Agreement review",
-      title: `${safeOwner} shared a draft Agreement with you.`,
-      intro: `Please review “${safeTitle}” and leave comments or suggested edits before anyone records acceptance.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">This is a review link, not an acceptance request. The Agreement will not be marked accepted until the parties review the final version and complete the separate recorded-acceptance step.</p>`,
-      action: "Review Agreement",
-      actionUrl: input.reviewUrl,
-      aside: `This link expires on ${expiry} (IST). If you were not expecting this message, do not record acceptance; contact ${safeOwner} through a trusted channel.`,
-      recipient: input.to,
-    }),
-    text: `${input.ownerName} shared “${input.contractTitle}” for review.\n\nReview it here: ${input.reviewUrl}\n\nThis link expires on ${expiry} IST. This is not an acceptance request.`,
-  });
+  return deliver(buildContractReviewEmail(input));
 }
 
 export function buildContractSigningEmail(input: {
@@ -562,7 +633,7 @@ export function buildContractSigningEmail(input: {
       eyebrow: "recorded acceptance requested",
       title: "An Agreement is ready for your review and acceptance.",
       intro: `Please read the complete Agreement before recording acceptance of “${escapeHtml(input.contractTitle)}”.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">The acceptance page will show the exact version, the recorded-acceptance consent language, and the acceptance record created when you type your name and confirm. Only the named client and freelancer parties are invited to accept.</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">The acceptance page will show the exact version, the recorded-acceptance consent language, and the acceptance record created when you type your name and confirm. Only the named client and freelancer parties are invited to accept.</p>`,
       action: "Open acceptance page",
       actionUrl: input.signUrl,
       aside: `This link expires on ${expiry} (IST). Do not forward it. If the name or terms are incorrect, ask the sender to void and reissue the acceptance request.`,
@@ -597,7 +668,7 @@ export function buildContractExecutedEmail(input: {
       eyebrow: "Agreement accepted",
       title: "Both parties have recorded acceptance.",
       intro: `The accepted version of “${escapeHtml(input.contractTitle)}” is ready to download and retain.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeRecipientName}, keep the accepted Agreement and its acceptance record with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeRecipientName}, keep the accepted Agreement and its acceptance record with your business records. The parties should also retain any documents or communications incorporated by reference.</p>`,
       action: "View accepted Agreement",
       actionUrl: input.artifactUrl,
       aside: "This message confirms the record created in Rive; it does not replace any legal, tax, identity, or regulatory requirement that applies to the transaction.",
@@ -635,7 +706,7 @@ export function buildInvoiceReadyEmail(input: {
       eyebrow: "invoice ready",
       title: `Invoice ${input.invoiceNumber} is ready.`,
       intro: `A milestone-linked draft invoice for ${input.clientName} has been generated for review.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Amount: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Amount: <strong style="color:#181511">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#181511">${escapeHtml(due)}</strong></p>`,
       action: "Open revenue workspace",
       actionUrl: `${appUrl}/workflow/revenue`,
       aside: "This email is a prompt to review. No invoice is sent to the client automatically by this notification.",
@@ -679,7 +750,7 @@ export function buildInvoiceSentEmail(input: {
       eyebrow: "invoice",
       title: `Invoice ${input.invoiceNumber}`,
       intro: `${input.senderName} sent an invoice for your review and payment.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeClientName}, ${safeSenderName} sent this invoice for your review and payment.<br><br>Amount due: <strong style="color:#0C1E36">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#0C1E36">${escapeHtml(due)}</strong></p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, ${safeSenderName} sent this invoice for your review and payment.<br><br>Amount due: <strong style="color:#181511">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#181511">${escapeHtml(due)}</strong></p>`,
       action: input.publicUrl ? "View invoice" : undefined,
       actionUrl: input.publicUrl,
       aside: "The invoice email is a delivery notice. Please verify the sender and payment details using a trusted channel before paying.",
@@ -721,7 +792,7 @@ export function sendContractVoidRequestedEmail(input: {
       eyebrow: "void requested",
       title: `${safeRequester} requested to void an accepted Agreement.`,
       intro: `A void request was raised for “${escapeHtml(input.contractTitle)}”. Both parties must agree before it is voided.`,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Hi ${safeRecipient}, use the secure link below to confirm or decline the void. The Agreement stays accepted and fully retained until the other party also confirms.</p><p style="margin:18px 0 0;padding:14px 16px;border:1px solid #DDE7F2;border-radius:12px;background:#F7FAFD;color:#42556F;font-size:13px;line-height:21px"><strong style="color:#0C1E36">Reason:</strong><br>${safeNote}</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeRecipient}, use the secure link below to confirm or decline the void. The Agreement stays accepted and fully retained until the other party also confirms.</p><p style="margin:18px 0 0;padding:14px 16px;border:1px solid #DDD6C7;border-radius:12px;background:#F1EDE2;color:#55503F;font-size:13px;line-height:21px"><strong style="color:#181511">Reason:</strong><br>${safeNote}</p>`,
       action: "Review void request",
       actionUrl: input.voidUrl,
       aside: "If you did not expect this message, you can safely ignore it. The Agreement is not voided unless you confirm through the secure link.",
@@ -740,6 +811,7 @@ export type PreparedEmail = {
   replyToAddress?: string;
   deliveryGuard?:
     | { kind: "contract_signing"; signerId: string; tokenHash: string }
+    | { kind: "contract_review"; linkId: string; tokenHash: string }
     | { kind: "invoice_sent"; invoiceId: string; tokenHash: string };
 };
 
@@ -759,7 +831,7 @@ export function buildEmailVerificationEmail(to: string, name: string, token: str
       eyebrow: "finish setting up",
       title: "Verify your email address.",
       intro,
-      body: `<p style="margin:0;color:#42556F;font-size:15px;line-height:25px">Your account is ready. Verify this email address to open your workspace. The link expires in 24 hours and works only once.</p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Your account is ready. Verify this email address to open your workspace. The link expires in 24 hours and works only once.</p>`,
       action: "Verify my email",
       actionUrl: verifyUrl,
       aside: "If you did not create a Rive account, you can safely ignore this message.",

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { hasAdminSession } from "@/utils/adminSession";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 const STATUSES = new Set(["new", "reviewing", "planned", "closed"]);
 const MAX_SEARCH = 120;
@@ -69,7 +70,9 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!await hasAdminSession(req)) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const body = await req.json().catch(() => null) as { id?: unknown; status?: unknown; tags?: unknown } | null;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const id = typeof body?.id === "string" ? body.id : "";
   const status = typeof body?.status === "string" ? body.status : "";
   const tags = Array.isArray(body?.tags) ? body.tags.filter((tag): tag is string => typeof tag === "string").map((tag) => tag.trim().slice(0, 40)).filter(Boolean).slice(0, 20) : undefined;

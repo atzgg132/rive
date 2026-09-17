@@ -27,6 +27,7 @@ import { toast, Toaster } from "sonner";
 import RiveLogo from "@/components/RiveLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StartEngagementComposer } from "@/components/engagements/StartEngagementComposer";
+import { canonicalTimeZone } from "@/lib/calendar-time";
 
 type ImportPreview = {
   name: string;
@@ -120,6 +121,10 @@ const BUSINESS_TYPES = [
     icon: WalletCards,
   },
 ];
+function browserTimeZone() {
+  return canonicalTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone) ?? "UTC";
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -129,7 +134,7 @@ export default function OnboardingPage() {
   const [profession, setProfession] = useState("");
   const [businessTypes, setBusinessTypes] = useState<string[]>(["freelancer"]);
   const [currency, setCurrency] = useState("INR");
-  const [timeZone, setTimeZone] = useState("Asia/Calcutta");
+  const [timeZone, setTimeZone] = useState("Asia/Kolkata");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [sources, setSources] = useState<string[]>([]);
   const [path, setPath] = useState<"import" | "quickstart" | "clean">("quickstart");
@@ -177,15 +182,14 @@ export default function OnboardingPage() {
             : ["freelancer"],
       );
       setCurrency(
-        data.user.currency === "USD" &&
-          Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Calcutta"
+        data.user.currency === "USD" && browserTimeZone() === "Asia/Kolkata"
           ? "INR"
           : data.user.currency || "USD",
       );
       setTimeZone(
         data.user.timeZone === "UTC"
-          ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-          : data.user.timeZone,
+          ? browserTimeZone()
+          : canonicalTimeZone(data.user.timeZone) ?? "UTC",
       );
       setAvatarUrl(data.user.avatarUrl || "");
       const connectorAvailability = data.connectorAvailability || {};

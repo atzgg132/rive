@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseMigrationWorkMessage } from "@/utils/migration/queue";
 import { processMigrationWork } from "@/utils/migration/worker";
 import { prisma } from "@/utils/db";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -12,7 +13,9 @@ export async function POST(request: NextRequest) {
   if (!process.env.CRON_SECRET || authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   }
-  const message = parseMigrationWorkMessage(await request.json().catch(() => null));
+  const parsedBody = await readJsonBody(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const message = parseMigrationWorkMessage(parsedBody.body);
   if (!message) return NextResponse.json({ success: false, message: "Invalid migration work message." }, { status: 400 });
   const startedAt = Date.now();
 

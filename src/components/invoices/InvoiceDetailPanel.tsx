@@ -313,8 +313,14 @@ export default function InvoiceDetailPanel({
                   {invoice.latest_delivery ? (
                     <div className="flex justify-between gap-3 sm:block">
                       <dt className="text-xs text-muted-foreground">Email delivery</dt>
-                      <dd className={`font-mono font-medium tabular-nums sm:mt-0.5 ${invoice.latest_delivery.status === "failed" ? "text-destructive" : ""}`}>
-                        {invoice.latest_delivery.status === "sent" ? "Delivered" : invoice.latest_delivery.status === "failed" ? "Failed" : "Pending"}
+                      <dd className={`font-mono font-medium tabular-nums sm:mt-0.5 ${invoice.latest_delivery.status === "failed" || invoice.latest_delivery.status === "delivery_failed" ? "text-destructive" : ""}`}>
+                        {invoice.latest_delivery.status === "delivered"
+                          ? "Delivered"
+                          : invoice.latest_delivery.status === "sent"
+                            ? "Accepted by provider"
+                            : invoice.latest_delivery.status === "failed" || invoice.latest_delivery.status === "delivery_failed"
+                              ? "Failed"
+                              : "Pending"}
                       </dd>
                     </div>
                   ) : null}
@@ -466,7 +472,7 @@ export default function InvoiceDetailPanel({
                       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Send
                     </Button>
                   ) : null}
-                  {invoice.latest_delivery?.status === "failed" ? (
+                  {invoice.latest_delivery?.status === "failed" || invoice.latest_delivery?.status === "delivery_failed" ? (
                     <Button size="sm" variant="outline" disabled={busy} onClick={() => void retryDelivery()} className="gap-1.5">
                       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Retry email
                     </Button>

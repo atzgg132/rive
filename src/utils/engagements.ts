@@ -7,6 +7,7 @@ import { contractsAvailable, createDefaultContractSections } from "@/utils/contr
 import { createAgreementDraft } from "@/utils/contractDraft";
 import { prisma } from "@/utils/db";
 import { nextInvoiceNumber } from "@/utils/invoiceNumber";
+import { normalizeEmailAddress } from "@/lib/email-address";
 
 export type StartEngagementInput = {
   flowId: string;
@@ -117,9 +118,10 @@ export function parseStartEngagementInput(value: unknown): StartEngagementInput 
     client = { mode: "existing", id };
   } else if (clientValue.mode === "new") {
     const name = clean(clientValue.name, 160);
-    const email = clean(clientValue.email, 320).toLowerCase() || null;
+    const emailInput = clean(clientValue.email, 320);
+    const email = emailInput ? normalizeEmailAddress(emailInput) : null;
     if (!name) throw new EngagementInputError("Client name is required.", "missing_client_name");
-    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+    if (emailInput && !email) {
       throw new EngagementInputError("Use a valid client email.", "invalid_client_email");
     }
     client = { mode: "new", name, email };
@@ -217,9 +219,10 @@ export function parseInquiryConversionInput(value: unknown): InquiryConversionIn
     client = { mode: "existing", id };
   } else if (clientValue.mode === "new") {
     const name = clean(clientValue.name, 160);
-    const email = clean(clientValue.email, 320).toLowerCase() || null;
+    const emailInput = clean(clientValue.email, 320);
+    const email = emailInput ? normalizeEmailAddress(emailInput) : null;
     if (!name) throw new EngagementInputError("Client name is required.", "missing_client_name");
-    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+    if (emailInput && !email) {
       throw new EngagementInputError("Use a valid client email.", "invalid_client_email");
     }
     client = { mode: "new", name, email };

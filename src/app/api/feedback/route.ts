@@ -11,10 +11,7 @@ import {
 } from "@/utils/feedback";
 import { durableRateLimitResult } from "@/utils/durableRateLimit";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
+import { readJsonBody } from "@/utils/apiBoundary";
 
 function clean(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
@@ -41,8 +38,9 @@ export async function POST(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  if (!isRecord(body)) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
 
   const promptKey = clean(body.promptKey, 80) || "";
   const prompt = promptForKey(promptKey);

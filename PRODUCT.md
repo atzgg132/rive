@@ -47,11 +47,12 @@ shipping; it must not appear on the homepage.
 
 Name and wordmark (`RiveLogo`, `/brand/rive-wordmark.svg`) are fixed.
 User-approved marketing direction (2026-09): "The Institution of One" —
-modernist-institution register; warm-white paper, ink black, signal red
-rationed to marks; one grotesk (Archivo) plus a print mono; a traveling
-"Record" artifact as signature mechanic; typography-first hero. The previous
-dark/cobalt/network-line direction ("Editorial Signal") is explicitly rejected
-and is the anti-reference.
+modernist-institution register; warm-white paper, ink black, registry blue
+rationed to marks and active states; one grotesk (Archivo) plus a print mono; a
+traveling "Record" artifact as signature mechanic; typography-first hero. The
+previous dark/cobalt/network-line direction ("Editorial Signal") is explicitly
+rejected and is the anti-reference. Registry blue replaced signal red after
+review because red read as an alarm on ordinary actions.
 
 ## Evidence on Hand
 
