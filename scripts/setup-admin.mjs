@@ -56,7 +56,7 @@ if (process.argv.includes("--totp")) {
   console.log("--- Or add to .env.local for local development ---");
   console.log(`ADMIN_TOTP_SECRET="${secret}"\n`);
   console.log("Once the variable is set, the admin login asks for the 6-digit code after the password.");
-  console.log("Remove or empty it to sign in with username and password only.\n");
+  console.log("Production refuses admin sign-in until a valid seed is configured.\n");
   rl.close();
   process.exit(0);
 }

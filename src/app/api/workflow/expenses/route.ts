@@ -4,6 +4,20 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
+import { readJsonBody } from "@/utils/apiBoundary";
+
+type ExpenseMutationBody = {
+  id?: string;
+  project_id?: unknown;
+  category?: string;
+  description?: string;
+  amount?: unknown;
+  currency?: string;
+  date?: string;
+  receipt_url?: string | null;
+  is_billable?: boolean;
+  is_reimbursed?: boolean;
+};
 
 type ProjectValidation =
   | { ok: true; projectId: string | null }
@@ -194,7 +208,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const { project_id, category, description, amount, currency, date, receipt_url, is_billable, is_reimbursed } = await req.json();
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { project_id, category, description, amount, currency, date, receipt_url, is_billable, is_reimbursed } = parsedBody.body as ExpenseMutationBody;
     if (!description || amount === undefined) {
       return NextResponse.json({ success: false, message: "Description and amount are required." }, { status: 400 });
     }
@@ -250,7 +266,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const { id, project_id, category, description, amount, currency, date, receipt_url, is_billable, is_reimbursed } = await req.json();
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { id, project_id, category, description, amount, currency, date, receipt_url, is_billable, is_reimbursed } = parsedBody.body as ExpenseMutationBody;
     if (!id || !description || amount === undefined) {
       return NextResponse.json({ success: false, message: "ID, description and amount are required." }, { status: 400 });
     }

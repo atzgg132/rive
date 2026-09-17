@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const delivery = await prisma.invoiceDelivery.findFirst({
       where: {
         invoiceId: id,
-        status: "failed",
+        status: { in: ["failed", "delivery_failed"] },
         invoice: {
           userId: session.userId,
           status: { in: ["sent", "viewed", "overdue"] },
@@ -31,11 +31,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await prisma.$transaction(async (tx) => {
       const outbox = await tx.emailOutbox.updateMany({
-        where: { id: delivery.id, status: "failed" },
+        where: { id: delivery.id, status: { in: ["failed", "sent"] } },
         data: { status: "queued", attempts: 0, availableAt: new Date(), lastError: null, processedAt: null },
       });
       const audit = await tx.invoiceDelivery.updateMany({
-        where: { id: delivery.id, status: "failed" },
+        where: { id: delivery.id, status: { in: ["failed", "delivery_failed"] } },
         data: { status: "queued", providerMessageId: null, error: "queued_for_retry" },
       });
       if (outbox.count !== 1 || audit.count !== 1) throw new Error("The failed delivery changed before it could be retried.");

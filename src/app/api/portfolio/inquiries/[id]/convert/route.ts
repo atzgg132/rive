@@ -7,6 +7,7 @@ import {
   parseInquiryConversionInput,
 } from "@/utils/engagements";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSessionUser(req);
@@ -15,9 +16,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!rateLimit(`portfolio-inquiry-convert:${session.userId}:${id}:${getRequestIp(req)}`, 20, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many conversion attempts. Try again later.", code: "rate_limited" }, { status: 429 });
   }
-
   try {
-    const conversion = parseInquiryConversionInput(await req.json().catch(() => null));
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const conversion = parseInquiryConversionInput(parsedBody.body);
     const result = await convertPortfolioInquiry(session.userId, id, conversion);
     await Promise.all([
       ...(result.createdClient

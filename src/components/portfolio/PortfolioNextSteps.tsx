@@ -163,7 +163,7 @@ export default function PortfolioNextSteps({
       aria-label="Hide this for now"
       title="Hide this for now"
       data-portfolio-worklist-dismiss
-      className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-muted-foreground transition hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
+      className="-mr-1 -mt-1 shrink-0 rounded-none p-1.5 text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
     >
       <X className="h-3.5 w-3.5" />
     </Button>
@@ -171,11 +171,11 @@ export default function PortfolioNextSteps({
 
   if (outstanding.length === 0) {
     return (
-      <section className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/25">
-        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+      <section className="flex items-start gap-3 rounded-none border border-success/25 bg-success/10 p-4">
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Your portfolio has everything it needs.</p>
-          <p className="mt-0.5 text-xs leading-5 text-emerald-800/80 dark:text-emerald-200/80">
+          <p className="text-sm font-bold text-success">Your portfolio has everything it needs.</p>
+          <p className="mt-0.5 text-xs leading-5 text-success/80">
             Keep it current as new work lands — that matters more than anything left on a checklist.
           </p>
         </div>
@@ -189,7 +189,7 @@ export default function PortfolioNextSteps({
   const shown = (essentials.length ? essentials : optional).slice(0, 2);
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <section className="rounded-none border border-border bg-card p-4 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -210,7 +210,7 @@ export default function PortfolioNextSteps({
             <Button
               type="button"
               onClick={() => (step.id === "publish" ? onPublish() : onGoTo(step.section))}
-              className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-background px-3.5 py-2.5 text-left !whitespace-normal transition hover:border-primary/50"
+              className="group flex w-full items-center justify-between gap-3 rounded-none border border-border bg-background px-3.5 py-2.5 text-left !whitespace-normal transition hover:border-primary/50"
             >
               <span className="min-w-0 text-sm font-semibold text-foreground">{step.label}</span>
               <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />

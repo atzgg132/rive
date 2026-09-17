@@ -572,9 +572,14 @@ test.describe("goal-aware activation", () => {
     await expect(page.getByTestId("guide-dock")).toBeVisible();
     await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "collapsed");
     await expect(page.getByRole("button", { name: "Open Help & guides" })).toBeVisible();
+    await expect(page.getByTestId("feedback-launcher")).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.getByRole("button", { name: "Expand guide" }).click();
+    await expect(page.getByTestId("guide-dock")).toHaveAttribute("data-guide-state", "expanded");
+    await expect(page.getByTestId("feedback-launcher")).toHaveCount(0);
     await page.getByRole("button", { name: "Maybe later" }).click();
+    await expect(page.getByTestId("guide-dock")).toBeHidden();
+    await expect(page.getByTestId("feedback-launcher")).toBeVisible();
   });
 
   test("Escape closes automatic guidance and Help is keyboard reachable", async ({ page }) => {

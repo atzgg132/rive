@@ -43,7 +43,7 @@ function KpiCard({
   changeSuffix?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="rounded-none border border-border bg-card p-5 shadow-card">
       <div className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
       <div className="mt-2.5 text-3xl font-black tabular-nums text-foreground">{value}</div>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -57,11 +57,11 @@ function KpiCard({
 function Breakdown({ title, subtitle, rows, empty }: { title: string; subtitle: string; rows: { label: string; views: number }[]; empty: string }) {
   const max = Math.max(...rows.map((row) => row.views), 1);
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <section className="rounded-none border border-border bg-card p-5 shadow-card sm:p-6">
       <h3 className="font-bold text-foreground">{title}</h3>
       <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
       {rows.length === 0 ? (
-        <p className="mt-5 rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">{empty}</p>
+        <p className="mt-5 rounded-none border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">{empty}</p>
       ) : (
         <ul className="mt-5 flex flex-col gap-2.5">
           {rows.map((row) => (
@@ -112,14 +112,14 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
   }, [load, range]);
 
   const rangeControls = (
-    <div role="group" aria-label="Analytics date range" className="flex flex-wrap gap-1 rounded-xl border border-border bg-card p-1">
+    <div role="group" aria-label="Analytics date range" className="flex flex-wrap gap-1 rounded-none border border-border bg-card p-1">
       {PORTFOLIO_ANALYTICS_RANGES.map((option) => (
         <Button
           key={option}
           type="button"
           aria-pressed={range === option}
           onClick={() => setRange(option)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${range === option ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          className={`rounded-none px-3 py-1.5 text-xs font-bold transition ${range === option ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
         >
           {RANGE_LABELS[option]}
         </Button>
@@ -133,14 +133,14 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
         <div className="flex flex-wrap items-center justify-between gap-3">{rangeControls}</div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((index) => (
-            <div key={index} className="rounded-2xl border border-border bg-card p-5">
+            <div key={index} className="rounded-none border border-border bg-card p-5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="mt-4 h-8 w-20" />
               <Skeleton className="mt-3 h-3 w-32" />
             </div>
           ))}
         </div>
-        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-none" />
       </div>
     );
   }
@@ -149,10 +149,10 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
     return (
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">{rangeControls}</div>
-        <section role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+        <section role="alert" className="rounded-none border border-destructive/30 bg-destructive/5 p-6 text-center">
           <h3 className="text-sm font-bold text-destructive">Analytics could not be loaded</h3>
           <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-muted-foreground">{error}</p>
-          <Button onClick={() => void load(range)} className="mt-4 rounded-xl bg-destructive px-4 py-2 text-xs font-bold text-white">
+          <Button onClick={() => void load(range)} className="mt-4 rounded-none bg-destructive px-4 py-2 text-xs font-bold text-destructive-foreground">
             <RefreshCw className="mr-1.5 inline h-3.5 w-3.5" /> Try again
           </Button>
         </section>
@@ -180,7 +180,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
       </div>
 
       {!published && (
-        <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+        <p className="flex items-start gap-2 rounded-none border border-warning/25 bg-warning/10 px-3.5 py-3 text-xs leading-5 text-warning">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           Your portfolio is not published yet, so these figures cover past traffic only. Publishing is what starts new visits.
         </p>
@@ -215,11 +215,11 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
       </div>
 
       {unconverted.length > 0 && (
-        <section className="flex flex-col gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/60 dark:bg-amber-950/30">
-          <h3 className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-100">
+        <section className="flex flex-col gap-2 rounded-none border border-warning/25 bg-warning/10 p-5">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-warning">
             <AlertTriangle className="h-4 w-4 shrink-0" /> Drawing attention, but no enquiries
           </h3>
-          <p className="text-xs leading-5 text-amber-800 dark:text-amber-200">
+          <p className="text-xs leading-5 text-warning">
             {unconverted.map((project) => project.title).join(", ")}{" "}
             {unconverted.length === 1 ? "has" : "have"} been read enough times to be worth a second look, while other work is
             producing enquiries. A clearer outcome or a direct call to action on {unconverted.length === 1 ? "that case study" : "those case studies"} is usually what closes the gap.
@@ -227,7 +227,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
         </section>
       )}
 
-      <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+      <section className="rounded-none border border-border bg-card p-5 shadow-card sm:p-6">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h3 className="font-bold text-foreground">Traffic over time</h3>
@@ -249,7 +249,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
         )}
       </section>
 
-      <section className="rounded-2xl border border-border bg-card shadow-sm">
+      <section className="rounded-none border border-border bg-card shadow-card">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border p-5 sm:p-6">
           <div>
             <h3 className="font-bold text-foreground">Top projects</h3>
@@ -319,7 +319,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
         />
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-3 text-xs leading-4 text-muted-foreground">
+      <div className="flex flex-col gap-2 rounded-none border border-border bg-muted/40 px-3.5 py-3 text-xs leading-4 text-muted-foreground">
         <p className="flex items-start gap-2">
           <Users className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
@@ -339,7 +339,7 @@ export default function PortfolioAnalyticsPanel({ published }: { published: bool
       </div>
 
       {inquiries.notificationFailures > 0 && (
-        <p role="alert" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+        <p role="alert" className="flex items-start gap-2 rounded-none border border-warning/25 bg-warning/10 px-3.5 py-3 text-xs leading-5 text-warning">
           <Inbox className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {inquiries.notificationFailures} enquiry notification{inquiries.notificationFailures === 1 ? "" : "s"} could not be emailed to you. The
           {inquiries.notificationFailures === 1 ? " enquiry is" : " enquiries are"} safely saved — open the Enquiries tab to read {inquiries.notificationFailures === 1 ? "it" : "them"}.

@@ -5,6 +5,7 @@ import { getSessionUser } from "@/utils/userAuth";
 import { PROJECT_STATUS_SET } from "@/lib/domain-vocabulary";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { projectProofOffer } from "@/utils/portfolio";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 class ProjectConflictError extends Error {
   constructor() {
@@ -25,8 +26,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { id, status } = body;
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { id, status } = parsedBody.body;
 
     if (typeof id !== "string" || !id || !status) {
       return NextResponse.json({ success: false, message: "Project ID and status are required." }, { status: 400 });

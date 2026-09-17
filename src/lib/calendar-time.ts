@@ -8,13 +8,22 @@
  * instant, and Google needs the naive wall time + IANA zone back again.
  */
 
-export function isValidTimeZone(value: string): boolean {
+const TIME_ZONE_ALIASES: ReadonlyMap<string, string> = new Map([
+  ["asia/calcutta", "Asia/Kolkata"],
+]);
+
+export function canonicalTimeZone(value: string): string | null {
+  const candidate = TIME_ZONE_ALIASES.get(value.trim().toLowerCase()) ?? value.trim();
   try {
-    new Intl.DateTimeFormat("en", { timeZone: value }).format();
-    return true;
+    new Intl.DateTimeFormat("en", { timeZone: candidate }).format();
+    return candidate;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function isValidTimeZone(value: string): boolean {
+  return canonicalTimeZone(value) !== null;
 }
 
 export function isDateOnly(value: string): boolean {
@@ -74,12 +83,13 @@ function zoneOffsetMs(timeZone: string, instant: Date): number {
  * gap the wall time shifts forward — both match how calendar UIs behave.
  */
 export function wallToInstant(date: string, time: string, timeZone: string): Date | null {
-  if (!isDateOnly(date) || !/^\d{2}:\d{2}$/.test(time) || !isValidTimeZone(timeZone)) return null;
+  const zone = canonicalTimeZone(timeZone);
+  if (!isDateOnly(date) || !/^\d{2}:\d{2}$/.test(time) || !zone) return null;
   const guess = new Date(`${date}T${time}:00Z`);
   if (Number.isNaN(guess.getTime())) return null;
-  const firstOffset = zoneOffsetMs(timeZone, guess);
+  const firstOffset = zoneOffsetMs(zone, guess);
   let instant = new Date(guess.getTime() - firstOffset);
-  const secondOffset = zoneOffsetMs(timeZone, instant);
+  const secondOffset = zoneOffsetMs(zone, instant);
   if (secondOffset !== firstOffset) instant = new Date(guess.getTime() - secondOffset);
   return instant;
 }
@@ -90,8 +100,9 @@ export function instantToWallParts(
   timeZone: string,
 ): { date: string; time: string } | null {
   const value = typeof instant === "string" ? new Date(instant) : instant;
-  if (Number.isNaN(value.getTime()) || !isValidTimeZone(timeZone)) return null;
-  const parts = zoneParts(value, timeZone);
+  const zone = canonicalTimeZone(timeZone);
+  if (Number.isNaN(value.getTime()) || !zone) return null;
+  const parts = zoneParts(value, zone);
   return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
 }
 
@@ -101,8 +112,9 @@ export function instantToWallParts(
  */
 export function localDateTimeInZone(instant: Date | string, timeZone: string): string | null {
   const value = typeof instant === "string" ? new Date(instant) : instant;
-  if (Number.isNaN(value.getTime()) || !isValidTimeZone(timeZone)) return null;
-  const parts = zoneParts(value, timeZone);
+  const zone = canonicalTimeZone(timeZone);
+  if (Number.isNaN(value.getTime()) || !zone) return null;
+  const parts = zoneParts(value, zone);
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
@@ -110,7 +122,9 @@ export function localDateTimeInZone(instant: Date | string, timeZone: string): s
 export function supportedTimeZones(): string[] {
   try {
     const list = Intl.supportedValuesOf("timeZone");
-    if (Array.isArray(list) && list.length) return list;
+    if (Array.isArray(list) && list.length) {
+      return [...new Set(list.map((zone) => canonicalTimeZone(zone) ?? zone))];
+    }
   } catch {}
   return [
     "UTC",

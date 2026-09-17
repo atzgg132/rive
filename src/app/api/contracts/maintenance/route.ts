@@ -3,6 +3,7 @@ import { processContractBilling } from "@/utils/contractBilling";
 import { prisma } from "@/utils/db";
 import { assertContractsEnabled, createNotification, transitionContractStatus } from "@/utils/contracts";
 import { pruneExpiredRateLimitBuckets } from "@/utils/durableRateLimit";
+import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
 
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get("authorization");
@@ -40,13 +41,15 @@ export async function POST(request: NextRequest) {
       await createNotification({ userId: contract.userId, type: "contract_expired", title: "Agreement request expired", message: `${contract.title} needs a fresh ${contract.status === "signing" ? "acceptance" : "review"} request.`, href: `/workflow/contracts/${contract.id}` }).catch(() => undefined);
     }
 
-    const overdue = await prisma.invoice.updateMany({
-      where: { status: { in: ["sent", "viewed"] }, dueDate: { lt: now } },
-      data: { status: "overdue" },
-    });
+    const overdueCount = await refreshOverdueInvoices();
     const billing = await processContractBilling({ limit: 500 });
     await pruneExpiredRateLimitBuckets().catch(() => undefined);
-    return NextResponse.json({ success: billing.failed === 0, expiredContracts: expired, overdueInvoices: overdue.count, billing });
+    // Public sessions are bearer artifacts, not audit data — once expired they
+    // only grow the table. Keep a day's tail for incident correlation, then prune.
+    await prisma.contractPublicSession.deleteMany({
+      where: { expiresAt: { lt: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+    }).catch(() => undefined);
+    return NextResponse.json({ success: billing.failed === 0, expiredContracts: expired, overdueInvoices: overdueCount, billing });
   } catch (error) {
     console.error("Contract billing maintenance error:", error);
     return NextResponse.json({ success: false, message: "Contract billing maintenance failed." }, { status: 500 });

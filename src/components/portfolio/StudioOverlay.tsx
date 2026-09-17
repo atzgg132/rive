@@ -119,7 +119,7 @@ export default function StudioOverlay({
       role="dialog"
       aria-modal
       aria-label={label}
-      className={`fixed inset-0 ${STUDIO_OVERLAY_Z} flex flex-col bg-slate-950/80 backdrop-blur-md ${className}`}
+      className={`fixed inset-0 ${STUDIO_OVERLAY_Z} flex flex-col bg-foreground/80 backdrop-blur-md ${className}`}
     >
       {/* Behind the content, so a click on the surround closes while a click on
           the controls inside does not. */}

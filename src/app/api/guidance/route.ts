@@ -15,6 +15,7 @@ import {
   type GuideId,
 } from "@/lib/guides";
 import type { GuideProgress, GuideProgressMap } from "@/lib/activation";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 const GUIDANCE_EVENTS = new Set([
   "started",
@@ -27,10 +28,6 @@ const GUIDANCE_EVENTS = new Set([
   "step_completed",
 ]);
 const GUIDANCE_MODES = new Set(["automatic", "manual"]);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
 
 function stringValue(value: unknown, max = 120): string | null {
   return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
@@ -122,8 +119,10 @@ export async function POST(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  if (!isRecord(body) || typeof body.event !== "string" || !GUIDANCE_EVENTS.has(body.event)) {
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
+  if (typeof body.event !== "string" || !GUIDANCE_EVENTS.has(body.event)) {
     return NextResponse.json({ success: false, message: "Unsupported guidance event." }, { status: 400 });
   }
 

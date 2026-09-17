@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const { id } = await params;
-  const body = await req.json().catch(() => null) as { reason?: unknown } | null;
-  const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 1_000) : "";
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body as { reason?: unknown };
+  const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 1_000) : "";
   const invoice = await prisma.invoice.findFirst({ where: { id, userId: session.userId }, include: { billingOccurrence: true } });
   if (!invoice) return NextResponse.json({ success: false, message: "Invoice not found." }, { status: 404 });
   if (invoice.billingOccurrence) return NextResponse.json({ success: false, message: "Agreement-generated invoices must be handled from the Agreement billing record." }, { status: 409 });

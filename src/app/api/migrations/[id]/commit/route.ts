@@ -5,6 +5,7 @@ import { getRequestIp, rateLimit } from "@/utils/rateLimit";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 import { dispatchMigrationWork } from "@/utils/migration/dispatch";
 import type { ImportPlan } from "@/lib/migration/types";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /**
  * Commit a reviewed migration.
@@ -30,7 +31,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const body = await req.json().catch(() => null);
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const planHash = typeof (body as { planHash?: unknown })?.planHash === "string"
     ? String((body as { planHash: string }).planHash)
     : "";

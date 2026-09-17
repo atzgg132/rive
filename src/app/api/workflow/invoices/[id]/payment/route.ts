@@ -4,6 +4,8 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { currencyFractionDigits } from "@/utils/invoiceMath";
+import { readJsonBody } from "@/utils/apiBoundary";
+import { InvalidIdempotencyKeyError, normalizeIdempotencyKey } from "@/utils/idempotency";
 
 function clean(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
@@ -145,20 +147,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const { id } = await params;
-  const body = await req.json().catch(() => null) as Record<string, unknown> | null;
-  const rawAmount = body?.amount;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
+  const rawAmount = body.amount;
   const amountText = typeof rawAmount === "number" ? String(rawAmount) : typeof rawAmount === "string" ? rawAmount.trim() : "";
   if (!/^(?:\d+\.?\d*|\.\d+)$/.test(amountText)) return NextResponse.json({ success: false, message: "Enter a valid positive payment amount." }, { status: 400 });
   const requestedAmount = new Prisma.Decimal(amountText);
   if (requestedAmount.lte(0) || requestedAmount.gt(1_000_000_000)) return NextResponse.json({ success: false, message: "Payment amount is outside the supported range." }, { status: 400 });
-  const method = clean(body?.method, 40) || "manual";
-  const reference = clean(body?.reference, 160);
-  const notes = clean(body?.notes, 1_000);
-  const rawIdempotencyKey = req.headers.get("idempotency-key") || (typeof body?.idempotency_key === "string" ? body.idempotency_key : "");
-  const idempotencyKey = rawIdempotencyKey.trim().slice(0, 128) || null;
+  const method = clean(body.method, 40) || "manual";
+  const reference = clean(body.reference, 160);
+  const notes = clean(body.notes, 1_000);
+  const rawIdempotencyKey = req.headers.get("idempotency-key") || (typeof body.idempotency_key === "string" ? body.idempotency_key : "");
+  let idempotencyKey: string | null;
+  try {
+    idempotencyKey = normalizeIdempotencyKey(rawIdempotencyKey || null);
+  } catch (error) {
+    if (error instanceof InvalidIdempotencyKeyError) {
+      return NextResponse.json({ success: false, message: error.message }, { status: 400 });
+    }
+    throw error;
+  }
   // A malformed calendar date is rejected before any row is locked or read.
-  const hasReceivedOn = body !== null && Object.prototype.hasOwnProperty.call(body, "receivedOn");
-  const requestedReceivedOn = body?.receivedOn;
+  const hasReceivedOn = Object.prototype.hasOwnProperty.call(body, "receivedOn");
+  const requestedReceivedOn = body.receivedOn;
   if (hasReceivedOn && !isValidReceivedOn(requestedReceivedOn)) {
     return NextResponse.json({ success: false, message: "Received on must be a valid calendar date." }, { status: 400 });
   }

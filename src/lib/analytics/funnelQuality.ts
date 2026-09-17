@@ -34,6 +34,10 @@ export type FunnelQualityInput = {
     uncapturedSignups: number;
     uncapturedSignupRate: number | null;
   };
+  coverage?: {
+    /** Rows the funnel scan actually read vs the rows matching its filter. */
+    eventScan: { scanned: number; total: number };
+  };
 };
 
 function alert(input: Omit<FunnelQualityAlert, "fingerprint">): FunnelQualityAlert {
@@ -164,6 +168,20 @@ export function evaluateFunnelQuality(input: FunnelQualityInput): FunnelQualityA
       title: "Email delivery failures need review",
       detail: `${input.reliability.failedEmails24h} email delivery record(s) failed in the last 24 hours.`,
       action: "Inspect provider responses and the outbox before assuming verification or invoice-send conversion is healthy.",
+    }));
+  }
+
+  const eventScan = input.coverage?.eventScan;
+  if (eventScan && eventScan.total > eventScan.scanned) {
+    alerts.push(alert({
+      id: "event_scan_truncated",
+      severity: "warning",
+      metric: "eventScanCoverage",
+      actual: eventScan.total - eventScan.scanned,
+      threshold: "0 unscanned events",
+      title: "The funnel scan is reading a bounded slice of events",
+      detail: `${eventScan.scanned} of ${eventScan.total} matching product events were scanned; cohort and activation counts are floor estimates.`,
+      action: "Aggregate events in SQL or raise the scan bound before treating funnel percentages as exact.",
     }));
   }
 

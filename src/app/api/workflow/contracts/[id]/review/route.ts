@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { sendContractReviewEmail } from "@/utils/email";
+import { buildContractReviewEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, transitionContractStatus } from "@/utils/contracts";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 function appUrl(): string {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -15,8 +17,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const parsedBody = await req.json().catch(() => ({}));
-    const body = parsedBody && typeof parsedBody === "object" && !Array.isArray(parsedBody) ? parsedBody as { sendEmail?: boolean; expiresInDays?: number } : {};
+    const parsedBody = await readJsonBody(req, { allowEmpty: true });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { sendEmail?: boolean; expiresInDays?: number };
     const contract = await prisma.contract.findFirst({
       where: { id, userId: session.userId },
       include: { client: { select: { name: true, email: true } }, user: { select: { name: true, email: true } }, versions: { orderBy: { version: "desc" }, take: 1 } },
@@ -31,21 +34,47 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const days = Number.isInteger(requestedDays) ? Math.min(Math.max(requestedDays, 1), 30) : CONTRACT_TOKEN_TTL_DAYS;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
     const token = createAccessToken();
+    const tokenHash = hashAccessToken(token);
+    const reviewUrl = `${appUrl()}/review/${encodeURIComponent(token)}`;
     const status = "in_review" as const;
+    const clientEmail = contract.client.email;
+    const shouldEmail = body.sendEmail === true && Boolean(clientEmail);
+    let outboxId = "";
     await prisma.$transaction(async (tx) => {
       await tx.contractReviewLink.updateMany({ where: { contractId: id, type: "review", revokedAt: null }, data: { revokedAt: new Date() } });
-      await tx.contractReviewLink.create({ data: { contractId: id, versionId: contract.versions[0].id, tokenHash: hashAccessToken(token), type: "review", expiresAt } });
+      const link = await tx.contractReviewLink.create({ data: { contractId: id, versionId: contract.versions[0].id, tokenHash, type: "review", expiresAt } });
       const shared = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: contract.status, to: status, data: { reviewExpiresAt: expiresAt } });
       if (shared !== 1) throw new Error("The Agreement changed while the review link was being created. Reload and try again.");
-      await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "review_link_created", metadata: { expiresAt: expiresAt.toISOString(), emailed: body.sendEmail === true } } });
+      await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "review_link_created", metadata: { expiresAt: expiresAt.toISOString(), emailed: shouldEmail } } });
+      if (shouldEmail && clientEmail) {
+        outboxId = await enqueueEmail({
+          ...buildContractReviewEmail({ to: clientEmail, clientName: contract.client.name, ownerName: contract.user.name || session.email, contractTitle: contract.title, reviewUrl, expiresAt }),
+          deliveryGuard: { kind: "contract_review", linkId: link.id, tokenHash },
+        }, tx);
+      }
     });
 
-    const reviewUrl = `${appUrl()}/review/${encodeURIComponent(token)}`;
-    const email = body.sendEmail === true && contract.client.email
-      ? await sendContractReviewEmail({ to: contract.client.email, clientName: contract.client.name, ownerName: contract.user.name || session.email, contractTitle: contract.title, reviewUrl, expiresAt })
-      : null;
+    let delivered = false;
+    if (shouldEmail && outboxId && getEmailProvider() !== "disabled") {
+      const outbox = await processEmailOutbox({ jobId: outboxId }).catch((deliveryError) => {
+        console.error("Immediate Agreement review email attempt failed:", deliveryError);
+        return null;
+      });
+      delivered = Boolean(outbox && outbox.sent > 0);
+    }
+
     await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.agreementReviewed, module: "agreements", entityType: "contract", entityId: id, source: "owner_review" });
-    return NextResponse.json({ success: true, reviewUrl, expiresAt, email: email ? { sent: email.sent, reason: email.reason } : null, message: body.sendEmail === true ? "Review link created and email attempted." : "Review link created." });
+    return NextResponse.json({
+      success: true,
+      reviewUrl,
+      expiresAt,
+      email: shouldEmail ? { queued: true, sent: delivered } : null,
+      message: shouldEmail
+        ? delivered
+          ? "Review link created and emailed."
+          : "Review link created. Share it if email delivery is still pending."
+        : "Review link created.",
+    });
   } catch (error) {
     console.error("Contract review link error:", error);
     return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to create review link." }, { status: 500 });

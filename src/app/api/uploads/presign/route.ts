@@ -13,6 +13,7 @@ import {
   maxBytesFor,
   type PortfolioAssetKind,
 } from "@/utils/portfolioMedia";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /* Requests without a `kind` predate mixed media and must keep the original
    image-only contract exactly: same accepted types, same cap, same errors. */
@@ -88,7 +89,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null);
+  const parsedBody = await readJsonBody(request);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const requestedKind = body?.kind;
   if (requestedKind !== undefined && !isPortfolioAssetKind(requestedKind)) {
     return NextResponse.json({ message: "Choose a supported media type." }, { status: 400 });

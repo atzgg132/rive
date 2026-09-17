@@ -29,8 +29,7 @@ resource "aws_instance" "app" {
     db_endpoint      = aws_db_instance.postgres.address
     db_master_secret = aws_db_instance.postgres.master_user_secret[0].secret_arn
     caddyfile        = file("${path.module}/caddy/Caddyfile")
-    prod_memory      = local.memory_limits.prod
-    dev_memory       = local.memory_limits.dev
+    deploy_runtime   = file("${path.module}/../../scripts/deploy-runtime.sh")
   })
 
   depends_on = [
@@ -66,27 +65,33 @@ resource "aws_eip" "app" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "instance_cpu" {
-  alarm_name          = "rive-instance-high-cpu"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 3
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 80
-  alarm_description   = "Rive application CPU has exceeded 80% for 15 minutes."
-  dimensions          = { InstanceId = aws_instance.app.id }
+  alarm_name                = "rive-instance-high-cpu"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = 3
+  metric_name               = "CPUUtilization"
+  namespace                 = "AWS/EC2"
+  period                    = 300
+  statistic                 = "Average"
+  threshold                 = 80
+  alarm_description         = "Rive application CPU has exceeded 80% for 15 minutes."
+  dimensions                = { InstanceId = aws_instance.app.id }
+  alarm_actions             = local.ops_alarm_actions
+  ok_actions                = local.ops_alarm_actions
+  insufficient_data_actions = local.ops_alarm_actions
 }
 
 resource "aws_cloudwatch_metric_alarm" "database_storage" {
-  alarm_name          = "rive-database-low-storage"
-  comparison_operator = "LessThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "FreeStorageSpace"
-  namespace           = "AWS/RDS"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 5368709120
-  alarm_description   = "Rive PostgreSQL has less than 5 GiB free."
-  dimensions          = { DBInstanceIdentifier = aws_db_instance.postgres.id }
+  alarm_name                = "rive-database-low-storage"
+  comparison_operator       = "LessThanThreshold"
+  evaluation_periods        = 1
+  metric_name               = "FreeStorageSpace"
+  namespace                 = "AWS/RDS"
+  period                    = 300
+  statistic                 = "Average"
+  threshold                 = 5368709120
+  alarm_description         = "Rive PostgreSQL has less than 5 GiB free."
+  dimensions                = { DBInstanceIdentifier = aws_db_instance.postgres.identifier }
+  alarm_actions             = local.ops_alarm_actions
+  ok_actions                = local.ops_alarm_actions
+  insufficient_data_actions = local.ops_alarm_actions
 }

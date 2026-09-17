@@ -198,6 +198,9 @@ resource "aws_cloudwatch_metric_alarm" "migration_dead_letters" {
   period              = 300
   statistic           = "Maximum"
   threshold           = 0
+  treat_missing_data  = "notBreaching"
   alarm_description   = "A Rive migration job exhausted its retries."
   dimensions          = { QueueName = aws_sqs_queue.migration_dead_letter[each.key].name }
+  alarm_actions       = local.ops_alarm_actions
+  ok_actions          = local.ops_alarm_actions
 }

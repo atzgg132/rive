@@ -36,8 +36,8 @@ export default function StudioDesignSection({
     <>
       <section className={sectionClass}>
         <div className="mb-5">
-          <h2 className="font-bold text-foreground dark:text-white">Choose your starting point</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Each one is shown with your own work. Changing templates keeps your content and is always reversible.</p>
+          <h2 className="font-bold text-foreground">Choose your starting point</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Each one is shown with your own work. Changing templates keeps your content and is always reversible.</p>
         </div>
         <PortfolioTemplateGallery
           content={content}
@@ -48,7 +48,7 @@ export default function StudioDesignSection({
       </section>
 
       <section className={sectionClass}>
-        <h2 className="mb-5 font-bold text-foreground dark:text-white">Appearance & visibility</h2>
+        <h2 className="mb-5 font-bold text-foreground">Appearance & visibility</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <AccentColorField value={theme.accent} onChange={(accent) => onUpdateTheme({ accent })} />
           <label className="flex flex-col gap-2">
@@ -67,12 +67,12 @@ export default function StudioDesignSection({
           </label>
         </div>
         <div className="mt-6 border-t border-border pt-6">
-          <h3 className="text-sm font-bold text-foreground dark:text-white">Media playback</h3>
+          <h3 className="text-sm font-bold text-foreground">Media playback</h3>
           {!hasProjectMedia ? (
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">These settings appear once a project has images, video, or audio attached. Add media under Selected work and the playback controls will show up here.</p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">These settings appear once a project has images, video, or audio attached. Add media under Selected work and the playback controls will show up here.</p>
           ) : (
             <>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">Applies to your public portfolio and the preview, never to this editor.</p>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">Applies to your public portfolio and the preview, never to this editor.</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-2">
                   <span className={labelClass}>Media layout</span>
@@ -101,19 +101,19 @@ export default function StudioDesignSection({
                   <label key={key} className="flex gap-3">
                     <Input id={`media-${key}`} type="checkbox" className="mt-1 shrink-0" checked={content.mediaSettings[key]} onChange={(event) => onUpdateMediaSettings({ [key]: event.target.checked })} />
                     <span>
-                      <span className="block text-sm text-slate-700 dark:text-slate-200">{label}</span>
-                      <span className="mt-0.5 block text-xs leading-4 text-slate-500 dark:text-slate-400">{hint}</span>
+                      <span className="block text-sm text-foreground">{label}</span>
+                      <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">{hint}</span>
                     </span>
                   </label>
                 ))}
               </div>
-              {content.mediaSettings.autoplayOnScroll && <p className="mt-4 rounded-xl bg-amber-50 px-3.5 py-3 text-xs leading-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">Autoplay starts downloading each video as it scrolls into view, which uses your visitors&apos; data and your storage bandwidth. Embedded video is served by its platform, so it costs you nothing.</p>}
+              {content.mediaSettings.autoplayOnScroll && <p className="mt-4 rounded-none border border-warning/25 bg-warning/10 px-3.5 py-3 text-xs leading-4 text-warning">Autoplay starts downloading each video as it scrolls into view, which uses your visitors&apos; data and your storage bandwidth. Embedded video is served by its platform, so it costs you nothing.</p>}
             </>
           )}
         </div>
         <div className="mt-6 border-t border-border pt-6">
-          <h3 className="text-sm font-bold text-foreground dark:text-white">Search preview</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Give search engines a useful title and description for your public portfolio.</p>
+          <h3 className="text-sm font-bold text-foreground">Search preview</h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Give search engines a useful title and description for your public portfolio.</p>
           <div className="mt-4 grid gap-4">
             <label className="flex flex-col gap-2"><span className={labelClass}>Page title</span><Input className={inputClass} value={seo.title} maxLength={60} placeholder={content.name ? `${content.name} — your work and services` : "Your name — your work and services"} onChange={(event) => onUpdateSeo({ title: event.target.value })} /></label>
             <label className="flex flex-col gap-2"><span className={labelClass}>Description</span><Textarea className={inputClass} rows={3} value={seo.description} maxLength={160} placeholder="A concise description of what you do, who you help, and where to find your work." onChange={(event) => onUpdateSeo({ description: event.target.value })} /></label>
@@ -121,11 +121,11 @@ export default function StudioDesignSection({
         </div>
         <div className="mt-5 flex items-center gap-3">
           <Input id="about-visible" type="checkbox" checked={content.sections.find((section) => section.key === "about")?.visible ?? true} onChange={(event) => onUpdateContent({ sections: content.sections.map((section) => section.key === "about" ? { ...section, visible: event.target.checked } : section) })} />
-          <label htmlFor="about-visible" className="text-sm text-slate-600 dark:text-slate-300">Show about section publicly</label>
+          <label htmlFor="about-visible" className="text-sm text-muted-foreground">Show about section publicly</label>
         </div>
         <div className="mt-3 flex items-center gap-3">
           <Input id="indexable" type="checkbox" checked={seo.indexable} onChange={(event) => onUpdateSeo({ indexable: event.target.checked })} />
-          <label htmlFor="indexable" className="text-sm text-slate-600 dark:text-slate-300">Allow search engines to index my portfolio</label>
+          <label htmlFor="indexable" className="text-sm text-muted-foreground">Allow search engines to index my portfolio</label>
         </div>
       </section>
     </>

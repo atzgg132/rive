@@ -245,16 +245,16 @@ export default function PortfolioDashboardPage() {
     });
   };
 
-  if (loading) return <div className="flex min-h-80 items-center justify-center text-sm text-muted-foreground dark:text-slate-400">Loading portfolio studio...</div>;
+  if (loading) return <div className="flex min-h-80 items-center justify-center text-sm text-muted-foreground">Loading portfolio studio...</div>;
 
   if (loadError || !portfolio) {
     return (
       <div className="flex min-h-80 items-center justify-center px-4">
-        <section role="alert" className="w-full max-w-lg rounded-3xl border border-red-200 bg-red-50 p-6 text-center text-red-900 shadow-sm dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
+        <section role="alert" className="w-full max-w-lg rounded-none border border-destructive/25 bg-destructive/10 p-6 text-center text-destructive shadow-card">
           <h1 className="text-lg font-black">Your portfolio could not be loaded</h1>
-          <p className="mt-2 text-sm leading-6 text-red-800 dark:text-red-200">Rive has not opened the editor because your saved portfolio is unavailable. Retry when your connection is ready. Any local recovery copy will remain untouched.</p>
-          {loadError && <p className="mt-3 break-words text-xs text-red-700/80 dark:text-red-200/80">{loadError}</p>}
-          <Button onClick={() => void loadPortfolio()} disabled={loading} className="mt-5 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-60">Retry loading portfolio</Button>
+          <p className="mt-2 text-sm leading-6">Rive has not opened the editor because your saved portfolio is unavailable. Retry when your connection is ready. Any local recovery copy will remain untouched.</p>
+          {loadError && <p className="mt-3 break-words text-xs text-destructive/80">{loadError}</p>}
+          <Button onClick={() => void loadPortfolio()} disabled={loading} className="mt-5 rounded-none bg-destructive px-4 py-2.5 text-sm font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-60">Retry loading portfolio</Button>
         </section>
       </div>
     );
@@ -266,13 +266,13 @@ export default function PortfolioDashboardPage() {
         className="sm:flex-col xl:flex-row"
         title="Portfolio Studio"
         description="Build a portfolio that makes your work easy to understand and easy to hire."
-        actions={savedPublicUrl ? <a href={savedPublicUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-accent"><ExternalLink className="h-4 w-4" /> View live site</a> : undefined}
+        actions={savedPublicUrl ? <a href={savedPublicUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-none border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-card hover:bg-accent"><ExternalLink className="h-4 w-4" /> View live site</a> : undefined}
       />
 
       <div data-portfolio-sticky-actions className="sticky -top-3 z-20 flex min-h-12 flex-wrap items-center justify-end gap-2 border-y border-border bg-background px-1 py-2 sm:-top-4 sm:px-2 md:-top-6 xl:-top-8">
         {/* Save status first, then the preview door — only where the preview
             is not already on screen: beside a visible pane with its own Inspect control, two doors. */}
-        <span aria-live="polite" className="mr-auto text-xs font-semibold text-slate-500 dark:text-slate-400">{saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved"}</span>{!sidePreviewVisible && <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button>}
+        <span aria-live="polite" className="mr-auto text-xs font-semibold text-muted-foreground">{saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved"}</span>{!sidePreviewVisible && <Button onClick={() => setInspectingPreview(true)} className="h-9 border border-border bg-card px-3 text-xs font-semibold text-foreground hover:bg-accent"><Eye className="h-3.5 w-3.5" /> Preview</Button>}
         <Button data-guide-target="portfolio-publish" variant="default" onClick={openPublishReview} className="h-9 px-3 text-xs"><Check className="h-3.5 w-3.5" /> {portfolio?.status === "published" ? "Update live site" : "Publish portfolio"}</Button>
       </div>
 
@@ -282,7 +282,7 @@ export default function PortfolioDashboardPage() {
         </FirstVisitNote>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border dark:border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
         <div className="flex flex-wrap gap-1">
           {([
             { key: "edit", label: "Editor", icon: LayoutTemplate },
@@ -299,10 +299,10 @@ export default function PortfolioDashboardPage() {
             </Button>
           ))}
         </div>
-        <div className="flex max-w-full flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"><span className={`h-2 w-2 rounded-full ${portfolio?.status === "published" ? "bg-emerald-500" : "bg-amber-500"}`} /> {portfolio?.status === "published" ? "Published" : "Draft — publish when you are ready"}{savedPublicUrl && <><span className="hidden truncate sm:inline">· {savedPublicUrl}</span><Button onClick={copyUrl} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Copy live portfolio URL" aria-label="Copy live portfolio URL">{copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}</Button></>}</div>
+        <div className="flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className={`h-2 w-2 rounded-full ${portfolio?.status === "published" ? "bg-success" : "bg-warning"}`} /> {portfolio?.status === "published" ? "Published" : "Draft — publish when you are ready"}{savedPublicUrl && <><span className="hidden truncate sm:inline">· {savedPublicUrl}</span><Button onClick={copyUrl} className="shrink-0 rounded-none p-1.5 hover:bg-muted" title="Copy live portfolio URL" aria-label="Copy live portfolio URL">{copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}</Button></>}</div>
       </div>
 
-      {saveError && <div data-portfolio-save-alert role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Keep my draft</Button></div> : <>{saveErrorSection && <Button onClick={() => goToSection(saveErrorSection)} className="rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-800 dark:border-blue-800 dark:text-blue-100">Go to {STUDIO_SECTION_LABELS[saveErrorSection]}</Button>}<Button onClick={() => void persist()} disabled={saving} className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-800 dark:border-red-800 dark:text-red-100">Retry</Button></>}</div>}
+      {saveError && <div data-portfolio-save-alert role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive"><span><strong>{conflictState ? "Your portfolio changed elsewhere." : "Could not save your changes."}</strong> {saveError}</span>{conflictState ? <div className="flex flex-wrap gap-2"><Button onClick={() => void reloadLatestPortfolio()} disabled={saving || loading} className="rounded-none border border-destructive/40 px-3 py-2 text-xs font-bold text-destructive">Reload latest</Button><Button onClick={() => void reloadAndKeepLocalDraft()} disabled={saving || loading} className="rounded-none bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground">Keep my draft</Button></div> : <>{saveErrorSection && <Button onClick={() => goToSection(saveErrorSection)} className="rounded-none border border-primary/40 px-3 py-2 text-xs font-bold text-primary">Go to {STUDIO_SECTION_LABELS[saveErrorSection]}</Button>}<Button onClick={() => void persist()} disabled={saving} className="rounded-none border border-destructive/40 px-3 py-2 text-xs font-bold text-destructive">Retry</Button></>}</div>}
 
       {/* Above the shell, not inside a panel: what to do next is true of the
           whole portfolio, not of whichever section happens to be open. An
@@ -320,7 +320,7 @@ export default function PortfolioDashboardPage() {
           content. Only the editor opts out: the aside must keep stretching, or
           a long editor would leave the sticky preview no travel and it would
           scroll away instead of staying put. */}
-      <div data-portfolio-editor-shell className="grid min-h-0 self-start overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
+      <div data-portfolio-editor-shell className="grid min-h-0 self-start overflow-hidden rounded-none border border-border bg-card shadow-card lg:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="border-b border-border bg-muted/35 p-4 lg:border-b-0 lg:border-r">
             <nav data-portfolio-section-nav className="grid grid-cols-2 gap-2 sm:grid-cols-6 lg:sticky lg:top-5 lg:grid-cols-1">
             {/* Work leads: it is the thing a portfolio is for. Practices keeps a
@@ -335,15 +335,15 @@ export default function PortfolioDashboardPage() {
               { key: "proof", label: STUDIO_SECTION_LABELS.proof, sub: `${content.testimonials.length} added`, icon: Quote },
               { key: "design", label: STUDIO_SECTION_LABELS.design, sub: "Theme and visibility", icon: Settings2 },
             ] as const).map(({ key, label, sub, icon: Icon }) => (
-              <Button data-guide-target={key === "profile" ? "portfolio-profile" : key === "work" ? "portfolio-project" : undefined} data-portfolio-section={key} key={key} onClick={() => setEditorSection(key)} className={`grid min-h-14 w-full grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${editorSection === key ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-blue-300 dark:ring-slate-700" : "text-slate-600 hover:bg-white/70 dark:text-slate-400 dark:hover:bg-slate-800/70"}`}>
+              <Button data-guide-target={key === "profile" ? "portfolio-profile" : key === "work" ? "portfolio-project" : undefined} data-portfolio-section={key} key={key} onClick={() => setEditorSection(key)} className={`grid min-h-14 w-full grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-none px-3 py-2.5 text-left transition ${editorSection === key ? "bg-accent text-accent-foreground shadow-card ring-1 ring-border" : "text-muted-foreground hover:bg-card"}`}>
                 <Icon className="h-4 w-4 justify-self-center" />
-                <span className="min-w-0"><span className="block truncate text-xs font-bold">{label}</span><span className="hidden truncate text-xs leading-4 text-slate-400 lg:block">{sub}</span></span>
+                <span className="min-w-0"><span className="block truncate text-xs font-bold">{label}</span><span className="hidden truncate text-xs leading-4 text-muted-foreground lg:block">{sub}</span></span>
               </Button>
             ))}
-            <div className="col-span-2 mt-2 border-t border-slate-200 pt-3 dark:border-slate-700 sm:col-span-6 lg:col-span-1">
-              <div className="flex items-center justify-between"><span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-slate-500"><Sparkles className="h-3.5 w-3.5 text-blue-500" /> Readiness</span><span className="text-xs font-black text-foreground dark:text-white">{readiness.score}%</span></div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${readiness.score}%` }} /></div>
-              <p className="mt-2 text-xs leading-4 text-slate-500">{readiness.completed} of {readiness.checks.length} signals complete. The worklist above says which.</p>
+            <div className="col-span-2 mt-2 border-t border-border pt-3 sm:col-span-6 lg:col-span-1">
+              <div className="flex items-center justify-between"><span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"><Sparkles className="h-3.5 w-3.5 text-primary" /> Readiness</span><span className="text-xs font-black text-foreground">{readiness.score}%</span></div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${readiness.score}%` }} /></div>
+              <p className="mt-2 text-xs leading-4 text-muted-foreground">{readiness.completed} of {readiness.checks.length} signals complete. The worklist above says which.</p>
             </div>
           </nav>
         </aside>

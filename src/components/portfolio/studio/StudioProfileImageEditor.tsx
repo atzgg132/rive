@@ -127,17 +127,17 @@ export default function StudioProfileImageEditor({
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 border-b border-border pb-6 dark:border-slate-800 sm:flex-row sm:items-center" data-profile-image-editor>
-        <div className="grid aspect-square w-24 min-h-0 min-w-0 shrink-0 place-items-center overflow-hidden rounded-2xl bg-slate-100 text-2xl font-black text-slate-400 dark:bg-slate-800">
+      <div className="mb-6 flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center" data-profile-image-editor>
+        <div className="grid aspect-square w-24 min-h-0 min-w-0 shrink-0 place-items-center overflow-hidden rounded-none bg-muted text-2xl font-black text-muted-foreground">
           {imageUrl ? <img src={imageUrl} alt="" className="h-full w-full object-cover" /> : (name || "Y").slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-foreground dark:text-white">Profile photo</p>
-          <p className="mt-1 max-w-lg text-xs leading-5 text-slate-500 dark:text-slate-400">
+          <p className="text-sm font-bold text-foreground">Profile photo</p>
+          <p className="mt-1 max-w-lg text-xs leading-5 text-muted-foreground">
             Use the square crop shown here in your portfolio hero. You can choose the part of the image that visitors see, zoom it, or rotate it before saving.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-none bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-strong">
               <Upload className="h-3.5 w-3.5" /> {imageUrl ? "Change photo" : "Upload photo"}
               <Input
                 ref={inputRef}
@@ -155,7 +155,7 @@ export default function StudioProfileImageEditor({
                 type="button"
                 onClick={() => openEditor(sourceImageUrl || imageUrl)}
                 disabled={busy}
-                className="rounded-xl border border-border px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
+                className="rounded-none border border-border px-3 py-2 text-xs font-bold text-muted-foreground disabled:opacity-50"
               >
                 <Pencil className="h-3.5 w-3.5" /> Edit crop
               </Button>
@@ -165,16 +165,16 @@ export default function StudioProfileImageEditor({
                 type="button"
                 onClick={onRemove}
                 disabled={busy}
-                className="rounded-xl border border-border px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
+                className="rounded-none border border-border px-3 py-2 text-xs font-bold text-muted-foreground disabled:opacity-50"
               >
                 Remove
               </Button>
             )}
           </div>
-          <label className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-3.5 py-3 dark:border-slate-700">
+          <label className="mt-4 flex items-center justify-between gap-4 rounded-none border border-border bg-card px-3.5 py-3">
             <span className="min-w-0">
-              <span className="block text-xs font-bold text-foreground dark:text-white">Show on public portfolio</span>
-              <span className="mt-0.5 block text-xs leading-4 text-slate-500 dark:text-slate-400">
+              <span className="block text-xs font-bold text-foreground">Show on public portfolio</span>
+              <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">
                 {imageUrl ? "Use this photo in the public hero when enabled." : "Upload a photo before choosing to display it."}
               </span>
             </span>
@@ -199,7 +199,7 @@ export default function StudioProfileImageEditor({
           </DialogDescription>
 
           <div
-            className="relative mx-auto mt-4 aspect-square shrink-0 overflow-hidden rounded-2xl bg-slate-950"
+            className="relative mx-auto mt-4 aspect-square shrink-0 overflow-hidden rounded-none bg-foreground"
             style={{ width: "min(36rem, calc(100vw - 2rem), 52dvh)" }}
             data-profile-image-cropper
           >
@@ -227,7 +227,7 @@ export default function StudioProfileImageEditor({
           </div>
 
           <div className="mt-4 shrink-0 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-            <label className="flex flex-col gap-2 text-xs font-bold text-foreground dark:text-white" htmlFor="profile-photo-zoom">
+            <label className="flex flex-col gap-2 text-xs font-bold text-foreground" htmlFor="profile-photo-zoom">
               Zoom
               <input
                 id="profile-photo-zoom"
@@ -237,27 +237,27 @@ export default function StudioProfileImageEditor({
                 step="0.01"
                 value={zoom}
                 onChange={(event) => setZoom(Number(event.target.value))}
-                className="h-2 w-full cursor-pointer accent-blue-600"
+                className="h-2 w-full cursor-pointer accent-primary"
                 aria-valuetext={`${Math.round(zoom * 100)}%`}
               />
             </label>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => setRotation((value) => value - 90)} disabled={busy} className="rounded-xl border border-border px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300" aria-label="Rotate photo left">
+              <Button type="button" onClick={() => setRotation((value) => value - 90)} disabled={busy} className="rounded-none border border-border px-3 py-2 text-xs font-bold text-muted-foreground" aria-label="Rotate photo left">
                 <RotateCcw className="h-3.5 w-3.5" /> Rotate left
               </Button>
-              <Button type="button" onClick={() => setRotation((value) => value + 90)} disabled={busy} className="rounded-xl border border-border px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300" aria-label="Rotate photo right">
+              <Button type="button" onClick={() => setRotation((value) => value + 90)} disabled={busy} className="rounded-none border border-border px-3 py-2 text-xs font-bold text-muted-foreground" aria-label="Rotate photo right">
                 <RotateCw className="h-3.5 w-3.5" /> Rotate right
               </Button>
             </div>
           </div>
 
-          {editorError && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-xs leading-5 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">{editorError}</p>}
+          {editorError && <p role="alert" className="mt-4 rounded-none border border-destructive/25 bg-destructive/10 px-3.5 py-3 text-xs leading-5 text-destructive">{editorError}</p>}
 
-          <div className="mt-5 flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-popover pt-4 dark:border-slate-800">
-            <Button type="button" onClick={closeEditor} disabled={busy} className="rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">
+          <div className="mt-5 flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-popover pt-4">
+            <Button type="button" onClick={closeEditor} disabled={busy} className="rounded-none border border-border px-4 py-2.5 text-sm font-bold text-muted-foreground">
               <X className="h-4 w-4" /> Cancel
             </Button>
-            <Button type="button" onClick={() => void saveCrop()} disabled={busy || !croppedAreaPixels} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
+            <Button type="button" onClick={() => void saveCrop()} disabled={busy || !croppedAreaPixels} className="rounded-none bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-strong">
               {uploading ? "Saving…" : "Save crop"}
             </Button>
           </div>

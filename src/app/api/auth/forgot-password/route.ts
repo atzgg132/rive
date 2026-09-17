@@ -8,6 +8,8 @@ import { durableRateLimit } from "@/utils/durableRateLimit";
 import { hashRequestValue } from "@/utils/contracts";
 import { isEmailVerificationSatisfied } from "@/utils/emailVerification";
 import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
+import { normalizeEmailAddress } from "@/lib/email-address";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 const genericMessage = "If an account exists for that email, a secure reset link is on its way.";
 const limits = PUBLIC_FORM_RATE_LIMITS.forgotPassword;
@@ -29,11 +31,13 @@ export async function POST(req: NextRequest) {
       return accepted();
     }
 
-    const body = await req.json().catch(() => null);
+    const parsedBody = await readJsonBody(req, { allowEmpty: true });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     if (!evaluatePublicFormGate(body).ok) return accepted();
 
-    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    const email = normalizeEmailAddress(body?.email) || "";
+    if (!email) {
       return NextResponse.json({ success: false, message: "Enter a valid email address." }, { status: 400 });
     }
 

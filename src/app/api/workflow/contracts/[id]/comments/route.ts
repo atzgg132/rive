@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { assertContractsEnabled, CONTRACT_MAX_COMMENT_LENGTH } from "@/utils/contracts";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -9,9 +10,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const body = await req.json().catch(() => null) as { body?: unknown; sectionKey?: unknown } | null;
-    const commentBody = typeof body?.body === "string" ? body.body.trim().slice(0, CONTRACT_MAX_COMMENT_LENGTH) : "";
-    const sectionKey = typeof body?.sectionKey === "string" ? body.sectionKey.trim().slice(0, 80) : null;
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { body?: unknown; sectionKey?: unknown };
+    const commentBody = typeof body.body === "string" ? body.body.trim().slice(0, CONTRACT_MAX_COMMENT_LENGTH) : "";
+    const sectionKey = typeof body.sectionKey === "string" ? body.sectionKey.trim().slice(0, 80) : null;
     if (!commentBody) return NextResponse.json({ success: false, message: "Write a comment before submitting." }, { status: 400 });
     const contract = await prisma.contract.findFirst({ where: { id, userId: session.userId }, include: { versions: { orderBy: { version: "desc" }, take: 1 } } });
     if (!contract) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
@@ -34,9 +37,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const body = await req.json().catch(() => null) as { commentId?: unknown; status?: unknown } | null;
-    const commentId = typeof body?.commentId === "string" ? body.commentId : "";
-    const status = body?.status === "resolved" ? "resolved" : body?.status === "open" ? "open" : "";
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { commentId?: unknown; status?: unknown };
+    const commentId = typeof body.commentId === "string" ? body.commentId : "";
+    const status = body.status === "resolved" ? "resolved" : body.status === "open" ? "open" : "";
     if (!commentId || !status) return NextResponse.json({ success: false, message: "Comment ID and a valid status are required." }, { status: 400 });
     const comment = await prisma.contractComment.findFirst({ where: { id: commentId, contractId: id, contract: { userId: session.userId } } });
     if (!comment) return NextResponse.json({ success: false, message: "Comment not found." }, { status: 404 });

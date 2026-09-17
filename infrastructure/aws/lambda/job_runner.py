@@ -47,10 +47,31 @@ def handle_sqs(records):
     return {"batchItemFailures": failures}
 
 
+def handle_sns(records):
+    results = []
+    for record in records:
+        message_id = record.get("Sns", {}).get("MessageId", "unknown")
+        message = record.get("Sns", {}).get("Message", "")
+        if not message:
+            raise ValueError("Empty email event message")
+        status = invoke(
+            "prod",
+            "/api/internal/email-events",
+            message.encode("utf-8"),
+            timeout=25,
+        )
+        if status < 200 or status >= 300:
+            raise RuntimeError(f"Email event worker returned {status}")
+        results.append({"messageId": message_id, "status": status})
+    return {"emailEvents": results}
+
+
 def handler(event, _context):
     records = event.get("Records", [])
     if records and all(record.get("eventSource") == "aws:sqs" for record in records):
         return handle_sqs(records)
+    if records and all(record.get("eventSource") == "aws:sns" for record in records):
+        return handle_sns(records)
 
     targets = event.get("targets", [])
     results = []

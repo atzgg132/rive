@@ -42,6 +42,22 @@ test("data quality and email backlog produce actionable warnings", () => {
   assert.deepEqual(new Set(alerts.map((item) => item.id)), new Set(["missing_data_origin_events_24h", "unknown_origin_records", "event_lag_minutes", "uncaptured_signup_source", "failed_emails_24h", "queued_email_backlog"]));
 });
 
+test("a truncated event scan is flagged instead of silently undercounting", () => {
+  const alerts = evaluateFunnelQuality({
+    ...healthy,
+    coverage: { eventScan: { scanned: 200_000, total: 260_500 } },
+  });
+  const truncated = alerts.find((item) => item.id === "event_scan_truncated");
+  assert.equal(truncated?.severity, "warning");
+  assert.equal(truncated?.actual, 60_500);
+
+  const full = evaluateFunnelQuality({
+    ...healthy,
+    coverage: { eventScan: { scanned: 150, total: 150 } },
+  });
+  assert.equal(full.some((item) => item.id === "event_scan_truncated"), false);
+});
+
 test("large email backlog escalates to critical", () => {
   const alerts = evaluateFunnelQuality({
     ...healthy,

@@ -62,6 +62,31 @@ test("inquiry conversion requires an explicit client choice and preserves the re
   );
 });
 
+test("new-client email is normalized when valid and rejected when malformed", () => {
+  const parsed = parseStartEngagementInput({
+    ...base,
+    client: { mode: "new", name: "Acme", email: "  Hello@Acme.IO " },
+  });
+  assert.equal(parsed.client.mode, "new");
+  assert.equal(parsed.client.email, "hello@acme.io");
+
+  for (const bad of ["jj.jkj@.", "not-an-email", "a@@b.com", "client@localhost"]) {
+    assert.throws(
+      () => parseStartEngagementInput({ ...base, client: { mode: "new", name: "Acme", email: bad } }),
+      (error) => error instanceof EngagementInputError && error.code === "invalid_client_email",
+      bad,
+    );
+    assert.throws(
+      () => parseInquiryConversionInput({ client: { mode: "new", name: "Acme", email: bad } }),
+      (error) => error instanceof EngagementInputError && error.code === "invalid_client_email",
+      bad,
+    );
+  }
+
+  const blank = parseStartEngagementInput({ ...base, client: { mode: "new", name: "Acme", email: "   " } });
+  assert.equal(blank.client.email, null);
+});
+
 test("engagement works without dates: milestone and deadline are independent and optional", () => {
   const omitted = parseStartEngagementInput({ ...base, milestone: undefined });
   assert.equal(omitted.milestone, null);

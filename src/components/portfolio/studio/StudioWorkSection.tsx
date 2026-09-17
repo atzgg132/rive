@@ -78,13 +78,13 @@ export default function StudioWorkSection({ content, onUpdateContent, onUploadCo
     <section className={sectionClass}>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="font-bold text-foreground dark:text-white">Selected work</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+          <h2 className="font-bold text-foreground">Selected work</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
             Show the work you want clients to remember. A title, role, short description, and cover image are enough to start.
             {content.projects.length > 1 && " Visitors read these in the order below — drag a project, or use the arrows, to change it."}
           </p>
         </div>
-        <Button type="button" onClick={() => onUpdateContent({ projects: [...content.projects, createStudioProject()] })} className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-blue-50 px-2.5 py-2 text-xs font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"><Plus className="h-3.5 w-3.5" /> Add project</Button>
+        <Button type="button" onClick={() => onUpdateContent({ projects: [...content.projects, createStudioProject()] })} className="inline-flex shrink-0 items-center justify-center gap-1 rounded-none bg-primary/10 px-2.5 py-2 text-xs font-bold text-primary"><Plus className="h-3.5 w-3.5" /> Add project</Button>
       </div>
       <div className="flex flex-col gap-4">
         {content.projects.map((project, index) => {
@@ -105,7 +105,7 @@ export default function StudioWorkSection({ content, onUpdateContent, onUploadCo
                 move(dragIndex, index);
                 endDrag();
               }}
-              className={`rounded-2xl transition ${isDropTarget ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""} ${dragIndex === index ? "opacity-50" : ""}`}
+              className={`rounded-none transition ${isDropTarget ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""} ${dragIndex === index ? "opacity-50" : ""}`}
             >
               <PortfolioProjectEditor
                 project={project}
@@ -136,9 +136,9 @@ export default function StudioWorkSection({ content, onUpdateContent, onUploadCo
         })}
       </div>
       {lastDeleted && (
-        <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm">
+        <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-none border border-border bg-muted/50 px-4 py-3 text-sm">
           <span className="font-semibold text-foreground">Removed {lastDeleted.project.title.trim() || "untitled project"}.</span>
-          <Button type="button" onClick={undoDelete} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:bg-accent">Undo</Button>
+          <Button type="button" onClick={undoDelete} className="rounded-none border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:bg-accent">Undo</Button>
         </div>
       )}
     </section>

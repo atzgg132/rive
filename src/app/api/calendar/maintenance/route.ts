@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { watchGoogleCalendar } from "@/utils/googleCalendar";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
+import { collectIdPages } from "@/utils/calendarOutbox";
 
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get("authorization");
@@ -11,23 +12,30 @@ export async function POST(request: NextRequest) {
   if (!googleCalendarAvailable()) return NextResponse.json({ success: true, disabled: true, checked: 0, renewed: 0, failed: 0 });
 
   const renewBefore = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  const selectedCalendars = await prisma.externalCalendar.findMany({
-    where: {
-      selected: true,
-      connection: { provider: "google", status: "connected" },
-    },
-    select: {
-      id: true,
-      connection: {
-        select: {
-          webhookChannels: {
-            select: { externalCalendarId: true, expiresAt: true },
+  // Keyset-paginate every selected calendar — the old take:100 sweep silently
+  // ignored every selected calendar past the first page, so their webhook
+  // channels were never renewed.
+  const selectedCalendars = await collectIdPages(100, ({ take, afterId }) =>
+    prisma.externalCalendar.findMany({
+      where: {
+        selected: true,
+        connection: { provider: "google", status: "connected" },
+        ...(afterId ? { id: { gt: afterId } } : {}),
+      },
+      select: {
+        id: true,
+        connection: {
+          select: {
+            webhookChannels: {
+              select: { externalCalendarId: true, expiresAt: true },
+            },
           },
         },
       },
-    },
-    take: 100,
-  });
+      orderBy: { id: "asc" },
+      take,
+    }),
+  );
   const calendars = selectedCalendars.filter((calendar) => {
     const channels = calendar.connection.webhookChannels.filter(
       (channel) => channel.externalCalendarId === calendar.id,

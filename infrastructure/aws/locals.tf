@@ -7,10 +7,8 @@ locals {
     prod = 3000
     dev  = 3002
   }
-  memory_limits = {
-    prod = "768m"
-    dev  = "384m"
-  }
+  # Container memory limits live as defaults in scripts/deploy-runtime.sh (the
+  # deploy contract), overridable per run via RIVE_APP_MEMORY.
   # Hostnames are declared in caddy/Caddyfile, which is the single source of truth
   # for routing and is shared by the bootstrap and the live-apply script.
 }

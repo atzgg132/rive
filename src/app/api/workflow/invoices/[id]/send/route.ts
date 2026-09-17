@@ -9,14 +9,16 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { createInvoicePublicToken, hashInvoicePublicToken, invoicePublicUrl } from "@/utils/invoicePublic";
 import { reclaimStaleSendingInvoice } from "@/utils/invoiceSend";
 import { renderInvoicePdf } from "@/utils/invoicePdf";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const parsedBody = await req.json().catch(() => ({}));
-    const body = parsedBody && typeof parsedBody === "object" && !Array.isArray(parsedBody) ? parsedBody as { confirm?: boolean } : {};
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { confirm?: boolean };
     if (body.confirm !== true) return NextResponse.json({ success: false, message: "Confirm the invoice after reviewing its amount, recipient, and due date." }, { status: 400 });
 
     await reclaimStaleSendingInvoice(id, session.userId);

@@ -2,6 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { prisma } from "../helpers/prisma-mock.mjs";
+import { NextRequest } from "../helpers/next-server-shim.mjs";
+
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || "test-operational-email-secret";
+
+const { generateUserToken } = await import("../../src/utils/userAuth.ts");
+const { POST: resetPasswordPost } = await import("../../src/app/api/auth/reset-password/route.ts");
+const { POST: reviewPost } = await import("../../src/app/api/workflow/contracts/[id]/review/route.ts");
+
 const contractSignRoute = await readFile(
   new URL("../../src/app/api/public/contracts/sign/[token]/route.ts", import.meta.url),
   "utf8",
@@ -48,6 +57,22 @@ const revenuePage = await readFile(
 );
 const invoiceDetail = await readFile(
   new URL("../../src/components/invoices/InvoiceDetailPanel.tsx", import.meta.url),
+  "utf8",
+);
+const resetPasswordRoute = await readFile(
+  new URL("../../src/app/api/auth/reset-password/route.ts", import.meta.url),
+  "utf8",
+);
+const reviewRoute = await readFile(
+  new URL("../../src/app/api/workflow/contracts/[id]/review/route.ts", import.meta.url),
+  "utf8",
+);
+const loginRoute = await readFile(
+  new URL("../../src/app/api/auth/login/route.ts", import.meta.url),
+  "utf8",
+);
+const googleCallbackRoute = await readFile(
+  new URL("../../src/app/api/auth/google/callback/route.ts", import.meta.url),
   "utf8",
 );
 
@@ -138,6 +163,182 @@ test("terminal invoice delivery failure is visible and retryable", async () => {
   assert.match(invoiceDetailRoute, /latest_delivery/);
   assert.match(invoiceDetail, /latest_delivery/);
   assert.match(invoiceDetail, /retry-delivery/);
-  assert.match(retryRoute, /status: "failed"/);
+  assert.match(retryRoute, /status: \{ in: \["failed", "delivery_failed"\] \}/);
   assert.match(retryRoute, /processEmailOutbox\(\{ jobId: delivery\.id \}\)/);
+});
+
+test("sign-in handlers no longer send an unconditional login-success email", () => {
+  assert.doesNotMatch(loginRoute, /sendLoginSuccessEmail/);
+  assert.doesNotMatch(googleCallbackRoute, /sendLoginSuccessEmail/);
+});
+
+test("password-change mail is enqueued inside the reset transaction and attempted best-effort", () => {
+  assert.match(
+    resetPasswordRoute,
+    /prisma\.\$transaction\(async \(transaction\)[\s\S]*?return enqueueEmail\(buildPasswordChangedEmail\(resetToken\.email\), transaction\)/,
+  );
+  assert.match(resetPasswordRoute, /if \(!outboxId\)[\s\S]*?409/);
+  assert.match(resetPasswordRoute, /getEmailProvider\(\) !== "disabled"[\s\S]*?processEmailOutbox\(\{ jobId: outboxId \}\)\.catch\(/);
+});
+
+test("Agreement review mail is enqueued in the link transaction and reports queue honestly", () => {
+  assert.match(reviewRoute, /deliveryGuard: \{ kind: "contract_review", linkId: link\.id, tokenHash \}/);
+  assert.match(
+    reviewRoute,
+    /prisma\.\$transaction\(async \(tx\)[\s\S]*?enqueueEmail\([\s\S]*?buildContractReviewEmail[\s\S]*?\}, tx\)/,
+  );
+  assert.match(reviewRoute, /processEmailOutbox\(\{ jobId: outboxId \}\)\.catch\(/);
+  assert.match(reviewRoute, /email: shouldEmail \? \{ queued: true, sent: delivered \} : null/);
+});
+
+function resetRequest(body) {
+  return new NextRequest("http://localhost/api/auth/reset-password", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function installResetMocks({ claimCount = 1 } = {}) {
+  const calls = { tokenUpdateMany: [], userUpdate: [] };
+  prisma.authToken = {
+    async findFirst() {
+      return { id: "token-1", userId: "user-1", email: "member@example.com", usedAt: null, expiresAt: new Date(Date.now() + 60_000) };
+    },
+    async updateMany(args) {
+      calls.tokenUpdateMany.push(args);
+      return { count: claimCount };
+    },
+    async create() {
+      return {};
+    },
+  };
+  prisma.user.update = async (args) => {
+    calls.userUpdate.push(args);
+    return { id: "user-1" };
+  };
+  prisma.emailDelivery = { create: async () => ({}) };
+  return calls;
+}
+
+test("a committed password reset queues the notice and survives an immediate delivery failure", async () => {
+  prisma.__reset();
+  const calls = installResetMocks();
+
+  const response = await resetPasswordPost(resetRequest({ token: "reset-token", password: "replacement-password-1" }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.equal(calls.userUpdate.length, 1);
+  assert.equal(calls.tokenUpdateMany.length, 2);
+  const jobs = prisma.__db.emailOutbox;
+  assert.equal(jobs.length, 1, "the notice must be enqueued by the reset transaction");
+  assert.equal(jobs[0].type, "password_changed");
+  assert.equal(jobs[0].recipient, "member@example.com");
+  assert.equal(jobs[0].status, "queued", "with no live provider the job stays queued for the worker");
+  assert.equal(jobs[0].lastError, "not_configured");
+});
+
+test("a lost reset claim returns 409 and queues no mail", async () => {
+  prisma.__reset();
+  installResetMocks({ claimCount: 0 });
+
+  const response = await resetPasswordPost(resetRequest({ token: "reset-token", password: "replacement-password-1" }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(payload.success, false);
+  assert.equal(prisma.__db.emailOutbox.length, 0);
+});
+
+const CONTRACT_ROW = {
+  id: "contract-1",
+  userId: "user-1",
+  title: "Service Agreement",
+  status: "draft",
+  client: { name: "Client Name", email: "client@example.com" },
+  user: { name: "Owner Name", email: "owner@example.com" },
+  versions: [{ id: "version-1", version: 1, status: "draft" }],
+};
+
+function installReviewMocks() {
+  prisma.__reset();
+  prisma.__db.user.push({
+    id: "user-1",
+    email: "owner@example.com",
+    plan: "free",
+    sessionVersion: 3,
+    emailVerifiedAt: new Date(),
+    emailVerificationRequiredAt: new Date(),
+  });
+  const calls = { contractUpdateMany: [], contractEvent: [] };
+  prisma.contract = {
+    async findFirst() {
+      return { ...CONTRACT_ROW };
+    },
+    async updateMany(args) {
+      calls.contractUpdateMany.push(args);
+      return { count: 1 };
+    },
+  };
+  prisma.contractReviewLink.updateMany = async () => ({ count: 0 });
+  prisma.contractReviewLink.create = async ({ data }) => {
+    const link = { id: "review-link-1", signerId: null, revokedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data };
+    prisma.__db.contractReviewLink.push(link);
+    return link;
+  };
+  prisma.contractEvent = {
+    create: async (args) => {
+      calls.contractEvent.push(args);
+      return { id: "event-1" };
+    },
+  };
+  prisma.productEvent = { create: async () => ({}) };
+  prisma.productEventIssue = { create: async () => ({}) };
+  prisma.emailDelivery = { create: async () => ({}) };
+  return calls;
+}
+
+function reviewRequest(body, sessionVersion = 3) {
+  const token = generateUserToken("user-1", "owner@example.com", "free", sessionVersion);
+  return new NextRequest("http://localhost/api/workflow/contracts/contract-1/review", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: `rive_session=${token}` },
+    body: JSON.stringify(body),
+  });
+}
+
+test("a review invite is queued in the link transaction and reports queued-not-sent honestly", async () => {
+  const calls = installReviewMocks();
+
+  const response = await reviewPost(reviewRequest({ sendEmail: true }), { params: Promise.resolve({ id: "contract-1" }) });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.ok(payload.reviewUrl.includes("/review/"));
+  assert.deepEqual(payload.email, { queued: true, sent: false });
+  const jobs = prisma.__db.emailOutbox;
+  assert.equal(jobs.length, 1);
+  assert.equal(jobs[0].type, "contract_review");
+  assert.equal(jobs[0].recipient, "client@example.com");
+  assert.equal(jobs[0].status, "queued");
+  assert.equal(calls.contractEvent.length, 1);
+  assert.equal(calls.contractUpdateMany.length, 1);
+  const link = prisma.__db.contractReviewLink[0];
+  assert.equal(link.type, "review");
+  assert.ok(link.tokenHash);
+});
+
+test("a review link without email queues nothing and reports no email", async () => {
+  installReviewMocks();
+
+  const response = await reviewPost(reviewRequest({ sendEmail: false }), { params: Promise.resolve({ id: "contract-1" }) });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.equal(payload.email, null);
+  assert.equal(prisma.__db.emailOutbox.length, 0);
 });

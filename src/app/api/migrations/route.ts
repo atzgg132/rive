@@ -13,6 +13,7 @@ import {
   migrationObjectStorageConfigured,
   presignMigrationUpload,
 } from "@/utils/migration/uploads";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 type FileManifest = { name: string; mimeType: string; sizeBytes: number; checksum: string };
 
@@ -120,7 +121,9 @@ export async function POST(req: NextRequest) {
         { status: 503 },
       );
     }
-    const body = await req.json().catch(() => null) as Record<string, unknown> | null;
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const manifests = parseFileManifests(body?.files);
     if (!manifests) {
       return NextResponse.json({

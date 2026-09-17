@@ -51,7 +51,7 @@ variable "admin_totp_secret" {
   type        = string
   sensitive   = true
   default     = ""
-  description = "Base32 TOTP seed for the admin portal second factor. Empty creates no parameter and leaves sign-in password-only; generate with node scripts/setup-admin.mjs --totp."
+  description = "Base32 TOTP seed for the admin portal second factor. Empty creates no parameter; production admin login fails closed until a seed is set in SSM. Generate with node scripts/setup-admin.mjs --totp."
 }
 
 variable "google_calendar_client_id" {

@@ -69,7 +69,7 @@ export default function PortfolioTrafficChart({ points, totalViews }: { points: 
       <div
         data-traffic-readout
         aria-live="polite"
-        className="mb-3 flex min-h-9 flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-lg bg-muted/50 px-3 py-2"
+        className="mb-3 flex min-h-9 flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-none bg-muted/50 px-3 py-2"
       >
         {shownPoint ? (
           <>

@@ -81,6 +81,8 @@ test("rejects every incomplete or out-of-range field", () => {
     "missing email": { ...valid, email: "" },
     "malformed email": { ...valid, email: "jane@@company" },
     "email without domain": { ...valid, email: "jane@company" },
+    "email with empty domain label": { ...valid, email: "jj.jkj@." },
+    "email with trailing dot domain": { ...valid, email: "jane@company." },
     "email too long": { ...valid, email: `${"j".repeat(INQUIRY_FIELD_LIMITS.email.max)}@company.com` },
     "missing project type": { ...valid, projectType: "" },
     "project type too long": { ...valid, projectType: "p".repeat(INQUIRY_FIELD_LIMITS.projectType.max + 1) },
@@ -101,6 +103,12 @@ test("non-string fields cannot smuggle past validation", () => {
   assert.equal(validateInquirySubmission({ ...valid, name: { toString: () => "Jane" } }).ok, false);
   assert.equal(validateInquirySubmission({ ...valid, message: ["a".repeat(50)] }).ok, false);
   assert.equal(validateInquirySubmission({ ...valid, email: 12345 }).ok, false);
+});
+
+test("a padded, upper-cased valid address stores its normalized form", () => {
+  const result = validateInquirySubmission({ ...valid, email: "  Jane.Doe+Work@Company.COM " });
+  assert.equal(result.ok, true);
+  assert.equal(result.value.email, "jane.doe+work@company.com");
 });
 
 test("keeps a plausible source project and discards anything oversized", () => {

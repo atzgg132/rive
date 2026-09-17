@@ -6,7 +6,8 @@ import { generateUserToken, GOOGLE_PLACEHOLDER_PASSWORD, setSessionCookie } from
 import { googleLoginAvailable } from "@/utils/connectorConfig";
 import { exchangeGoogleLoginCode, getGoogleLoginProfile, verifyGoogleLoginState } from "@/utils/googleAuth";
 import { decideGoogleLogin } from "@/utils/googleLogin";
-import { sendLoginSuccessEmail } from "@/utils/email";
+import { buildLoginSuccessEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { attributionFromRequest, saveUserAttribution } from "@/utils/attribution";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
@@ -127,13 +128,22 @@ export async function GET(req: NextRequest) {
         },
         select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true },
       });
-      await sendLoginSuccessEmail(user.email);
     } else {
       user = await prisma.user.findUniqueOrThrow({
         where: { id: decision.userId },
         select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true },
       });
-      await sendLoginSuccessEmail(user.email);
+    }
+
+    // The sign-in notice fires for an existing account returning — a fresh
+    // signup just created the account, so a "new sign-in" email would be noise.
+    if (decision.action !== "create" && getEmailProvider() !== "disabled") {
+      const outboxId = await enqueueEmail(buildLoginSuccessEmail(user.email)).catch(() => null);
+      if (outboxId) {
+        await processEmailOutbox({ jobId: outboxId }).catch((mailError) => {
+          console.error("Immediate sign-in notice attempt failed:", mailError);
+        });
+      }
     }
 
     const destination = loginDestination(user.onboardingStatus, state.next);

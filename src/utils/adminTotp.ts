@@ -82,3 +82,38 @@ export function verifyTotp(code: string, secretBase32: string): boolean {
   }
   return false;
 }
+
+// The admin account is a single set of keys to every tenant, so in the real
+// production environments a missing second factor must close the login route
+// rather than degrade to password-only.
+const PRODUCTION_ADMIN_ENVIRONMENTS: ReadonlySet<string> = new Set(["prod", "production"]);
+
+export function isProductionAdminEnvironment(appEnv: string | null | undefined): boolean {
+  return PRODUCTION_ADMIN_ENVIRONMENTS.has((appEnv ?? "").trim().toLowerCase());
+}
+
+/** A configured secret only counts when it decodes to real key material. */
+export function isUsableTotpSecret(secretBase32: string | null | undefined): boolean {
+  if (!secretBase32) return false;
+  const decoded = base32Decode(secretBase32);
+  return decoded !== null && decoded.length > 0;
+}
+
+/**
+ * The login gate for the second factor.
+ *
+ * - `not_required` — no secret provisioned outside production; password-only
+ *   is the intended local/dev/test behaviour.
+ * - `required` — a usable secret exists; the code must verify.
+ * - `unavailable` — the environment requires TOTP or a secret is configured,
+ *   but the configured value cannot decode. Login must fail closed.
+ */
+export type AdminTotpGate = "not_required" | "required" | "unavailable";
+
+export function adminTotpGate(
+  appEnv: string | null | undefined,
+  secretBase32: string | null | undefined,
+): AdminTotpGate {
+  if (!isProductionAdminEnvironment(appEnv) && !secretBase32?.trim()) return "not_required";
+  return isUsableTotpSecret(secretBase32) ? "required" : "unavailable";
+}

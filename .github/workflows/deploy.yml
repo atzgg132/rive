@@ -122,25 +122,16 @@ jobs:
           tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}-migrate
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # The runner ships the repo's deploy script and canonical Caddyfile to the
+      # host so every deploy runs the reviewed versions, then the host-side
+      # script performs the candidate/cutover/rollback flow.
       - name: Deploy immutable image through Systems Manager
         env:
           INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
           ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
           IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
-        run: |
-          command_id=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name AWS-RunShellScript \
-            --parameters commands="docker image prune -af >/dev/null 2>&1 || true; /opt/rive/deploy.sh $ENVIRONMENT $IMAGE_TAG" \
-            --query Command.CommandId \
-            --output text)
-          set +e
-          aws ssm wait command-executed \
-            --command-id "$command_id" \
-            --instance-id "$INSTANCE_ID"
-          wait_status=$?
-          aws ssm get-command-invocation \
-            --command-id "$command_id" \
-            --instance-id "$INSTANCE_ID" \
-            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
-          exit "$wait_status"
+          REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
+        run: >-
+          bash scripts/deploy-to-host.sh
+          "$INSTANCE_ID" "$ENVIRONMENT" "$IMAGE_TAG"
+          "${AWS_REGION:-ap-south-1}" "$REPOSITORY_URL"

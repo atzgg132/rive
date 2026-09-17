@@ -100,6 +100,7 @@ function loadExpensesRoute(stub) {
         "@/utils/userAuth": { getSessionUser: async () => ({ userId: USER }) },
         "@/utils/productEvents": { PRODUCT_EVENTS: { expenseCreated: "expense_created" }, recordProductEvent: async () => ({}) },
         "@/lib/pagination": pagination,
+        "@/utils/apiBoundary": { readJsonBody: async (request) => ({ ok: true, body: await request.json() }) },
       };
       return deps[name] || require(name);
     },

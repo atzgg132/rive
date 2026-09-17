@@ -3,6 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { isPromptAvailable, promptForKey } from "@/utils/feedback";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 function clean(value: string | null, max: number): string {
   return (value || "").trim().slice(0, max);
@@ -35,7 +36,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const body = await req.json().catch(() => null) as { promptKey?: unknown; action?: unknown } | null;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const key = typeof body?.promptKey === "string" ? clean(body.promptKey, 80) : "";
   const action = typeof body?.action === "string" ? clean(body.action, 20) : "";
   if (!promptForKey(key) || !["dismiss", "snooze", "shown"].includes(action)) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,8 +21,9 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-    const parsedBody = await req.json().catch(() => ({}));
-    const body = parsedBody && typeof parsedBody === "object" && !Array.isArray(parsedBody) ? parsedBody as { id?: unknown; all?: unknown } : {};
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { id?: unknown; all?: unknown };
     if (body.all === true) await prisma.notification.updateMany({ where: { userId: session.userId, readAt: null }, data: { readAt: new Date() } });
     else if (typeof body.id === "string") await prisma.notification.updateMany({ where: { id: body.id, userId: session.userId }, data: { readAt: new Date() } });
     else return NextResponse.json({ success: false, message: "Notification ID or all=true is required." }, { status: 400 });

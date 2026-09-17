@@ -3,6 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { googleCalendarAvailable } from "@/utils/connectorConfig";
 import { revokeGoogleCredentials } from "@/utils/googleCalendar";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -39,7 +40,9 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const body = await req.json();
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const externalCalendarId = typeof body.externalCalendarId === "string" ? body.externalCalendarId : "";
   const external = await prisma.externalCalendar.findFirst({
     where: { id: externalCalendarId, connection: { userId: session.userId } },

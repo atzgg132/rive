@@ -3,14 +3,19 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { getAnonymousId } from "@/utils/attribution";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { sanitizeAnalyticsPath, sanitizeAnalyticsReferrer } from "@/lib/route-privacy";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const path = typeof body?.path === "string" ? body.path.slice(0, 500) : "/";
-    const referrer = typeof body?.referrer === "string" ? body.referrer.slice(0, 500) : null;
-    const anonymousId = typeof body?.anonymousId === "string" ? body.anonymousId.slice(0, 100) : getAnonymousId(req);
-    const sessionId = typeof body?.sessionId === "string" ? body.sessionId.slice(0, 100) : null;
+    const parsedBody = await readJsonBody(req, { allowEmpty: true });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
+    const path = sanitizeAnalyticsPath(body.path);
+    const referrer = sanitizeAnalyticsReferrer(body.referrer);
+    const landingPath = sanitizeAnalyticsPath(body.landingPage ?? path);
+    const anonymousId = typeof body.anonymousId === "string" ? body.anonymousId.slice(0, 100) : getAnonymousId(req);
+    const sessionId = typeof body.sessionId === "string" ? body.sessionId.slice(0, 100) : null;
     const user = await getSessionUser(req);
     const userAgent = req.headers.get("user-agent") || "";
     let referrerDomain: string | null = null;
@@ -25,10 +30,10 @@ export async function POST(req: NextRequest) {
         anonymousId,
         sessionId,
         userId: user?.userId || null,
-        utmSource: typeof body?.source === "string" ? body.source.slice(0, 120) : null,
-        utmMedium: typeof body?.medium === "string" ? body.medium.slice(0, 120) : null,
-        utmCampaign: typeof body?.campaign === "string" ? body.campaign.slice(0, 160) : null,
-        landingPath: typeof body?.landingPage === "string" ? body.landingPage.slice(0, 500) : path,
+        utmSource: typeof body.source === "string" ? body.source.slice(0, 120) : null,
+        utmMedium: typeof body.medium === "string" ? body.medium.slice(0, 120) : null,
+        utmCampaign: typeof body.campaign === "string" ? body.campaign.slice(0, 160) : null,
+        landingPath,
       }
     });
     await recordProductEvent({

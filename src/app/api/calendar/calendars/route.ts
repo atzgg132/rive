@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { ensureDefaultCalendar, isValidTimeZone } from "@/utils/calendar";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -22,7 +23,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const body = await req.json();
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const color = typeof body.color === "string" && /^#[0-9a-f]{6}$/i.test(body.color) ? body.color : "#2563EB";
   const timeZone = typeof body.timeZone === "string" && isValidTimeZone(body.timeZone) ? body.timeZone : "UTC";
