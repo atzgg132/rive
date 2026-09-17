@@ -7,6 +7,15 @@ import { NextRequest } from "../helpers/next-server-shim.mjs";
 
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || "test-operational-email-secret";
 
+// Pin the provider before the imports below transitively load email.ts, which
+// evaluates the ambient env once at module load. "smtp" with no transport
+// yields the deterministic retryable not_configured path these tests assert
+// (CI sets EMAIL_PROVIDER=ses, which would attempt a real SES send).
+process.env.EMAIL_PROVIDER = "smtp";
+delete process.env.SMTP_HOST;
+delete process.env.SMTP_USER;
+delete process.env.SMTP_PASS;
+
 const { generateUserToken } = await import("../../src/utils/userAuth.ts");
 const { POST: resetPasswordPost } = await import("../../src/app/api/auth/reset-password/route.ts");
 const { POST: reviewPost } = await import("../../src/app/api/workflow/contracts/[id]/review/route.ts");

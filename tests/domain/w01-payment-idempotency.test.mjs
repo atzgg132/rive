@@ -66,6 +66,9 @@ function loadHandler() {
         };
       }
       if (name === "@/utils/invoiceMath") return { currencyFractionDigits };
+      // The real boundary is covered by api-boundary.test.mjs; the sandbox
+      // only needs a passthrough for well-formed JSON request bodies.
+      if (name === "@/utils/apiBoundary") return { readJsonBody: async (request) => ({ ok: true, body: await request.json() }) };
       return require(name);
     },
   });

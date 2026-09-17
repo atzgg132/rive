@@ -2,8 +2,17 @@ import assert from "node:assert/strict";
 import test, { beforeEach } from "node:test";
 
 import { prisma } from "../helpers/prisma-mock.mjs";
-import { collectEmailOutboxMetrics, enqueueEmail, processEmailOutbox, STALE_PROCESSING_MS } from "../../src/utils/emailOutbox.ts";
-import { __emailTestInternals, deliverPreparedEmail } from "../../src/utils/email.ts";
+
+// Provider must be pinned before email.ts reads its env at module load:
+// "smtp" with no transport yields the deterministic retryable not_configured
+// result these tests assert, regardless of ambient CI env (EMAIL_PROVIDER=ses).
+process.env.EMAIL_PROVIDER = "smtp";
+delete process.env.SMTP_HOST;
+delete process.env.SMTP_USER;
+delete process.env.SMTP_PASS;
+
+const { collectEmailOutboxMetrics, enqueueEmail, processEmailOutbox, STALE_PROCESSING_MS } = await import("../../src/utils/emailOutbox.ts");
+const { __emailTestInternals, deliverPreparedEmail } = await import("../../src/utils/email.ts");
 
 const { classifyEmailProviderError, sanitizeEmailDiagnostic } = __emailTestInternals;
 
