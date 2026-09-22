@@ -1,0 +1,619 @@
+# Overnight AWS backup for Rive. Backup-only: no terminate/stop/delete of
+# EC2/RDS, no DNS changes, no security-group 0.0.0.0/0, no migrate.
+# Trigger from the Actions UI after this file is on the default branch.
+name: Overnight AWS backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_rds_snapshot:
+        description: Create a manual RDS snapshot for each available Postgres instance
+        type: boolean
+        default: true
+      dump_via_ssm:
+        description: Dump databases via SSM on the app host and archive them
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-backup-overnight
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    environment: production
+    env:
+      AWS_REGION: ap-south-1
+      AWS_DEFAULT_REGION: ap-south-1
+      BACKUP_STAMP: "2026-09-23"
+      SNAPSHOT_PREFIX: rive-backup-manual-20260923-overnight
+      DUMP_DIR_HOST: /tmp/aws-backup-2026-09-23
+      BACKUP_BUCKET_NAME: rive-aws-backup-20260923
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Record caller identity
+        id: sts
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/aws-backup-2026-09-23"
+          echo "::notice::Backup-only workflow. Never terminate/stop/delete EC2 or RDS."
+          aws sts get-caller-identity | tee "${RUNNER_TEMP}/aws-backup-2026-09-23/caller-identity.json"
+          ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+          echo "account=${ACCOUNT}" >> "${GITHUB_OUTPUT}"
+
+      - name: Describe RDS instances
+        id: rds_describe
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
+          if aws rds describe-db-instances --region ap-south-1 --output json \
+            > "${OUT}/rds-instances.json"; then
+            echo "RDS instances:"
+            jq -r '.DBInstances[] | [.DBInstanceIdentifier, .Engine, .EngineVersion, .DBInstanceStatus, .DBInstanceClass, .StorageEncrypted, .DBInstanceArn] | @tsv' \
+              "${OUT}/rds-instances.json"
+            echo "ok=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "::warning::rds:DescribeDBInstances failed. rive-github-deploy may lack rds:Describe*."
+            echo "ok=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+
+      - name: Create manual RDS snapshots
+        id: rds_snapshot
+        if: inputs.create_rds_snapshot
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
+          : > "${OUT}/snapshots.txt"
+          if [ ! -f "${OUT}/rds-instances.json" ]; then
+            echo "::warning::No RDS describe output; cannot create snapshots."
+            echo "created=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+
+          mapfile -t ROWS < <(jq -r '
+            .DBInstances[]
+            | select((.Engine == "postgres" or .Engine == "aurora-postgresql") and .DBInstanceStatus == "available")
+            | .DBInstanceIdentifier
+          ' "${OUT}/rds-instances.json")
+
+          if [ "${#ROWS[@]}" -eq 0 ]; then
+            echo "::warning::No available Postgres instances found."
+            echo "created=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+
+          created=0
+          for dbid in "${ROWS[@]}"; do
+            arn=""
+            status=""
+            safe="$(printf '%s' "$dbid" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g; s/--*/-/g; s/^-//; s/-$//')"
+            snap="${SNAPSHOT_PREFIX}-${safe}"
+            snap="$(printf '%s' "$snap" | cut -c1-63 | sed 's/-$//')"
+            echo "Creating snapshot ${snap} for ${dbid} (never deleting)"
+            set +e
+            create_out="$(aws rds create-db-snapshot \
+              --region ap-south-1 \
+              --db-instance-identifier "$dbid" \
+              --db-snapshot-identifier "$snap" \
+              --output json 2>"${OUT}/snapshot-${safe}.err")"
+            create_rc=$?
+            set -e
+            if [ "$create_rc" -ne 0 ]; then
+              if grep -qi 'DBSnapshotAlreadyExists' "${OUT}/snapshot-${safe}.err"; then
+                echo "Snapshot ${snap} already exists; recording it."
+              else
+                echo "::warning::create-db-snapshot failed for ${dbid} (rc=${create_rc})."
+                echo "::warning::rive-github-deploy likely lacks rds:CreateDBSnapshot (and maybe rds:DescribeDBSnapshots)."
+                cat "${OUT}/snapshot-${safe}.err" || true
+                continue
+              fi
+            else
+              printf '%s\n' "$create_out" | jq -r '.DBSnapshot | [.DBSnapshotIdentifier, .DBSnapshotArn, .Status] | @tsv' \
+                | tee -a "${OUT}/snapshots.txt"
+              arn="$(printf '%s' "$create_out" | jq -r '.DBSnapshot.DBSnapshotArn // empty')"
+            fi
+
+            # Wait until available, but keep the ARN even if the wait times out.
+            status="creating"
+            arn="${arn:-}"
+            denied=0
+            for _ in $(seq 1 80); do
+              set +e
+              desc="$(aws rds describe-db-snapshots \
+                --region ap-south-1 \
+                --db-snapshot-identifier "$snap" \
+                --output json 2>"${OUT}/snapshot-wait.err")"
+              desc_rc=$?
+              set -e
+              if [ "$desc_rc" -ne 0 ] || [ -z "$desc" ]; then
+                if grep -qiE 'AccessDenied|UnauthorizedOperation' "${OUT}/snapshot-wait.err"; then
+                  echo "::warning::describe-db-snapshots denied; recording create ARN without wait."
+                  denied=1
+                  break
+                fi
+                echo "describe-db-snapshots for ${snap} not ready yet; keeping any create ARN"
+                sleep 15
+                continue
+              fi
+              status="$(printf '%s' "$desc" | jq -r '.DBSnapshots[0].Status')"
+              arn="$(printf '%s' "$desc" | jq -r '.DBSnapshots[0].DBSnapshotArn')"
+              echo "snapshot ${snap} status=${status} arn=${arn}"
+              if [ "$status" = "available" ]; then
+                break
+              fi
+              if [ "$status" = "failed" ]; then
+                echo "::warning::Snapshot ${snap} entered failed status (not deleting)."
+                break
+              fi
+              sleep 15
+            done
+            if [ "$denied" -eq 1 ]; then
+              status="created-wait-denied"
+            fi
+            printf '%s\t%s\t%s\n' "$snap" "$arn" "$status" >> "${OUT}/snapshots.txt"
+            if [ -n "$arn" ] && [ "$arn" != "null" ]; then
+              created=$((created + 1))
+            fi
+          done
+
+          if [ "$created" -gt 0 ]; then
+            echo "created=true" >> "${GITHUB_OUTPUT}"
+            echo "count=${created}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "created=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+
+      - name: Discover or create private backup bucket
+        id: s3
+        continue-on-error: true
+        env:
+          ACCOUNT: ${{ steps.sts.outputs.account }}
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
+          CHOSEN=""
+
+          is_fully_blocked() {
+            local bucket="$1"
+            local pab
+            pab="$(aws s3api get-public-access-block --bucket "$bucket" --output json 2>/dev/null || true)"
+            if [ -z "$pab" ]; then
+              return 1
+            fi
+            echo "$pab" | jq -e '
+              .PublicAccessBlockConfiguration.BlockPublicAcls == true
+              and .PublicAccessBlockConfiguration.IgnorePublicAcls == true
+              and .PublicAccessBlockConfiguration.BlockPublicPolicy == true
+              and .PublicAccessBlockConfiguration.RestrictPublicBuckets == true
+            ' >/dev/null
+          }
+
+          consider() {
+            local bucket="$1"
+            local known="${2:-}"
+            if [ -z "$bucket" ] || [ -n "$CHOSEN" ]; then
+              return 0
+            fi
+            if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+              if is_fully_blocked "$bucket"; then
+                CHOSEN="$bucket"
+                echo "Using existing private bucket s3://${bucket}"
+              elif [ "$known" = "known" ]; then
+                echo "Using known rive bucket s3://${bucket} (this role could not re-verify Block Public Access)"
+                CHOSEN="$bucket"
+              else
+                echo "Skipping s3://${bucket}: Block Public Access is not fully ON."
+              fi
+            fi
+          }
+
+          consider "$BACKUP_BUCKET_NAME" known
+          consider "rive-prod-assets-${ACCOUNT}" known
+          consider "rive-dev-assets-${ACCOUNT}" known
+
+          set +e
+          listed="$(aws s3api list-buckets --query 'Buckets[].Name' --output text 2>"${OUT}/s3-list.err")"
+          list_rc=$?
+          set -e
+          if [ "$list_rc" -eq 0 ]; then
+            for bucket in $listed; do
+              case "$bucket" in
+                *rive*) consider "$bucket" ;;
+              esac
+            done
+          else
+            echo "list-buckets not permitted (expected if deploy role has no S3). Will try known rive asset bucket names."
+          fi
+
+          if [ -z "$CHOSEN" ]; then
+            echo "Attempting to create s3://${BACKUP_BUCKET_NAME} with Block Public Access ON"
+            set +e
+            aws s3api create-bucket \
+              --bucket "$BACKUP_BUCKET_NAME" \
+              --region ap-south-1 \
+              --create-bucket-configuration LocationConstraint=ap-south-1 \
+              2>"${OUT}/s3-create.err"
+            create_rc=$?
+            set -e
+            if [ "$create_rc" -eq 0 ]; then
+              aws s3api put-public-access-block \
+                --bucket "$BACKUP_BUCKET_NAME" \
+                --public-access-block-configuration \
+                BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+              aws s3api put-bucket-encryption \
+                --bucket "$BACKUP_BUCKET_NAME" \
+                --server-side-encryption-configuration \
+                '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+              if is_fully_blocked "$BACKUP_BUCKET_NAME"; then
+                CHOSEN="$BACKUP_BUCKET_NAME"
+                echo "Created private bucket s3://${CHOSEN}"
+              else
+                echo "::warning::Created bucket but could not verify Block Public Access; not using it."
+              fi
+            else
+              echo "create-bucket not permitted or failed; dumps will rely on host PutObject to a known asset bucket, else artifacts only."
+              cat "${OUT}/s3-create.err" || true
+            fi
+          fi
+
+          # Host instance role can PutObject to the Terraform asset buckets even
+          # when this GitHub role cannot list or create buckets.
+          FALLBACK="rive-prod-assets-${ACCOUNT}"
+          echo "bucket=${CHOSEN}" >> "${GITHUB_OUTPUT}"
+          echo "fallback=${FALLBACK}" >> "${GITHUB_OUTPUT}"
+          echo "Selected bucket='${CHOSEN:-}' fallback='${FALLBACK}'" | tee "${OUT}/s3-target.txt"
+
+      - name: Dump databases via SSM
+        id: dump
+        if: inputs.dump_via_ssm
+        continue-on-error: true
+        env:
+          INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
+          BACKUP_BUCKET: ${{ steps.s3.outputs.bucket }}
+          FALLBACK_BUCKET: ${{ steps.s3.outputs.fallback }}
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
+          if [ -z "${INSTANCE_ID}" ]; then
+            echo "::error::vars.AWS_INSTANCE_ID is empty (production environment required)."
+            echo "ok=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+
+          sanitize_bucket() {
+            local b="${1:-}"
+            if [[ "$b" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
+              printf '%s' "$b"
+            fi
+          }
+          BUCKET="$(sanitize_bucket "${BACKUP_BUCKET:-}")"
+          FALLBACK="$(sanitize_bucket "${FALLBACK_BUCKET:-}")"
+
+          HOST_SCRIPT_FILE="${OUT}/host-dump.sh"
+          cat > "$HOST_SCRIPT_FILE" <<'HOST'
+          set -euo pipefail
+          umask 077
+          BACKUP_BUCKET='@@BACKUP_BUCKET@@'
+          FALLBACK_BUCKET='@@FALLBACK_BUCKET@@'
+          DUMP_DIR=/tmp/aws-backup-2026-09-23
+          mkdir -p "$DUMP_DIR"
+          chmod 700 "$DUMP_DIR"
+          echo "=== docker ps ==="
+          docker ps --format '{{.ID}} {{.Names}} {{.Image}}' || true
+          echo "=== mise/minervaa containers ==="
+          docker ps --format '{{.ID}} {{.Names}} {{.Image}}' | grep -iE 'mise|minervaa|minerva' || echo "(none)"
+
+          get_env() {
+            local ctn="$1" key="$2"
+            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$ctn" 2>/dev/null \
+              | awk -F= -v k="$key" '$1==k { print substr($0, index($0,"=")+1) }' \
+              | tail -n1
+          }
+
+          skip_name() {
+            printf '%s' "$1" | grep -qiE 'proxy|caddy|candidate|previous|migrate|buildx|aws-backup-pgdump'
+          }
+
+          ensure_pg_client() {
+            if docker image inspect postgres:17-alpine >/dev/null 2>&1; then
+              return 0
+            fi
+            echo "Pulling postgres:17-alpine for pg_dump (ARM64 host)"
+            docker pull postgres:17-alpine || return 1
+          }
+
+          dump_url_to() {
+            local dest="$1"
+            if [ -z "${DATABASE_URL:-}" ]; then
+              echo "skip ${dest}: no DATABASE_URL in env (not printing values)"
+              return 0
+            fi
+            echo "pg_dump -Fc -> ${DUMP_DIR}/${dest} (credentials redacted)"
+            if ! ensure_pg_client; then
+              echo "pg_dump client unavailable for ${dest}"
+              unset DATABASE_URL
+              return 0
+            fi
+            docker run --rm --network host \
+              --name "aws-backup-pgdump-$$" \
+              -e DATABASE_URL \
+              -v "${DUMP_DIR}:/backup" \
+              postgres:17-alpine \
+              pg_dump -Fc -d "$DATABASE_URL" -f "/backup/${dest}" \
+              || echo "pg_dump failed for ${dest} (container/host unchanged; not printing connection)"
+            unset DATABASE_URL
+            return 0
+          }
+
+          dump_container_url() {
+            local ctn="$1" dest="$2"
+            if ! docker inspect "$ctn" >/dev/null 2>&1; then
+              echo "container ${ctn} not present"
+              return 0
+            fi
+            DATABASE_URL="$(get_env "$ctn" DATABASE_URL)"
+            dump_url_to "$dest"
+          }
+
+          echo "=== preferred rive app dumps ==="
+          dump_container_url rive-prod rive_prod.dump
+          dump_container_url rive-dev rive_dev.dump
+
+          if [ ! -s "${DUMP_DIR}/rive_prod.dump" ] && [ -f /opt/rive/env/prod.env ]; then
+            DATABASE_URL="$(awk -F= '$1=="DATABASE_URL" { print substr($0, index($0,"=")+1) }' /opt/rive/env/prod.env | tail -n1)"
+            dump_url_to rive_prod.dump
+          fi
+          if [ ! -s "${DUMP_DIR}/rive_dev.dump" ] && [ -f /opt/rive/env/dev.env ]; then
+            DATABASE_URL="$(awk -F= '$1=="DATABASE_URL" { print substr($0, index($0,"=")+1) }' /opt/rive/env/dev.env | tail -n1)"
+            dump_url_to rive_dev.dump
+          fi
+
+          echo "=== postgres/mysql container dumps ==="
+          docker ps --format '{{.ID}}\t{{.Names}}\t{{.Image}}' | while IFS=$'\t' read -r cid cname cimage; do
+            if skip_name "$cname"; then
+              continue
+            fi
+            low="$(printf '%s %s' "$cname" "$cimage" | tr '[:upper:]' '[:lower:]')"
+            case "$low" in
+              *postgres*|*postgis*)
+                dest="postgres-${cname}.dump"
+                dest="$(printf '%s' "$dest" | tr -c 'A-Za-z0-9._-' '-' )"
+                echo "docker exec pg_dump for ${cname} -> ${dest}"
+                if ! timeout 180 docker exec "$cid" sh -c 'pg_dumpall --no-password -U "${POSTGRES_USER:-postgres}"' \
+                  > "${DUMP_DIR}/${dest}"; then
+                  echo "postgres dump of ${cname} failed or timed out (container kept)"
+                  rm -f "${DUMP_DIR}/${dest}"
+                fi
+                ;;
+              *mysql*|*mariadb*)
+                dest="mysql-${cname}.sql.gz"
+                dest="$(printf '%s' "$dest" | tr -c 'A-Za-z0-9._-' '-' )"
+                echo "docker exec mysqldump for ${cname} -> ${dest}"
+                if ! timeout 180 docker exec "$cid" sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --all-databases --single-transaction --quick' \
+                  | gzip -c > "${DUMP_DIR}/${dest}"; then
+                  echo "mysql dump of ${cname} failed or timed out (container kept)"
+                  rm -f "${DUMP_DIR}/${dest}"
+                fi
+                ;;
+            esac
+          done
+
+          echo "=== minervaa / mise dumps ==="
+          docker ps --format '{{.ID}}\t{{.Names}}\t{{.Image}}' | while IFS=$'\t' read -r cid cname cimage; do
+            if ! printf '%s %s' "$cname" "$cimage" | grep -qiE 'mise|minervaa|minerva'; then
+              continue
+            fi
+            dest="minervaa-${cname}.dump"
+            dest="$(printf '%s' "$dest" | tr -c 'A-Za-z0-9._-' '-' )"
+            DATABASE_URL="$(get_env "$cid" DATABASE_URL)"
+            if [ -z "${DATABASE_URL:-}" ]; then
+              DATABASE_URL="$(get_env "$cid" POSTGRES_URL)"
+            fi
+            if [ -n "${DATABASE_URL:-}" ]; then
+              dump_url_to "$dest"
+            else
+              echo "listed ${cname} (${cimage}); no DATABASE_URL to dump"
+            fi
+          done
+
+          echo "=== dump directory ==="
+          ls -la "$DUMP_DIR" || true
+          tar -C /tmp -czf /tmp/aws-backup-2026-09-23.tar.gz aws-backup-2026-09-23
+          chmod 600 /tmp/aws-backup-2026-09-23.tar.gz
+          echo "tarball=$(wc -c < /tmp/aws-backup-2026-09-23.tar.gz) bytes"
+
+          upload_to() {
+            local bucket="$1"
+            if [ -z "$bucket" ]; then
+              return 1
+            fi
+            echo "aws s3 cp tarball -> s3://${bucket}/aws-backup-2026-09-23/rive-overnight.tar.gz"
+            aws s3 cp /tmp/aws-backup-2026-09-23.tar.gz \
+              "s3://${bucket}/aws-backup-2026-09-23/rive-overnight.tar.gz" \
+              --sse AES256 --only-show-errors
+          }
+
+          UPLOADED=""
+          for candidate in "$BACKUP_BUCKET" "$FALLBACK_BUCKET"; do
+            if [ -z "$candidate" ] || [ "$candidate" = "$UPLOADED" ]; then
+              continue
+            fi
+            if upload_to "$candidate"; then
+              UPLOADED="$candidate"
+              echo "uploaded_bucket=${UPLOADED}"
+              break
+            fi
+            echo "upload to s3://${candidate} failed (instance role may only allow asset buckets)"
+          done
+          if [ -z "$UPLOADED" ]; then
+            echo "No S3 upload from host. Dumps remain on the instance at ${DUMP_DIR} and /tmp/aws-backup-2026-09-23.tar.gz"
+          fi
+          HOST
+
+          python3 - "$HOST_SCRIPT_FILE" "$BUCKET" "$FALLBACK" "${OUT}/ssm-params.json" <<'PY'
+          import json, sys
+          path, bucket, fallback, dest = sys.argv[1:5]
+          script = open(path, encoding="utf-8").read()
+          script = script.replace("@@BACKUP_BUCKET@@", bucket or "").replace("@@FALLBACK_BUCKET@@", fallback or "")
+          # SSM AWS-RunShellScript expects a list of command strings.
+          json.dump({"commands": [script]}, open(dest, "w", encoding="utf-8"))
+          PY
+
+          COMMAND_ID="$(aws ssm send-command \
+            --region ap-south-1 \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --timeout-seconds 2400 \
+            --comment "rive overnight backup dumps (non-destructive)" \
+            --parameters "file://${OUT}/ssm-params.json" \
+            --query 'Command.CommandId' \
+            --output text)"
+          echo "SSM command ${COMMAND_ID} dispatched"
+          echo "command_id=${COMMAND_ID}" >> "${GITHUB_OUTPUT}"
+
+          status="Pending"
+          for _ in $(seq 1 120); do
+            inv="$(aws ssm get-command-invocation \
+              --region ap-south-1 \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --output json 2>/dev/null || true)"
+            if [ -n "$inv" ]; then
+              status="$(printf '%s' "$inv" | jq -r '.Status')"
+              echo "SSM status=${status}"
+              case "$status" in
+                Success|Failed|Cancelled|TimedOut) break ;;
+              esac
+            fi
+            sleep 15
+          done
+
+          aws ssm get-command-invocation \
+            --region ap-south-1 \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
+            --output json | tee "${OUT}/ssm-invocation.json" >/dev/null
+          jq -r '.Output // empty' "${OUT}/ssm-invocation.json"
+          jq -r '.Error // empty' "${OUT}/ssm-invocation.json" >&2 || true
+
+          uploaded="$(jq -r '.Output // empty' "${OUT}/ssm-invocation.json" | awk -F= '/^uploaded_bucket=/{print $2}' | tail -n1)"
+          echo "uploaded_bucket=${uploaded}" >> "${GITHUB_OUTPUT}"
+
+          if [ "$status" != "Success" ]; then
+            echo "::warning::SSM dump command ended with status=${status}"
+            echo "ok=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+          echo "ok=true" >> "${GITHUB_OUTPUT}"
+
+      - name: Copy dumps from S3 to the runner
+        id: pull
+        if: inputs.dump_via_ssm
+        continue-on-error: true
+        env:
+          UPLOADED_BUCKET: ${{ steps.dump.outputs.uploaded_bucket }}
+          SELECTED_BUCKET: ${{ steps.s3.outputs.bucket }}
+          FALLBACK_BUCKET: ${{ steps.s3.outputs.fallback }}
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
+          KEY="aws-backup-2026-09-23/rive-overnight.tar.gz"
+          pulled=0
+          for bucket in ${UPLOADED_BUCKET:-} ${SELECTED_BUCKET:-} ${FALLBACK_BUCKET:-}; do
+            if [ -z "$bucket" ]; then
+              continue
+            fi
+            echo "Attempting aws s3 cp s3://${bucket}/${KEY}"
+            if aws s3 cp "s3://${bucket}/${KEY}" "${OUT}/rive-overnight.tar.gz" --only-show-errors; then
+              mkdir -p "${OUT}/dumps"
+              tar -tzf "${OUT}/rive-overnight.tar.gz" >/dev/null
+              tar -xzf "${OUT}/rive-overnight.tar.gz" -C "${OUT}/dumps" --strip-components=1 || tar -xzf "${OUT}/rive-overnight.tar.gz" -C "${OUT}/dumps"
+              echo "pulled=true" >> "${GITHUB_OUTPUT}"
+              pulled=1
+              break
+            fi
+          done
+          if [ "$pulled" -eq 0 ]; then
+            echo "Could not copy dumps to the runner (GitHub deploy role likely has no s3:GetObject). Host/S3 copies may still exist."
+            echo "pulled=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+
+      - name: Upload backup artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rive-aws-backup-2026-09-23
+          path: |
+            ${{ runner.temp }}/aws-backup-2026-09-23/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Summarize backup
+        if: always()
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
+          {
+            echo "## Overnight AWS backup"
+            echo
+            echo "- Region: ap-south-1"
+            echo "- Caller: \`$(jq -r .Arn "${OUT}/caller-identity.json" 2>/dev/null || echo unknown)\`"
+            echo "- RDS describe: ${{ steps.rds_describe.outcome }}"
+            echo "- RDS snapshots: ${{ steps.rds_snapshot.outcome }} (created=${{ steps.rds_snapshot.outputs.created }})"
+            echo "- S3 target: ${{ steps.s3.outputs.bucket }}"
+            echo "- SSM dump: ${{ steps.dump.outcome }} (uploaded_bucket=${{ steps.dump.outputs.uploaded_bucket }})"
+            echo "- Runner pull: ${{ steps.pull.outcome }}"
+            echo
+            echo "### Snapshots"
+            echo '```'
+            cat "${OUT}/snapshots.txt" 2>/dev/null || echo "(none recorded)"
+            echo '```'
+            echo
+            echo "### IAM note"
+            echo "\`rive-github-deploy\` is scoped to ECR + SSM SendCommand. It does **not** currently grant \`rds:CreateDBSnapshot\`, \`rds:DescribeDBInstances\`, or S3. Snapshot/S3 steps may AccessDenied; dumps via SSM and host PutObject to \`rive-*-assets-<account>\` are the likely success path."
+            echo
+            echo "Nothing in this run terminates, stops, or deletes EC2/RDS, opens security groups, changes DNS, or runs migrations."
+          } | tee -a "${GITHUB_STEP_SUMMARY}"
+
+          snap_ok=0
+          dump_ok=0
+          if [ "${{ inputs.create_rds_snapshot }}" = "true" ] && [ "${{ steps.rds_snapshot.outputs.created }}" = "true" ]; then
+            snap_ok=1
+          fi
+          if [ "${{ inputs.create_rds_snapshot }}" != "true" ]; then
+            snap_ok=1
+          fi
+          if [ "${{ inputs.dump_via_ssm }}" = "true" ] && [ "${{ steps.dump.outputs.ok }}" = "true" ]; then
+            dump_ok=1
+          fi
+          if [ "${{ inputs.dump_via_ssm }}" != "true" ]; then
+            dump_ok=1
+          fi
+
+          if [ "$snap_ok" -eq 1 ] || [ "$dump_ok" -eq 1 ]; then
+            echo "Backup produced at least one requested artifact/snapshot (or that path was skipped)."
+            if [ "${{ inputs.create_rds_snapshot }}" = "true" ] && [ "$snap_ok" -eq 0 ]; then
+              echo "::warning::RDS snapshot path failed (often missing rds:CreateDBSnapshot on the deploy role)."
+            fi
+            if [ "${{ inputs.dump_via_ssm }}" = "true" ] && [ "$dump_ok" -eq 0 ]; then
+              echo "::warning::SSM dump path failed."
+            fi
+            exit 0
+          fi
+          echo "::error::Both requested backup paths failed."
+          exit 1
