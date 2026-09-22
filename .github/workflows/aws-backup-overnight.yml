@@ -3,8 +3,10 @@
 #
 # Primary path: SSM on the app host using the EC2 instance profile
 # (rive-app-instance) for RDS snapshots, pg_dump, and S3 PutObject.
-# GitHub OIDC (rive-github-deploy) is used to send the SSM command;
-# runner-side RDS/S3 is best-effort and expected to AccessDenied.
+# After a successful upload the host prints presigned_url=<https> (aws s3 presign,
+# 7200s) so a box without AWS CLI can curl the tarball. The runner curls that
+# URL into the artifact (best-effort). GitHub OIDC (rive-github-deploy) only
+# sends the SSM command; runner-side RDS/S3 GetObject is expected to AccessDenied.
 name: Overnight AWS backup
 
 on:
@@ -373,7 +375,9 @@ jobs:
               return 0
             fi
             echo "Pulling postgres:17-alpine for pg_dump (ARM64 host)"
-            docker pull postgres:17-alpine || return 1
+            # --quiet keeps docker progress off stdout. SSM returns only the first
+            # 24KB of StandardOutputContent; a verbose pull would clip presigned_url=.
+            docker pull --quiet postgres:17-alpine || return 1
           }
 
           dump_url_to() {
@@ -538,6 +542,15 @@ jobs:
               instance_s3_denied=true
               echo "No S3 upload from host. Dumps remain at ${DUMP_DIR} and /tmp/aws-backup-2026-09-23.tar.gz"
             fi
+            if [ -n "$UPLOADED" ]; then
+              echo "=== presigned GET via instance profile (7200s) ==="
+              PRESIGN="$(aws s3 presign "s3://${UPLOADED}/aws-backup-2026-09-23/rive-overnight.tar.gz" --expires-in 7200)" || PRESIGN=""
+              if [ -n "$PRESIGN" ]; then
+                printf 'presigned_url=%s\n' "$PRESIGN"
+              else
+                echo "aws s3 presign failed; object remains at s3://${UPLOADED}/aws-backup-2026-09-23/rive-overnight.tar.gz"
+              fi
+            fi
             echo "instance_s3_denied=${instance_s3_denied}"
           fi
 
@@ -606,6 +619,9 @@ jobs:
           echo "host_dump_ok=$(parse host_dump_ok)" >> "${GITHUB_OUTPUT}"
           echo "instance_rds_denied=$(parse instance_rds_denied)" >> "${GITHUB_OUTPUT}"
           echo "instance_s3_denied=$(parse instance_s3_denied)" >> "${GITHUB_OUTPUT}"
+          # Query string contains '='. Keep everything after the first '='.
+          presign_url="$(printf '%s\n' "$outtxt" | tr -d '\r' | sed -n 's/^presigned_url=//p' | tail -n1)"
+          printf 'presigned_url=%s\n' "$presign_url" >> "${GITHUB_OUTPUT}"
 
           if [ "$status" != "Success" ]; then
             echo "::warning::SSM host backup ended with status=${status}"
@@ -648,12 +664,66 @@ jobs:
             exit 1
           fi
 
+      - name: Best-effort curl presigned tarball
+        id: presign_pull
+        if: ${{ env.DO_DUMP == 'true' && steps.ssm.outputs.ok == 'true' }}
+        continue-on-error: true
+        env:
+          PRESIGNED_URL: ${{ steps.ssm.outputs.presigned_url }}
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
+          url="${PRESIGNED_URL:-}"
+          if [ -z "$url" ] && [ -f "${OUT}/ssm-invocation.json" ]; then
+            url="$(jq -r '.Output // empty' "${OUT}/ssm-invocation.json" | tr -d '\r' | sed -n 's/^presigned_url=//p' | tail -n1)"
+          fi
+          if [ -z "$url" ]; then
+            echo "::warning::No presigned_url in SSM output. Host stdout should contain presigned_url=https://..."
+            echo "curled=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+          case "$url" in
+            https://*) ;;
+            *)
+              echo "::warning::presigned_url is not an https URL; not curling."
+              echo "curled=false" >> "${GITHUB_OUTPUT}"
+              exit 1
+              ;;
+          esac
+          echo "Curling presigned GET (from host presigned_url= line) into ${OUT}/rive-overnight.tar.gz"
+          if ! curl -fsSL --retry 3 --retry-delay 2 --max-time 180 -o "${OUT}/rive-overnight.tar.gz" "$url"; then
+            echo "::warning::curl of presigned URL failed (best-effort). The URL is still in the SSM step log."
+            rm -f "${OUT}/rive-overnight.tar.gz"
+            echo "curled=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+          if ! tar -tzf "${OUT}/rive-overnight.tar.gz" >/dev/null; then
+            echo "::warning::Downloaded object is not a readable tar.gz; not uploading it as the tarball."
+            rm -f "${OUT}/rive-overnight.tar.gz"
+            echo "curled=false" >> "${GITHUB_OUTPUT}"
+            exit 1
+          fi
+          bytes="$(wc -c < "${OUT}/rive-overnight.tar.gz" | tr -d ' ')"
+          echo "Presigned curl ok (${bytes} bytes)."
+          echo "curled=true" >> "${GITHUB_OUTPUT}"
+          echo "bytes=${bytes}" >> "${GITHUB_OUTPUT}"
+
       - name: Upload backup artifacts
         uses: actions/upload-artifact@v4
         with:
           name: rive-aws-backup-2026-09-23
           path: |
             ${{ runner.temp }}/aws-backup-2026-09-23/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload real tarball artifact
+        if: ${{ steps.presign_pull.outputs.curled == 'true' || steps.pull.outputs.pulled == 'true' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: rive-overnight-tarball-2026-09-23
+          path: ${{ runner.temp }}/aws-backup-2026-09-23/rive-overnight.tar.gz
           if-no-files-found: ignore
           retention-days: 14
 
@@ -678,6 +748,8 @@ jobs:
             echo "- Instance RDS denied: ${{ steps.ssm.outputs.instance_rds_denied }}"
             echo "- Instance S3 denied: ${{ steps.ssm.outputs.instance_s3_denied }}"
             echo "- Runner S3 pull: ${{ steps.pull.outcome }}"
+            echo "- Presigned curl: ${{ steps.presign_pull.outcome }} (curled=${{ steps.presign_pull.outputs.curled }}, bytes=${{ steps.presign_pull.outputs.bytes }})"
+            echo "- presigned_url= is printed in the SSM host stdout (2h GET). Do not treat a missing GitHub artifact as a missing object."
             echo
             echo "### Host snapshots"
             echo '```'
