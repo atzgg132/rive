@@ -18,6 +18,12 @@ on:
         description: Dump databases via SSM on the app host and archive them
         type: boolean
         default: true
+  push:
+    branches: [main]
+    paths:
+      - '.github/triggers/run-aws-backup'
+  schedule:
+    - cron: '40 21 * * *'  # 03:10 IST — backup if push path somehow misses
 
 permissions:
   contents: read
@@ -39,6 +45,9 @@ jobs:
       SNAPSHOT_PREFIX: rive-backup-manual-20260923-overnight
       DUMP_DIR_HOST: /tmp/aws-backup-2026-09-23
       BACKUP_BUCKET_NAME: rive-aws-backup-20260923
+      # workflow_dispatch honors the boolean inputs. push and schedule always do both.
+      DO_SNAPSHOT: ${{ github.event_name == 'workflow_dispatch' && inputs.create_rds_snapshot || (github.event_name != 'workflow_dispatch') }}
+      DO_DUMP: ${{ github.event_name == 'workflow_dispatch' && inputs.dump_via_ssm || (github.event_name != 'workflow_dispatch') }}
     steps:
       - uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -81,7 +90,7 @@ jobs:
 
       - name: Best-effort runner RDS snapshot (GitHub role)
         id: rds_snapshot
-        if: inputs.create_rds_snapshot
+        if: ${{ env.DO_SNAPSHOT == 'true' }}
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -206,14 +215,14 @@ jobs:
 
       - name: SSM host backup (primary — instance profile)
         id: ssm
-        if: ${{ inputs.create_rds_snapshot || inputs.dump_via_ssm }}
+        if: ${{ env.DO_SNAPSHOT == 'true' || env.DO_DUMP == 'true' }}
         continue-on-error: true
         env:
           INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
           BACKUP_BUCKET: ${{ steps.s3.outputs.bucket }}
           FALLBACK_BUCKET: ${{ steps.s3.outputs.fallback }}
-          CREATE_SNAPSHOT_IN: ${{ inputs.create_rds_snapshot }}
-          DO_DUMP_IN: ${{ inputs.dump_via_ssm }}
+          CREATE_SNAPSHOT_IN: ${{ env.DO_SNAPSHOT }}
+          DO_DUMP_IN: ${{ env.DO_DUMP }}
         run: |
           set -euo pipefail
           OUT="${RUNNER_TEMP}/aws-backup-2026-09-23"
@@ -607,7 +616,7 @@ jobs:
 
       - name: Best-effort copy dumps from S3 to the runner
         id: pull
-        if: inputs.dump_via_ssm
+        if: ${{ env.DO_DUMP == 'true' }}
         continue-on-error: true
         env:
           UPLOADED_BUCKET: ${{ steps.ssm.outputs.uploaded_bucket }}
@@ -692,22 +701,22 @@ jobs:
           if [ "${{ steps.ssm.outputs.host_dump_ok }}" = "true" ]; then
             dump_ok=1
           fi
-          if [ "${{ inputs.create_rds_snapshot }}" = "true" ] && [ "$snap_ok" -eq 1 ]; then
+          if [ "$DO_SNAPSHOT" = "true" ] && [ "$snap_ok" -eq 1 ]; then
             any=1
           fi
-          if [ "${{ inputs.dump_via_ssm }}" = "true" ] && [ "$dump_ok" -eq 1 ]; then
+          if [ "$DO_DUMP" = "true" ] && [ "$dump_ok" -eq 1 ]; then
             any=1
           fi
-          if [ "${{ inputs.create_rds_snapshot }}" != "true" ] && [ "${{ inputs.dump_via_ssm }}" != "true" ]; then
+          if [ "$DO_SNAPSHOT" != "true" ] && [ "$DO_DUMP" != "true" ]; then
             any=1
           fi
 
           if [ "$any" -eq 1 ]; then
             echo "Backup produced at least one requested artifact/snapshot (or nothing was requested)."
-            if [ "${{ inputs.create_rds_snapshot }}" = "true" ] && [ "$snap_ok" -eq 0 ]; then
+            if [ "$DO_SNAPSHOT" = "true" ] && [ "$snap_ok" -eq 0 ]; then
               echo "::warning::Host RDS snapshot did not confirm success. Instance role likely needs rds:CreateDBSnapshot and rds:DescribeDBInstances on rive-app-instance (no Delete*)."
             fi
-            if [ "${{ inputs.dump_via_ssm }}" = "true" ] && [ "$dump_ok" -eq 0 ]; then
+            if [ "$DO_DUMP" = "true" ] && [ "$dump_ok" -eq 0 ]; then
               echo "::warning::SSM dump path did not confirm a dump file."
             fi
             if [ "${{ steps.ssm.outputs.instance_rds_denied }}" = "true" ]; then
