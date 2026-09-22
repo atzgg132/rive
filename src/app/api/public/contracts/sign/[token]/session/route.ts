@@ -11,6 +11,7 @@ import {
 } from "@/utils/contracts";
 import {
   contractAcceptanceLinkProblem,
+  contractPublicRedirectUrl,
   createContractPublicSession,
   isContractPublicSessionSegment,
   setContractPublicSessionCookie,
@@ -35,11 +36,7 @@ async function resolveLink(token: string) {
 }
 
 function redirectToClean(req: NextRequest, path: "/sign" | "/review"): NextResponse {
-  const target = new URL(path, req.url);
-  // Preserve attribution params (utm_*/ref) across the exchange so analytics
-  // keeps working without ever carrying the token itself forward.
-  target.search = new URL(req.url).search;
-  return NextResponse.redirect(target, 303);
+  return NextResponse.redirect(contractPublicRedirectUrl(path, req.url), 303);
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
