@@ -10,7 +10,9 @@ import { fileURLToPath } from "node:url";
 const scriptPath = fileURLToPath(new URL("../../scripts/deploy-runtime.sh", import.meta.url));
 const source = readFileSync(scriptPath, "utf8");
 const pullMarker = "# 2. Pull the immutable images.";
+const cleanupMarker = "# 1b. Free disk before pull.";
 const pullAt = source.indexOf(pullMarker);
+const cleanupAt = source.indexOf(cleanupMarker);
 const pullCmdAt = source.indexOf('docker pull "$REPOSITORY_URL:$IMAGE"');
 
 test("deploy-runtime.sh frees disk before pulling images", () => {
@@ -41,8 +43,9 @@ test("deploy-runtime.sh frees disk before pulling images", () => {
 test("deploy-runtime.sh never prunes volumes or force-removes the serving container before pull", () => {
   assert.doesNotMatch(source, /docker volume prune/);
   assert.doesNotMatch(source, /docker system prune/);
-  const prePull = source.slice(0, pullAt);
-  assert.doesNotMatch(prePull, /docker rm -f "\$CONTAINER"/);
-  assert.doesNotMatch(prePull, /docker rm -f rive-proxy/);
-  assert.doesNotMatch(prePull, /docker rm -f "\$CANDIDATE"/);
+  assert.ok(cleanupAt !== -1 && pullAt > cleanupAt, "disk-free step must sit immediately before pull");
+  const cleanup = source.slice(cleanupAt, pullAt);
+  assert.doesNotMatch(cleanup, /docker rm -f "\$CONTAINER"/);
+  assert.doesNotMatch(cleanup, /docker rm -f rive-proxy/);
+  assert.doesNotMatch(cleanup, /docker rm -f "\$CANDIDATE"/);
 });
