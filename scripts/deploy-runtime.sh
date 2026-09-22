@@ -5,6 +5,7 @@
 # Runs ON the host (uploaded by scripts/deploy-to-host.sh through SSM, or
 # installed by the instance bootstrap). Flow:
 #   1. refresh /opt/rive/env/<env>.env from SSM Parameter Store
+#   1b. free disk (backup leftovers, unused images/build cache) before pull
 #   2. pull the immutable app and migration images
 #   3. run the migration image
 #   4. start a candidate app container on the alternate port
@@ -15,7 +16,12 @@
 #
 # If candidate readiness or public verification fails, the previous Caddy
 # upstream is restored and the candidate removed; the old container keeps
-# serving throughout. Images are never pruned with -af during a deploy.
+# serving throughout. Unused-image prune (-af) runs before pull when disk is
+# tight so the next image can land; volumes are never pruned, and the
+# active/candidate containers are never force-removed beyond this script's
+# existing cutover/rollback flow. Running containers and stopped-but-still-
+# named ones (rive-prod-previous, etc.) keep their images while the
+# container object exists.
 #
 # Usage: deploy-runtime.sh <prod|dev> <image-tag> [region] [repository-url]
 
@@ -113,6 +119,34 @@ aws ssm get-parameters-by-path \
   done
 printf 'DEPLOYMENT_VERSION=%s\n' "$IMAGE" >>"$TMP_FILE"
 mv "$TMP_FILE" "$ENV_FILE"
+
+# 1b. Free disk before pull. Running containers and named volumes are left
+# alone. Unused-image prune with -af is required here: the post-cutover
+# dangling-only prune is too late when the disk is already full. Never prune
+# volumes. Never force-remove the active or candidate containers beyond the
+# cutover/rollback flow below.
+echo "=== Disk before cleanup ==="
+df -h
+docker system df || true
+
+echo "Removing overnight backup leftovers from /tmp (already on S3 + Google Drive)..."
+rm -rf /tmp/aws-backup-2026-09-23 /tmp/aws-backup-2026-09-23.tar.gz
+
+echo "Pruning stopped containers, unused images, and build cache (not volumes)..."
+docker container prune -f
+docker image prune -af
+if docker builder prune --help >/dev/null 2>&1; then
+  docker builder prune -af || true
+fi
+
+echo "=== Disk after cleanup ==="
+df -h
+ROOT_AVAIL="$(df -PB1 / | awk 'NR==2 { print $4 }')"
+MIN_FREE=1610612736 # ~1.5GiB
+if ! [ "${ROOT_AVAIL:-0}" -ge "$MIN_FREE" ] 2>/dev/null; then
+  echo "Refusing to pull images: root filesystem has ${ROOT_AVAIL:-unknown} bytes free; need at least ${MIN_FREE} (~1.5GiB)." >&2
+  exit 1
+fi
 
 # 2. Pull the immutable images.
 aws ecr get-login-password --region "$REGION" |
