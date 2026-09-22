@@ -9,6 +9,7 @@ const {
   CONTRACT_PUBLIC_SESSION_COOKIE_NAMES,
   CONTRACT_PUBLIC_SESSION_COOKIE_PATH,
   CONTRACT_PUBLIC_SESSION_TTL_MS,
+  contractPublicRedirectUrl,
   contractPublicSessionLogOutcome,
   createContractPublicSession,
   isContractPublicSessionSegment,
@@ -252,6 +253,38 @@ test("the sign exchange route mints a hash-only session, sets the purpose cookie
     assert.equal(logs.join("\n").includes("bearer-token-secret"), false, "access logging never sees the raw token");
   } finally {
     console.info = originalInfo;
+  }
+});
+
+test("agreement redirects use the public origin, not the container bind address", async () => {
+  const internal = "https://0.0.0.0:3000/api/public/contracts/sign/not-real/session?utm_source=email";
+  const signTarget = contractPublicRedirectUrl("/sign", internal, "https://www.rive.work");
+  assert.equal(signTarget.href, "https://www.rive.work/sign?utm_source=email");
+  const reviewTarget = contractPublicRedirectUrl("/review", internal, "https://dev.rive.work/");
+  assert.equal(reviewTarget.origin, "https://dev.rive.work");
+  assert.equal(reviewTarget.pathname, "/review");
+  assert.equal(reviewTarget.search, "?utm_source=email");
+  const local = contractPublicRedirectUrl("/sign", "http://localhost/api/public/contracts/sign/not-real/session", "");
+  assert.equal(local.origin, "http://localhost");
+
+  const previous = process.env.APP_URL;
+  process.env.APP_URL = "https://www.rive.work";
+  try {
+    prisma.contractReviewLink.findUnique = async () => null;
+    prisma.contractPublicSession = { create: async () => ({}), updateMany: async () => ({}), update: async () => ({}), findUnique: async () => null };
+    const signResponse = await signExchangeGet(
+      new NextRequest(internal),
+      { params: Promise.resolve({ token: "not-real" }) },
+    );
+    assert.equal(signResponse.headers.get("location"), "https://www.rive.work/sign?utm_source=email");
+    const reviewResponse = await reviewExchangeGet(
+      new NextRequest("https://0.0.0.0:3000/api/public/contracts/review/not-real/session?ref=mail"),
+      { params: Promise.resolve({ token: "not-real" }) },
+    );
+    assert.equal(reviewResponse.headers.get("location"), "https://www.rive.work/review?ref=mail");
+  } finally {
+    if (previous === undefined) delete process.env.APP_URL;
+    else process.env.APP_URL = previous;
   }
 });
 

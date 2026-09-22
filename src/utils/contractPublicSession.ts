@@ -172,6 +172,21 @@ export function readContractPublicSessionToken(
  * forwarded proto the TLS terminator sets) and always in production, matching
  * the workspace-session convention.
  */
+/**
+ * Build a browser redirect for a public agreement link.
+ *
+ * Behind the TLS proxy, `request.url` is the container bind address
+ * (`https://0.0.0.0:3000`). A Location copied from that origin sends the
+ * browser off the site. Use the configured public origin, and keep only the
+ * incoming query string so attribution survives without the bearer token.
+ */
+export function contractPublicRedirectUrl(path: string, requestUrl: string, appUrl = process.env.APP_URL): URL {
+  const configured = typeof appUrl === "string" ? appUrl.trim() : "";
+  const target = new URL(path, configured || requestUrl);
+  target.search = new URL(requestUrl).search;
+  return target;
+}
+
 export function contractPublicSessionIsSecure(request: { url: string; headers: Headers }): boolean {
   try {
     if (new URL(request.url).protocol === "https:") return true;
