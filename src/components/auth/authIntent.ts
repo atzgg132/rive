@@ -13,6 +13,12 @@ export const AUTH_PATHS: Record<AuthView, string> = {
   forgot: "/forgot-password",
 };
 
+export const AUTH_TITLES: Record<AuthView, string> = {
+  login: "Log in — Rive",
+  register: "Create your free account — Rive",
+  forgot: "Reset your password — Rive",
+};
+
 export const emptyAuthParams: AuthParams = {
   email: "",
   next: "",
