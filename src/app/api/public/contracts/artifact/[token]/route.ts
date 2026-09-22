@@ -12,6 +12,7 @@ import {
 } from "@/utils/contracts";
 import {
   contractArtifactLinkProblem,
+  contractPublicRedirectUrl,
   contractPublicSessionLogOutcome,
   contractPublicSessionMessage,
   createContractPublicSession,
@@ -173,8 +174,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     }
     const session = await createContractPublicSession(prisma, { link: link!, purpose: "artifact" });
     logAccess(req, requestId, link, "session_exchanged", { revoked: false, expired: false });
-    const target = new URL("/api/public/contracts/artifact/session", req.url);
-    const response = NextResponse.redirect(target, 303);
+    const response = NextResponse.redirect(contractPublicRedirectUrl("/api/public/contracts/artifact/session", req.url), 303);
     setContractPublicSessionCookie(req, response, { purpose: "artifact", token: session.token, expiresAt: session.expiresAt });
     return response;
   } catch (error) {
