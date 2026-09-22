@@ -87,19 +87,19 @@ export default function PortfolioInquiryConversionDialog({ inquiry, open, onOpen
       <DialogContent className="max-w-2xl">
         <div className="flex flex-col gap-5">
           <div className="pr-8">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><BriefcaseBusiness className="h-5 w-5" /></div>
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-none bg-primary/10 text-primary"><BriefcaseBusiness className="h-5 w-5" /></div>
             <DialogTitle className="text-xl font-extrabold">Turn this enquiry into work</DialogTitle>
             <DialogDescription className="mt-1.5 leading-6">Choose exactly which Client should own this relationship. Rive will create one unscheduled follow-up Task, then open Start Engagement for the Project, milestone, and optional Agreement or invoice.</DialogDescription>
           </div>
 
-          <div className="rounded-2xl border border-border bg-muted/35 p-4">
+          <div className="rounded-none border border-border bg-muted/35 p-4">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Visitor message · read-only</p>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{inquiry.message}</p>
           </div>
 
           <section className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-black"><UserRound className="h-4 w-4 text-primary" /> Client</div>
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1" role="group" aria-label="Client choice">
+            <div className="grid grid-cols-2 gap-2 rounded-none bg-muted p-1" role="group" aria-label="Client choice">
               <Button type="button" variant={clientMode === "new" ? "default" : "ghost"} onClick={() => setClientMode("new")}><UserRound className="h-3.5 w-3.5" /> New client</Button>
               <Button type="button" variant={clientMode === "existing" ? "default" : "ghost"} onClick={() => setClientMode("existing")}><Check className="h-3.5 w-3.5" /> Existing client</Button>
             </div>

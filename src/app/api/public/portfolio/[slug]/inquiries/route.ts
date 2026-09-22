@@ -15,6 +15,7 @@ import {
   validateInquirySubmission,
   type InquiryRateLimitScope,
 } from "@/utils/portfolioInquiries";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /**
  * Public portfolio enquiry submission.
@@ -52,19 +53,17 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   /* Size first, before the body is touched. A caller that announces megabytes
      is refused without allocating any of them, and a caller that lies about
-     Content-Length is caught by the byte check below. */
-  const declaredLength = Number.parseInt(request.headers.get("content-length") || "", 10);
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_INQUIRY_BODY_BYTES) {
-    return NextResponse.json({ success: false, message: "That message is too large." }, { status: 413 });
-  }
+     Content-Length is caught by the streamed read inside readJsonBody. */
+  const parsedBody = await readJsonBody(request, { maxBytes: MAX_INQUIRY_BODY_BYTES });
+  if (!parsedBody.ok) return parsedBody.response;
 
   const ip = getRequestIp(request);
   const visitorKey = hashRequestValue(ip);
 
   /* Layered, durable, and race-safe. Each window is counted in Postgres, so the
      caps hold across restarts and across instances, and two concurrent requests
-     cannot both pass a cap. Checked before the body is parsed so a flood costs
-     the sender their quota rather than costing us the work.
+     cannot both pass a cap. Checked after the byte cap so a flood costs the
+     sender their quota rather than costing us the work.
 
      Every 429 below is byte-identical, and all of these run before the portfolio
      is looked up, so a throttled response never reveals whether the slug or its
@@ -78,22 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const perVisitor = await checkLimit("visitor", slug, visitorKey);
   if (!perVisitor.allowed) return throttled(perVisitor.retryAfterSeconds);
 
-  const raw = await request.text().catch(() => null);
-  if (raw === null) {
-    return NextResponse.json({ success: false, message: "Please complete every field with valid details." }, { status: 400 });
-  }
-  if (Buffer.byteLength(raw, "utf8") > MAX_INQUIRY_BODY_BYTES) {
-    return NextResponse.json({ success: false, message: "That message is too large." }, { status: 413 });
-  }
-
-  let body: unknown = null;
-  try {
-    body = raw ? JSON.parse(raw) : null;
-  } catch {
-    return NextResponse.json({ success: false, message: "Please complete every field with valid details." }, { status: 400 });
-  }
-
-  const validation = validateInquirySubmission(body);
+  const validation = validateInquirySubmission(parsedBody.body);
   // A honeypot hit is thanked and dropped. No record, no mail, no hint that the
   // field is what gave it away.
   if (!validation.ok && validation.reason === "honeypot") return NextResponse.json({ success: true });

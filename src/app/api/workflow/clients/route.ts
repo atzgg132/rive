@@ -5,6 +5,20 @@ import { getSessionUser } from "@/utils/userAuth";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { buildPagination, paginationOffset, parsePagination } from "@/lib/pagination";
+import { normalizeEmailAddress } from "@/lib/email-address";
+import { readJsonBody } from "@/utils/apiBoundary";
+
+type ClientMutationBody = {
+  id?: string;
+  name?: string;
+  email?: unknown;
+  phone?: string | null;
+  company?: string | null;
+  website?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  tags?: string[];
+};
 
 // GET /api/workflow/clients
 export async function GET(req: NextRequest) {
@@ -156,9 +170,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const { name, email, phone, company, website, address, notes, tags } = await req.json();
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { name, email, phone, company, website, address, notes, tags } = parsedBody.body as ClientMutationBody;
     if (!name) {
       return NextResponse.json({ success: false, message: "Client name is required." }, { status: 400 });
+    }
+    const hasEmail = typeof email === "string" ? email.trim().length > 0 : email !== undefined && email !== null;
+    const normalizedEmail = hasEmail ? normalizeEmailAddress(email) : null;
+    if (hasEmail && !normalizedEmail) {
+      return NextResponse.json({ success: false, message: "Use a valid client email." }, { status: 400 });
     }
 
     // Pick random colors for avatar
@@ -169,7 +190,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: session.userId,
         name,
-        email: email || null,
+        email: normalizedEmail,
         phone: phone || null,
         company: company || null,
         website: website || null,
@@ -214,9 +235,16 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const { id, name, email, phone, company, website, address, notes, tags } = await req.json();
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { id, name, email, phone, company, website, address, notes, tags } = parsedBody.body as ClientMutationBody;
     if (!id || !name) {
       return NextResponse.json({ success: false, message: "Client ID and name are required." }, { status: 400 });
+    }
+    const hasEmail = typeof email === "string" ? email.trim().length > 0 : email !== undefined && email !== null;
+    const normalizedEmail = hasEmail ? normalizeEmailAddress(email) : null;
+    if (hasEmail && !normalizedEmail) {
+      return NextResponse.json({ success: false, message: "Use a valid client email." }, { status: 400 });
     }
 
     const existing = await prisma.client.findFirst({ where: { id, userId: session.userId } });
@@ -228,7 +256,7 @@ export async function PUT(req: NextRequest) {
       where: { id },
       data: {
         name,
-        email: email || null,
+        email: normalizedEmail,
         phone: phone || null,
         company: company || null,
         website: website || null,

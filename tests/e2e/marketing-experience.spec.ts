@@ -308,6 +308,33 @@ test.describe("institution marketing experience", () => {
     expect(clip).toBe("static");
   });
 
+  test("cookie and privacy policies describe first-party analytics truthfully", async ({ page }) => {
+    await page.goto("/cookies", { waitUntil: "load" });
+    await expect(page.locator("body")).toContainText("Last updated · September 17, 2026");
+    await expect(page.locator("body")).toContainText("Rive uses first-party analytics stored in Rive's own database. We do not use Vercel Analytics, advertising pixels, or cross-site tracking cookies.");
+    await expect(page.locator("body")).toContainText("rive_anonymous_id");
+    await expect(page.locator("body")).toContainText("expire when your browser session ends");
+    await expect(page.locator("body")).not.toContainText("no persistent cookies");
+    await expect(page.locator("body")).not.toContainText("cookieless");
+
+    await page.goto("/privacy", { waitUntil: "load" });
+    await expect(page.locator("body")).toContainText("Usage analytics — First-party page and product events, including the route visited, a browser-session identifier, acquisition tags, referrer origin and path, browser user agent, and the signed-in account ID when applicable. These records are not advertising profiles and are not shared with advertisers.");
+    await expect(page.locator("body")).not.toContainText("screen resolution");
+    await expect(page.locator("body")).toContainText("Usage analytics are first-party and stored on Rive's AWS infrastructure");
+    await expect(page.locator("body")).toContainText("The database is private, the application host does not accept inbound SSH, and operator access uses authenticated AWS sessions recorded in the AWS audit trail.");
+    await expect(page.locator("body")).not.toContainText("operator access is least-privilege");
+  });
+
+  test("robots.txt points to the sitemap and keeps token routes out of search", async ({ page }) => {
+    const response = await page.goto("/robots.txt", { waitUntil: "domcontentloaded" });
+    expect(response?.status()).toBe(200);
+    const body = await response?.text();
+    expect(body).toContain("Sitemap: https://www.rive.work/sitemap.xml");
+    for (const path of ["/invoice/", "/review/", "/sign/", "/api/", "/admin"]) {
+      expect(body).toContain(`Disallow: ${path}`);
+    }
+  });
+
   test("marketing metadata and organization schema describe Rive", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveTitle("Rive — Multiple clients. One clear picture.");

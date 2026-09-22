@@ -13,6 +13,12 @@ import {
 
 export { zohoBooksAvailable };
 
+// Server-side outbound caps: token calls, Books API calls, and revocations
+// each get their own budget so a hung Zoho endpoint can't pin a request.
+const ZOHO_OAUTH_TIMEOUT_MS = 10_000;
+const ZOHO_API_TIMEOUT_MS = 15_000;
+const ZOHO_REVOKE_TIMEOUT_MS = 5_000;
+
 type ZohoCredentials = {
   accessToken: string;
   refreshToken: string;
@@ -93,6 +99,7 @@ export async function exchangeZohoCode(code: string, accountsServer?: string | n
       redirect_uri: settings.redirectUri,
       grant_type: "authorization_code",
     }),
+    signal: AbortSignal.timeout(ZOHO_OAUTH_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`Zoho token exchange failed (${response.status}).`);
   const payload = await response.json() as {
@@ -125,6 +132,7 @@ async function refresh(connectionId: string, credentials: ZohoCredentials): Prom
       client_secret: settings.clientSecret,
       grant_type: "refresh_token",
     }),
+    signal: AbortSignal.timeout(ZOHO_OAUTH_TIMEOUT_MS),
   });
   const payload = await response.json() as { access_token?: string; expires_in?: number; api_domain?: string; error?: string };
   if (!response.ok || !payload.access_token) throw new Error(payload.error || "Zoho authorization was revoked.");
@@ -167,7 +175,10 @@ async function zohoFetch<T>(
   const perform = (token: string) => {
     const url = new URL(`/books/v3/${path.replace(/^\//, "")}`, credentials.apiDomain);
     for (const [key, value] of Object.entries(params || {})) url.searchParams.set(key, value);
-    return fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+    return fetch(url, {
+      headers: { Authorization: `Zoho-oauthtoken ${token}` },
+      signal: AbortSignal.timeout(ZOHO_API_TIMEOUT_MS),
+    });
   };
 
   let response = await perform(credentials.accessToken);
@@ -328,6 +339,7 @@ export async function revokeZohoCredentials(encryptedCredentials: string): Promi
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ token }),
+      signal: AbortSignal.timeout(ZOHO_REVOKE_TIMEOUT_MS),
     });
   } catch (error) {
     console.error("Zoho token revocation failed; local disconnect still proceeds:", error);

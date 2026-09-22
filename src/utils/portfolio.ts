@@ -1,5 +1,6 @@
 import { EMBED_PROVIDERS, parseEmbedInput, type EmbedProvider } from "@/utils/portfolioEmbeds";
 import { MANAGED_IMAGE_URL, MANAGED_MEDIA_URL, MAX_MEDIA_PER_PROJECT } from "@/utils/portfolioMedia";
+import { isValidEmailAddress, normalizeEmailAddress } from "@/lib/email-address";
 
 export type PortfolioMediaKind = "image" | "video" | "audio" | "document" | "embed";
 
@@ -489,6 +490,7 @@ export function mergePortfolioContent(value: unknown): PortfolioContent {
     bio: clearLegacyStarterCopy(input.bio),
     location: clearLegacyStarterCopy(input.location),
     availability: clearLegacyStarterCopy(input.availability),
+    contactEmail: normalizeEmailAddress(input.contactEmail) || "",
     social: Array.isArray(input.social) ? input.social : DEFAULT_PORTFOLIO_CONTENT.social,
     projects: Array.isArray(input.projects)
       ? input.projects.map((project) => {
@@ -856,7 +858,7 @@ export function validatePortfolioContent(value: unknown): string | null {
       if (item.visibility !== undefined && item.visibility !== "public" && item.visibility !== "private") return "Testimonial visibility is invalid.";
     }
   }
-  if (input.contactEmail !== undefined && (typeof input.contactEmail !== "string" || input.contactEmail.length > 320 || (input.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.contactEmail)))) return "Enter a valid contact email.";
+  if (input.contactEmail !== undefined && (typeof input.contactEmail !== "string" || (input.contactEmail.trim() && !isValidEmailAddress(input.contactEmail)))) return "Enter a valid contact email.";
   /* A short, uppercased, letter-spaced line in the hero. Capped tightly because
      the constraint here is the layout, not storage — a paragraph in this slot
      wraps over the headline on every template. */

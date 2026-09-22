@@ -3,13 +3,17 @@ import { prisma } from "@/utils/db";
 import { verifyPassword, generateUserToken, setSessionCookie, hashPassword, passwordNeedsUpgrade, isGooglePlaceholderPassword } from "@/utils/userAuth";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
-import { sendLoginSuccessEmail } from "@/utils/email";
 import { hashRequestValue } from "@/utils/contracts";
 import { isEmailVerificationSatisfied } from "@/utils/emailVerification";
+import { buildLoginSuccessEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json().catch(() => ({}));
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { email, password } = parsedBody.body;
     const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     if (!normalizedEmail || typeof password !== "string" || !password) {
       return NextResponse.json({ success: false, message: "Missing email or password." }, { status: 400 });
@@ -59,7 +63,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await sendLoginSuccessEmail(user.email);
+    if (getEmailProvider() !== "disabled") {
+      const outboxId = await enqueueEmail(buildLoginSuccessEmail(user.email)).catch(() => null);
+      if (outboxId) {
+        await processEmailOutbox({ jobId: outboxId }).catch((mailError) => {
+          console.error("Immediate sign-in notice attempt failed:", mailError);
+        });
+      }
+    }
 
     const token = generateUserToken(user.id, user.email, user.plan, user.sessionVersion);
 

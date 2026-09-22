@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 const COVERAGE_OPTIONS = new Set(["undecided", "external", "none"]);
 
@@ -30,10 +31,9 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
-    if (!body) {
-      return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
-    }
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
 
     const coverage = clean(body.coverage, 24).toLowerCase();
     if (!COVERAGE_OPTIONS.has(coverage)) {

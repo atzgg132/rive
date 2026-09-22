@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { findValidAuthToken } from "@/utils/authTokens";
 import { hashPassword } from "@/utils/userAuth";
-import { sendPasswordChangedEmail } from "@/utils/email";
+import { buildPasswordChangedEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +14,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Too many attempts. Please wait and try again." }, { status: 429 });
     }
 
-    const body = await req.json();
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const token = typeof body.token === "string" ? body.token : "";
     const password = typeof body.password === "string" ? body.password : "";
     if (password.length < 8) {
@@ -24,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "This reset link is invalid or has expired." }, { status: 400 });
     }
 
-    const changed = await prisma.$transaction(async (transaction) => {
+    const outboxId = await prisma.$transaction(async (transaction) => {
       const claimed = await transaction.authToken.updateMany({
         where: { id: resetToken.id, usedAt: null, expiresAt: { gt: new Date() } },
         data: { usedAt: new Date() },
@@ -39,14 +43,18 @@ export async function POST(req: NextRequest) {
         where: { userId: resetToken.userId, type: "password_reset", usedAt: null },
         data: { usedAt: new Date() },
       });
-      return true;
+      return enqueueEmail(buildPasswordChangedEmail(resetToken.email), transaction);
     });
 
-    if (!changed) {
+    if (!outboxId) {
       return NextResponse.json({ success: false, message: "This reset link has already been used." }, { status: 409 });
     }
 
-    await sendPasswordChangedEmail(resetToken.email);
+    if (getEmailProvider() !== "disabled") {
+      await processEmailOutbox({ jobId: outboxId }).catch((mailError) => {
+        console.error("Immediate password-changed email attempt failed:", mailError);
+      });
+    }
     return NextResponse.json({ success: true, message: "Your password has been updated. You can now sign in." });
   } catch (error) {
     console.error("Reset password error:", error);

@@ -192,7 +192,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
               setStatus(filter.key);
               setPage(1);
             }}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${status === filter.key ? "bg-primary text-primary-foreground shadow-sm" : "border border-border bg-card text-muted-foreground hover:text-foreground"}`}
+            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${status === filter.key ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:text-foreground"}`}
           >
             {filter.label}
             {count > 0 && <span className="ml-1.5 tabular-nums opacity-70">{count}</span>}
@@ -209,12 +209,12 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
         <Button
           type="button"
           onClick={() => setSelected(null)}
-          className="inline-flex w-fit items-center gap-1.5 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground"
+          className="inline-flex w-fit items-center gap-1.5 rounded-none text-xs font-bold text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to all enquiries
         </Button>
 
-        <article className="rounded-2xl border border-border bg-card shadow-sm">
+        <article className="rounded-none border border-border bg-card shadow-card">
           <header className="flex flex-col gap-3 border-b border-border p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
@@ -241,7 +241,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
           </header>
 
           {selected.notificationStatus === "failed" && (
-            <p role="alert" className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-5 py-3.5 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100 sm:px-6">
+            <p role="alert" className="flex items-start gap-2 border-b border-warning/25 bg-warning/10 px-5 py-3.5 text-xs leading-5 text-warning sm:px-6">
               <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 <strong className="font-bold">This enquiry never reached your email.</strong> Rive kept the message here, so nothing was lost.
@@ -260,8 +260,8 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
           </div>
 
           {selected.convertedAt ? (
-              <div className="border-t border-emerald-200 bg-emerald-50/70 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/20 sm:p-6">
-              <div className="flex items-start gap-3"><BriefcaseBusiness className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /><div className="min-w-0"><p className="text-sm font-bold text-emerald-950 dark:text-emerald-100">This enquiry is connected to your workspace.</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">{selected.convertedClient ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/clients/${encodeURIComponent(selected.convertedClient.id)}`}>{selected.convertedClient.name}<ExternalLink className="h-3 w-3" /></a> : null}{selected.convertedProjectId ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/projects/${encodeURIComponent(selected.convertedProjectId)}?from=inquiry&inquiryId=${encodeURIComponent(selected.id)}`}>{selected.convertedProjectTitle || "Open Project"}<ExternalLink className="h-3 w-3" /></a> : null}{selected.followUpTaskId ? <a className="inline-flex items-center gap-1 underline" href={selected.convertedProjectId ? `/workflow/projects/${encodeURIComponent(selected.convertedProjectId)}?from=inquiry&inquiryId=${encodeURIComponent(selected.id)}#follow-up-task-${encodeURIComponent(selected.followUpTaskId)}` : "/calendar#planning-queue"}>Follow-up Task<ExternalLink className="h-3 w-3" /></a> : null}{!selected.convertedProjectId ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/start-engagement?inquiryId=${encodeURIComponent(selected.id)}`}>Start the engagement<ExternalLink className="h-3 w-3" /></a> : null}</div>{selected.followUpTaskTitle ? <p className="mt-2 text-xs text-emerald-800/80 dark:text-emerald-200/80">{selected.followUpTaskTitle} · unscheduled</p> : null}</div></div>
+              <div className="border-t border-success/25 bg-success/10 p-5 sm:p-6">
+              <div className="flex items-start gap-3"><BriefcaseBusiness className="mt-0.5 h-4 w-4 shrink-0 text-success" /><div className="min-w-0"><p className="text-sm font-bold text-success">This enquiry is connected to your workspace.</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold text-success">{selected.convertedClient ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/clients/${encodeURIComponent(selected.convertedClient.id)}`}>{selected.convertedClient.name}<ExternalLink className="h-3 w-3" /></a> : null}{selected.convertedProjectId ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/projects/${encodeURIComponent(selected.convertedProjectId)}?from=inquiry&inquiryId=${encodeURIComponent(selected.id)}`}>{selected.convertedProjectTitle || "Open Project"}<ExternalLink className="h-3 w-3" /></a> : null}{selected.followUpTaskId ? <a className="inline-flex items-center gap-1 underline" href={selected.convertedProjectId ? `/workflow/projects/${encodeURIComponent(selected.convertedProjectId)}?from=inquiry&inquiryId=${encodeURIComponent(selected.id)}#follow-up-task-${encodeURIComponent(selected.followUpTaskId)}` : "/calendar#planning-queue"}>Follow-up Task<ExternalLink className="h-3 w-3" /></a> : null}{!selected.convertedProjectId ? <a className="inline-flex items-center gap-1 underline" href={`/workflow/start-engagement?inquiryId=${encodeURIComponent(selected.id)}`}>Start the engagement<ExternalLink className="h-3 w-3" /></a> : null}</div>{selected.followUpTaskTitle ? <p className="mt-2 text-xs text-success/80">{selected.followUpTaskTitle} · unscheduled</p> : null}</div></div>
             </div>
           ) : (
             <div className="border-t border-border bg-muted/20 p-5 sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-foreground">Ready to follow up?</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Convert this prospect into one Client and one unscheduled follow-up Task. Start Engagement will create the Project when you are ready.</p></div><Button type="button" onClick={() => setConversionOpen(true)} disabled={selected.status === "spam"}><BriefcaseBusiness className="h-3.5 w-3.5" /> Convert to work</Button></div></div>
@@ -270,7 +270,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
           <footer className="flex flex-wrap gap-2 border-t border-border p-5 sm:p-6">
             <a
               href={mailtoHref}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-sm transition hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-none bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-card transition hover:opacity-90"
             >
               <CornerUpLeft className="h-3.5 w-3.5" /> Reply by email
             </a>
@@ -279,7 +279,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                 type="button"
                 disabled={Boolean(pendingAction)}
                 onClick={() => void act(selected.id, "replied", "Marked as replied")}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-none border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
               >
                 <Check className="h-3.5 w-3.5" /> Mark replied
               </Button>
@@ -288,7 +288,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
               type="button"
               disabled={Boolean(pendingAction)}
               onClick={() => void act(selected.id, selected.status === "new" ? "read" : "unread", selected.status === "new" ? "Marked as read" : "Marked as unread")}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-none border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
             >
               {selected.status === "new" ? <MailOpen className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}
               {selected.status === "new" ? "Mark read" : "Mark unread"}
@@ -298,7 +298,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                 type="button"
                 disabled={Boolean(pendingAction)}
                 onClick={() => void act(selected.id, "restore", "Moved back to your inbox")}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-none border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
               >
                 <Inbox className="h-3.5 w-3.5" /> Move to inbox
               </Button>
@@ -308,7 +308,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                   type="button"
                   disabled={Boolean(pendingAction)}
                   onClick={() => void act(selected.id, "archived", "Archived")}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-none border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground disabled:opacity-60"
                 >
                   <Archive className="h-3.5 w-3.5" /> Archive
                 </Button>
@@ -316,7 +316,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                   type="button"
                   disabled={Boolean(pendingAction)}
                   onClick={() => void act(selected.id, "spam", "Marked as spam")}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-destructive disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-none border border-border bg-card px-4 py-2.5 text-xs font-bold text-destructive disabled:opacity-60"
                 >
                   <Ban className="h-3.5 w-3.5" /> Mark spam
                 </Button>
@@ -346,7 +346,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search name, email, or message"
-            className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary"
+            className="pl-9"
           />
         </label>
       </div>
@@ -354,7 +354,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
       {filters}
 
       {notificationFailures > 0 && (
-        <p role="alert" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+        <p role="alert" className="flex items-start gap-2 rounded-none border border-warning/25 bg-warning/10 px-3.5 py-3 text-xs leading-5 text-warning">
           <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {notificationFailures} enquiry notification{notificationFailures === 1 ? "" : "s"} could not be delivered to your email address. Nothing was
           lost — {notificationFailures === 1 ? "the message is" : "those messages are"} listed here.
@@ -364,7 +364,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
       {loading ? (
         <div className="flex flex-col gap-2.5">
           {[0, 1, 2].map((index) => (
-            <div key={index} className="rounded-2xl border border-border bg-card p-4">
+            <div key={index} className="rounded-none border border-border bg-card p-4">
               <Skeleton className="h-3.5 w-40" />
               <Skeleton className="mt-3 h-3 w-full" />
               <Skeleton className="mt-2 h-3 w-2/3" />
@@ -372,10 +372,10 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
           ))}
         </div>
       ) : error ? (
-        <section role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+        <section role="alert" className="rounded-none border border-destructive/30 bg-destructive/5 p-6 text-center">
           <h3 className="text-sm font-bold text-destructive">Your enquiries could not be loaded</h3>
           <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-muted-foreground">{error}</p>
-          <Button onClick={() => void load()} className="mt-4 rounded-xl bg-destructive px-4 py-2 text-xs font-bold text-white">
+          <Button onClick={() => void load()} className="mt-4 rounded-none bg-destructive px-4 py-2 text-xs font-bold text-destructive-foreground">
             <RefreshCw className="mr-1.5 inline h-3.5 w-3.5" /> Try again
           </Button>
         </section>
@@ -400,7 +400,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                     type="button"
                     disabled={detailLoading}
                     onClick={() => void openInquiry(inquiry.id)}
-                    className={`w-full items-start rounded-2xl border p-4 text-left !whitespace-normal transition hover:border-primary/50 disabled:opacity-60 ${inquiry.status === "new" ? "border-primary/30 bg-primary/[0.04]" : "border-border bg-card"}`}
+                    className={`w-full items-start rounded-none border p-4 text-left !whitespace-normal transition hover:border-primary/50 disabled:opacity-60 ${inquiry.status === "new" ? "border-primary/30 bg-primary/[0.04]" : "border-border bg-card"}`}
                   >
                     <div className="flex w-full min-w-0 flex-col gap-1.5">
                       <div className="flex w-full flex-wrap items-center justify-between gap-2">
@@ -433,7 +433,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                   type="button"
                   disabled={page === 1 || loading}
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:opacity-40"
+                  className="rounded-none border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:opacity-40"
                 >
                   Previous
                 </Button>
@@ -441,7 +441,7 @@ export default function PortfolioInquiriesPanel({ onUnreadChange }: { onUnreadCh
                   type="button"
                   disabled={!hasMore || loading}
                   onClick={() => setPage((current) => current + 1)}
-                  className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:opacity-40"
+                  className="rounded-none border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:opacity-40"
                 >
                   Next
                 </Button>

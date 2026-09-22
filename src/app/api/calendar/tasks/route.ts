@@ -4,6 +4,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { isDateOnly, isValidTimeZone } from "@/utils/calendar";
 import { getRequestIp, rateLimit } from "@/utils/rateLimit";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -27,8 +28,9 @@ export async function POST(req: NextRequest) {
   if (!rateLimit(`calendar-task-create:${session.userId}:${getRequestIp(req)}`, 120, 60 * 60 * 1000)) {
     return NextResponse.json({ success: false, message: "Too many tasks created. Please try again later." }, { status: 429 });
   }
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") return NextResponse.json({ success: false, message: "A valid request body is required." }, { status: 400 });
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if (!title) return NextResponse.json({ success: false, message: "Task title is required." }, { status: 400 });
   if (title.length > 200) return NextResponse.json({ success: false, message: "Task title must be 200 characters or fewer." }, { status: 400 });
@@ -44,9 +46,9 @@ export async function POST(req: NextRequest) {
       title,
       description: typeof body.description === "string" ? body.description.trim() || null : null,
       projectId,
-      priority: ["low", "medium", "high", "urgent"].includes(body.priority) ? body.priority : "medium",
+      priority: typeof body.priority === "string" && ["low", "medium", "high", "urgent"].includes(body.priority) ? body.priority : "medium",
       dueDate: dueDateValue,
-      estimatedMinutes: Number.isInteger(body.estimatedMinutes) && body.estimatedMinutes > 0 ? Math.min(body.estimatedMinutes, 1440) : null,
+      estimatedMinutes: typeof body.estimatedMinutes === "number" && Number.isInteger(body.estimatedMinutes) && body.estimatedMinutes > 0 ? Math.min(body.estimatedMinutes, 1440) : null,
       billable: body.billable === true,
     },
   });
@@ -56,8 +58,9 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") return NextResponse.json({ success: false, message: "A valid request body is required." }, { status: 400 });
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const id = typeof body.id === "string" ? body.id : "";
   const existing = await prisma.task.findFirst({ where: { id, userId: session.userId } });
   if (!existing) return NextResponse.json({ success: false, message: "Task not found." }, { status: 404 });

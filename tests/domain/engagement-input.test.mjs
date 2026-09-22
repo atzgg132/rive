@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EngagementInputError, parseInquiryConversionInput, parseStartEngagementInput } from "../../src/utils/engagements.ts";
 
+function isoDaysFromToday(days) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 const base = {
   flowId: "flow_1234567890abcdef",
   entryPoint: "workspace",
@@ -24,7 +30,7 @@ test("parses an Agreement plus invoice with a positive decimal amount", () => {
     entryPoint: "onboarding",
     client: { mode: "existing", id: "client_123" },
     scopeMode: "agreement",
-    invoice: { amount: "1250.50", dueDate: "2026-09-20" },
+    invoice: { amount: "1250.50", dueDate: isoDaysFromToday(14) },
   });
   assert.deepEqual(parsed.client, { mode: "existing", id: "client_123" });
   assert.equal(parsed.invoice?.amount, 1250.5);
@@ -60,6 +66,31 @@ test("inquiry conversion requires an explicit client choice and preserves the re
     () => parseInquiryConversionInput({ client: { mode: "existing", id: "" } }),
     (error) => error instanceof EngagementInputError && error.code === "missing_client",
   );
+});
+
+test("new-client email is normalized when valid and rejected when malformed", () => {
+  const parsed = parseStartEngagementInput({
+    ...base,
+    client: { mode: "new", name: "Acme", email: "  Hello@Acme.IO " },
+  });
+  assert.equal(parsed.client.mode, "new");
+  assert.equal(parsed.client.email, "hello@acme.io");
+
+  for (const bad of ["jj.jkj@.", "not-an-email", "a@@b.com", "client@localhost"]) {
+    assert.throws(
+      () => parseStartEngagementInput({ ...base, client: { mode: "new", name: "Acme", email: bad } }),
+      (error) => error instanceof EngagementInputError && error.code === "invalid_client_email",
+      bad,
+    );
+    assert.throws(
+      () => parseInquiryConversionInput({ client: { mode: "new", name: "Acme", email: bad } }),
+      (error) => error instanceof EngagementInputError && error.code === "invalid_client_email",
+      bad,
+    );
+  }
+
+  const blank = parseStartEngagementInput({ ...base, client: { mode: "new", name: "Acme", email: "   " } });
+  assert.equal(blank.client.email, null);
 });
 
 test("engagement works without dates: milestone and deadline are independent and optional", () => {

@@ -9,6 +9,7 @@ import {
   type PortfolioInquiryNotificationStatus,
   type PortfolioInquiryStatus,
 } from "@/utils/portfolioInquiries";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /**
  * One enquiry: read it, or move it through its lifecycle.
@@ -151,8 +152,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
   const { id } = await params;
 
-  const body = await req.json().catch(() => null);
-  const action = (body as { action?: unknown } | null)?.action;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const action = parsedBody.body.action;
   if (!isAction(action)) {
     return NextResponse.json(
       { success: false, message: `Choose one of these actions: ${ACTIONS.join(", ")}.` },

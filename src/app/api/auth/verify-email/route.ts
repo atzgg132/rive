@@ -3,10 +3,13 @@ import { prisma } from "@/utils/db";
 import { generateUserToken, setSessionCookie } from "@/utils/userAuth";
 import { recordProductEvent, PRODUCT_EVENTS } from "@/utils/productEvents";
 import { recordActivationEvent, ACTIVATION_EVENTS } from "@/utils/activation";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const token = typeof body?.token === "string" ? body.token.trim() : "";
     if (!token || token.length > 256) {
       return NextResponse.json({ success: false, code: "INVALID_TOKEN", message: "This verification link is invalid or incomplete." }, { status: 400 });

@@ -7,6 +7,10 @@ import { prisma } from "@/utils/db";
  * derived label. A scheduler can call this globally; workspace reads call it
  * for one user so overdue state is also correct during local development.
  */
+export function presentedInvoiceStatus(status: string, dueDate: Date | null, now = new Date()): string {
+  return (status === "sent" || status === "viewed") && dueDate && dueDate < now ? "overdue" : status;
+}
+
 export async function refreshOverdueInvoices(userId?: string): Promise<number> {
   const now = new Date();
   const candidates = await prisma.invoice.findMany({

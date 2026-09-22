@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Kicker, Select, Textarea } from "@/components/ui";
+import { isValidEmailAddress } from "@/lib/email-address";
 
 type ClientOption = { id: string; name: string; email?: string | null };
 export type StartEngagementInquiry = {
@@ -194,7 +195,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
       if (inquiry && (clientMode !== "existing" || clientId !== inquiry.convertedClient.id)) return "The converted Client is locked to this enquiry.";
       if (clientMode === "existing" && !clientId) return "Choose an existing client.";
       if (clientMode === "new" && !clientName.trim()) return "Add the client name.";
-      if (clientMode === "new" && clientEmail.trim() && !/^\S+@\S+\.\S+$/.test(clientEmail.trim())) return "Use a valid client email.";
+      if (clientMode === "new" && clientEmail.trim() && !isValidEmailAddress(clientEmail)) return "Use a valid client email.";
     }
     if (step === 1) {
       if (!projectTitle.trim()) return "Add the project name.";

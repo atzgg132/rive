@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendContactMessageEmail } from "@/utils/email";
+import { buildContactMessageEmail, getEmailProvider } from "@/utils/email";
+import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
+import { prisma } from "@/utils/db";
+import { logger, requestLogContext } from "@/utils/logger";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { hashRequestValue } from "@/utils/contracts";
 import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
+import { normalizeEmailAddress } from "@/lib/email-address";
+import { readJsonBody } from "@/utils/apiBoundary";
+import { CONTACT_SUBJECTS } from "@/content/marketing/resources";
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const allowedSubjects = new Set([
-  "General Inquiry",
-  "Partnership",
-  "Press",
-  "Feedback",
-  "Bug Report",
-]);
+const allowedSubjects = new Set<string>(CONTACT_SUBJECTS);
 
 const limits = PUBLIC_FORM_RATE_LIMITS.contact;
 
@@ -34,21 +33,22 @@ export async function POST(request: NextRequest) {
   if (!await durableRateLimit("contact:global", limits.global.limit, limits.global.windowMs)) return throttled;
   if (!await durableRateLimit(`contact:${hashRequestValue(ip)}`, limits.ip.limit, limits.ip.windowMs)) return throttled;
 
-  const body = await request.json().catch(() => null);
+  const parsedBody = await readJsonBody(request, { allowEmpty: true });
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const gate = evaluatePublicFormGate(body);
   // Same 200 a real send would return. No mail, no hint which check fired.
   if (!gate.ok) return accepted();
 
   const name = typeof body?.name === "string" ? body.name.trim() : "";
-  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const email = normalizeEmailAddress(body?.email) || "";
   const subject = typeof body?.subject === "string" ? body.subject : "";
   const message = typeof body?.message === "string" ? body.message.trim() : "";
 
   if (
     name.length < 2 ||
     name.length > 120 ||
-    !emailPattern.test(email) ||
-    email.length > 320 ||
+    !email ||
     !allowedSubjects.has(subject) ||
     message.length < 10 ||
     message.length > 5_000
@@ -63,12 +63,29 @@ export async function POST(request: NextRequest) {
     return throttled;
   }
 
-  const result = await sendContactMessageEmail({ name, email, subject, message });
-  if (!result.sent) {
-    return NextResponse.json(
-      { success: false, message: "Your message could not be delivered. Email hello@rive.work directly." },
-      { status: 503 },
-    );
+  const userAgent = request.headers.get("user-agent")?.slice(0, 300) || null;
+  const queued = await prisma.$transaction(async (tx) => {
+    const record = await tx.contactMessage.create({
+      data: {
+        name,
+        email,
+        subject,
+        message,
+        ipHash: hashRequestValue(ip),
+        userAgent,
+      },
+      select: { id: true },
+    });
+    const outboxId = await enqueueEmail(buildContactMessageEmail({ name, email, subject, message }), tx);
+    await tx.contactMessage.update({ where: { id: record.id }, data: { outboxId } });
+    return { id: record.id, outboxId };
+  });
+
+  if (getEmailProvider() !== "disabled") {
+    const context = requestLogContext(request);
+    await processEmailOutbox({ jobId: queued.outboxId }).catch((error) => {
+      logger.warn("contact_message_delivery_deferred", { ...context, error });
+    });
   }
 
   return accepted();

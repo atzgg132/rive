@@ -665,7 +665,15 @@ async function mockRestylePublic(page: Page) {
         },
       });
     }
-    if (pathname === "/api/public/contracts/sign/restyle-token" && request.method() === "GET") {
+    // Bearer entry points exchange the link for a session cookie and land on
+    // the clean page — emulate the exchange handler's redirect.
+    if (pathname === "/api/public/contracts/sign/restyle-token/session" && request.method() === "GET") {
+      return route.fulfill({ status: 303, headers: { location: `/sign${new URL(request.url()).search}` } });
+    }
+    if (pathname === "/api/public/contracts/review/restyle-token/session" && request.method() === "GET") {
+      return route.fulfill({ status: 303, headers: { location: `/review${new URL(request.url()).search}` } });
+    }
+    if (pathname === "/api/public/contracts/sign/session" && request.method() === "GET") {
       return json(route, {
         success: true, mode: signMode, demo: true, downloadUrl: signDownloadUrl,
         contract: {
@@ -685,17 +693,17 @@ async function mockRestylePublic(page: Page) {
         consent: { version: "2026-08-03-v2", text: "I confirm that I have read and approve this exact Agreement version, and that I am authorised to act for myself or the named organisation. I consent to Rive recording my typed-name acceptance, the displayed timestamp, and the associated acceptance evidence. I understand that this record describes the method used and is not an OTP or identity-verification result." },
       });
     }
-    if (pathname === "/api/public/contracts/sign/restyle-token" && request.method() === "POST") {
+    if (pathname === "/api/public/contracts/sign/session" && request.method() === "POST") {
       const body = request.postDataJSON() as { typedName?: unknown; consentAccepted?: unknown; action?: unknown };
       if (body.action === "decline") return json(route, { success: true, declined: true, message: "The recorded-acceptance request was declined and the sender has been notified." });
       if (body.typedName !== "Restyle Client" || body.consentAccepted !== true) return json(route, { success: false, message: "The acceptance details are incomplete." }, 400);
       signMode = "completed";
       signStatus = "executed";
       signerStatus = "signed";
-      signDownloadUrl = "/api/public/contracts/artifact/restyle-artifact";
+      signDownloadUrl = "/api/public/contracts/sign/session/artifact";
       return json(route, { success: true, alreadySigned: false, completed: true, artifactHash: "restyle-artifact-hash", downloadUrl: signDownloadUrl, message: "Both parties have recorded acceptance. The accepted Agreement is ready." });
     }
-    if (pathname === "/api/public/contracts/review/restyle-token" && request.method() === "GET") {
+    if (pathname === "/api/public/contracts/review/session" && request.method() === "GET") {
       return json(route, {
         success: true, mode: reviewMode,
         contract: {
@@ -712,7 +720,7 @@ async function mockRestylePublic(page: Page) {
         },
       });
     }
-    if (pathname === "/api/public/contracts/review/restyle-token" && request.method() === "POST") {
+    if (pathname === "/api/public/contracts/review/session" && request.method() === "POST") {
       const body = request.postDataJSON() as { action?: unknown; authorName?: string; authorEmail?: string; sectionKey?: string | null; body?: string };
       if (body.action === "approve") {
         reviewMode = "read_only";
@@ -811,6 +819,8 @@ for (const theme of ["light", "dark"] as const) {
   test(`restyle capture sign ${theme}`, async ({ page }, testInfo) => {
     await captureRestyle(page, theme, "sign", "/sign/restyle-token", "public", async (capturePage) => {
       await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+      // The bearer link was exchanged: the token must not survive in the URL.
+      expect(new URL(capturePage.url()).pathname).toBe("/sign");
       const recordButton = capturePage.getByRole("button", { name: "Record acceptance" });
       await expect(recordButton).toBeDisabled();
       await expect(capturePage.getByRole("checkbox")).toBeVisible();
@@ -823,6 +833,7 @@ for (const theme of ["light", "dark"] as const) {
   test(`restyle capture review ${theme}`, async ({ page }, testInfo) => {
     await captureRestyle(page, theme, "review", "/review/restyle-token", "public", async (capturePage) => {
       await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
+      expect(new URL(capturePage.url()).pathname).toBe("/review");
       await expect(capturePage.getByRole("button", { name: /Looks good/ })).toBeVisible();
       await expect(capturePage.getByRole("textbox").first()).toHaveValue("Restyle Client");
     }, testInfo);

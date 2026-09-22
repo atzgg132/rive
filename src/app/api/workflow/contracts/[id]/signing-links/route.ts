@@ -10,6 +10,7 @@ import {
   hashAccessToken,
 } from "@/utils/contracts";
 import { getSessionUser } from "@/utils/userAuth";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 function appUrl(): string {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -24,8 +25,10 @@ export async function POST(
     const session = await getSessionUser(request);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const body = await request.json().catch(() => null) as { role?: unknown; sendEmail?: unknown } | null;
-    const role = body?.role === "client" ? "client" : body?.role === "owner" ? "owner" : "";
+    const parsedBody = await readJsonBody(request);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body as { role?: unknown; sendEmail?: unknown };
+    const role = body.role === "client" ? "client" : body.role === "owner" ? "owner" : "";
     if (!role) return NextResponse.json({ success: false, message: "Choose the client or owner acceptance link." }, { status: 400 });
 
     const contract = await prisma.contract.findFirst({
@@ -48,7 +51,7 @@ export async function POST(
     const tokenHash = hashAccessToken(token);
     const expiresAt = new Date(Date.now() + CONTRACT_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
     const signUrl = `${appUrl()}/sign/${encodeURIComponent(token)}`;
-    const shouldEmail = body?.sendEmail === true;
+    const shouldEmail = body.sendEmail === true;
     let outboxId = "";
     await prisma.$transaction(async (tx) => {
       await tx.contractReviewLink.updateMany({

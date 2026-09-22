@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/utils/db";
 import {
@@ -17,29 +18,40 @@ import {
 } from "@/utils/contracts";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { sendContractVoidRequestedEmail } from "@/utils/email";
+import {
+  contractPublicSessionLogOutcome,
+  contractPublicSessionMessage,
+  contractVoidLinkProblem,
+  isContractPublicSessionSegment,
+  readContractPublicSessionToken,
+  resolveContractPublicSession,
+} from "@/utils/contractPublicSession";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 // Client-party entry to the two-party void flow. The signer reaches this via
 // their existing sign-type acceptance link; the link resolves to the signer
 // whose `role` is the requesting/confirming party. Self-confirmation is blocked:
-// a confirmer's role must differ from `voidRequestedByRole`.
+// a confirmer's role must differ from `voidRequestedByRole`. The reserved
+// "session" segment resolves the same link through the acceptance-purpose
+// public-session cookie so the page can act without holding the raw token.
+
+const LINK_INCLUDE = {
+  contract: { include: { client: { select: { name: true, email: true } }, user: { select: { name: true, email: true } }, signers: { select: { id: true, role: true, name: true, email: true } } } },
+  signer: true,
+} satisfies Prisma.ContractReviewLinkInclude;
 
 async function resolveLink(token: string) {
   return prisma.contractReviewLink.findUnique({
     where: { tokenHash: hashAccessToken(token) },
-    include: {
-      contract: { include: { client: { select: { name: true, email: true } }, user: { select: { name: true, email: true } }, signers: { select: { id: true, role: true, name: true, email: true } } } },
-      signer: true,
-    },
+    include: LINK_INCLUDE,
   });
 }
 
-function invalidLink(link: Awaited<ReturnType<typeof resolveLink>>): string | null {
-  if (!link || !["sign", "void"].includes(link.type)) return "Acceptance link not found.";
-  if (link.revokedAt) return "This acceptance link has been revoked.";
-  if (link.expiresAt <= new Date()) return "This acceptance link has expired. Ask the sender to reissue it.";
-  if (!link.signer) return "This acceptance link is incomplete.";
-  if (link.contract.status !== "executed") return "This Agreement is not eligible for voiding through this link.";
-  return null;
+async function resolveLinkById(id: string) {
+  return prisma.contractReviewLink.findUnique({
+    where: { id },
+    include: LINK_INCLUDE,
+  });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -47,8 +59,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   try {
     assertContractsEnabled();
     const { token } = await params;
-    const link = await resolveLink(token);
-    const problem = invalidLink(link);
+    let link: Awaited<ReturnType<typeof resolveLink>> | Awaited<ReturnType<typeof resolveLinkById>>;
+    if (isContractPublicSessionSegment(token)) {
+      const resolved = await resolveContractPublicSession(prisma, {
+        purpose: "acceptance",
+        token: readContractPublicSessionToken(req, "acceptance"),
+      });
+      if (!resolved.ok) {
+        logContractPublicLinkAccess({
+          request: req,
+          requestId,
+          purpose: "acceptance",
+          contractId: resolved.session?.contractId || null,
+          versionId: resolved.session?.versionId || null,
+          outcome: contractPublicSessionLogOutcome(resolved.reason),
+          revoked: resolved.reason === "revoked" || resolved.reason === "link_revoked" ? true : null,
+          expired: resolved.reason === "expired" || resolved.reason === "link_expired" ? true : null,
+          rateLimited: false,
+        });
+        return NextResponse.json(
+          { success: false, message: contractPublicSessionMessage("acceptance") },
+          { status: ["expired", "revoked", "link_expired", "link_revoked"].includes(resolved.reason) ? 410 : 401 },
+        );
+      }
+      link = await resolveLinkById(resolved.session.linkId);
+    } else {
+      link = await resolveLink(token);
+    }
+    const problem = contractVoidLinkProblem(link);
     if (problem) {
       logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
       return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
@@ -58,7 +96,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link!.contractId, versionId: link!.versionId, outcome: "rate_limited", revoked: false, expired: false, rateLimited: true });
       return NextResponse.json({ success: false, message: "Too many void attempts. Try again later." }, { status: 429 });
     }
-    const body = await req.json().catch(() => null) as { action?: unknown; note?: unknown } | null;
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
     const action = typeof body?.action === "string" ? body.action : "";
     const note = typeof body?.note === "string" ? body.note.trim().slice(0, 2_000) : "";
     const contract = link!.contract;

@@ -35,3 +35,18 @@ provider "aws" {
     }
   }
 }
+
+# Route53 health-check metrics exist only in us-east-1; the public-readiness
+# alarms and their SNS destination live behind this alias.
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = {
+      Project   = "rive"
+      ManagedBy = "terraform"
+      Region    = var.aws_region
+    }
+  }
+}

@@ -89,7 +89,7 @@ export default function PortfolioFirstRun({ onGoTo }: { onGoTo: (section: Studio
   if (isDismissed) return null;
 
   return (
-    <section data-portfolio-first-run className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <section data-portfolio-first-run className="rounded-none border border-border bg-card p-5 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-primary">
@@ -106,7 +106,7 @@ export default function PortfolioFirstRun({ onGoTo }: { onGoTo: (section: Studio
           aria-label="Hide this for now"
           title="Hide this for now"
           data-portfolio-first-run-dismiss
-          className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-muted-foreground transition hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
+          className="-mr-1 -mt-1 shrink-0 rounded-none p-1.5 text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </Button>
@@ -114,14 +114,14 @@ export default function PortfolioFirstRun({ onGoTo }: { onGoTo: (section: Studio
 
       <ol className="mt-4 grid gap-3 sm:grid-cols-3">
         {STEPS.map((step, index) => (
-          <li key={step.id} className="flex flex-col rounded-xl border border-border bg-background p-4">
+          <li key={step.id} className="flex flex-col rounded-none border border-border bg-background p-4">
             <span className="text-xs font-bold tabular-nums text-primary">{index + 1}</span>
             <span className="mt-1 text-sm font-semibold text-foreground">{step.title}</span>
             <span className="mt-1 flex-1 text-xs leading-5 text-muted-foreground">{step.detail}</span>
             <Button
               type="button"
               onClick={() => onGoTo(step.section)}
-              className="group mt-3 inline-flex items-center gap-1.5 self-start rounded-lg text-xs font-bold text-primary hover:underline"
+              className="group mt-3 inline-flex items-center gap-1.5 self-start rounded-none text-xs font-bold text-primary hover:underline"
             >
               {step.cta} <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
             </Button>
@@ -130,7 +130,7 @@ export default function PortfolioFirstRun({ onGoTo }: { onGoTo: (section: Studio
       </ol>
 
       {/* Shown as an example, never written into their content. */}
-      <details className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
+      <details className="mt-4 rounded-none border border-border bg-muted/40 p-4">
         <summary className="cursor-pointer text-xs font-bold text-foreground">What a strong project entry reads like</summary>
         <dl className="mt-3 grid gap-2.5 text-xs leading-5 sm:grid-cols-2">
           <div><dt className="font-semibold text-foreground">Title</dt><dd className="text-muted-foreground">A calmer checkout for Acme</dd></div>

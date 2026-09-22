@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  adminTotpGate,
   base32Encode,
   generateTotpSecret,
+  isProductionAdminEnvironment,
+  isUsableTotpSecret,
   totpCode,
   verifyTotp,
 } from "../../src/utils/adminTotp.ts";
@@ -62,4 +65,48 @@ test("verifyTotp rejects malformed codes and secrets without throwing", () => {
   assert.equal(verifyTotp("abcdef", secret), false);
   assert.equal(verifyTotp("", secret), false);
   assert.equal(verifyTotp("123456", "!!!"), false);
+});
+
+test("production admin environments are exactly prod and production", () => {
+  for (const env of ["prod", "production", "PROD", "Production", "  prod  "]) {
+    assert.equal(isProductionAdminEnvironment(env), true, env);
+  }
+  for (const env of ["dev", "test", "local", "development", "staging", "preview", "prod2", "", undefined, null]) {
+    assert.equal(isProductionAdminEnvironment(env), false, String(env));
+  }
+});
+
+test("isUsableTotpSecret requires a base32 value that decodes to real key material", () => {
+  assert.equal(isUsableTotpSecret(generateTotpSecret()), true);
+  assert.equal(isUsableTotpSecret(RFC_SECRET), true);
+  // Whitespace, separators, and lowercase still decode — that is by design so
+  // operators can paste from an authenticator export.
+  assert.equal(isUsableTotpSecret("gezd gnBV-GY3TQOJQ=gezdgnbvgy3tqojq"), true);
+  for (const bad of ["", "   ", "====", "A", "not-valid!!!", "ABC0DEF1", "88888888", undefined, null]) {
+    assert.equal(isUsableTotpSecret(bad), false, String(bad));
+  }
+});
+
+test("adminTotpGate fails closed in production whenever no usable secret exists", () => {
+  for (const env of ["prod", "production"]) {
+    assert.equal(adminTotpGate(env, undefined), "unavailable", env);
+    assert.equal(adminTotpGate(env, ""), "unavailable", env);
+    assert.equal(adminTotpGate(env, "   "), "unavailable", env);
+    assert.equal(adminTotpGate(env, "not-valid!!!"), "unavailable", env);
+    assert.equal(adminTotpGate(env, "A"), "unavailable", env);
+    assert.equal(adminTotpGate(env, generateTotpSecret()), "required", env);
+  }
+});
+
+test("adminTotpGate outside production keeps password-only only when nothing is configured", () => {
+  for (const env of ["dev", "test", "local", "development", "staging", "", undefined, null]) {
+    assert.equal(adminTotpGate(env, undefined), "not_required", String(env));
+    assert.equal(adminTotpGate(env, ""), "not_required", String(env));
+    assert.equal(adminTotpGate(env, "   "), "not_required", String(env));
+    // A configured-but-broken secret must never fall back to password-only,
+    // in any environment.
+    assert.equal(adminTotpGate(env, "not-valid!!!"), "unavailable", String(env));
+    assert.equal(adminTotpGate(env, "A"), "unavailable", String(env));
+    assert.equal(adminTotpGate(env, generateTotpSecret()), "required", String(env));
+  }
 });

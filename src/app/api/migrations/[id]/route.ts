@@ -11,6 +11,7 @@ import { isEditable, loadSession, transition } from "@/utils/migration/session";
 import { MIGRATION_EVENTS, recordMigrationEvent } from "@/utils/migration/analytics";
 import { isValidIsoCurrency } from "@/lib/migration/normalize/money";
 import { dispatchMigrationWork } from "@/utils/migration/dispatch";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /**
  * A single migration: read its full state, or record a review decision.
@@ -272,12 +273,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     );
   }
 
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return NextResponse.json({ success: false, message: "Invalid request body." }, { status: 400 });
-  }
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
 
-  const updates = body as Record<string, unknown>;
+  const updates = parsedBody.body;
   let manualMappingCount = 0;
 
   // Per-source overrides: classification, column mappings, date formats,

@@ -16,6 +16,7 @@ import {
 } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 function clean(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -142,8 +143,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const session = await getSessionUser(req);
     if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     const { id } = await params;
-    const body = await req.json().catch(() => null) as Record<string, unknown> | null;
-    if (!body) return NextResponse.json({ success: false, message: "Invalid JSON body." }, { status: 400 });
+    const parsedBody = await readJsonBody(req);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
 
     const existing = await getOwnedContract(session.userId, id);
     if (!existing) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });

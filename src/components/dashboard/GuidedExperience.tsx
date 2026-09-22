@@ -49,6 +49,7 @@ type GuidedExperienceProps = {
   activation: ActivationPlan | null;
   pathname: string;
   onActivationChange: (plan: ActivationPlan) => void;
+  onLayerVisibilityChange?: (active: boolean) => void;
 };
 
 const LAST_GUIDE_STORAGE_KEY = "rive:guide:last";
@@ -146,7 +147,7 @@ function guideIntro(plan: ActivationPlan | null, mode: GuideMode, guideId: Guide
   return "This guide follows the facts in your workspace. It never advances just because you opened a screen.";
 }
 
-export function GuidedExperience({ activation, pathname, onActivationChange }: GuidedExperienceProps) {
+export function GuidedExperience({ activation, pathname, onActivationChange, onLayerVisibilityChange }: GuidedExperienceProps) {
   const router = useRouter();
   const [helpOpen, setHelpOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -381,6 +382,10 @@ export function GuidedExperience({ activation, pathname, onActivationChange }: G
       void recordEvent("started", "automatic", automaticGuideId);
     }
   }, [activation, activeMode, autoDeferred, guideOpen, pathname, recordEvent, rememberGuide]);
+
+  useEffect(() => {
+    onLayerVisibilityChange?.(helpOpen || guideOpen);
+  }, [guideOpen, helpOpen, onLayerVisibilityChange]);
 
   useEffect(() => {
     if (!guideOpen || guideCollapsed || activeGuideId === "orientation") return;

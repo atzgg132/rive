@@ -48,8 +48,8 @@ export default function PrivacyPage() {
                   <li><strong>Email addresses</strong> — When you create an account, use the workspace, or contact us.</li>
                   <li><strong>Account and workspace data</strong> — Information you enter in Rive, such as clients, projects, invoices, expenses, and calendar events.</li>
                   <li><strong>Google account data</strong> — If you sign in with Google or connect Google Calendar. Details are in section 4.</li>
-                  <li><strong>Usage analytics</strong> — Page views, session duration, and navigation patterns (aggregated, not personally linked).</li>
-                  <li><strong>Browser and device information</strong> — Browser type, OS, screen resolution, for product compatibility purposes.</li>
+                  <li><strong>Usage analytics</strong> — First-party page and product events, including the route visited, a browser-session identifier, acquisition tags, referrer origin and path, browser user agent, and the signed-in account ID when applicable. These records are not advertising profiles and are not shared with advertisers.</li>
+                  <li><strong>Browser and device information</strong> — Browser and device category derived from the user agent, for product compatibility purposes.</li>
                   <li><strong>Cookies</strong> — See our <a href="/cookies" className="text-primary hover:underline">Cookie Policy</a> for details.</li>
                 </ul>
                 <p>We do not collect payment details or government IDs. Synced calendar events can include the titles, times, and details you or others put on those events.</p>
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li><strong>Encryption in transit</strong> — The website, APIs, and database connections use TLS (HTTPS in the browser; TLS required to the database).</li>
                   <li><strong>Encryption at rest</strong> — Workspace data is stored in a private, encrypted PostgreSQL database that is not publicly reachable. Google Calendar OAuth access and refresh tokens are encrypted at rest with AES-256-GCM using a dedicated application key, separate from session secrets.</li>
-                  <li><strong>Access limited to the feature</strong> — Google data is used only to provide sign-in or calendar sync. Authenticated workspace queries are scoped to the signed-in account. Production operator access is least-privilege: the database is private, and the application host does not accept inbound SSH.</li>
+                  <li><strong>Access limited to the feature</strong> — Google data is used only to provide sign-in or calendar sync. Authenticated workspace queries are scoped to the signed-in account. The database is private, the application host does not accept inbound SSH, and operator access uses authenticated AWS sessions recorded in the AWS audit trail.</li>
                   <li><strong>Account credentials</strong> — Passwords are stored as salted scrypt hashes, not in plain text. Sessions use signed HttpOnly cookies (Secure in production, SameSite restrictions) rather than tokens exposed to page scripts.</li>
                 </ul>
                 <p>No method of transmission or storage is perfectly secure. We apply these controls as a small SaaS operating on AWS; we do not claim third-party security certifications in this policy.</p>
@@ -94,6 +94,7 @@ export default function PrivacyPage() {
 
               <Section id="third" title="7. Third-party services">
                 <p>We use privacy-respecting infrastructure providers for web hosting and database management. These services process data on our behalf under strict confidentiality terms. Production hosting and the encrypted database run on Amazon Web Services.</p>
+                <p>Usage analytics are first-party and stored on Rive&apos;s AWS infrastructure; no third-party analytics service processes them.</p>
                 <p>If you sign in with Google or connect Google Calendar, Google provides those APIs under Google&apos;s terms. Rive then stores and protects the Google user data described in sections 4 and 5 in order to provide the feature you enabled.</p>
               </Section>
 

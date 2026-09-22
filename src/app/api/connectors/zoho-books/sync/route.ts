@@ -8,6 +8,7 @@ import { createZohoProvider, type ZohoRecord } from "@/lib/migration/adapters/zo
 import { persistProviderRecords } from "@/utils/migration/analyze";
 import { MIGRATION_ENGINE_VERSION } from "@/lib/migration/config";
 import { MIGRATION_EVENTS, recordMigrationEvent } from "@/utils/migration/analytics";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 /**
  * Zoho Books sync: pull read-only data into a Migration Engine import.
@@ -48,7 +49,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Too many synchronization attempts." }, { status: 429 });
   }
 
-  const body = await req.json().catch(() => null);
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const connectionId = typeof body?.connectionId === "string" ? body.connectionId : "";
   const connection = await prisma.connectorConnection.findFirst({
     where: { id: connectionId, userId: session.userId, provider: "zoho_books" },

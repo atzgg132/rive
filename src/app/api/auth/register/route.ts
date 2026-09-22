@@ -13,15 +13,15 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
 import { inferCurrencyFromBrowser, inferCurrencyFromRequest, resolveDisplayCurrency } from "@/lib/currency";
-
-function validEmail(value: unknown): value is string {
-  return typeof value === "string" && /^\S+@\S+\.\S+$/.test(value.trim());
-}
+import { normalizeEmailAddress } from "@/lib/email-address";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const parsedBody = await readJsonBody(req, { allowEmpty: true });
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.body;
+    const email = normalizeEmailAddress(body?.email) || "";
     const name = typeof body?.name === "string" ? body.name.trim().slice(0, 160) : "";
     const password = typeof body?.password === "string" ? body.password : "";
     const inviteToken = typeof body?.inviteToken === "string" ? body.inviteToken.trim() : "";
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, requiresEmailVerification: true, message: "Account created. Check your email to verify your address before entering Rive." }, { status: 201 });
     }
 
-    if (!validEmail(email) || password.length < 8 || !name) {
+    if (!email || password.length < 8 || !name) {
       return NextResponse.json({ success: false, message: "Enter your name, a valid email, and a password of at least 8 characters." }, { status: 400 });
     }
 

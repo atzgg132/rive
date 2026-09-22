@@ -65,6 +65,9 @@ resource "aws_cloudwatch_metric_alarm" "asset_bucket_size" {
     BucketName  = aws_s3_bucket.assets[each.key].id
     StorageType = "StandardStorage"
   }
+
+  alarm_actions = local.ops_alarm_actions
+  ok_actions    = local.ops_alarm_actions
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "assets" {

@@ -36,8 +36,8 @@ import { toast } from "sonner";
 import Portal from "@/components/ui/Portal";
 import {
   addDays as addDaysToDateKey,
+  canonicalTimeZone,
   instantToWallParts,
-  isValidTimeZone,
   supportedTimeZones,
   wallToInstant,
 } from "@/lib/calendar-time";
@@ -160,13 +160,25 @@ function rangeFor(view: View, cursor: Date) {
   return { start, end };
 }
 
+function browserTimeZone(): string {
+  return canonicalTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone) ?? "UTC";
+}
+
 function formatTime(value: string | null, timeZone?: string): string {
   if (!value) return "";
+  const zone = timeZone ? canonicalTimeZone(timeZone) : null;
   return new Intl.DateTimeFormat("en-IN", {
     hour: "numeric",
     minute: "2-digit",
-    ...(timeZone && isValidTimeZone(timeZone) ? { timeZone } : {}),
+    ...(zone ? { timeZone: zone } : {}),
   }).format(new Date(value));
+}
+
+function formatEventDate(event: CalendarEvent): string {
+  const options: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" };
+  const zone = canonicalTimeZone(event.timeZone);
+  if (zone) options.timeZone = zone;
+  return new Date(event.allDay ? `${event.startDate}T12:00:00` : event.startAt || "").toLocaleDateString("en-IN", options);
 }
 
 function sourceLabel(source: string): string {
@@ -322,8 +334,9 @@ export default function CalendarPage() {
     async function loadGuidePreference() {
       const response = await fetch("/api/auth/session").catch(() => null);
       const data = response?.ok ? await response.json().catch(() => null) : null;
-      if (typeof data?.user?.time_zone === "string" && isValidTimeZone(data.user.time_zone)) {
-        setUserTimeZone(data.user.time_zone);
+      if (typeof data?.user?.time_zone === "string") {
+        const userZone = canonicalTimeZone(data.user.time_zone);
+        if (userZone) setUserTimeZone(userZone);
       }
       const key = `rive:calendar-guide:${data?.user?.id || "local"}:v1`;
       setGuideStorageKey(key);
@@ -395,7 +408,7 @@ export default function CalendarPage() {
     setDraftStart(`${String(hour).padStart(2, "0")}:00`);
     // Wrap past midnight — the submit path reads an end ≤ start as next-day.
     setDraftEnd(`${String((hour + 1) % 24).padStart(2, "0")}:00`);
-    setDraftTimeZone(userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+    setDraftTimeZone(userTimeZone || browserTimeZone());
     setDraftTitle("");
     setDraftDescription("");
     setDraftLocation("");
@@ -406,9 +419,7 @@ export default function CalendarPage() {
 
   function openEdit(event: CalendarEvent) {
     if (event.readOnly || ["derived", "task"].includes(event.source)) return;
-    const eventTimeZone = isValidTimeZone(event.timeZone)
-      ? event.timeZone
-      : userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    const eventTimeZone = canonicalTimeZone(event.timeZone) ?? (userTimeZone || browserTimeZone());
     setEditingId(event.id);
     setDraftTitle(event.title);
     setDraftDescription(event.description || "");
@@ -437,7 +448,7 @@ export default function CalendarPage() {
     event.preventDefault();
     setSaving(true);
     try {
-      const timeZone = draftTimeZone || userTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const timeZone = draftTimeZone || userTimeZone || browserTimeZone();
       let payload: Record<string, unknown>;
       if (draftAllDay) {
         payload = {
@@ -543,7 +554,7 @@ export default function CalendarPage() {
           id: taskToSchedule.id,
           scheduledStartAt: startAt!.toISOString(),
           scheduledEndAt: new Date(startAt!.getTime() + estimate * 60000).toISOString(),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          timeZone: browserTimeZone(),
         } : {
           title: taskTitle.trim(),
           priority: taskPriority,
@@ -826,7 +837,7 @@ export default function CalendarPage() {
         <Portal><ModalShell title={selectedEvent.title} onClose={() => setSelectedEvent(null)}>
           <div className="space-y-5">
             <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: selectedEvent.color }} /><span className="text-xs font-black uppercase tracking-wider text-muted-foreground">{sourceLabel(selectedEvent.source)}</span></div>
-            <div className="rounded-none bg-muted p-4"><p className="flex items-center gap-2 text-sm font-bold text-foreground"><Clock3 className="h-4 w-4 text-primary" />{selectedEvent.allDay ? new Date(`${selectedEvent.startDate}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : `${new Date(selectedEvent.startAt!).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", ...(isValidTimeZone(selectedEvent.timeZone) ? { timeZone: selectedEvent.timeZone } : {}) })} · ${formatTime(selectedEvent.startAt, selectedEvent.timeZone)}–${formatTime(selectedEvent.endAt, selectedEvent.timeZone)}`}</p><p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{selectedEvent.timeZone} · {selectedEvent.availability}</p></div>
+            <div className="rounded-none bg-muted p-4"><p className="flex items-center gap-2 text-sm font-bold text-foreground"><Clock3 className="h-4 w-4 text-primary" />{selectedEvent.allDay ? formatEventDate(selectedEvent) : `${formatEventDate(selectedEvent)} · ${formatTime(selectedEvent.startAt, selectedEvent.timeZone)}–${formatTime(selectedEvent.endAt, selectedEvent.timeZone)}`}</p><p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{canonicalTimeZone(selectedEvent.timeZone) ?? selectedEvent.timeZone} · {selectedEvent.availability}</p></div>
             {selectedEvent.description && <div><p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Notes</p><p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{selectedEvent.description}</p></div>}
             {selectedEvent.location && <div><p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Location</p><p className="mt-1 text-sm text-muted-foreground">{selectedEvent.location}</p></div>}
             {(selectedEvent.projectId || selectedEvent.invoiceId || selectedEvent.taskId || selectedEvent.clientId) && <div className="rounded-none border border-info/25 bg-info/10 p-3"><p className="text-xs font-bold text-info">Live-linked to your workspace</p><p className="mt-1 text-xs leading-4 text-info/80">Changes to the source record automatically update this calendar item.</p><div className="mt-2 flex flex-wrap gap-2">{selectedEvent.projectId && <Link href={`/workflow/projects/${selectedEvent.projectId}`} className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open project <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.invoiceId && <Link href="/workflow/revenue" className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open invoices <ArrowRight className="h-3 w-3" /></Link>}{selectedEvent.clientId && !selectedEvent.projectId && <Link href={`/workflow/clients/${selectedEvent.clientId}`} className="inline-flex items-center gap-1 rounded-none bg-card px-2.5 py-1.5 text-xs font-bold text-info">Open client <ArrowRight className="h-3 w-3" /></Link>}</div></div>}

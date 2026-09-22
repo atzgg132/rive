@@ -56,7 +56,7 @@ function contactPayload(overrides: Record<string, unknown> = {}) {
   return {
     name: "Ada Lovelace",
     email: `contact-${randomUUID()}@example.invalid`,
-    subject: "General Inquiry",
+    subject: "Product question",
     message: "I would like to ask about using rive. for my studio.",
     startedAt: humanStartedAt(),
     ...overrides,

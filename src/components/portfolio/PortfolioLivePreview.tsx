@@ -55,10 +55,13 @@ const DEVICE_WIDTH: Record<PreviewDevice, number> = {
   mobile: 390,
 };
 
-const FRAME_RADIUS: Record<PreviewDevice, string> = {
-  desktop: "rounded-lg",
-  tablet: "rounded-xl",
-  mobile: "rounded-[1.75rem]",
+/* The phone bezel keeps a real radius — it is what makes the mobile frame
+   read as a phone — so it is applied as an inline style rather than a radius
+   class. Every named radius resolves to `--radius`, which is 0 in the app. */
+const FRAME_RADIUS: Record<PreviewDevice, string | undefined> = {
+  desktop: undefined,
+  tablet: undefined,
+  mobile: "1.75rem",
 };
 
 /**
@@ -219,19 +222,21 @@ export default function PortfolioLivePreview({
     <div
       className={`flex flex-wrap items-center justify-between gap-2 ${
         inspecting
-          // A real toolbar rather than text floating over a blurred page.
-          ? "shrink-0 rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 shadow-lg sm:px-4"
+          // A real toolbar rather than text floating over a blurred page. The
+          // inspect room inverts the theme — foreground scrim, background
+          // chrome — so it stays legible in light and dark alike.
+          ? "shrink-0 rounded-none border border-background/10 bg-foreground/80 px-3 py-2 shadow-overlay sm:px-4"
           : "mb-3"
       }`}
     >
-      <p className={`flex items-baseline gap-2 text-xs font-bold uppercase tracking-[0.12em] ${inspecting ? "text-white/80" : "text-muted-foreground"}`}>
+      <p className={`flex items-baseline gap-2 text-xs font-bold uppercase tracking-[0.12em] ${inspecting ? "text-background/80" : "text-muted-foreground"}`}>
         {inspecting ? `Inspecting ${device}` : "Live preview"}
         {/* Say so when it is not life-sized, rather than letting someone judge
             type size from a 29% rendering. */}
         {percent < 100 && <span className="font-semibold normal-case tracking-normal opacity-70">{percent}% · {deviceWidth}px wide</span>}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <div className={`flex rounded-xl border p-1 ${inspecting ? "border-white/20 bg-white/10" : "border-border bg-card"}`} role="group" aria-label="Preview size">
+        <div className={`flex rounded-none border p-1 ${inspecting ? "border-background/20 bg-background/10" : "border-border bg-card"}`} role="group" aria-label="Preview size">
           {DEVICES.map(({ key, label, icon: Icon }) => (
             <Button
               key={key}
@@ -240,11 +245,11 @@ export default function PortfolioLivePreview({
               aria-pressed={device === key}
               title={`${label} preview`}
               onClick={() => chooseDevice(key)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold ${
+              className={`inline-flex items-center gap-1.5 rounded-none px-2.5 py-1.5 text-xs font-bold ${
                 device === key
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-primary text-primary-foreground"
                   : inspecting
-                    ? "text-white/70 hover:text-white"
+                    ? "text-background/70 hover:text-background"
                     : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -258,7 +263,7 @@ export default function PortfolioLivePreview({
             href={liveSiteUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-2.5 py-2 text-xs font-bold text-white hover:bg-white/20"
+            className="inline-flex items-center gap-1.5 rounded-none border border-background/20 bg-background/10 px-2.5 py-2 text-xs font-bold text-background hover:bg-background/20"
           >
             <ExternalLink className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Open live site</span>
           </a>
@@ -271,8 +276,8 @@ export default function PortfolioLivePreview({
           aria-label={inspecting ? "Close the full-screen preview" : "Inspect the preview full screen"}
           title={inspecting ? "Close (Esc)" : "Inspect full screen"}
           aria-expanded={inspecting}
-          className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-bold ${
-            inspecting ? "border-white/20 bg-white/10 text-white hover:bg-white/20" : "border-border bg-card text-muted-foreground hover:text-foreground"
+          className={`inline-flex items-center gap-1.5 rounded-none border px-2.5 py-2 text-xs font-bold ${
+            inspecting ? "border-background/20 bg-background/10 text-background hover:bg-background/20" : "border-border bg-card text-muted-foreground hover:text-foreground"
           }`}
         >
           {inspecting ? <X className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
@@ -290,15 +295,16 @@ export default function PortfolioLivePreview({
          a definite height for the free space to come from. */
       className={
         inspecting
-          ? "min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/10 bg-black/30 p-2 sm:p-3"
-          : `overflow-hidden rounded-2xl border border-border bg-muted/40 p-2 sm:p-3 ${frameClassName}`
+          ? "min-h-0 flex-1 overflow-hidden rounded-none border border-background/10 bg-foreground/30 p-2 sm:p-3"
+          : `overflow-hidden rounded-none border border-border bg-muted/40 p-2 sm:p-3 ${frameClassName}`
       }
     >
       <div ref={shellRef} className="relative h-full w-full overflow-hidden">
         <div
-          className={`absolute top-0 origin-top-left overflow-hidden bg-white shadow-xl dark:bg-slate-900 ${FRAME_RADIUS[device]}`}
+          className="absolute top-0 origin-top-left overflow-hidden bg-card shadow-overlay"
           style={{
             width: `${deviceWidth}px`,
+            borderRadius: FRAME_RADIUS[device],
             /* Divided by the scale so the frame still fills the pane once
                shrunk — a scaled-down desktop shows more page, not a
                letterbox. A percentage rather than measured pixels, so it
@@ -317,7 +323,7 @@ export default function PortfolioLivePreview({
                frame whose Escape key cannot reach this overlay. The live
                site, one click away, is the thing to explore properly. */
             tabIndex={-1}
-            className="block h-full w-full border-0 bg-white"
+            className="block h-full w-full border-0 bg-card"
             onLoad={() => {
               readyRef.current = true;
               post();

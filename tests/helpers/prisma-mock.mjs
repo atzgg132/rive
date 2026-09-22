@@ -44,6 +44,7 @@ export const Prisma = {
   PrismaClientKnownRequestError,
   sql: (strings, ...values) => ({ strings, values }),
   JsonNull: null,
+  DbNull: null,
   InputJsonObject: Object,
   InputJsonValue: Object,
   JsonValue: Object,
@@ -73,6 +74,9 @@ function applyUpdate(record, data) {
       record[key] = (Number(record[key]) || 0) + value.increment;
     } else if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && "decrement" in value) {
       record[key] = (Number(record[key]) || 0) - value.decrement;
+    } else if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && value.constructor?.name === "DbNull") {
+      // Prisma.DbNull clears a nullable Json column to SQL NULL.
+      record[key] = null;
     } else {
       record[key] = value;
     }
@@ -86,6 +90,7 @@ function matchFilter(actual, expected) {
     if (Object.hasOwn(expected, "lt")) return actual < expected.lt;
     if (Object.hasOwn(expected, "gt")) return actual > expected.gt;
     if (Object.hasOwn(expected, "in")) return expected.in.includes(actual);
+    if (Object.hasOwn(expected, "not")) return actual !== expected.not;
   }
   return actual === expected;
 }
@@ -111,10 +116,15 @@ export function createPrismaMock() {
     migrationEvent: [],
     user: [],
     portfolioInquiry: [],
+    contactMessage: [],
+    emailSuppression: [],
+    emailDelivery: [],
     emailOutbox: [],
     invoiceEvent: [],
     invoiceDelivery: [],
     contractReviewLink: [],
+    idempotencyRecord: [],
+    rateLimitBucket: [],
   };
 
   let failOnCall = -1; // -1 = never; 0 = first $transaction call; 1 = second
@@ -381,6 +391,73 @@ export function createPrismaMock() {
       },
     },
 
+    /* The durable idempotency table. create() enforces the real
+       @@unique([userId, operation, keyHash]) so claim races surface the same
+       P2002 the production client would raise. */
+    idempotencyRecord: {
+      async create({ data, select } = {}) {
+        const clash = db.idempotencyRecord.find((record) =>
+          record.userId === data.userId
+          && record.operation === data.operation
+          && record.keyHash === data.keyHash);
+        if (clash) {
+          throw new PrismaClientKnownRequestError(
+            "Unique constraint failed on the fields: (`user_id`,`operation`,`key_hash`)",
+            { code: "P2002" },
+          );
+        }
+        const created = row("idempotencyRecord", {
+          status: "processing",
+          response: null,
+          entityType: null,
+          entityId: null,
+          ...data,
+        });
+        db.idempotencyRecord.push(created);
+        return pick(created, select);
+      },
+      async findUnique({ where, select } = {}) {
+        let found = null;
+        if (where?.id) {
+          found = db.idempotencyRecord.find((record) => record.id === where.id);
+        } else if (where?.userId_operation_keyHash) {
+          const key = where.userId_operation_keyHash;
+          found = db.idempotencyRecord.find((record) =>
+            record.userId === key.userId
+            && record.operation === key.operation
+            && record.keyHash === key.keyHash);
+        }
+        return found ? pick(found, select) : null;
+      },
+      async findFirst({ where, select } = {}) {
+        const found = db.idempotencyRecord.find((record) => matchEmailOutbox(record, where || {}));
+        return found ? pick(found, select) : null;
+      },
+      async update({ where, data }) {
+        const record = db.idempotencyRecord.find((candidate) => candidate.id === where.id);
+        if (!record) throw new Error(`idempotencyRecord ${where.id} not found`);
+        applyUpdate(record, data);
+        return { ...record };
+      },
+      async updateMany({ where = {}, data }) {
+        const list = db.idempotencyRecord.filter((record) => matchEmailOutbox(record, where));
+        for (const record of list) applyUpdate(record, data);
+        return { count: list.length };
+      },
+    },
+
+    rateLimitBucket: {
+      async findUnique({ where, select } = {}) {
+        const found = db.rateLimitBucket.find((bucket) => bucket.key === where?.key);
+        return found ? pick(found, select) : null;
+      },
+      async deleteMany({ where = {} } = {}) {
+        const before = db.rateLimitBucket.length;
+        db.rateLimitBucket = db.rateLimitBucket.filter((bucket) => !matchEmailOutbox(bucket, where));
+        return { count: before - db.rateLimitBucket.length };
+      },
+    },
+
     /* Enough of the enquiry table to drive notification settlement, which is
        the one piece of that flow the outbox worker reaches into. Correlation is
        by outboxId, so that is the only filter modelled. */
@@ -407,6 +484,66 @@ export function createPrismaMock() {
         return { count: list.length };
       },
     },
+
+    emailSuppression: {
+      async findUnique({ where, select } = {}) {
+        const record = db.emailSuppression.find((candidate) => candidate.email === where?.email || candidate.id === where?.id);
+        return record ? pick(record, select) : null;
+      },
+      async create({ data, select }) {
+        const created = row("emailSuppression", { source: "ses", ...data });
+        db.emailSuppression.push(created);
+        return pick(created, select);
+      },
+      async upsert({ where, create, update, select } = {}) {
+        const existing = db.emailSuppression.find((candidate) => candidate.email === where?.email);
+        if (existing) {
+          applyUpdate(existing, update || {});
+          return pick(existing, select);
+        }
+        const created = row("emailSuppression", { source: "ses", ...create });
+        db.emailSuppression.push(created);
+        return pick(created, select);
+      },
+    },
+
+    emailDelivery: {
+      async updateMany({ where, data }) {
+        const list = db.emailDelivery.filter((record) => matchEmailOutbox(record, where || {}));
+        for (const record of list) applyUpdate(record, data);
+        return { count: list.length };
+      },
+      async createMany({ data }) {
+        const records = Array.isArray(data) ? data : [data];
+        for (const entry of records) db.emailDelivery.push(row("emailDelivery", entry));
+        return { count: records.length };
+      },
+    },
+
+    contactMessage: {
+      async create({ data, select }) {
+        const created = row("contactMessage", {
+          status: "new",
+          notificationStatus: "queued",
+          notificationError: null,
+          outboxId: null,
+          ...data,
+        });
+        db.contactMessage.push(created);
+        return pick(created, select);
+      },
+      async update({ where, data }) {
+        const record = db.contactMessage.find((candidate) => candidate.id === where.id);
+        if (!record) throw new Error(`contactMessage ${where.id} not found`);
+        applyUpdate(record, data);
+        return { ...record };
+      },
+      async updateMany({ where, data }) {
+        const list = db.contactMessage.filter((record) => matchEmailOutbox(record, where || {}));
+        for (const record of list) applyUpdate(record, data);
+        return { count: list.length };
+      },
+    },
   };
 
   api.$executeRaw = async (query) => {
@@ -419,6 +556,24 @@ export function createPrismaMock() {
   };
   api.$queryRaw = async (query) => {
     const values = query?.values || [];
+    const sql = (query?.strings || []).join("?");
+    if (sql.includes('INSERT INTO "rate_limit_buckets"')) {
+      const [key, resetStamp, nowStamp] = values;
+      const now = new Date(`${String(nowStamp).replace(" ", "T")}Z`);
+      const resetAt = new Date(`${String(resetStamp).replace(" ", "T")}Z`);
+      let bucket = db.rateLimitBucket.find((candidate) => candidate.key === key);
+      if (!bucket || bucket.resetAt <= now) {
+        if (!bucket) {
+          bucket = row("rateLimitBucket", { key, count: 0, resetAt });
+          db.rateLimitBucket.push(bucket);
+        }
+        bucket.count = 1;
+        bucket.resetAt = resetAt;
+      } else {
+        bucket.count += 1;
+      }
+      return [{ count: bucket.count, retry_after: Math.ceil((bucket.resetAt.getTime() - now.getTime()) / 1000) }];
+    }
     const userId = values[0];
     const sequence = db.invoiceNumberSequence.find((row) => row.userId === userId);
     return sequence ? [{ next_number: sequence.nextNumber, prefix: sequence.prefix }] : [];

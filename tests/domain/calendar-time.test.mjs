@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 
 import {
   addDays,
+  canonicalTimeZone,
   instantToWallParts,
   isDateOnly,
   isValidTimeZone,
@@ -81,6 +82,14 @@ test("isValidTimeZone accepts IANA names and rejects garbage", () => {
   assert.equal(isValidTimeZone(""), false);
 });
 
+test("canonicalTimeZone keeps the deprecated Calcutta alias readable but stores Kolkata", () => {
+  assert.equal(canonicalTimeZone("Asia/Calcutta"), KOLKATA);
+  assert.equal(canonicalTimeZone(" asia/calcutta "), KOLKATA);
+  assert.equal(canonicalTimeZone(KOLKATA), KOLKATA);
+  assert.equal(canonicalTimeZone("Mars/Olympus"), null);
+  assert.equal(wallToInstant("2026-03-10", "15:00", "Asia/Calcutta")?.toISOString(), "2026-03-10T09:30:00.000Z");
+});
+
 test("isDateOnly distinguishes all-day and timed inputs", () => {
   assert.equal(isDateOnly("2026-03-10"), true);
   assert.equal(isDateOnly("2026-03-10T15:00"), false);
@@ -95,7 +104,8 @@ test("addDays shifts a date-only string across month boundaries", () => {
 test("supportedTimeZones returns a non-empty IANA list when the runtime supports it", () => {
   const zones = supportedTimeZones();
   assert.ok(zones.length > 100);
-  assert.ok(zones.includes("Asia/Kolkata") || zones.includes("Asia/Calcutta"));
+  assert.ok(zones.includes("Asia/Kolkata"));
+  assert.ok(!zones.includes("Asia/Calcutta"));
 });
 
 test("eventToGooglePayload sends naive dateTime + timeZone, letting the zone carry the wall time", () => {

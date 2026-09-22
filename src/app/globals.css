@@ -159,7 +159,7 @@ section[id] {
 }
 
 /* The public site resolves the shared semantic token space onto the
-   Institution of One palette — warm paper, black ink, rationed signal red.
+   Institution of One palette — warm paper, black ink, rationed registry blue.
    The institution stays on paper under a dark color scheme by design, so the
    same mapping applies under .dark. Semantic token names stay local to this
    subtree so dashboard screenshot baselines stay isolated. */

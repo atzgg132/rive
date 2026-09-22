@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
+import { readJsonBody } from "@/utils/apiBoundary";
 
 const PROVIDER = /^[a-z0-9_-]{2,40}$/;
 const ENTITY = new Set(["clients", "projects", "invoices", "expenses", "payments", "tasks"]);
@@ -23,7 +24,9 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-  const body = await req.json().catch(() => null);
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.body;
   const provider = typeof body?.provider === "string" ? body.provider.trim().toLowerCase() : "";
   const entity = typeof body?.entity === "string" ? body.entity.trim().toLowerCase() : "";
   const name = typeof body?.name === "string" ? body.name.trim().slice(0, 80) : "";

@@ -96,6 +96,7 @@ model User {
   attribution                 UserAttribution?
   invoiceProfile              InvoiceProfile?
   invoiceNumberSequence       InvoiceNumberSequence?
+  idempotencyRecords          IdempotencyRecord[]
 
   @@map("users")
 }
@@ -114,6 +115,26 @@ model AuthToken {
   @@index([email, type, createdAt])
   @@index([expiresAt])
   @@map("auth_tokens")
+}
+
+model IdempotencyRecord {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operation   String
+  keyHash     String   @map("key_hash")
+  requestHash String   @map("request_hash")
+  status      String   @default("processing")
+  response    Json?
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, operation, keyHash])
+  @@index([expiresAt])
+  @@map("idempotency_records")
 }
 
 model EmailOutbox {
@@ -304,6 +325,38 @@ model EmailDelivery {
   @@index([recipient, type, createdAt])
   @@index([status, createdAt])
   @@map("email_deliveries")
+}
+
+model ContactMessage {
+  id                 String    @id @default(uuid())
+  name               String
+  email              String
+  subject            String
+  message            String
+  status             String    @default("new")
+  notificationStatus String    @default("queued") @map("notification_status")
+  notificationError  String?   @map("notification_error")
+  outboxId           String?   @map("outbox_id")
+  ipHash             String?   @map("ip_hash")
+  userAgent          String?   @map("user_agent")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([notificationStatus, createdAt])
+  @@index([email, createdAt])
+  @@map("contact_messages")
+}
+
+model EmailSuppression {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  reason    String
+  source    String   @default("ses")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("email_suppressions")
 }
 
 model Client {
@@ -548,20 +601,25 @@ model ExternalEventMapping {
 }
 
 model CalendarSyncOutbox {
-  id          String    @id @default(uuid())
-  userId      String    @map("user_id")
-  eventId     String?   @map("event_id")
-  operation   String
-  provider    String
-  payload     Json?
-  status      String    @default("pending")
-  attempts    Int       @default(0)
-  availableAt DateTime  @default(now()) @map("available_at")
-  processedAt DateTime? @map("processed_at")
-  lastError   String?   @map("last_error")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  eventId        String?   @map("event_id")
+  operation      String
+  provider       String
+  payload        Json?
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  availableAt    DateTime  @default(now()) @map("available_at")
+  claimedAt      DateTime? @map("claimed_at")
+  leaseId        String?   @map("lease_id")
+  leaseExpiresAt DateTime? @map("lease_expires_at")
+  processedAt    DateTime? @map("processed_at")
+  lastError      String?   @map("last_error")
+  lastResult     String?   @map("last_result")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   @@index([status, availableAt])
+  @@index([status, leaseExpiresAt])
   @@index([userId, eventId])
   @@map("calendar_sync_outbox")
 }
@@ -1210,6 +1268,7 @@ model Contract {
   billingOccurrences       ContractBillingOccurrence[]
   contractSignatures       ContractSignature[]
   projectGenerationRecords ProjectGenerationRecord[]
+  publicSessions           ContractPublicSession[]
 
   @@index([userId, status, updatedAt])
   @@index([clientId, status])
@@ -1232,6 +1291,7 @@ model ContractVersion {
   artifacts                ContractArtifact[]
   comments                 ContractComment[]
   reviewLinks              ContractReviewLink[]
+  publicSessions           ContractPublicSession[]
   projectGenerationRecords ProjectGenerationRecord[]
 
   @@unique([contractId, version])
@@ -1308,11 +1368,32 @@ model ContractReviewLink {
   lastAccessedAt DateTime?         @map("last_accessed_at")
   createdAt      DateTime          @default(now()) @map("created_at")
   comments       ContractComment[]
+  sessions       ContractPublicSession[]
 
   @@index([contractId, type, revokedAt])
   @@index([versionId, type])
   @@index([expiresAt])
   @@map("contract_review_links")
+}
+
+model ContractPublicSession {
+  id             String             @id @default(uuid())
+  tokenHash      String             @unique @map("token_hash")
+  contractId     String             @map("contract_id")
+  contract       Contract           @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  versionId      String?            @map("version_id")
+  version        ContractVersion?   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  linkId         String             @map("link_id")
+  link           ContractReviewLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  purpose        String
+  expiresAt      DateTime           @map("expires_at")
+  revokedAt      DateTime?          @map("revoked_at")
+  lastAccessedAt DateTime?          @map("last_accessed_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  @@index([linkId, purpose])
+  @@index([expiresAt])
+  @@map("contract_public_sessions")
 }
 
 model ContractComment {
@@ -1358,23 +1439,27 @@ model ContractEvent {
 }
 
 model ContractArtifact {
-  id           String          @id @default(uuid())
-  contractId   String          @map("contract_id")
-  contract     Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  versionId    String          @map("version_id")
-  version      ContractVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
-  artifactType String          @map("artifact_type")
-  mimeType     String          @map("mime_type")
-  objectKey    String?         @map("object_key")
-  content      Json?
-  contentHash  String          @map("content_hash")
-  generatedAt  DateTime        @default(now()) @map("generated_at")
+  id              String          @id @default(uuid())
+  contractId      String          @map("contract_id")
+  contract        Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  versionId       String          @map("version_id")
+  version         ContractVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  artifactType    String          @map("artifact_type")
+  mimeType        String          @map("mime_type")
+  storage         String          @default("inline")
+  objectKey       String?         @map("object_key")
+  content         Json?
+  contentBytes    Bytes?          @map("content_bytes")
+  byteSize        Int?            @map("byte_size")
+  rendererVersion String?         @map("renderer_version")
+  contentHash     String          @map("content_hash")
+  generatedAt     DateTime        @default(now()) @map("generated_at")
 
   // One artifact per (contract, version, type) — e.g. a single evidence PDF per
   // accepted version. Defense-in-depth: correctness currently rests on the
   // optimistic signing → executed transaction ordering; this makes a duplicate
   // artifact write impossible even if that ordering ever races.
-  @@unique([contractId, versionId, artifactType], name: "unique_contract_artifact_per_version_type")
+  @@unique([contractId, versionId, artifactType])
   @@index([contractId, generatedAt])
   @@map("contract_artifacts")
 }

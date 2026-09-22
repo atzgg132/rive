@@ -11,6 +11,13 @@ import { GOOGLE_CALENDAR_OAUTH_SCOPES } from "@/utils/googleScopes";
 
 export { googleCalendarAvailable, GOOGLE_CALENDAR_OAUTH_SCOPES };
 
+// Server-side outbound caps: token calls, Calendar API calls, and revocations
+// each get their own budget so a hung Google endpoint can't pin a request or
+// an outbox worker.
+const GOOGLE_OAUTH_TIMEOUT_MS = 10_000;
+const GOOGLE_API_TIMEOUT_MS = 15_000;
+const GOOGLE_REVOKE_TIMEOUT_MS = 5_000;
+
 type GoogleCredentials = {
   accessToken: string;
   refreshToken?: string;
@@ -92,6 +99,7 @@ export async function exchangeGoogleCode(code: string): Promise<GoogleCredential
       redirect_uri: config.redirectUri,
       grant_type: "authorization_code",
     }),
+    signal: AbortSignal.timeout(GOOGLE_OAUTH_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`Google token exchange failed (${response.status}).`);
   const payload = await response.json() as { access_token: string; refresh_token?: string; expires_in: number };
@@ -140,6 +148,7 @@ async function refreshCredentials(connectionId: string, credentials: GoogleCrede
       client_secret: config.clientSecret,
       grant_type: "refresh_token",
     }),
+    signal: AbortSignal.timeout(GOOGLE_OAUTH_TIMEOUT_MS),
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
@@ -176,6 +185,7 @@ async function googleFetch<T>(
   if (credentials.expiresAt < Date.now() + 60_000) credentials = await refreshCredentials(connection.id, credentials);
   const perform = (accessToken: string) => fetch(`https://www.googleapis.com${path}`, {
     ...init,
+    signal: init?.signal ?? AbortSignal.timeout(GOOGLE_API_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
@@ -229,6 +239,7 @@ export async function revokeGoogleCredentials(encryptedCredentials: string): Pro
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ token }),
+      signal: AbortSignal.timeout(GOOGLE_REVOKE_TIMEOUT_MS),
     });
   } catch (error) {
     console.error("Google token revocation failed; local disconnect still proceeds:", error);
@@ -238,6 +249,7 @@ export async function revokeGoogleCredentials(encryptedCredentials: string): Pro
 export async function getGoogleAccount(credentials: GoogleCredentials) {
   const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: { Authorization: `Bearer ${credentials.accessToken}` },
+    signal: AbortSignal.timeout(GOOGLE_API_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error("Could not read the connected Google account.");
   return response.json() as Promise<{ sub: string; email?: string }>;

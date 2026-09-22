@@ -39,6 +39,7 @@ const SCOPED_DIRS = [
   "src/components/currency",
   "src/components/auth",
   "src/components/contracts",
+  "src/components/portfolio",
 ];
 
 const SCOPED_FILES = [
@@ -47,9 +48,20 @@ const SCOPED_FILES = [
   "src/components/RiveLogo.tsx",
 ];
 
+// Narrow carve-outs for the public portfolio surface only. These files are
+// rendered exclusively by the public /p/* routes (and the inert previews that
+// mirror them) and intentionally style against the visitor-facing
+// --portfolio-*/--case-* custom properties plus fixed white-on-accent and
+// media-scrim colors chosen to stay legible over user content. Forcing the
+// workspace tokens there would break the customization Studio sells. Every
+// authenticated Studio/Operate file under src/components/portfolio and
+// src/app/(dashboard)/portfolio stays in scope.
 const EXCLUDED_PREFIXES = [
-  "src/components/portfolio/",
-  "src/app/(dashboard)/portfolio/",
+  "src/components/portfolio/media/",
+  "src/components/portfolio/PortfolioRenderer.tsx",
+  "src/components/portfolio/PortfolioCaseStudy.tsx",
+  "src/components/portfolio/PortfolioInquiryForm.tsx",
+  "src/components/portfolio/PracticeSwitcher.tsx",
 ];
 
 const EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);

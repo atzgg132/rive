@@ -1,17 +1,7 @@
 import crypto from "crypto";
 import { createConnectorOAuthState, verifyConnectorOAuthState } from "@/utils/connectorSecurity";
 
-function encryptionKey(): Buffer {
-  // Deliberately does not fall back to SESSION_SECRET: that secret also signs
-  // sessions and OAuth state, and reusing it here would mean one leaked value
-  // compromises session integrity, OAuth CSRF protection, and calendar/Zoho
-  // token confidentiality all at once. connectorConfig.ts's availability
-  // checks already keep both connectors off without this key configured; this
-  // throw is the defense-in-depth backstop if that's ever bypassed.
-  const secret = process.env.CALENDAR_ENCRYPTION_KEY;
-  if (!secret) {
-    throw new Error("CALENDAR_ENCRYPTION_KEY is required for calendar and connector credential storage.");
-  }
+function keyMaterial(secret: string): Buffer {
   try {
     const decoded = Buffer.from(secret, "base64");
     if (decoded.length === 32) return decoded;
@@ -19,24 +9,57 @@ function encryptionKey(): Buffer {
   return crypto.createHash("sha256").update(secret).digest();
 }
 
+function encryptionKeys(): { id: string; material: Buffer }[] {
+  // Deliberately does not fall back to SESSION_SECRET: that secret also signs
+  // sessions and OAuth state, and reusing it here would mean one leaked value
+  // compromises session integrity, OAuth CSRF protection, and calendar/Zoho
+  // token confidentiality all at once. connectorConfig.ts's availability
+  // checks already keep both connectors off without this key configured; this
+  // throw is the defense-in-depth backstop if that's ever bypassed.
+  const current = process.env.CALENDAR_ENCRYPTION_KEY;
+  if (!current) {
+    throw new Error("CALENDAR_ENCRYPTION_KEY is required for calendar and connector credential storage.");
+  }
+  const previous = process.env.CALENDAR_ENCRYPTION_KEY_PREVIOUS;
+  return [
+    { id: process.env.CALENDAR_ENCRYPTION_KEY_ID || "v1", material: keyMaterial(current) },
+    ...(previous ? [{ id: process.env.CALENDAR_ENCRYPTION_KEY_PREVIOUS_ID || "v1", material: keyMaterial(previous) }] : []),
+  ];
+}
+
 export function encryptCalendarCredentials(value: object): string {
+  const key = encryptionKeys()[0];
+  if (!key) throw new Error("CALENDAR_ENCRYPTION_KEY is required for calendar and connector credential storage.");
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey(), iv);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key.material, iv);
   const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return `${iv.toString("base64url")}.${tag.toString("base64url")}.${encrypted.toString("base64url")}`;
+  return `${key.id}.${iv.toString("base64url")}.${tag.toString("base64url")}.${encrypted.toString("base64url")}`;
 }
 
 export function decryptCalendarCredentials<T>(value: string): T {
-  const [ivValue, tagValue, payloadValue] = value.split(".");
-  if (!ivValue || !tagValue || !payloadValue) throw new Error("Invalid encrypted calendar credentials.");
-  const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(ivValue, "base64url"));
-  decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(payloadValue, "base64url")),
-    decipher.final(),
-  ]);
-  return JSON.parse(decrypted.toString("utf8")) as T;
+  const parts = value.split(".");
+  const versioned = parts.length === 4;
+  const keyId = versioned ? parts[0] : null;
+  const [ivValue, tagValue, payloadValue] = versioned ? parts.slice(1) : parts;
+  if (!ivValue || !tagValue || !payloadValue || (versioned && !keyId)) {
+    throw new Error("Invalid encrypted calendar credentials.");
+  }
+
+  const configuredKeys = encryptionKeys();
+  const keys = keyId ? configuredKeys.filter((key) => key.id === keyId) : configuredKeys;
+  for (const key of keys) {
+    try {
+      const decipher = crypto.createDecipheriv("aes-256-gcm", key.material, Buffer.from(ivValue, "base64url"));
+      decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
+      const decrypted = Buffer.concat([
+        decipher.update(Buffer.from(payloadValue, "base64url")),
+        decipher.final(),
+      ]);
+      return JSON.parse(decrypted.toString("utf8")) as T;
+    } catch {}
+  }
+  throw new Error("Calendar credentials cannot be decrypted with the configured keys.");
 }
 
 export function createCalendarOAuthState(userId: string, returnTo: "/calendar" | "/onboarding" = "/calendar"): string {

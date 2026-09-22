@@ -33,6 +33,7 @@ data "aws_iam_policy_document" "app" {
   statement {
     actions = [
       "ecr:BatchCheckLayerAvailability",
+      "ecr:DescribeRepositories",
       "ecr:GetDownloadUrlForLayer",
       "ecr:BatchGetImage",
     ]
@@ -85,6 +86,22 @@ data "aws_iam_policy_document" "app" {
     sid       = "ObserveMigrationFailures"
     actions   = ["sqs:GetQueueAttributes"]
     resources = [for queue in aws_sqs_queue.migration_dead_letter : queue.arn]
+  }
+
+  statement {
+    sid = "WriteRuntimeLogs"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:DescribeLogStreams",
+    ]
+    resources = flatten([
+      for group in concat(
+        values(aws_cloudwatch_log_group.app),
+        [aws_cloudwatch_log_group.proxy],
+      ) : [group.arn, "${group.arn}:*"]
+    ])
   }
 
   statement {

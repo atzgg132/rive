@@ -8,6 +8,7 @@ import { ensureDefaultCalendar } from "@/utils/calendar";
 import { ensurePrefilledPortfolio } from "@/utils/portfolioProvisioning";
 import { reconcileInvoiceNumberSequence } from "@/utils/invoiceNumber";
 import { createHash } from "node:crypto";
+import { normalizeEmailAddress } from "@/lib/email-address";
 
 type Row = Record<string, string>;
 type Entity = "clients" | "projects" | "invoices" | "expenses" | "unknown";
@@ -311,7 +312,7 @@ export async function POST(req: NextRequest) {
             dataOrigin: "imported",
             userId: session.userId,
             name: name.slice(0, 160),
-            email: /^\S+@\S+\.\S+$/.test(email) ? email : null,
+            email: normalizeEmailAddress(email),
             phone: value(row, ["phone", "phone_number", "mobile"]).slice(0, 80) || null,
             company: value(row, ["company", "company_name", "organization"]).slice(0, 160) || null,
             website: value(row, ["website", "url"]).slice(0, 500) || null,

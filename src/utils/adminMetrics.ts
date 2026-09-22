@@ -17,6 +17,11 @@ import {
 } from "@/utils/funnelDefinitions";
 import { funnelSummaryForUser } from "@/utils/adminFunnelFacts";
 
+/* The funnel aggregates events in memory, so the scan is bounded. When the
+   bound bites, the count in the payload turns the silent undercount into an
+   explicit coverage flag instead of a wrong number. */
+const EVENT_SCAN_LIMIT = 200_000;
+
 type UserRow = {
   id: string;
   email: string;
@@ -199,6 +204,9 @@ export type AdminMetrics = {
       failures: Array<{ phase: string; code: string; count: number }>;
     };
   };
+  coverage: {
+    productEvents: { scanned: number; total: number; truncated: boolean };
+  };
   window: {
     label: "all_customer_accounts";
     signupSparklineDays: number;
@@ -270,6 +278,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     importJobs,
     portfolios,
     events,
+    eventScanTotal,
     productEvents24h,
     failedEmails24h,
     queuedEmails,
@@ -313,8 +322,9 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
       where: { environment, userId: { in: customerIds }, occurredAt: { gte: eventSince } },
       select: { userId: true, eventName: true, module: true, occurredAt: true, properties: true, entityId: true, requestId: true, sessionId: true, source: true },
       orderBy: { occurredAt: "asc" },
-      take: 200_000,
+      take: EVENT_SCAN_LIMIT,
     }),
+    prisma.productEvent.count({ where: { environment, userId: { in: customerIds }, occurredAt: { gte: eventSince } } }),
     prisma.productEvent.count({ where: { environment, occurredAt: { gte: ago24h } } }),
     prisma.emailDelivery.count({ where: { status: { in: ["failed", "delivery_failed"] }, createdAt: { gte: ago24h } } }),
     prisma.emailOutbox.count({ where: { status: { in: ["queued", "processing"] } } }),
@@ -646,6 +656,9 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     retention: { available: retentionDenominatorUsers.length > 0, numerator: retentionNumerator, denominator: retentionDenominatorUsers.length, rate: pct(retentionNumerator, retentionDenominatorUsers.length), definition: "Qualified users active in days 7–13 after signup, among cohorts at least 14 days old." },
     workflowDepth: { averageModules, buckets },
     reliability: { productEvents24h, failedEmails24h, queuedEmails, migration: migrationReliability },
+    coverage: {
+      productEvents: { scanned: events.length, total: eventScanTotal, truncated: eventScanTotal > events.length },
+    },
     window: {
       label: "all_customer_accounts",
       signupSparklineDays: 14,
@@ -663,6 +676,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
         signups: { total: customerUsers.length, last24h: customerUsers.filter((user) => user.createdAt >= ago24h).length, last7d: customerUsers.filter((user) => user.createdAt >= ago7d).length },
         reliability: { productEvents24h, failedEmails24h, queuedEmails },
         quality: qualityData,
+        coverage: { eventScan: { scanned: events.length, total: eventScanTotal } },
       }),
     },
   };
