@@ -9,14 +9,9 @@ import { hashRequestValue } from "@/utils/contracts";
 import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
 import { normalizeEmailAddress } from "@/lib/email-address";
 import { readJsonBody } from "@/utils/apiBoundary";
+import { CONTACT_SUBJECTS } from "@/content/marketing/resources";
 
-const allowedSubjects = new Set([
-  "General Inquiry",
-  "Partnership",
-  "Press",
-  "Feedback",
-  "Bug Report",
-]);
+const allowedSubjects = new Set<string>(CONTACT_SUBJECTS);
 
 const limits = PUBLIC_FORM_RATE_LIMITS.contact;
 

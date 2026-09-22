@@ -1,3 +1,12 @@
+export const CONTACT_SUBJECTS = [
+  "Product question",
+  "Support",
+  "Feedback",
+  "Partnership",
+  "Press",
+  "Other",
+] as const;
+
 export const contactContent = {
   eyebrow: "Contact",
   title: "Talk to the people building Rive.",
@@ -11,7 +20,7 @@ export const contactContent = {
     emailLabel: "Email",
     emailPlaceholder: "you@email.com",
     subjectLabel: "Topic",
-    subjects: ["Product question", "Support", "Feedback", "Partnership", "Press", "Other"],
+    subjects: CONTACT_SUBJECTS,
     messageLabel: "Message",
     messagePlaceholder: "Tell us what you need help with.",
     submitLabel: "Send message",
