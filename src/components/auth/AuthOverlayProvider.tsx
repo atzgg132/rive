@@ -14,6 +14,7 @@ import {
 import { AuthEnterVeil, AuthOverlay } from "@/components/auth/AuthOverlay";
 import {
   AUTH_PATHS,
+  AUTH_TITLES,
   authViewFromPathname,
   authViewFromSearch,
   emptyAuthParams,
@@ -76,6 +77,7 @@ export function AuthOverlayProvider({ children }: { children: ReactNode }) {
     const searchView = authViewFromSearch(window.location.search);
     setView(pathView || searchView);
     setParams(readAuthParams(window.location.search));
+    if (pathView) document.title = AUTH_TITLES[pathView];
   }, []);
 
   useEffect(() => {
@@ -105,7 +107,8 @@ export function AuthOverlayProvider({ children }: { children: ReactNode }) {
     setParams(merged);
     setView(nextView);
     const url = new URL(window.location.href);
-    if (authViewFromPathname(url.pathname)) {
+    const onDedicatedAuth = Boolean(authViewFromPathname(url.pathname));
+    if (onDedicatedAuth) {
       // Already on a dedicated auth route; switch the path in-place without a
       // route transition so the overlay stays stable and animated.
       url.pathname = AUTH_PATHS[nextView];
@@ -123,6 +126,7 @@ export function AuthOverlayProvider({ children }: { children: ReactNode }) {
       return;
     }
     window.history.pushState({ auth: nextView }, "", `${url.pathname}${url.search}${url.hash}`);
+    if (onDedicatedAuth) document.title = AUTH_TITLES[nextView];
   }, [params, router]);
 
   const close = useCallback(() => {
