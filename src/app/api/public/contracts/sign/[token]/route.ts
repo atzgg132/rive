@@ -102,6 +102,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   try {
     assertContractsEnabled();
     const { token } = await params;
+    const ip = getRequestIp(req);
+    const tokenKey = isContractPublicSessionSegment(token)
+      ? hashRequestValue(readContractPublicSessionToken(req, "acceptance") || "missing")
+      : hashAccessToken(token);
+    if (!(await durableRateLimit(`contract-sign-get:${tokenKey}:${hashRequestValue(ip)}`, 60, 60 * 60 * 1000)) || !(await durableRateLimit("contract-sign-get:global", 600, 60 * 60 * 1000))) {
+      logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: null, versionId: null, outcome: "rate_limited", revoked: null, expired: null, rateLimited: true });
+      return NextResponse.json({ success: false, message: "Too many requests. Try again later." }, { status: 429 });
+    }
     const resolved = await resolveRequestLink(req, token);
     if (resolved.session) return sessionFailureResponse(req, requestId, resolved.session);
     const link = resolved.link;

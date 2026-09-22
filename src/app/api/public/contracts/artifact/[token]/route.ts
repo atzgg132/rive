@@ -127,9 +127,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
 
     // Cookie-backed path: /api/public/contracts/artifact/session
     if (isContractPublicSessionSegment(token)) {
+      const ip = getRequestIp(req);
+      const sessionToken = readContractPublicSessionToken(req, "artifact");
+      const tokenKey = hashRequestValue(sessionToken || "missing");
+      if (!(await durableRateLimit(`contract-artifact-get:${tokenKey}:${hashRequestValue(ip)}`, 60, 60 * 60 * 1000)) || !(await durableRateLimit("contract-artifact-get:global", 600, 60 * 60 * 1000))) {
+        logAccess(req, requestId, null, "rate_limited", { revoked: null, expired: null, rateLimited: true });
+        return NextResponse.json({ success: false, message: "Too many download attempts. Try again later." }, { status: 429 });
+      }
       const resolved = await resolveContractPublicSession(prisma, {
         purpose: "artifact",
-        token: readContractPublicSessionToken(req, "artifact"),
+        token: sessionToken,
       });
       if (!resolved.ok) {
         logAccess(req, requestId, null, contractPublicSessionLogOutcome(resolved.reason), {
