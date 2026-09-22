@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
+function isoDaysFromToday(days: number) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function captureBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
@@ -88,7 +94,8 @@ test("creates an Agreement-and-invoice engagement from one three-step composer",
   await page.getByRole("button", { name: /Create editable Agreement draft/ }).click();
   await page.getByRole("checkbox", { name: /Create a draft invoice/ }).check();
   await page.getByLabel("Amount (USD)").fill("1250.50");
-  await page.getByLabel("Invoice due date").fill("2026-09-20");
+  const invoiceDueDate = isoDaysFromToday(14);
+  await page.getByLabel("Invoice due date").fill(invoiceDueDate);
   await expect(page.getByText("Editable Agreement draft", { exact: true })).toBeVisible();
   await expect(page.getByText("Draft invoice", { exact: true })).toBeVisible();
   const createResponse = page.waitForResponse((response) => response.url().includes("/api/workflow/start-engagement") && response.request().method() === "POST");
@@ -102,7 +109,7 @@ test("creates an Agreement-and-invoice engagement from one three-step composer",
     project: { title: "Website redesign", scope: "Design and build the launch site." },
     milestone: { title: "Design approval", dueDate: "2026-09-15" },
     scopeMode: "agreement",
-    invoice: { amount: "1250.50", dueDate: "2026-09-20" },
+    invoice: { amount: "1250.50", dueDate: invoiceDueDate },
   });
   expect(errors, "engagement flow emitted browser errors").toEqual([]);
 });
