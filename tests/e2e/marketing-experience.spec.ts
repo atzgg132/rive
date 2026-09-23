@@ -45,6 +45,9 @@ test.describe("institution marketing experience", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/", { waitUntil: "load" });
     const hero = page.getByTestId("marketing-hero");
+    // "load" can fire before hydration on a busy runner; clicking then gets
+    // the browser's native one-frame hash jump, not the staged scroll.
+    await expect(page.locator("html[data-smooth-anchors='ready']")).toBeAttached();
 
     await hero.getByRole("link", { name: "Read the register" }).click();
 

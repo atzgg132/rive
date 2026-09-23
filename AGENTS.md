@@ -1,7 +1,11 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->
 
 <!-- BEGIN:product-engineering-judgment -->
@@ -28,8 +32,9 @@ Three kinds of branches exist:
   promotion, after dev.rive.work is verified) or `hotfix/` branches only.
   Nothing is committed or pushed to it directly.
 - **`dev`** — staging / integration. Accepts squash-merge PRs from typed work
-  branches only. Pushing `dev` deploys https://dev.rive.work, which runs the
-  same browser suite `main` does. Keep `dev` shippable at all times.
+  branches, and merge-commit PRs from `sync/` back-merges. Pushing `dev`
+  deploys https://dev.rive.work, which runs the same browser suite `main`
+  does. Keep `dev` shippable at all times.
 - **Typed work branches** — `feature/<slug>`, `fix/<slug>`, `chore/<slug>`,
   `hotfix/<slug>`, `docs/<slug>`. Short-lived, branch off `dev`, deleted on
   merge. `sync/<slug>` is reserved for `main` → `dev` back-merges.
@@ -53,8 +58,16 @@ Three kinds of branches exist:
 ### Hotfixes
 
 Branch `hotfix/<slug>` off `main`, PR to `main`, merge-commit. Then back-merge
-so staging never drifts behind production: branch `sync/main-back` off
-`main`, PR to `dev`, squash merge.
+so staging never drifts behind production: branch `sync/<slug>` off `main`,
+PR to `dev`, and **merge-commit it — do not squash**. A squashed back-merge
+copies `main`'s changes under a new SHA without making `main`'s commits
+ancestors of `dev`, so `main...dev` keeps reporting drift and the next
+`dev` → `main` promotion replays the hotfix. After the merge,
+`git rev-list --count origin/dev..origin/main` must be `0`.
+
+Back-merge after every hotfix, before the next one lands. Several hotfixes
+stacked on `main` with no back-merge leave `dev` testing code production no
+longer runs.
 
 ### Rules that do not change
 
@@ -69,12 +82,25 @@ Do not create git worktrees or branches outside the typed set — every branch
 is `feature|fix|chore|hotfix|docs|sync/<slug>` off `dev` (or `main` for
 hotfixes). Tooling sessions get a `chore/` branch like everything else.
 
-### Known gap
+### Enforcement
 
-This repo is private on a plan without GitHub branch protection, so `main`
-and `dev` cannot be technically locked to PR-only. Enforcement is the
-`branch-policy.yml` workflow plus this convention. If direct pushes become a
-problem, GitHub Pro adds required reviews and status checks.
+GitHub repository rulesets enforce the branch model on push; the
+`branch-policy.yml` workflow enforces PR source/target pairs on the PR:
+
+- **main is merge-only** — `main` requires a pull request; no force-push, no
+  deletion.
+- **Prevent deleting the working branch** — `dev` cannot be deleted.
+- **Block every branch that is not main, dev, or a typed work branch** —
+  creating or updating any other ref is rejected (`GH013 … creations being
+  restricted`). Allowed: `main`, `dev`, `feature/**`, `fix/**`, `chore/**`,
+  `hotfix/**`, `docs/**`, `sync/**`. If a push is refused with GH013, fix the
+  branch name; do not edit the ruleset to fit the branch.
+
+No ruleset has a bypass actor. Rulesets and branch policy do not require
+status checks or reviews — a red `Quality` run can still be merged, so read
+CI before merging. Typed branches are deleted automatically on merge
+(`delete_branch_on_merge`); delete any leftover by hand once its PR is merged
+or closed.
 
 ## Screenshot baselines
 
