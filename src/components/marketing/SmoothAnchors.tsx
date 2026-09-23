@@ -63,11 +63,14 @@ export function SmoothAnchors() {
     };
 
     document.addEventListener("click", onClick, true);
+    // Mirrors the auth forms' data-hydrated: tells tests the listener is armed.
+    document.documentElement.dataset.smoothAnchors = "ready";
     window.addEventListener("wheel", stop, { passive: true });
     window.addEventListener("touchstart", stop, { passive: true });
     window.addEventListener("keydown", stop);
     return () => {
       document.removeEventListener("click", onClick, true);
+      delete document.documentElement.dataset.smoothAnchors;
       window.removeEventListener("wheel", stop);
       window.removeEventListener("touchstart", stop);
       window.removeEventListener("keydown", stop);
