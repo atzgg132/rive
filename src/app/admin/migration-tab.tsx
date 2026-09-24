@@ -3,7 +3,7 @@
 import { Empty, FunnelUnavailable, LoadError, Metric, Panel, rate, type Funnel } from "./shared";
 
 export function MigrationReliability({ funnel, retry, loading, error }: { funnel: Funnel | null; retry: () => void; loading: boolean; error: string }) {
-  if (!funnel) return <FunnelUnavailable message={error} retry={retry} loading={loading} />;
+  if (!funnel) return <FunnelUnavailable message={error} retry={retry} loading={loading} section="Reliability · Migration" />;
   const migration = funnel.reliability.migration;
   const duration = (value: number | null) => value === null ? "Not available" : `${value}m`;
   return (

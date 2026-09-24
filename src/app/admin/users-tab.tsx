@@ -12,9 +12,13 @@ const STAGE_CHIPS = [
   { key: "qualified", label: "Qualified" },
   { key: "activated", label: "Activated" },
   { key: "deeply_activated", label: "Deeply activated" },
+  { key: "internal", label: "Internal" },
 ] as const;
 
+const RECLASSIFIABLE = new Set(["customer", "internal"]);
+
 function stageLabel(user: UserRow) {
+  if (user.accountType && user.accountType !== "customer") return <span className="text-muted-foreground">{user.accountType === "internal" ? "Internal" : `${user.accountType} account`} · not counted</span>;
   if (user.deeplyActivated) return <span className="text-success">Deeply activated</span>;
   if (user.stage === "activated") return <span className="text-success">Activated</span>;
   if (user.stage === "qualified") return <span className="text-success">Qualified</span>;
@@ -34,7 +38,7 @@ function deepSummary(diagnosis: FunnelDiagnosis): string {
   return `Not reached — ${missing.join(", ")}`;
 }
 
-export function UsersTab() {
+export function UsersTab({ onCohortChanged }: { onCohortChanged?: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -62,6 +66,8 @@ export function UsersTab() {
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState("");
+  const [reclassifying, setReclassifying] = useState(false);
+  const [reclassifyNote, setReclassifyNote] = useState("");
   const detailRef = useRef<HTMLDivElement>(null);
   // Rapid row clicks race: without a sequence guard the slower response wins
   // and shows one user's timeline under another user's email.
@@ -139,6 +145,7 @@ export function UsersTab() {
     setDiagnosis(null);
     setTimeline([]);
     setDetailError("");
+    setReclassifyNote("");
     setTimelineLoading(true);
     try {
       const response = await fetchAdmin(`/api/admin/users/${user.id}`, { cache: "no-store", credentials: "same-origin" });
@@ -161,6 +168,28 @@ export function UsersTab() {
   useEffect(() => {
     if (selected) detailRef.current?.scrollIntoView({ block: "nearest" });
   }, [selected]);
+
+  // Internal accounts are excluded from every metric. The server audits the
+  // change and drops its metrics cache, so reloading here and on the parent
+  // shows the corrected counts immediately.
+  const reclassify = async (user: UserRow) => {
+    const next = user.accountType === "internal" ? "customer" : "internal";
+    setReclassifying(true);
+    setReclassifyNote("");
+    try {
+      const response = await fetchAdmin(`/api/admin/users/${user.id}`, { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountType: next }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.message || "The account could not be updated.");
+      setSelected((current) => current && current.id === user.id ? { ...current, accountType: next } : current);
+      setReclassifyNote(next === "internal" ? "Marked as internal. It is now excluded from every metric and listed under Internal." : "Marked as a customer. It is counted in every metric again.");
+      void load();
+      onCohortChanged?.();
+    } catch (err) {
+      setReclassifyNote(err instanceof Error ? err.message : "The account could not be updated.");
+    } finally {
+      setReclassifying(false);
+    }
+  };
 
   const copyEmails = async () => {
     setCopying(true);
@@ -276,6 +305,16 @@ export function UsersTab() {
                 <p><span className="text-muted-foreground">Starting path:</span> {selected.startingPath || "Not recorded"}</p>
                 <p><span className="text-muted-foreground">Source:</span> {selected.attribution?.firstTouchSource || "Not recorded"}</p>
                 <p><span className="text-muted-foreground">Verified:</span> {selected.emailVerified ? "Yes" : "No"}</p>
+                {RECLASSIFIABLE.has(selected.accountType || "customer") ? (
+                  <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
+                    <p><span className="text-muted-foreground">Counted in metrics:</span> {selected.accountType === "internal" ? "No — internal account" : "Yes"}</p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void reclassify(selected)} disabled={reclassifying} className="gap-2">
+                      {reclassifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      {selected.accountType === "internal" ? "Mark as customer" : "Mark as internal"}
+                    </Button>
+                    {reclassifyNote ? <p className="w-full text-xs text-muted-foreground" role="status">{reclassifyNote}</p> : null}
+                  </div>
+                ) : <p><span className="text-muted-foreground">Counted in metrics:</span> No — {selected.accountType} account</p>}
                 {calendarConnections.length ? (
                   <div>
                     <p className="text-muted-foreground">Calendar connections:</p>

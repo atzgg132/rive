@@ -7,13 +7,15 @@ import { Button, Kicker } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { FunnelQualityAlert } from "@/lib/analytics/funnelQuality";
 
+export { trailingTrend } from "@/lib/analytics/adminMetricsMath";
+
 export type Funnel = {
   definitionVersion: string;
   generatedAt: string;
   signups: { total: number; verified: number; last24h: number; last7d: number; daily: Array<{ day: string; count: number }> };
   qualification: { qualified: number; rate: number | null; sourceBreakdown: Array<{ source: string; signups: number; qualified: number }> };
   activation: { activated: number; rate: number | null; native: number; migration: number; portfolio: number; pathBreakdown: Array<{ path: string; count: number }> };
-  engagement?: { prospectiveSince: string | null; createdUsers: number; createdFlows: number; medianHoursToCreate: number | null; p75HoursToCreate: number | null; firstSession: { completed: number; started: number; rate: number | null }; sevenDay: { completed: number; eligible: number; rate: number | null }; followThrough: { users: number; eligible: number; rate: number | null }; steps: Array<{ step: string; users: number; flows: number }>; failures: Array<{ code: string; entryPoint: string; count: number }> };
+  engagement?: { prospectiveSince: string | null; createdUsers: number; createdFlows: number; medianHoursToCreate: number | null; p75HoursToCreate: number | null; timedUsers?: number; firstSession: { completed: number; started: number; rate: number | null }; sevenDay: { completed: number; eligible: number; rate: number | null }; followThrough: { users: number; eligible: number; rate: number | null }; steps: Array<{ step: string; users: number; flows: number }>; failures: Array<{ code: string; entryPoint: string; count: number }> };
   deepActivation: { deeplyActivated: number; rateAmongActivated: number | null; averageModules: number; usersWithTwoActiveDays: number; connectedWorkflows: number };
   realData: { users: number; records: number };
   activeUsers: { wau: number; mau: number };
@@ -21,6 +23,7 @@ export type Funnel = {
   workflowDepth: { averageModules: number; buckets: Array<{ label: string; count: number }> };
   reliability: {
     productEvents24h: number;
+    productEvents7d?: number;
     failedEmails24h: number;
     queuedEmails: number;
     migration: {
@@ -37,6 +40,7 @@ export type Funnel = {
 
 export type UserRow = {
   id: string;
+  accountType?: string;
   email: string;
   name: string | null;
   createdAt: string;
@@ -67,6 +71,7 @@ export type UserFacets = {
   deeply_activated: number;
   unverified: number;
   realData: number;
+  internal?: number;
 };
 
 export type FunnelDiagnosis = {
@@ -179,21 +184,17 @@ export function LoadError({ message, onRetry, loading = false }: { message: stri
   return <div className="rounded-none border border-destructive/25 bg-destructive/10 p-5 text-destructive" role="alert"><div className="flex items-start gap-3"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" /><div className="min-w-0"><p className="font-semibold">This admin data is temporarily unavailable.</p><p className="mt-1 text-sm text-destructive/80">{message}</p><Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={loading} className="mt-4 border-destructive/25 text-destructive hover:bg-destructive/10">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Try again</Button></div></div></div>;
 }
 
-export function FunnelUnavailable({ message, retry, loading }: { message: string; retry: () => void; loading: boolean }) {
-  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Overview</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Metrics unavailable</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">You are still signed in — only the metrics query failed. The Users, Feedback and Legacy archive tabs read from different queries and should still work.</p></div><LoadError message={message} onRetry={retry} loading={loading} /></div>;
-}
-
-// Trend over the trailing 7 days against the 7 before it. The daily series is
-// 14 days long, which is exactly one comparison and no more — say so plainly
-// rather than implying a longer baseline than the data supports.
-export function trailingTrend(daily: Array<{ day: string; count: number }>): { current: number; previous: number; change: number | null } {
-  const recent = daily.slice(-7).reduce((sum, day) => sum + day.count, 0);
-  const prior = daily.slice(-14, -7).reduce((sum, day) => sum + day.count, 0);
-  return { current: recent, previous: prior, change: prior > 0 ? Math.round(((recent - prior) / prior) * 1000) / 10 : null };
+// Every metrics tab renders this while it has no snapshot. Until a request has
+// actually failed that is a first load, not an outage — showing the error card
+// during the first second read as "the dashboard is broken" on every visit.
+export function FunnelUnavailable({ message, retry, loading, section = "Overview" }: { message: string; retry: () => void; loading: boolean; section?: string }) {
+  if (loading || !message) return <Loading label="Loading metrics" />;
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">{section}</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Metrics unavailable</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">You are still signed in — only the metrics query failed. The Users, Feedback and Legacy archive tabs read from different queries and should still work.</p></div><LoadError message={message} onRetry={retry} loading={loading} /></div>;
 }
 
 export function Delta({ change, previous }: { change: number | null; previous: number }) {
-  if (change === null) return <span className="text-xs text-muted-foreground">no prior week to compare</span>;
+  // A zero prior week is a real comparison with no defined percentage.
+  if (change === null) return <span className="text-xs text-muted-foreground">{previous} in prior 7d</span>;
   const flat = Math.abs(change) < 0.05;
   const tone = flat ? "text-muted-foreground" : change > 0 ? "text-success" : "text-destructive";
   return <span className={`text-xs font-semibold ${tone}`}>{flat ? "flat" : `${change > 0 ? "+" : ""}${change}%`} <span className="font-normal text-muted-foreground">vs {previous} prior 7d</span></span>;
