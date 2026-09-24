@@ -124,7 +124,7 @@ silent and the code-level gates all passed, re-run it.
 ## How CI avoids re-running the same tests
 
 `.github/workflows/verify.yml` is the one suite; `Quality` (PRs) and `Deploy`
-(dev/main pushes) both call it. Static checks and two browser-test shards run in
+(dev/main pushes) both call it. Static checks and three browser-test shards run in
 parallel. A fully passing run uploads a `verified-tree-<git tree hash>` marker;
 a later run for the identical tree (the squash commit a PR became, or a
 dev → main promotion) skips straight to success, and a docs/`*.md`-only change
