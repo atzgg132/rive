@@ -56,6 +56,16 @@ Three kinds of branches exist:
 6. Promote in batches: merge-commit PR `dev` → `main`. Features ride together;
    the merge boundary is the release audit trail.
 
+### Closing issues
+
+GitHub only acts on closing keywords (`Closes #N`, `Fixes #N`) when a PR
+merges into the default branch, `main`. A keyword in a work-branch PR to `dev`
+does nothing. List the issues a batch resolves in the **promotion PR** body,
+one `Closes #N` line each, so they close when the fix reaches production — not
+when it lands on staging. Work-branch PRs may still reference issues
+(`Refs #N`) for traceability. Hotfix PRs merge into `main`, so their keywords
+work directly.
+
 ### Hotfixes
 
 Branch `hotfix/<slug>` off `main`, PR to `main`, merge-commit. Then back-merge
