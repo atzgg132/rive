@@ -18,16 +18,15 @@ export function WeeklySummaryOptInCard() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    // No cancellation guard: the GET claims the one-time showing server-side,
+    // so under StrictMode's double effect the first response is the only one
+    // that can say `available`, and it must still be honoured.
     fetch("/api/workflow/weekly-summary/prompt", { credentials: "same-origin", cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data?.available) setVisible(true);
+        if (data?.available) setVisible(true);
       })
       .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   if (!visible) return null;
@@ -36,11 +35,13 @@ export function WeeklySummaryOptInCard() {
     setSaving(action === "accepted" ? "enable" : "dismiss");
     try {
       if (action === "accepted") {
-        await fetch("/api/workflow/weekly-summary", {
+        const res = await fetch("/api/workflow/weekly-summary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ enabled: true }),
-        });
+        }).catch(() => null);
+        // Leave the prompt up on failure so the click can be retried.
+        if (!res?.ok) return;
         setEnabled(true);
       }
       await fetch("/api/workflow/weekly-summary/prompt", {
@@ -66,7 +67,7 @@ export function WeeklySummaryOptInCard() {
         className="flex items-center gap-3 rounded-none border border-border bg-card p-4 text-sm text-foreground"
       >
         <Mail className="h-4 w-4 shrink-0 text-primary" />
-        <p>Weekly summaries are on. Your first one arrives Monday morning.</p>
+        <p>Weekly summaries are on. They arrive Monday mornings whenever there is something to report.</p>
         <button
           type="button"
           onClick={() => setVisible(false)}

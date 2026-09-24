@@ -8,7 +8,7 @@ import { convertFromSnapshot, getExchangeRateSnapshot, type ExchangeRateSnapshot
 import { ISSUED_STATUSES, isIssuedStatus, outstandingAmount } from "@/utils/invoiceTotals";
 import { contractsAvailable } from "@/utils/contracts";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
-import { createAuthToken } from "@/utils/authTokens";
+import { prepareAuthToken } from "@/utils/authTokens";
 import { logger, requestLogContext } from "@/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ async function sendWeeklySummaryForUser(
   user: Candidate,
   now: Date,
   opts: { agreementsEnabled: boolean; exchangeRates: ExchangeRateSnapshot | null },
-): Promise<"sent" | "skipped_empty"> {
+): Promise<"sent" | "skipped_empty" | "skipped_claimed"> {
   const displayCurrency = normalizeCurrency(user.displayCurrency);
   const convert = (amount: number, currency: string) => convertFromSnapshot(amount, currency, displayCurrency, opts.exchangeRates) ?? 0;
 
@@ -55,7 +55,7 @@ async function sendWeeklySummaryForUser(
       _sum: { total: true, amountPaid: true },
     }),
     prisma.project.findMany({
-      where: { userId: user.id, dueDate: { gte: now, lt: upcomingEnd }, status: { notIn: ["completed", "cancelled"] } },
+      where: { userId: user.id, dueDate: { gte: now, lt: upcomingEnd }, status: { notIn: ["completed", "archived"] } },
       select: { id: true, title: true, dueDate: true },
       orderBy: { dueDate: "asc" },
       take: 10,
@@ -102,7 +102,10 @@ async function sendWeeklySummaryForUser(
   });
   if (!content) return "skipped_empty";
 
-  const { token } = await createAuthToken({ email: user.email, type: "weekly_summary_unsubscribe", userId: user.id });
+  // Prepared, not created: `createAuthToken` retires earlier tokens of the type,
+  // which would break the unsubscribe link in every older summary email.
+  const unsubscribeToken = prepareAuthToken({ email: user.email, type: "weekly_summary_unsubscribe", userId: user.id });
+  const token = unsubscribeToken.token;
   const unsubscribeUrl = `${appUrl}/api/public/weekly-summary/unsubscribe?token=${encodeURIComponent(token)}`;
   const settingsUrl = `${appUrl}/settings`;
 
@@ -127,7 +130,15 @@ async function sendWeeklySummaryForUser(
     sections.push({ kind: "agreements", items: content.agreementsAwaitingClient.map((agreement) => ({ title: agreement.title, clientName: agreement.clientName || "Client" })) });
   }
 
-  await prisma.$transaction(async (tx) => {
+  // Claim the week before enqueuing: an overlapping cron run that read the
+  // same `weeklySummaryLastSentAt` loses this compare-and-set and sends nothing.
+  const claimed = await prisma.$transaction(async (tx) => {
+    const claim = await tx.user.updateMany({
+      where: { id: user.id, weeklySummaryEnabled: true, weeklySummaryLastSentAt: user.weeklySummaryLastSentAt },
+      data: { weeklySummaryLastSentAt: now },
+    });
+    if (claim.count !== 1) return false;
+    await tx.authToken.create({ data: unsubscribeToken.data });
     await enqueueEmail(
       buildWeeklySummaryEmail({
         to: user.email,
@@ -139,8 +150,9 @@ async function sendWeeklySummaryForUser(
       }),
       tx,
     );
-    await tx.user.update({ where: { id: user.id }, data: { weeklySummaryLastSentAt: now } });
+    return true;
   });
+  if (!claimed) return "skipped_claimed";
   await recordProductEvent({ userId: user.id, eventName: PRODUCT_EVENTS.weeklySummarySent, module: "weekly_summary", source: "cron" });
   return "sent";
 }
@@ -174,7 +186,7 @@ export async function POST(req: NextRequest) {
       try {
         const outcome = await sendWeeklySummaryForUser(user, now, { agreementsEnabled, exchangeRates });
         if (outcome === "sent") sent += 1;
-        else skippedEmpty += 1;
+        else if (outcome === "skipped_empty") skippedEmpty += 1;
       } catch (error) {
         logger.error("weekly_summary_user_failed", { ...context, userId: user.id, error });
       }

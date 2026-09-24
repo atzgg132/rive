@@ -122,7 +122,7 @@ test.describe("weekly summary opt-in card", () => {
     await expect(card.getByText("Want a Monday morning summary?")).toBeVisible();
 
     await card.getByRole("button", { name: "Turn on" }).click();
-    await expect(card.getByText("Weekly summaries are on. Your first one arrives Monday morning.")).toBeVisible();
+    await expect(card.getByText("Weekly summaries are on.")).toBeVisible();
     expect(weeklySummaryEnabled.value).toBe(true);
   });
 

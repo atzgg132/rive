@@ -13,7 +13,7 @@ import { readJsonBody } from "@/utils/apiBoundary";
  * it is a one-time informational card, not a recurring ask, so it only ever
  * needs "has this been shown to this user before".
  */
-export const WEEKLY_SUMMARY_OPTIN_PROMPT_KEY = "weekly_summary_optin";
+const WEEKLY_SUMMARY_OPTIN_PROMPT_KEY = "weekly_summary_optin";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
