@@ -3,6 +3,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import {
+  agreementErrorResponse,
+  AgreementActionError,
   buildContractContent,
   type ContractContent,
   assertContractsEnabled,
@@ -30,7 +32,7 @@ async function getOwnedContract(userId: string, id: string) {
       project: { select: { id: true, title: true, currency: true, description: true, startDate: true, dueDate: true, milestones: { orderBy: { dueDate: "asc" }, take: 100, select: { id: true, title: true, dueDate: true, completed: true } } } },
       versions: { orderBy: { version: "desc" }, take: 50, include: { artifacts: { orderBy: { generatedAt: "desc" }, take: 5 } } },
       signers: { orderBy: { sequence: "asc" }, include: { signatures: { orderBy: { signedAt: "desc" }, take: 50, select: { id: true, versionId: true, signerRole: true, signerName: true, signerEmail: true, consentAccepted: true, consentTextVersion: true, signedAt: true, providerEventId: true } } } },
-      reviewLinks: { orderBy: { createdAt: "desc" }, take: 50, select: { id: true, type: true, versionId: true, expiresAt: true, revokedAt: true, createdAt: true } },
+      reviewLinks: { orderBy: { createdAt: "desc" }, take: 50, select: { id: true, type: true, versionId: true, signerId: true, expiresAt: true, revokedAt: true, createdAt: true } },
       comments: { orderBy: { createdAt: "asc" }, take: 50, select: { id: true, versionId: true, authorRole: true, authorName: true, authorEmail: true, sectionKey: true, body: true, status: true, resolvedAt: true, createdAt: true } },
       events: { orderBy: { createdAt: "desc" }, take: 100, select: { id: true, versionId: true, eventType: true, metadata: true, createdAt: true } },
       paymentPlanItems: { orderBy: { sequence: "asc" }, take: 25, include: { milestone: { select: { id: true, title: true, dueDate: true, completed: true } }, occurrence: { include: { invoice: { select: { id: true, invoiceNumber: true, status: true, total: true } } } } } },
@@ -132,8 +134,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!contract) return NextResponse.json({ success: false, message: "Agreement not found." }, { status: 404 });
     return NextResponse.json({ success: true, contract: mapContract(contract) });
   } catch (error) {
-    console.error("Contract detail fetch error:", error);
-    return NextResponse.json({ success: false, message: "Unable to load Agreement." }, { status: 500 });
+    return agreementErrorResponse(error, "Unable to load Agreement.", "Contract detail fetch error");
   }
 }
 
@@ -220,7 +221,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       await tx.contractSigner.updateMany({ where: { contractId: id, role: "client" }, data: { clientId: existing.client.id, name: existing.client.name, email: existing.client.email || "", status: "pending", invitedAt: null, signedAt: null, declinedAt: null } });
       await tx.contractSigner.updateMany({ where: { contractId: id, role: "owner" }, data: { userId: session.userId, name: owner.name || owner.email, email: owner.email, status: "pending", invitedAt: null, signedAt: null, declinedAt: null } });
       const saved = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: existing.status, to: "draft", data: { title, currency, governingLaw, jurisdiction, finalizedAt: null, executedAt: null, providerEnvelopeId: null, reviewExpiresAt: null } });
-      if (saved !== 1) throw new Error("The Agreement changed while the new version was being saved. Reload and try again.");
+      if (saved !== 1) throw new AgreementActionError("The Agreement changed while the new version was being saved. Reload and try again.", 409);
       await tx.contractReviewLink.updateMany({ where: { contractId: id, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, versionId: version.id, actorUserId: session.userId, eventType: "contract_version_created", metadata: { version: versionNumber, projectSnapshotSynced: syncProjectSnapshot } } });
       return version.id;
@@ -237,8 +238,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ success: true, versionId: updated, message: "A new editable Agreement version was created." });
   } catch (error) {
-    console.error("Contract update error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to update Agreement." }, { status: 400 });
+    return agreementErrorResponse(error, "Unable to update Agreement.", "Contract update error");
   }
 }
 
@@ -262,14 +262,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
     await prisma.$transaction(async (tx) => {
       const voided = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: contract.status, to: "void", data: { voidedAt: new Date() } });
-      if (voided !== 1) throw new Error("The Agreement changed while it was being voided. Reload and try again.");
+      if (voided !== 1) throw new AgreementActionError("The Agreement changed while it was being voided. Reload and try again.", 409);
       await tx.contractReviewLink.updateMany({ where: { contractId: id, revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, actorUserId: session.userId, eventType: "contract_voided", metadata: { providerEnvelopeId: contract.providerEnvelopeId } } });
       if (contract.projectId) await resetProjectCoverageIfNoActiveContracts(tx, contract.projectId, session.userId);
     });
     return NextResponse.json({ success: true, message: "Agreement voided. Its history is retained." });
   } catch (error) {
-    console.error("Contract void error:", error);
-    return NextResponse.json({ success: false, message: "Unable to void Agreement." }, { status: 500 });
+    return agreementErrorResponse(error, "Unable to void Agreement.", "Contract void error");
   }
 }

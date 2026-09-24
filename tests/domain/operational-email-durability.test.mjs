@@ -21,7 +21,7 @@ const { POST: resetPasswordPost } = await import("../../src/app/api/auth/reset-p
 const { POST: reviewPost } = await import("../../src/app/api/workflow/contracts/[id]/review/route.ts");
 
 const contractSignRoute = await readFile(
-  new URL("../../src/app/api/public/contracts/sign/[token]/route.ts", import.meta.url),
+  new URL("../../src/utils/agreementAcceptance.ts", import.meta.url),
   "utf8",
 );
 const contractBilling = await readFile(

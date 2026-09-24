@@ -3,7 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { buildContractReviewEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
-import { assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, transitionContractStatus } from "@/utils/contracts";
+import { agreementErrorResponse, AgreementActionError, assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, transitionContractStatus } from "@/utils/contracts";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { readJsonBody } from "@/utils/apiBoundary";
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await tx.contractReviewLink.updateMany({ where: { contractId: id, type: "review", revokedAt: null }, data: { revokedAt: new Date() } });
       const link = await tx.contractReviewLink.create({ data: { contractId: id, versionId: contract.versions[0].id, tokenHash, type: "review", expiresAt } });
       const shared = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: contract.status, to: status, data: { reviewExpiresAt: expiresAt } });
-      if (shared !== 1) throw new Error("The Agreement changed while the review link was being created. Reload and try again.");
+      if (shared !== 1) throw new AgreementActionError("The Agreement changed while the review link was being created. Reload and try again.", 409);
       await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "review_link_created", metadata: { expiresAt: expiresAt.toISOString(), emailed: shouldEmail } } });
       if (shouldEmail && clientEmail) {
         outboxId = await enqueueEmail({
@@ -76,7 +76,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         : "Review link created.",
     });
   } catch (error) {
-    console.error("Contract review link error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to create review link." }, { status: 500 });
+    return agreementErrorResponse(error, "Unable to create review link.", "Contract review link error");
   }
 }

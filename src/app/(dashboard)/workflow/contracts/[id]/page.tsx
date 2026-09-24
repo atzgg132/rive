@@ -37,6 +37,7 @@ import {
   FileSignature,
   Link2,
   Loader2,
+  Mail,
   Pencil,
   Plus,
   RefreshCw,
@@ -50,6 +51,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { localeForCurrency } from "@/lib/currency";
+import { CONTRACT_CONSENT_TEXT, CONTRACT_CONSENT_TEXT_VERSION } from "@/lib/agreementConsent";
 import ContractWorkSetupCard from "@/components/contracts/ContractWorkSetupCard";
 
 type Section = { key: string; title: string; body: string; enabled: boolean; required?: boolean };
@@ -69,6 +71,9 @@ type Content = {
   sections: Section[];
   paymentPlan?: { currency?: string; items: Array<{ id: string; label: string; amount: string; currency: string; triggerType: string; triggerDate: string | null; dueDays: number; milestoneId: string | null; milestoneTitle: string | null; invoiceDescription: string | null }> };
 };
+type ReviewLink = { id: string; type: string; versionId: string | null; signerId: string | null; expiresAt: string; revokedAt: string | null; createdAt: string };
+type ContractEvent = { id: string; versionId: string | null; eventType: string; metadata?: Record<string, unknown> | null; createdAt: string };
+type Signer = { id: string; role: "client" | "owner"; name: string; email: string; status: string; invited_at: string | null; signed_at: string | null; signatures: Array<{ versionId: string; signedAt: string; consentTextVersion: string; providerEventId?: string | null }> };
 type Contract = {
   id: string;
   title: string;
@@ -87,10 +92,10 @@ type Contract = {
   client: { id: string; name: string; email: string | null; company?: string | null; address?: string | null };
   project: { id: string; title: string; description?: string | null; startDate?: string | null; dueDate?: string | null; milestones?: Array<{ id: string; title: string; dueDate: string | null; completed: boolean }> } | null;
   versions: Array<{ id: string; version: number; status: string; content: Content; content_hash: string; created_at: string; finalized_at: string | null; artifacts: Array<{ id: string }> }>;
-  signers: Array<{ id: string; role: "client" | "owner"; name: string; email: string; status: string; invited_at: string | null; signed_at: string | null; signatures: Array<{ versionId: string; signedAt: string; consentTextVersion: string; providerEventId?: string | null }> }>;
-  review_links: Array<{ id: string; type: string; versionId: string | null; expiresAt: string; revokedAt: string | null; createdAt: string }>;
+  signers: Signer[];
+  review_links: ReviewLink[];
   comments: Array<{ id: string; versionId: string | null; authorRole: string; authorName: string; sectionKey: string | null; body: string; status: string; resolvedAt: string | null; createdAt: string }>;
-  events: Array<{ id: string; versionId: string | null; eventType: string; metadata?: Record<string, unknown> | null; createdAt: string }>;
+  events: ContractEvent[];
   payment_plan: Array<{
     id: string;
     label: string;
@@ -118,6 +123,18 @@ type Contract = {
     error: string | null;
   };
 };
+type RunAction = (key: string, url: string, method?: string, body?: unknown, preserveEditor?: boolean) => Promise<Record<string, unknown> | null>;
+type Reissue = { kind: "review" | "client"; sendEmail: boolean; activeSince: string };
+
+function formatDate(value: string | null | undefined): string {
+  return value ? new Date(value).toLocaleDateString() : "—";
+}
+
+/** The newest unrevoked, unexpired link of a type for the current version. */
+function activeLink(links: ReviewLink[], type: string, versionId: string | undefined, signerId?: string): ReviewLink | null {
+  const now = Date.now();
+  return links.find((link) => link.type === type && !link.revokedAt && new Date(link.expiresAt).getTime() > now && link.versionId === versionId && (!signerId || link.signerId === signerId)) || null;
+}
 
 export default function ContractDetailPage() {
   const params = useParams<{ id: string }>();
@@ -126,9 +143,9 @@ export default function ContractDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [reviewUrl, setReviewUrl] = useState("");
-  const [clientSignUrl, setClientSignUrl] = useState("");
-  const [ownerSignUrl, setOwnerSignUrl] = useState("");
+  const [freshReviewUrl, setFreshReviewUrl] = useState("");
+  const [freshClientUrl, setFreshClientUrl] = useState("");
+  const [pendingReissue, setPendingReissue] = useState<Reissue | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editSections, setEditSections] = useState<Section[]>([]);
@@ -141,6 +158,11 @@ export default function ContractDetailPage() {
   const [finalizeOpenComments, setFinalizeOpenComments] = useState<number | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidNote, setVoidNote] = useState("");
+  const [acceptOpen, setAcceptOpen] = useState(false);
+  const [ownerTypedName, setOwnerTypedName] = useState("");
+  const [ownerConsent, setOwnerConsent] = useState(false);
+  const [ownerDeclineOpen, setOwnerDeclineOpen] = useState(false);
+  const [ownerDeclineReason, setOwnerDeclineReason] = useState("");
   const [engagementInvoiceId, setEngagementInvoiceId] = useState<string | null>(null);
   const [createdFromEngagement, setCreatedFromEngagement] = useState(false);
 
@@ -195,7 +217,7 @@ export default function ContractDetailPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const runAction = async (key: string, url: string, method = "POST", body?: unknown, preserveEditor = true) => {
+  const runAction: RunAction = async (key, url, method = "POST", body, preserveEditor = true) => {
     if (!id || busy) return null;
     setBusy(key);
     try {
@@ -212,11 +234,9 @@ export default function ContractDetailPage() {
         }
         throw new Error(payload.message || "Action failed.");
       }
-      if (payload.reviewUrl) setReviewUrl(payload.reviewUrl);
-      if (payload.clientSignUrl) setClientSignUrl(payload.clientSignUrl);
-      if (payload.ownerSignUrl) setOwnerSignUrl(payload.ownerSignUrl);
-      if (payload.role === "client" && payload.signUrl) setClientSignUrl(payload.signUrl);
-      if (payload.role === "owner" && payload.signUrl) setOwnerSignUrl(payload.signUrl);
+      if (typeof payload.reviewUrl === "string") setFreshReviewUrl(payload.reviewUrl);
+      if (typeof payload.clientSignUrl === "string") setFreshClientUrl(payload.clientSignUrl);
+      if (payload.role === "client" && typeof payload.signUrl === "string") setFreshClientUrl(payload.signUrl);
       if (payload.email && payload.email.sent === false) toast.warning(payload.message || "The link was created, but email delivery failed.");
       else toast.success(payload.message || "Updated.");
       await load(preserveEditor);
@@ -247,16 +267,22 @@ export default function ContractDetailPage() {
       })),
       syncProjectSnapshot,
     }, false);
-    if (payload) setEditing(false);
+    if (payload) {
+      setEditing(false);
+      setFreshReviewUrl("");
+      setFreshClientUrl("");
+    }
   };
 
   const finalize = async (acknowledgeOpenComments = false) => {
     const payload = await runAction("finalize", `/api/workflow/contracts/${id}/finalize`, "POST", { acknowledgeOpenComments });
     if (payload) setFinalizeOpenComments(null);
+    return payload;
   };
 
-  const reissueSigningLink = async (role: "client" | "owner", sendEmail: boolean) => {
-    await runAction(`${role}-${sendEmail ? "email" : "link"}`, `/api/workflow/contracts/${id}/signing-links`, "POST", { role, sendEmail });
+  const issueLink = async (kind: "review" | "client", sendEmail: boolean) => {
+    if (kind === "review") await runAction(sendEmail ? "review-email" : "review", `/api/workflow/contracts/${id}/review`, "POST", { sendEmail });
+    else await runAction(sendEmail ? "client-email" : "client-link", `/api/workflow/contracts/${id}/signing-links`, "POST", { role: "client", sendEmail });
   };
 
   const copy = async (value: string) => {
@@ -274,13 +300,56 @@ export default function ContractDetailPage() {
   const displayClientCompany = content ? content.clientCompany : contract.client.company;
   const displayClientAddress = content ? content.clientAddress : contract.client.address;
   const projectSnapshotChanged = Boolean(contract.project && ((content?.projectTitle || "") !== contract.project.title || (content?.projectDescription || "") !== (contract.project.description || "")));
+  const clientSigner = contract.signers.find((signer) => signer.role === "client");
+  const ownerSigner = contract.signers.find((signer) => signer.role === "owner");
+  const clientAcceptance = clientSigner?.signatures.find((signature) => signature.versionId === version?.id) || null;
   const hasSignature = contract.signers.some((signer) => signer.signatures.some((signature) => signature.versionId === version?.id));
   const canEdit = ["draft", "in_review", "declined", "expired", "ready_to_sign"].includes(contract.status) && (!hasSignature || ["declined", "expired"].includes(contract.status));
   const canReview = ["draft", "in_review", "expired"].includes(contract.status) && version?.status !== "final" && !hasSignature;
   const canFinalize = ["draft", "in_review", "expired"].includes(contract.status) && !hasSignature;
+  const canOwnerAccept = Boolean(ownerSigner?.status === "pending" && clientSigner?.status === "signed" && clientAcceptance && ["signing", "expired"].includes(contract.status) && version?.status === "final");
+  const canRestartAcceptance = contract.status === "expired" && version?.status === "final" && !hasSignature;
   const currentComments = contract.comments.filter((item) => item.versionId === version?.id);
   const openComments = currentComments.filter((item) => item.status === "open");
-  const reviewApproved = version?.status === "approved" || contract.events.some((event) => event.versionId === version?.id && event.eventType === "client_review_approved");
+  const reviewApproved = version?.status === "approved";
+  const activeReview = activeLink(contract.review_links, "review", version?.id);
+  const activeClientLink = clientSigner ? activeLink(contract.review_links, "sign", version?.id, clientSigner.id) : null;
+  // Links matter until the client has accepted; after that nothing needs sharing.
+  const showShare = canReview || ["ready_to_sign", "starting"].includes(contract.status) || (contract.status === "signing" && !clientAcceptance) || canRestartAcceptance;
+
+  const requestLink = (kind: "review" | "client", sendEmail: boolean) => {
+    const active = kind === "review" ? activeReview : activeClientLink;
+    if (active) {
+      setPendingReissue({ kind, sendEmail, activeSince: active.createdAt });
+      return;
+    }
+    void issueLink(kind, sendEmail);
+  };
+
+  const restartAcceptance = async () => {
+    const finalized = await finalize();
+    if (finalized) await runAction("sign", `/api/workflow/contracts/${id}/start-signing`);
+  };
+
+  const acceptAsOwner = async () => {
+    const payload = await runAction("owner-accept", `/api/workflow/contracts/${id}/accept`, "POST", { typedName: ownerTypedName, consentAccepted: ownerConsent });
+    if (payload) {
+      setAcceptOpen(false);
+      setOwnerTypedName("");
+      setOwnerConsent(false);
+    }
+  };
+
+  const declineAsOwner = async () => {
+    const payload = await runAction("owner-decline", `/api/workflow/contracts/${id}/accept`, "POST", { action: "decline", reason: ownerDeclineReason });
+    if (payload) {
+      setAcceptOpen(false);
+      setOwnerDeclineOpen(false);
+      setOwnerDeclineReason("");
+      setEditing(true);
+    }
+  };
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 animate-panel-in">
       {createdFromEngagement && (
@@ -304,6 +373,7 @@ export default function ContractDetailPage() {
         <div className="flex flex-wrap gap-2">
           {canEdit ? <Button variant="outline" onClick={() => setEditing((current) => !current)}><Pencil className="h-4 w-4" /> {editing ? "Close editor" : "Edit draft"}</Button> : null}
           {contract.status === "executed" ? <Button onClick={() => window.open(`/api/workflow/contracts/${id}/artifact`, "_blank")}><Download className="h-4 w-4" /> Download accepted PDF</Button> : null}
+          {contract.status === "executed" && contract.client.email ? <Button variant="outline" disabled={Boolean(busy)} onClick={() => void runAction("accepted-copy", `/api/workflow/contracts/${id}/accepted-copy`)}><Mail className="h-4 w-4" /> Resend accepted copy</Button> : null}
           {contract.status !== "executed" && contract.status !== "void" ? <Button variant="ghost" className="text-destructive" onClick={() => setVoidDialogOpen(true)}><XCircle className="h-4 w-4" /> Void</Button> : null}
         </div>
       </div>
@@ -317,22 +387,25 @@ export default function ContractDetailPage() {
                 {contract.void_request_note ? <p className="mt-1 whitespace-pre-wrap text-xs">{contract.void_request_note}</p> : null}
                 <textarea className="mt-3 w-full rounded-none border border-border bg-background px-3 py-2 text-sm text-foreground" rows={2} placeholder="Add a short confirmation note" value={voidNote} onChange={(event) => setVoidNote(event.target.value)} />
                 <div className="mt-2 flex gap-2">
-                  <Button size="sm" disabled={busy === "void-confirm" || voidNote.trim().length < 5} onClick={() => void runAction("void-confirm", `/api/workflow/contracts/${id}/void`, "POST", { action: "confirm", note: voidNote })}>Confirm void</Button>
-                  <Button size="sm" variant="outline" disabled={busy === "void-decline"} onClick={() => void runAction("void-decline", `/api/workflow/contracts/${id}/void`, "POST", { action: "decline", note: voidNote })}>Decline</Button>
+                  <Button size="sm" disabled={Boolean(busy) || voidNote.trim().length < 5} onClick={() => void runAction("void-confirm", `/api/workflow/contracts/${id}/void`, "POST", { action: "confirm", note: voidNote })}>Confirm void</Button>
+                  <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => void runAction("void-decline", `/api/workflow/contracts/${id}/void`, "POST", { action: "decline", note: voidNote })}>Decline</Button>
                 </div>
               </>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p><strong>Void requested.</strong> Waiting for the client to confirm — the Agreement stays accepted until then.</p>
-                <Button size="sm" variant="outline" disabled={busy === "void-decline"} onClick={() => void runAction("void-decline", `/api/workflow/contracts/${id}/void`, "POST", { action: "decline", note: "" })}>Cancel request</Button>
+                <p><strong>Void requested {formatDate(contract.void_requested_at)}.</strong> Waiting for the client to confirm from their email — the Agreement stays accepted until then.</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => void runAction("void-resend", `/api/workflow/contracts/${id}/void`, "POST", { action: "resend" })}><Send className="h-3.5 w-3.5" /> Resend email</Button>
+                  <Button size="sm" variant="ghost" disabled={Boolean(busy)} onClick={() => void runAction("void-decline", `/api/workflow/contracts/${id}/void`, "POST", { action: "decline", note: "" })}>Withdraw request</Button>
+                </div>
               </div>
             )
           ) : (
             <>
               <p className="font-bold">Void this accepted Agreement</p>
-              <p className="mt-1 text-xs">Both parties must agree. The client will be asked to confirm; the record is retained either way.</p>
+              <p className="mt-1 text-xs">Both parties must agree. The client is emailed a link to confirm; the record is retained either way.</p>
               <textarea className="mt-3 w-full rounded-none border border-border bg-background px-3 py-2 text-sm text-foreground" rows={2} placeholder="Add a short reason for the void request" value={voidNote} onChange={(event) => setVoidNote(event.target.value)} />
-              <Button size="sm" variant="default" className="mt-2" disabled={busy === "void-request" || voidNote.trim().length < 5} onClick={() => void runAction("void-request", `/api/workflow/contracts/${id}/void`, "POST", { action: "request", note: voidNote })}>Request void</Button>
+              <Button size="sm" variant="default" className="mt-2" disabled={Boolean(busy) || voidNote.trim().length < 5} onClick={() => void runAction("void-request", `/api/workflow/contracts/${id}/void`, "POST", { action: "request", note: voidNote })}>Request void</Button>
             </>
           )}
         </div>
@@ -342,20 +415,40 @@ export default function ContractDetailPage() {
 
       <NextActionCard
         contract={contract}
+        clientAcceptedAt={clientAcceptance?.signedAt || null}
+        versionStatus={version?.status || null}
         versionApproved={reviewApproved}
         openComments={openComments.length}
-        canReview={canReview}
         canFinalize={canFinalize}
+        canOwnerAccept={canOwnerAccept}
+        canRestartAcceptance={canRestartAcceptance}
         busy={busy}
         onAction={runAction}
         onFinalize={() => void finalize()}
+        onAcceptOwn={() => setAcceptOpen(true)}
+        onRestart={() => void restartAcceptance()}
+        onEdit={() => setEditing(true)}
       />
 
       {contract.status === "executed" ? <ContractWorkSetupCard contractId={contract.id} project={contract.project} acceptedContent={content} setup={contract.work_setup} onRefresh={() => load(true)} /> : null}
 
-      {reviewUrl ? <LinkPanel label="Client review link — comments only, not an acceptance request" url={reviewUrl} onCopy={copy} /> : null}
-      {clientSignUrl ? <LinkPanel label="Client acceptance link — send only to the named client" url={clientSignUrl} onCopy={copy} /> : null}
-      {ownerSignUrl ? <LinkPanel label="Owner acceptance link — use after the client records acceptance" url={ownerSignUrl} onCopy={copy} /> : null}
+      {showShare ? (
+        <ShareLinksCard
+          clientName={clientSigner?.name || contract.client.name}
+          clientEmail={contract.client.email}
+          status={contract.status}
+          canReview={canReview}
+          clientSigner={clientSigner || null}
+          clientAcceptedAt={clientAcceptance?.signedAt || null}
+          activeReview={activeReview}
+          activeClientLink={activeClientLink}
+          freshReviewUrl={freshReviewUrl}
+          freshClientUrl={freshClientUrl}
+          busy={busy}
+          onRequest={requestLink}
+          onCopy={copy}
+        />
+      ) : null}
 
       {editing && canEdit && projectSnapshotChanged ? <Alert variant="warning" className="text-xs"><RefreshCw className="h-4 w-4" /><div><p className="font-bold">The linked project brief changed after this version</p><p className="mt-1 text-muted-foreground">A legal snapshot never changes silently. Keep it as-is, or explicitly pull the current project title and description into the new version.</p><label className="mt-2 flex items-center gap-2 font-semibold"><input type="checkbox" checked={syncProjectSnapshot} onChange={(event) => setSyncProjectSnapshot(event.target.checked)} className="h-4 w-4 accent-primary" /> Use the current project brief in this new version</label></div></Alert> : null}
 
@@ -391,21 +484,21 @@ export default function ContractDetailPage() {
 
         <aside className="flex flex-col gap-6">
           <Card>
-            <CardHeader><CardTitle>Acceptance parties</CardTitle><CardDescription>Rive is not a party and does not accept this Agreement.</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Acceptance parties</CardTitle><CardDescription>The client accepts from their link first; you record yours here. Rive is not a party.</CardDescription></CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0 sm:pt-0">
               {contract.signers.map((signer) => (
                 <div key={signer.id} className="rounded-none border border-border p-3">
-                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold">{signer.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{signer.role} · {signer.email}</p></div><Badge variant={signer.status === "signed" ? "success" : signer.status === "declined" ? "destructive" : "outline"}>{signer.status === "signed" ? "accepted" : signer.status}</Badge></div>
+                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-bold">{signer.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{signer.role === "owner" ? "you" : "client"} · {signer.email}</p></div><Badge variant={signer.status === "signed" ? "success" : signer.status === "declined" ? "destructive" : "outline"}>{signer.status === "signed" ? "accepted" : signer.status === "declined" ? "requested changes" : signer.status}</Badge></div>
                   {signer.signatures.map((signature) => <p key={signature.signedAt} className="mt-2 text-xs leading-4 text-muted-foreground">Acceptance recorded {new Date(signature.signedAt).toLocaleString()} · consent {signature.consentTextVersion}</p>)}
-                  {contract.status === "signing" && signer.status === "pending" ? <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => void reissueSigningLink(signer.role, false)}><Link2 className="h-3.5 w-3.5" /> Get fresh link</Button><Button size="sm" variant="ghost" disabled={Boolean(busy)} onClick={() => void reissueSigningLink(signer.role, true)}><Send className="h-3.5 w-3.5" /> Email</Button></div> : null}
+                  {signer.role === "owner" && canOwnerAccept ? <Button size="sm" className="mt-3" disabled={Boolean(busy)} onClick={() => setAcceptOpen(true)}><FileSignature className="h-3.5 w-3.5" /> Record your acceptance</Button> : null}
                 </div>
               ))}
-              {contract.status === "declined" && hasSignature ? <Alert variant="warning" className="text-xs"><AlertTriangle className="h-4 w-4" /><div><p className="font-bold">An acceptance record already exists on this version</p><p className="mt-1 text-muted-foreground">Use Edit draft to save the requested changes as a new immutable version. The partial acceptance record remains attached only to the declined version.</p></div></Alert> : null}
+              {contract.status === "declined" && hasSignature ? <Alert variant="warning" className="text-xs"><AlertTriangle className="h-4 w-4" /><div><p className="font-bold">An acceptance record already exists on this version</p><p className="mt-1 text-muted-foreground">Use Edit draft to save the requested changes as a new version, then request acceptance again. The earlier acceptance stays attached to this version as evidence.</p></div></Alert> : null}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>Review comments</CardTitle><CardDescription>{openComments.length} open on version {version?.version}</CardDescription></div>{reviewApproved ? <Badge variant="success"><UserRoundCheck className="h-3.5 w-3.5" /> Approved</Badge> : null}</div></CardHeader>
+            <CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>Review comments</CardTitle><CardDescription>{openComments.length} open on version {version?.version}</CardDescription></div>{reviewApproved ? <Badge variant="success"><UserRoundCheck className="h-3.5 w-3.5" /> Client ready</Badge> : null}</div></CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0 sm:pt-0">
               {currentComments.length === 0 ? <p className="text-sm text-muted-foreground">No comments on this version.</p> : currentComments.map((item) => (
                 <div key={item.id} className={`rounded-none border p-3 ${item.status === "resolved" ? "border-border bg-muted/30" : "border-border"}`}>
@@ -422,8 +515,8 @@ export default function ContractDetailPage() {
           <Card>
             <CardHeader><CardTitle>Version & evidence history</CardTitle></CardHeader>
             <CardContent className="flex flex-col gap-4 pt-0 sm:pt-0">
-              <div className="space-y-2">{contract.versions.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 text-xs"><span className="font-semibold">Version {item.version} · {item.status}</span><span className="font-mono tabular-nums text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</span></div>)}</div>
-              <div className="border-t border-border pt-3"><Kicker tone="muted" dot={false} className="mb-2">Recent Agreement evidence events</Kicker><div className="space-y-2">{contract.events.slice(0, 12).map((event) => <div key={event.id} className="flex items-start justify-between gap-3 text-xs"><span className="font-medium capitalize">{formatContractEventType(event.eventType)}</span><span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{new Date(event.createdAt).toLocaleString()}</span></div>)}</div></div>
+              <div className="space-y-2">{contract.versions.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 text-xs"><span className="font-semibold">Version {item.version} · {formatVersionStatus(item.status)}</span><span className="font-mono tabular-nums text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</span></div>)}</div>
+              <div className="border-t border-border pt-3"><Kicker tone="muted" dot={false} className="mb-2">Recent Agreement evidence events</Kicker><div className="space-y-2">{contract.events.slice(0, 12).map((event) => <div key={event.id} className="flex items-start justify-between gap-3 text-xs"><span className="font-medium">{formatContractEvent(event)}</span><span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{new Date(event.createdAt).toLocaleString()}</span></div>)}</div></div>
             </CardContent>
           </Card>
         </aside>
@@ -438,11 +531,43 @@ export default function ContractDetailPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={pendingReissue !== null} onOpenChange={(open) => { if (!open) setPendingReissue(null); }}>
+        <DialogContent>
+          <AlertTriangle className="h-8 w-8 text-warning" />
+          <DialogTitle className="mt-3 text-lg font-extrabold tracking-[-0.03em]">Replace the current {pendingReissue?.kind === "review" ? "review" : "acceptance"} link?</DialogTitle>
+          <DialogDescription className="mt-2 leading-6">The link created on {formatDate(pendingReissue?.activeSince)} stops working as soon as you continue. {pendingReissue?.sendEmail ? `${contract.client.name} will be emailed the new link.` : `Send the new link to ${contract.client.name} yourself.`}</DialogDescription>
+          <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setPendingReissue(null)}>Keep current link</Button><Button disabled={Boolean(busy)} onClick={() => { const next = pendingReissue; setPendingReissue(null); if (next) void issueLink(next.kind, next.sendEmail); }}><RefreshCw className="h-4 w-4" /> Replace link</Button></div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={acceptOpen} onOpenChange={(open) => { if (!busy) setAcceptOpen(open); }}>
+        <DialogContent>
+          <FileSignature className="h-8 w-8 text-primary" />
+          <DialogTitle className="mt-3 text-lg font-extrabold tracking-[-0.03em]">Record your acceptance</DialogTitle>
+          <DialogDescription className="mt-2 leading-6">You are accepting version {version?.version} of “{contract.title}” as {ownerSigner?.name}. {clientSigner?.name} accepted on {formatDate(clientAcceptance?.signedAt)}. Both acceptances complete the Agreement and start its payment plan.</DialogDescription>
+          <div className="mt-4 flex flex-col gap-3">
+            <FormField label="Type your full name" required><Input value={ownerTypedName} onChange={(event) => setOwnerTypedName(event.target.value)} placeholder={ownerSigner?.name} autoComplete="name" /></FormField>
+            <label className="flex gap-3 text-xs leading-5 text-muted-foreground"><input type="checkbox" checked={ownerConsent} onChange={(event) => setOwnerConsent(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span>{CONTRACT_CONSENT_TEXT}<span className="mt-1 block font-mono text-[10px]">Consent version {CONTRACT_CONSENT_TEXT_VERSION}</span></span></label>
+            {ownerDeclineOpen ? (
+              <div className="rounded-none border border-destructive/20 bg-destructive/5 p-3">
+                <FormField label="What needs to change?"><Textarea rows={3} value={ownerDeclineReason} onChange={(event) => setOwnerDeclineReason(event.target.value)} maxLength={2_000} /></FormField>
+                <p className="mt-2 text-[11px] leading-4 text-muted-foreground">This stops the acceptance request. You then edit the draft and request acceptance again; the client’s earlier acceptance stays attached to this version as evidence.</p>
+                <Button variant="destructive" className="mt-3 w-full" disabled={Boolean(busy) || ownerDeclineReason.trim().length < 5} onClick={() => void declineAsOwner()}>{busy === "owner-decline" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />} Stop and revise</Button>
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-5 flex flex-wrap justify-between gap-2">
+            <Button variant="ghost" className="text-destructive" onClick={() => setOwnerDeclineOpen((current) => !current)}>Request changes instead</Button>
+            <div className="flex gap-2"><Button variant="outline" onClick={() => setAcceptOpen(false)}>Cancel</Button><Button disabled={Boolean(busy) || !ownerTypedName.trim() || !ownerConsent} onClick={() => void acceptAsOwner()}>{busy === "owner-accept" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Record acceptance</Button></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={voidDialogOpen} onOpenChange={(open) => { if (busy !== "void") setVoidDialogOpen(open); }}>
         <DialogContent>
           <XCircle className="h-8 w-8 text-destructive" />
           <DialogTitle className="mt-3 text-lg font-extrabold tracking-[-0.03em]">Void this Agreement record?</DialogTitle>
-          <DialogDescription className="mt-2 leading-6">Active review and acceptance links will be revoked. The Agreement record, versions, comments, and evidence stay retained for history.</DialogDescription>
+          <DialogDescription className="mt-2 leading-6">Active review and acceptance links will be revoked{clientAcceptance ? `, and ${clientSigner?.name}’s recorded acceptance will no longer lead anywhere` : ""}. The Agreement record, versions, comments, and evidence stay retained for history.</DialogDescription>
           <div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setVoidDialogOpen(false)}>Cancel</Button><Button variant="destructive" disabled={busy === "void"} onClick={async () => { const result = await runAction("void", `/api/workflow/contracts/${id}`, "DELETE"); if (result) setVoidDialogOpen(false); }}>{busy === "void" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />} Void Agreement record</Button></div>
         </DialogContent>
       </Dialog>
@@ -452,55 +577,207 @@ export default function ContractDetailPage() {
 
 function ContractProgress({ status }: { status: string }) {
   const current = status === "executed" ? 3 : ["ready_to_sign", "starting", "signing"].includes(status) ? 2 : status === "in_review" ? 1 : 0;
-  const stages = ["Draft", "Client review", "Recorded acceptance", "Accepted"];
-  return <ol className="grid grid-cols-4 gap-2" aria-label="Agreement progress">{stages.map((stage, index) => <li key={stage} className="min-w-0"><div className={`h-1 rounded-none ${index <= current ? status === "void" || status === "declined" ? "bg-warning" : "bg-primary" : "bg-muted"}`} /><p className={`mt-1.5 truncate text-xs font-bold sm:text-xs ${index === current ? "text-foreground" : "text-muted-foreground"}`}>{stage}</p></li>)}</ol>;
+  const stages = ["Draft", "Client review", "Acceptance", "Accepted"];
+  return <ol className="grid grid-cols-4 gap-2" aria-label="Agreement progress">{stages.map((stage, index) => <li key={stage} className="min-w-0"><div className={`h-1 rounded-none ${index <= current ? status === "void" || status === "declined" || status === "expired" ? "bg-warning" : "bg-primary" : "bg-muted"}`} /><p className={`mt-1.5 truncate text-xs font-bold sm:text-xs ${index === current ? "text-foreground" : "text-muted-foreground"}`}>{stage}</p></li>)}</ol>;
 }
 
-function formatContractEventType(eventType: string): string {
-  const labels: Record<string, string> = {
-    client_review_approved: "Review approved",
-    client_comment_added: "Comment added",
-    review_link_created: "Review link created",
-    signing_started: "Recorded acceptance started",
-    signing_link_created: "Acceptance link created",
-    client_signed: "Client acceptance recorded",
-    owner_signed: "Owner acceptance recorded",
-    contract_executed: "Agreement accepted",
-    contract_declined: "Acceptance changes requested",
-    contract_expired: "Acceptance request expired",
-    contract_voided: "Agreement voided",
-    contract_project_generated: "Work setup created",
-  };
-  return labels[eventType] || eventType.replaceAll("_", " ");
+function formatVersionStatus(status: string): string {
+  return ({ draft: "draft", approved: "client ready", final: "finalized" } as Record<string, string>)[status] || status;
 }
 
-function NextActionCard({ contract, versionApproved, openComments, canReview, canFinalize, busy, onAction, onFinalize }: { contract: Contract; versionApproved: boolean; openComments: number; canReview: boolean; canFinalize: boolean; busy: string | null; onAction: (key: string, url: string, method?: string, body?: unknown, preserveEditor?: boolean) => Promise<Record<string, unknown> | null>; onFinalize: () => void }) {
+const EVENT_LABELS: Record<string, string> = {
+  contract_created: "Agreement drafted",
+  contract_version_created: "New version saved",
+  review_link_created: "Review link created",
+  client_comment_added: "Client commented",
+  owner_comment_added: "Note added",
+  comment_resolved: "Comment resolved",
+  comment_reopened: "Comment reopened",
+  client_review_approved: "Client ready for the final version",
+  client_review_approval_withdrawn: "Client commented after marking ready",
+  contract_finalized: "Version finalized",
+  signing_started: "Acceptance requested",
+  signing_link_reissued: "New client acceptance link",
+  contract_executed: "Agreement accepted",
+  contract_request_expired: "Request expired",
+  acceptance_request_reopened: "Acceptance request reopened",
+  contract_voided: "Agreement voided",
+  void_requested: "Void requested",
+  void_request_declined: "Void request declined",
+  void_request_withdrawn: "Void request withdrawn",
+  void_request_resent: "Void request re-sent",
+  void_confirmed: "Void confirmed",
+  accepted_copy_sent: "Accepted copy sent to client",
+  billing_draft_created: "Invoice draft created",
+  billing_cancelled: "Remaining payments cancelled",
+  contract_project_generated: "Work setup created",
+};
+
+function formatContractEvent(event: ContractEvent): string {
+  const role = typeof event.metadata?.role === "string" ? event.metadata.role : null;
+  if (event.eventType === "signer_signed") return role === "owner" ? "You accepted" : "Client accepted";
+  if (event.eventType === "signer_declined") return role === "owner" ? "You stopped the request for changes" : "Client requested changes";
+  return EVENT_LABELS[event.eventType] || event.eventType.replaceAll("_", " ");
+}
+
+function NextActionCard({ contract, clientAcceptedAt, versionStatus, versionApproved, openComments, canFinalize, canOwnerAccept, canRestartAcceptance, busy, onAction, onFinalize, onAcceptOwn, onRestart, onEdit }: { contract: Contract; clientAcceptedAt: string | null; versionStatus: string | null; versionApproved: boolean; openComments: number; canFinalize: boolean; canOwnerAccept: boolean; canRestartAcceptance: boolean; busy: string | null; onAction: RunAction; onFinalize: () => void; onAcceptOwn: () => void; onRestart: () => void; onEdit: () => void }) {
   const client = contract.signers.find((signer) => signer.role === "client");
-  const owner = contract.signers.find((signer) => signer.role === "owner");
-  let title = "Review the draft";
-  let description = "Check parties, scope, clauses, and payment triggers before involving the client.";
+  let title = "Share for review, or finalize";
+  let description = "Send the client a review link (step 1 below) to collect comments, or finalize this version when the terms are settled.";
+  let actions: React.ReactNode = canFinalize ? <Button disabled={Boolean(busy)} onClick={onFinalize}><CheckCircle2 className="h-4 w-4" /> Finalize version</Button> : null;
+
   if (contract.status === "in_review") {
-    title = versionApproved ? "Client approved this draft" : openComments ? `Resolve ${openComments} open comment${openComments === 1 ? "" : "s"}` : "Waiting on client review";
-    description = versionApproved ? "Finalize this exact version when you are satisfied, then issue a separate recorded-acceptance request." : openComments ? "Resolve the negotiation thread or edit a new immutable version before finalizing." : "You can resend a fresh review link or finalize after confirming the client is ready.";
+    title = versionApproved ? "Client is ready for the final version" : openComments ? `Resolve ${openComments} open comment${openComments === 1 ? "" : "s"}` : "Waiting on client review";
+    description = versionApproved ? "They have no more comments. Finalize this exact version, then request their acceptance." : openComments ? "Reply, resolve, or edit a new version before finalizing." : "The client can comment from their review link. You can finalize whenever the terms are settled.";
   } else if (contract.status === "ready_to_sign") {
-    title = "Start the recorded-acceptance request";
-    description = "The client records acceptance first. Your owner link unlocks after their acceptance is recorded.";
-  } else if (contract.status === "signing") {
-    title = client?.status !== "signed" ? "Waiting for the client acceptance" : owner?.status !== "signed" ? "Your acceptance is next" : "Completing the acceptance record";
-    description = "Fresh links can be issued from the acceptance-party cards. Old links are revoked automatically.";
+    title = "Request the client’s acceptance";
+    description = "Rive emails the client their acceptance link for this finalized version. After they accept, you record your own acceptance here.";
+    actions = <Button disabled={Boolean(busy)} onClick={() => void onAction("sign", `/api/workflow/contracts/${contract.id}/start-signing`)}><FileSignature className="h-4 w-4" /> Request client acceptance</Button>;
+  } else if (contract.status === "starting") {
+    title = "Preparing the acceptance request";
+    description = "This normally takes a moment. If it does not finish, it resets automatically within 15 minutes so you can try again.";
+    actions = <Button variant="outline" onClick={() => window.location.reload()}><RefreshCw className="h-4 w-4" /> Reload</Button>;
+  } else if (contract.status === "signing" || (contract.status === "expired" && canOwnerAccept)) {
+    if (canOwnerAccept) {
+      title = "Your acceptance is next";
+      description = `${client?.name || "The client"} accepted on ${formatDate(clientAcceptedAt)}. Record your acceptance to complete the Agreement and start its payment plan.`;
+      actions = <Button disabled={Boolean(busy)} onClick={onAcceptOwn}><FileSignature className="h-4 w-4" /> Record your acceptance</Button>;
+    } else {
+      title = "Waiting for the client to accept";
+      description = "Their acceptance link is in step 2 below. You will get a notification and an email as soon as they accept.";
+      actions = null;
+    }
   } else if (contract.status === "declined") {
-    title = "A signer requested changes";
-    description = contract.signers.some((signer) => signer.signatures.length) ? "Because an acceptance record already exists, void this record and create a replacement Agreement." : "Read the decline reason in the evidence timeline, revise the draft, and run review again.";
+    title = "Changes were requested";
+    description = "Read the reason in the history, then edit the draft to save a new version and request acceptance again. Any acceptance already recorded stays attached to the earlier version.";
+    actions = <Button disabled={Boolean(busy)} onClick={onEdit}><Pencil className="h-4 w-4" /> Edit draft</Button>;
+  } else if (contract.status === "expired") {
+    title = "The request expired";
+    description = canRestartAcceptance
+      ? "The client did not accept in time. Nothing was lost — send a fresh acceptance request for the same version, or edit the draft first."
+      : versionStatus === "final"
+        ? "Edit the draft to save a new version, then request acceptance again."
+        : "The review link expired. Share a new review link below, or finalize this version.";
+    actions = canRestartAcceptance
+      ? <Button disabled={Boolean(busy)} onClick={onRestart}><Send className="h-4 w-4" /> Send a fresh acceptance request</Button>
+      : canFinalize ? <Button disabled={Boolean(busy)} onClick={onFinalize}><CheckCircle2 className="h-4 w-4" /> Finalize version</Button> : <Button variant="outline" disabled={Boolean(busy)} onClick={onEdit}><Pencil className="h-4 w-4" /> Edit draft</Button>;
   } else if (contract.status === "executed") {
     const workReady = contract.work_setup.status === "succeeded";
     title = workReady ? "Agreement accepted — review billing drafts" : "Agreement accepted — set up the work";
     description = workReady ? "Eligible payment triggers create draft invoices only. Review each invoice before sending it to the client." : "Choose the linked Project and planning details before Rive activates the accepted billing plan.";
+    actions = <>{workReady ? <Link href="/workflow/revenue" className={buttonVariants({ variant: "default" })}><CircleDollarSign className="h-4 w-4" /> Review invoices</Link> : <Link href="#work-setup" className={buttonVariants({ variant: "default" })}><ArrowRight className="h-4 w-4" /> Set up the work</Link>}<Button variant="outline" disabled={Boolean(busy)} onClick={() => void onAction("billing", `/api/workflow/contracts/${contract.id}/billing/run`)}><RefreshCw className="h-4 w-4" /> Check triggers</Button></>;
   } else if (contract.status === "void") {
     title = "This record is void";
     description = "Its immutable versions and evidence remain available. Create a replacement if the engagement continues.";
+    actions = <Link className={buttonVariants({ variant: "default" })} href={`/workflow/contracts?new=1&clientId=${encodeURIComponent(contract.client.id)}${contract.project ? `&projectId=${encodeURIComponent(contract.project.id)}` : ""}`}><Plus className="h-4 w-4" /> Create replacement</Link>;
   }
 
-  return <Card className="border-primary/20 bg-primary/[0.035]"><CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-primary/10 text-primary"><ArrowRight className="h-4 w-4" /></span><div><Kicker>Next action</Kicker><h2 className="mt-0.5 text-base font-extrabold">{title}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p></div></div><div className="flex flex-wrap gap-2 lg:justify-end">{canReview ? <><Button variant="outline" disabled={Boolean(busy)} onClick={() => void onAction("review", `/api/workflow/contracts/${contract.id}/review`, "POST", { sendEmail: false })}><Link2 className="h-4 w-4" /> Get review link</Button><Button variant="outline" disabled={Boolean(busy) || !contract.client.email} onClick={() => void onAction("review-email", `/api/workflow/contracts/${contract.id}/review`, "POST", { sendEmail: true })}><Send className="h-4 w-4" /> Email client</Button></> : null}{canFinalize ? <Button disabled={Boolean(busy)} onClick={onFinalize}><CheckCircle2 className="h-4 w-4" /> Finalize version</Button> : null}{contract.status === "ready_to_sign" ? <Button disabled={Boolean(busy)} onClick={() => void onAction("sign", `/api/workflow/contracts/${contract.id}/start-signing`)}><FileSignature className="h-4 w-4" /> Start recorded acceptance</Button> : null}{contract.status === "executed" ? <>{contract.work_setup.status === "succeeded" ? <Link href="/workflow/revenue" className={buttonVariants({ variant: "default" })}><CircleDollarSign className="h-4 w-4" /> Review invoices</Link> : <Link href="#work-setup" className={buttonVariants({ variant: "default" })}><ArrowRight className="h-4 w-4" /> Set up the work</Link>}<Button variant="outline" disabled={Boolean(busy)} onClick={() => void onAction("billing", `/api/workflow/contracts/${contract.id}/billing/run`)}><RefreshCw className="h-4 w-4" /> Check triggers</Button></> : null}{contract.status === "void" ? <Link className={buttonVariants({ variant: "default" })} href={`/workflow/contracts?new=1&clientId=${encodeURIComponent(contract.client.id)}${contract.project ? `&projectId=${encodeURIComponent(contract.project.id)}` : ""}`}><Plus className="h-4 w-4" /> Create replacement</Link> : null}</div></CardContent></Card>;
+  return <Card className="border-primary/20 bg-primary/[0.035]"><CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center"><div className="flex min-w-0 flex-1 items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-primary/10 text-primary"><ArrowRight className="h-4 w-4" /></span><div><Kicker>Next action</Kicker><h2 className="mt-0.5 text-base font-extrabold">{title}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p></div></div>{actions ? <div className="flex flex-wrap gap-2 lg:justify-end">{actions}</div> : null}</CardContent></Card>;
+}
+
+/**
+ * The only two public links an Agreement has, in the order they are used.
+ * A link's URL is shown once (only its hash is stored); afterwards the panel
+ * shows when the active link was created and expires, never the token.
+ */
+function ShareLinksCard({ clientName, clientEmail, status, canReview, clientSigner, clientAcceptedAt, activeReview, activeClientLink, freshReviewUrl, freshClientUrl, busy, onRequest, onCopy }: {
+  clientName: string;
+  clientEmail: string | null;
+  status: string;
+  canReview: boolean;
+  clientSigner: Signer | null;
+  clientAcceptedAt: string | null;
+  activeReview: ReviewLink | null;
+  activeClientLink: ReviewLink | null;
+  freshReviewUrl: string;
+  freshClientUrl: string;
+  busy: string | null;
+  onRequest: (kind: "review" | "client", sendEmail: boolean) => void;
+  onCopy: (url: string) => void;
+}) {
+  const clientLinkUsable = status === "signing" && clientSigner?.status === "pending";
+  const clientStepNote = clientAcceptedAt
+    ? `${clientName} accepted on ${formatDate(clientAcceptedAt)}. No link is needed any more.`
+    : clientLinkUsable
+      ? null
+      : "Available once you finalize the version and request acceptance.";
+  return (
+    <Card>
+      <CardHeader><CardTitle>Client links</CardTitle><CardDescription>Your client uses at most two links, in this order. You never need a link yourself.</CardDescription></CardHeader>
+      <CardContent className="flex flex-col gap-3 pt-0 sm:pt-0">
+        <ShareStep
+          step={1}
+          title="Review link — comments only"
+          helper={`${clientName} can read the draft, comment, and tell you they are ready for the final version. It cannot record acceptance.`}
+          active={activeReview}
+          freshUrl={canReview ? freshReviewUrl : ""}
+          note={canReview ? null : "Closed — this version has been finalized for acceptance."}
+          busy={busy}
+          canEmail={Boolean(clientEmail)}
+          onGet={() => onRequest("review", false)}
+          onEmail={() => onRequest("review", true)}
+          onCopy={onCopy}
+          enabled={canReview}
+        />
+        <ShareStep
+          step={2}
+          title="Acceptance link — send only to the client"
+          helper={`Opens the finalized version so ${clientName} can record acceptance. You record yours here in Rive after they accept.`}
+          active={clientLinkUsable ? activeClientLink : null}
+          freshUrl={clientLinkUsable ? freshClientUrl : ""}
+          note={clientStepNote}
+          busy={busy}
+          canEmail={Boolean(clientEmail)}
+          onGet={() => onRequest("client", false)}
+          onEmail={() => onRequest("client", true)}
+          onCopy={onCopy}
+          enabled={clientLinkUsable}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function ShareStep({ step, title, helper, active, freshUrl, note, busy, canEmail, onGet, onEmail, onCopy, enabled }: {
+  step: number;
+  title: string;
+  helper: string;
+  active: ReviewLink | null;
+  freshUrl: string;
+  note: string | null;
+  busy: string | null;
+  canEmail: boolean;
+  onGet: () => void;
+  onEmail: () => void;
+  onCopy: (url: string) => void;
+  enabled: boolean;
+}) {
+  return (
+    <div className={`rounded-none border p-4 ${enabled ? "border-border" : "border-border bg-muted/30"}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold"><span className="mr-2 font-mono text-xs text-muted-foreground">{step}</span>{title}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{helper}</p>
+          {note ? <p className="mt-2 text-xs font-semibold">{note}</p> : null}
+          {enabled && freshUrl ? (
+            <div className="mt-2 rounded-none border border-primary/25 bg-primary/5 p-2">
+              <a className="block break-all text-xs text-primary underline" href={freshUrl} target="_blank" rel="noreferrer">{freshUrl}</a>
+              <p className="mt-1 text-[11px] text-muted-foreground">Copy it now — Rive stores only a fingerprint of the link and cannot show it again.</p>
+            </div>
+          ) : enabled && active ? (
+            <p className="mt-2 text-xs text-muted-foreground">Active link created {formatDate(active.createdAt)} · expires {formatDate(active.expiresAt)}. To copy it again, get a new link (the current one stops working).</p>
+          ) : enabled ? <p className="mt-2 text-xs text-muted-foreground">No active link.</p> : null}
+        </div>
+        {enabled ? (
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {freshUrl ? <Button size="sm" variant="outline" onClick={() => onCopy(freshUrl)}><Copy className="h-3.5 w-3.5" /> Copy</Button> : null}
+            <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={onGet}><Link2 className="h-3.5 w-3.5" /> {active || freshUrl ? "New link" : "Get link"}</Button>
+            <Button size="sm" variant="ghost" disabled={Boolean(busy) || !canEmail} onClick={onEmail}><Send className="h-3.5 w-3.5" /> Email client</Button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function Editor({ contract, title, setTitle, currency, setCurrency, governingLaw, setGoverningLaw, jurisdiction, setJurisdiction, sections, setSections, payments, setPayments, saving, onSave }: { contract: Contract; title: string; setTitle: (value: string) => void; currency: string; setCurrency: (value: string) => void; governingLaw: string; setGoverningLaw: (value: string) => void; jurisdiction: string; setJurisdiction: (value: string) => void; sections: Section[]; setSections: React.Dispatch<React.SetStateAction<Section[]>>; payments: PaymentDraft[]; setPayments: React.Dispatch<React.SetStateAction<PaymentDraft[]>>; saving: boolean; onSave: () => void }) {
@@ -521,10 +798,6 @@ function Editor({ contract, title, setTitle, currency, setCurrency, governingLaw
 
 function PaymentPlan({ contract, busy, runAction }: { contract: Contract; busy: string | null; runAction: (key: string, url: string, method?: string, body?: unknown, preserveEditor?: boolean) => Promise<Record<string, unknown> | null> }) {
   return <section><h2 className="mb-2 text-sm font-bold">Payment plan</h2>{contract.payment_plan.length === 0 ? <p className="text-sm text-muted-foreground">No automatic invoice triggers. Billing remains manual.</p> : <div className="divide-y divide-border rounded-none border border-border">{contract.payment_plan.map((item) => <div key={item.id} className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{item.label} · <span className="font-mono tabular-nums">{item.currency} {Number(item.amount).toLocaleString(localeForCurrency(item.currency))}</span></p><p className="mt-0.5 text-xs text-muted-foreground">{formatTrigger(item)} · invoice due in {item.due_days} days</p>{item.occurrence?.invoice ? <Link href={`/workflow/revenue?invoiceId=${encodeURIComponent(item.occurrence.invoice.id)}`} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">{item.occurrence.invoice.invoiceNumber} · {item.occurrence.invoice.status}<ArrowRight className="h-3 w-3" /></Link> : item.occurrence?.status === "awaiting_work_setup" ? <p className="mt-1 text-xs text-primary">Waiting for work setup before this accepted trigger can draft an invoice.</p> : item.occurrence?.status === "eligible" ? <p className="mt-1 text-xs text-warning">Eligible — run a billing check if the draft has not appeared.</p> : null}</div><div className="flex flex-wrap items-center gap-2">{item.milestone ? <Button size="sm" variant={item.milestone.completed ? "secondary" : "outline"} disabled={Boolean(busy) || contract.status !== "executed"} onClick={() => item.milestone && void runAction(`milestone-${item.milestone.id}`, `/api/workflow/milestones/${item.milestone.id}`, "PATCH", { completed: !item.milestone.completed })}>{item.milestone.completed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}{item.milestone.completed ? "Completed" : "Mark complete"}</Button> : null}<Badge variant={item.status === "draft_created" ? "success" : "outline"}>{item.status.replaceAll("_", " ")}</Badge></div></div>)}</div>}</section>;
-}
-
-function LinkPanel({ label, url, onCopy }: { label: string; url: string; onCopy: (url: string) => void }) {
-  return <div className="rounded-none border border-primary/25 bg-primary/5 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start"><div className="min-w-0 flex-1"><p className="text-sm font-bold">{label}</p><a className="mt-1 block break-all text-xs text-primary underline" href={url} target="_blank" rel="noreferrer">{url}</a><p className="mt-1 text-xs text-muted-foreground">This acceptance or review link is shown once. Reissuing it revokes the previous active link for that person.</p></div><Button size="sm" variant="outline" onClick={() => onCopy(url)}><Copy className="h-3.5 w-3.5" /> Copy</Button></div></div>;
 }
 
 function formatTrigger(item: { trigger_type?: string; trigger_date?: string | null; milestone?: { title: string } | null }) {

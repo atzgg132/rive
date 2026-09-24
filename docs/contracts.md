@@ -6,9 +6,9 @@ The current compatibility workflow is exposed as Agreements in the product while
 
 1. Create an Agreement draft from `/workflow/contracts`.
 2. Select a client/project, edit clause text, turn optional clauses on or off, and add payment items.
-3. Create a review link. The link is an unguessable bearer credential, expires, and is stored only as a hash. It is for preview/comments; it is not an acceptance request.
-4. Revise the draft. Every save creates a new immutable `ContractVersion`; old review links are revoked.
-5. Finalize the exact version, start recorded acceptance, then use the client link first and owner link second.
+3. Optional — share the **review link** (step 1 on the Agreement page). It is an unguessable bearer credential, expires, and is stored only as a hash. The client can comment and say they have no more comments ("ready for the final version"); a later comment withdraws that signal. It never records acceptance.
+4. Revise the draft. Every save creates a new immutable `ContractVersion`; old review links are revoked. Creating a new link while one is active asks for confirmation, because the old link stops working.
+5. Finalize the exact version and request acceptance. Only the **client** receives a public acceptance link (step 2), emailed and shown once. When the client accepts, the owner gets a notification and an email, and records their own acceptance on the Agreement page while signed in (`POST /api/workflow/contracts/[id]/accept`). There is no owner link; owner links issued before this change are refused and redirect to the workspace.
 6. After both parties record acceptance, Rive records the acceptance evidence, creates an accepted PDF on demand, and activates the payment plan.
 7. `on_signing`, milestone-completed, milestone-due, and fixed-date items create one idempotent draft invoice per payment-plan item. The owner is notified and prompted to review. An invoice becomes `sent` only after the explicit send action records successful email delivery.
 
@@ -19,7 +19,12 @@ The composer reuses the existing client name, email, company, and address, plus 
 - Rive is never an acceptance party. The only acceptance parties created by the workflow are the workspace owner and the selected client; legacy database fields still use signer names.
 - Accepted versions cannot be edited. Editing creates a new version and revokes prior review/acceptance links.
 - Client/project/milestone ownership is checked server-side; payment triggers cannot point at another project.
-- Client recorded acceptance is sequenced before owner recorded acceptance.
+- Client recorded acceptance is sequenced before owner recorded acceptance. Both go through one writer (`src/utils/agreementAcceptance.ts`).
+- A request whose client has already accepted never expires: the maintenance job reminds the owner once a day instead. A request that lapsed before this rule can still be completed by the owner's in-app acceptance (`expired → signing → executed`).
+- A signed-in owner cannot accept on the client's link in the client's name.
+- After acceptance, the client's acceptance link becomes their record link for 365 days (download and void requests), and the emailed accepted copy lasts as long. The owner can email a fresh copy at any time.
+- A void of an accepted Agreement needs both parties. The client confirms through an emailed void link; the owner always confirms in the workspace.
+- Route errors return a message only for `AgreementActionError`; anything else is logged and replaced with a generic message.
 - Acceptance evidence contains the exact version hash, party role/name/email, consent-text version, timestamp, hashed IP/user-agent metadata, and provider event id.
 - Typed-name acceptance is an alpha acceptance record. It is not an OTP result, independent identity verification, regulated/digital-signature claim, or substitute for any transaction-specific formality.
 - Review and acceptance links are token-hashed, expiry-checked, revocable, rate-limited, and never returned from database reads.

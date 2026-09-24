@@ -180,6 +180,15 @@ The accepted version is immutable. A later project deadline, task edit, or clien
 7. Client receives a final copy; provider receives a notification.
 8. Provider previews and confirms project generation, or an account/workspace policy auto-confirms it.
 
+### Current implementation (decided 2026-09-24)
+
+The happy path is **review → client acceptance → owner acceptance**:
+
+- The client has at most two public links, used in order: a review link (comments plus a "ready for the final version" signal, never acceptance) and an acceptance link.
+- The owner never receives a public link. The owner records acceptance inside the signed-in workspace after the client accepts, and is notified and emailed when that happens.
+- A request whose client already accepted does not expire; the owner is reminded daily instead.
+- See `docs/contracts.md` for the operational detail.
+
 Simple recorded acceptance is an explicit product tier. Rive must not imply that typing a name and checking a box proves identity beyond the evidence actually collected.
 
 ## Secure public links and sessions
