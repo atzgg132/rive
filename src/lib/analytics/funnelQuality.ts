@@ -20,6 +20,8 @@ export type FunnelQualityInput = {
   };
   reliability: {
     productEvents24h: number;
+    /** Optional so older callers keep the legacy behaviour; see the stale-stream rule. */
+    productEvents7d?: number;
     failedEmails24h: number;
     queuedEmails: number;
   };
@@ -39,6 +41,12 @@ export type FunnelQualityInput = {
     eventScan: { scanned: number; total: number };
   };
 };
+
+export const EVENT_STALE_MINUTES = 24 * 60;
+
+function formatLag(minutes: number): string {
+  return minutes >= 120 ? `${Math.round(minutes / 60)} hours` : `${Math.round(minutes)} minutes`;
+}
 
 function alert(input: Omit<FunnelQualityAlert, "fingerprint">): FunnelQualityAlert {
   return { ...input, fingerprint: `funnel-quality:v${FUNNEL_QUALITY_ALERT_VERSION}:${input.id}` };
@@ -132,15 +140,22 @@ export function evaluateFunnelQuality(input: FunnelQualityInput): FunnelQualityA
     }));
   }
 
-  if (quality.eventLagMinutes !== null && quality.eventLagMinutes > 30) {
+  // At early-stage volume a quiet half hour is normal, so a fixed short lag
+  // fires almost permanently. The stream is stale when a full day has passed
+  // with no event even though events were flowing earlier in the week — that
+  // pattern is a broken write path, not a slow Tuesday.
+  // Signups this week count too: a stream that died more than 7 days ago
+  // would otherwise fall silent exactly when new users arrive.
+  const flowedThisWeek = (input.reliability.productEvents7d ?? 1) > 0 || input.signups.last7d > 0;
+  if (quality.eventLagMinutes !== null && quality.eventLagMinutes > EVENT_STALE_MINUTES && flowedThisWeek) {
     alerts.push(alert({
       id: "event_lag_minutes",
       severity: "warning",
       metric: "eventLagMinutes",
       actual: quality.eventLagMinutes,
-      threshold: "<= 30 minutes",
+      threshold: "<= 24 hours while events flowed in the last 7 days",
       title: "The event stream is stale",
-      detail: `The latest product event is ${quality.eventLagMinutes} minutes old.`,
+      detail: `The latest product event is ${formatLag(quality.eventLagMinutes)} old, but events were recorded earlier this week.`,
       action: "Check event writes and the production database before treating a flat funnel as user behavior.",
     }));
   }

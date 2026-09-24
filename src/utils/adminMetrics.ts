@@ -2,6 +2,7 @@ import "server-only";
 
 import { PRODUCT_EVENT_NAMES, PRODUCT_EVENT_SCHEMA_VERSION, REAL_DATA_EVENT_NAMES } from "@/lib/analytics/eventContracts";
 import { evaluateFunnelQuality, type FunnelQualityAlert } from "@/lib/analytics/funnelQuality";
+import { createSharedLoader, hoursToFirstEngagement } from "@/lib/analytics/adminMetricsMath";
 import { prisma } from "@/utils/db";
 import { GetQueueAttributesCommand, SQSClient } from "@aws-sdk/client-sqs";
 import {
@@ -59,6 +60,7 @@ type QualitySnapshot = {
 
 export type AdminUserIndexEntry = {
   id: string;
+  accountType: string;
   email: string;
   name: string | null;
   createdAt: string;
@@ -87,7 +89,11 @@ export type AdminUserIndexEntry = {
   lastActivity: { at: string; eventName: string; module: string | null } | null;
 };
 
-let cached: { expiresAt: number; value: AdminMetrics; cohort: AdminUserIndexEntry[] } | null = null;
+type AdminSnapshot = { metrics: AdminMetrics; cohort: AdminUserIndexEntry[]; internal: AdminUserIndexEntry[] };
+
+// One scan feeds the cards, the Users list and its filters, at most once per
+// 30s. Concurrent cold requests share the same scan instead of each running it.
+const snapshot = createSharedLoader<AdminSnapshot>(30_000, computeAdminSnapshot);
 
 async function migrationDlqDepth(): Promise<number | null> {
   const queueUrl = process.env.MIGRATION_DLQ_URL;
@@ -160,6 +166,8 @@ export type AdminMetrics = {
     createdFlows: number;
     medianHoursToCreate: number | null;
     p75HoursToCreate: number | null;
+    /** Users behind the time-to-engagement percentiles: first flow only, signed up after instrumentation. */
+    timedUsers: number;
     firstSession: { completed: number; started: number; rate: number | null };
     sevenDay: { completed: number; eligible: number; rate: number | null };
     followThrough: { users: number; eligible: number; rate: number | null };
@@ -185,6 +193,7 @@ export type AdminMetrics = {
   workflowDepth: { averageModules: number; buckets: Array<{ label: string; count: number }> };
   reliability: {
     productEvents24h: number;
+    productEvents7d: number;
     failedEmails24h: number;
     queuedEmails: number;
     migration: {
@@ -234,8 +243,10 @@ export type AdminMetrics = {
 };
 
 export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
-  if (!force && cached && cached.expiresAt > Date.now()) return cached.value;
+  return (await snapshot.get(force)).metrics;
+}
 
+async function computeAdminSnapshot(): Promise<AdminSnapshot> {
   const now = new Date();
   const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -280,6 +291,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     events,
     eventScanTotal,
     productEvents24h,
+    productEvents7d,
     failedEmails24h,
     queuedEmails,
     migrationReliabilityJobs,
@@ -326,6 +338,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     }),
     prisma.productEvent.count({ where: { environment, userId: { in: customerIds }, occurredAt: { gte: eventSince } } }),
     prisma.productEvent.count({ where: { environment, occurredAt: { gte: ago24h } } }),
+    prisma.productEvent.count({ where: { environment, occurredAt: { gte: ago7d } } }),
     prisma.emailDelivery.count({ where: { status: { in: ["failed", "delivery_failed"] }, createdAt: { gte: ago24h } } }),
     prisma.emailOutbox.count({ where: { status: { in: ["queued", "processing"] } } }),
     prisma.importJob.findMany({
@@ -461,6 +474,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     const lastEvent = userEvents[userEvents.length - 1];
     cohort.push({
       id: user.id,
+      accountType: user.accountType,
       email: user.email,
       name: user.name,
       createdAt: user.createdAt.toISOString(),
@@ -531,14 +545,11 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
   const engagementCreatedEvents = engagementEvents.filter((event) => event.eventName === "engagement_created" && event.userId);
   const engagementCreatedUsers = new Set(engagementCreatedEvents.map((event) => event.userId!));
   const engagementCreatedFlows = new Set(engagementCreatedEvents.map((event) => event.requestId).filter((value): value is string => Boolean(value)));
-  const hoursToCreate = engagementCreatedEvents.flatMap((event) => {
-    const user = customerUsers.find((candidate) => candidate.id === event.userId);
-    return user ? [Math.max(0, (event.occurredAt.getTime() - user.createdAt.getTime()) / 3_600_000)] : [];
-  });
   const startedSessions = new Set(engagementEvents.filter((event) => event.eventName === "engagement_flow_started" && event.sessionId).map((event) => event.sessionId!));
   const completedSessions = new Set(engagementCreatedEvents.filter((event) => event.sessionId && startedSessions.has(event.sessionId)).map((event) => event.sessionId!));
   const prospectiveSinceDate = engagementEvents[0]?.occurredAt || null;
   const prospectiveUsers = prospectiveSinceDate ? customerUsers.filter((user) => user.createdAt >= prospectiveSinceDate) : [];
+  const hoursToCreate = hoursToFirstEngagement(customerUsers, engagementCreatedEvents, prospectiveSinceDate);
   const sevenDayEligible = prospectiveUsers.filter((user) => user.createdAt <= ago7d || engagementCreatedEvents.some((event) => event.userId === user.id));
   const sevenDayCompleted = sevenDayEligible.filter((user) => engagementCreatedEvents.some((event) => event.userId === user.id && within(event.occurredAt, user.createdAt, 7)));
   const stepNames = ["started", "client", "work", "setup", "created"];
@@ -644,6 +655,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
       createdFlows: engagementCreatedFlows.size,
       medianHoursToCreate: percentile(hoursToCreate, 0.5),
       p75HoursToCreate: percentile(hoursToCreate, 0.75),
+      timedUsers: hoursToCreate.length,
       firstSession: { completed: completedSessions.size, started: startedSessions.size, rate: pct(completedSessions.size, startedSessions.size) },
       sevenDay: { completed: sevenDayCompleted.length, eligible: sevenDayEligible.length, rate: pct(sevenDayCompleted.length, sevenDayEligible.length) },
       followThrough: { users: followUsers.length, eligible: followEligible.length, rate: pct(followUsers.length, followEligible.length) },
@@ -655,7 +667,7 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
     activeUsers: { wau: activeWeek.size, mau: activeMonth.size },
     retention: { available: retentionDenominatorUsers.length > 0, numerator: retentionNumerator, denominator: retentionDenominatorUsers.length, rate: pct(retentionNumerator, retentionDenominatorUsers.length), definition: "Qualified users active in days 7–13 after signup, among cohorts at least 14 days old." },
     workflowDepth: { averageModules, buckets },
-    reliability: { productEvents24h, failedEmails24h, queuedEmails, migration: migrationReliability },
+    reliability: { productEvents24h, productEvents7d, failedEmails24h, queuedEmails, migration: migrationReliability },
     coverage: {
       productEvents: { scanned: events.length, total: eventScanTotal, truncated: eventScanTotal > events.length },
     },
@@ -674,15 +686,52 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
       ...qualityData,
       alerts: evaluateFunnelQuality({
         signups: { total: customerUsers.length, last24h: customerUsers.filter((user) => user.createdAt >= ago24h).length, last7d: customerUsers.filter((user) => user.createdAt >= ago7d).length },
-        reliability: { productEvents24h, failedEmails24h, queuedEmails },
+        reliability: { productEvents24h, productEvents7d, failedEmails24h, queuedEmails },
         quality: qualityData,
         coverage: { eventScan: { scanned: events.length, total: eventScanTotal } },
       }),
     },
   };
 
-  cached = { expiresAt: Date.now() + 30_000, value: metrics, cohort };
-  return metrics;
+  // Internal and test accounts stay out of every number, but they are listed
+  // separately so an admin can find one and mark it back as a customer.
+  // The cohort query above reads customers only, so they need their own read.
+  const internalUsers = await prisma.user.findMany({
+    where: { accountType: { in: Array.from(INTERNAL_ACCOUNT_TYPES) } },
+    select: {
+      id: true, email: true, name: true, createdAt: true, accountType: true, emailVerifiedAt: true, emailVerificationRequiredAt: true,
+      onboardingStatus: true, businessType: true, profession: true, onboardingData: true,
+      attribution: { select: { firstTouchSource: true, lastTouchSource: true, firstTouchMedium: true, firstTouchCampaign: true, referralSource: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 2_000,
+  }) as UserRow[];
+  const internal: AdminUserIndexEntry[] = internalUsers.map((user) => ({
+    id: user.id,
+    accountType: user.accountType,
+    email: user.email,
+    name: user.name,
+    createdAt: user.createdAt.toISOString(),
+    emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequiredAt),
+    onboardingStatus: user.onboardingStatus,
+    businessType: user.businessType,
+    profession: user.profession,
+    goal: null,
+    startingPath: null,
+    qualified: false,
+    activated: false,
+    deeplyActivated: false,
+    deepActivation: null,
+    stage: "registered",
+    realData: false,
+    qualificationBlockers: ["internal"],
+    activationPaths: [],
+    source: sourceFrom(user),
+    attribution: user.attribution,
+    lastActivity: null,
+  }));
+
+  return { metrics, cohort, internal };
 }
 
 /**
@@ -690,11 +739,11 @@ export async function getAdminMetrics(force = false): Promise<AdminMetrics> {
  * the Users list, its filters and the drill-down counts can never disagree
  * with the cards. Shares the metrics cache — at most one scan per 30s.
  */
-export async function getAdminCohortUsers(force = false): Promise<AdminUserIndexEntry[]> {
-  await getAdminMetrics(force);
-  return cached?.cohort || [];
+export async function getAdminCohortUsers(force = false): Promise<{ cohort: AdminUserIndexEntry[]; internal: AdminUserIndexEntry[] }> {
+  const { cohort, internal } = await snapshot.get(force);
+  return { cohort, internal };
 }
 
 export function clearAdminMetricsCache(): void {
-  cached = null;
+  snapshot.clear();
 }

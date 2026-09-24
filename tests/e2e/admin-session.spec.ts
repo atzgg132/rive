@@ -172,6 +172,38 @@ test.describe("admin session lifecycle", () => {
     }
   });
 
+  test("reclassifies an account as internal with an audit record, repeatably", async () => {
+    // Disposable address under @example.invalid; never deleted.
+    const email = `admin-reclassify-${Date.now()}-${process.pid}@example.invalid`;
+    const user = await prisma.user.create({ data: { email, name: "Admin Reclassify", passwordHash: "e2e-only" } });
+
+    // Customer → internal → customer → internal: audit_events is unique on
+    // (user_id, action), so the second audited change is what a mis-keyed
+    // audit row would refuse.
+    for (const accountType of ["internal", "customer", "internal"]) {
+      const response = await page.request.patch(`/api/admin/users/${user.id}`, { data: { accountType } });
+      expect(response.status(), `PATCH to ${accountType}`).toBe(200);
+      expect(await response.json()).toMatchObject({ success: true, accountType, changed: true });
+    }
+
+    const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { accountType: true } });
+    expect(stored.accountType).toBe("internal");
+    const audits = await prisma.auditEvent.findMany({ where: { action: "admin.users.account_type", targetId: user.id }, orderBy: { createdAt: "asc" } });
+    expect(audits.map((row) => row.metadata)).toEqual([
+      { from: "customer", to: "internal" },
+      { from: "internal", to: "customer" },
+      { from: "customer", to: "internal" },
+    ]);
+
+    // The account leaves the customer cohort and is listed only under Internal.
+    const customers = await (await page.request.get(`/api/admin/users?search=${encodeURIComponent(email)}`)).json();
+    expect(customers.total).toBe(0);
+    const internal = await (await page.request.get(`/api/admin/users?stage=internal&search=${encodeURIComponent(email)}`)).json();
+    expect(internal.data.map((row: { email: string }) => row.email)).toEqual([email]);
+
+    expect((await page.request.patch(`/api/admin/users/${user.id}`, { data: { accountType: "e2e" } })).status()).toBe(400);
+  });
+
   test("signs out once, with a reason, and invalidates the session", async () => {
     await page.getByRole("button", { name: "Sign out" }).click();
 
@@ -180,5 +212,6 @@ test.describe("admin session lifecycle", () => {
 
     expect((await page.request.get("/api/admin/session")).status()).toBe(401);
     expect((await page.request.get("/api/admin/analytics")).status()).toBe(401);
+    expect((await page.request.patch("/api/admin/users/any-id", { data: { accountType: "internal" } })).status()).toBe(401);
   });
 });

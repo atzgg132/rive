@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasAdminSession } from "@/utils/adminSession";
 import { getAdminCohortUsers, type AdminUserIndexEntry } from "@/utils/adminMetrics";
 
-const STAGES = new Set(["all", "registered", "qualified", "activated", "deeply_activated"]);
+const STAGES = new Set(["all", "registered", "qualified", "activated", "deeply_activated", "internal"]);
 const EXPORT_CAP = 5000;
 
 // Stage filters are cumulative to match the Overview cards: "Qualified" is every
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const realData = params.get("realData") === "true";
   const source = (params.get("source") || "").trim();
 
-  const cohort = await getAdminCohortUsers();
+  const { cohort, internal } = await getAdminCohortUsers();
   const matchesNonStage = (user: AdminUserIndexEntry) => (
     (!search || user.email.toLowerCase().includes(search) || (user.name || "").toLowerCase().includes(search))
     && (verified !== "true" && verified !== "false" || String(user.emailVerified) === verified)
@@ -45,9 +45,12 @@ export async function GET(req: NextRequest) {
     deeply_activated: base.filter((user) => user.deeplyActivated).length,
     unverified: base.filter((user) => !user.emailVerified).length,
     realData: base.filter((user) => user.realData).length,
+    internal: internal.filter(matchesNonStage).length,
   };
 
-  const filtered = base.filter((user) => matchesStage(user, stage));
+  // Internal accounts are outside every other chip and count; this stage is
+  // the only way to see them, so a mistaken reclassification can be undone.
+  const filtered = stage === "internal" ? internal.filter(matchesNonStage) : base.filter((user) => matchesStage(user, stage));
 
   if (params.get("export") === "emails") {
     return NextResponse.json({ success: true, total: filtered.length, emails: filtered.slice(0, EXPORT_CAP).map((user) => user.email) });
