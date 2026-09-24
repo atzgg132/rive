@@ -193,22 +193,29 @@ model UserAttribution {
 }
 
 model InvoiceProfile {
-  id                  String   @id @default(uuid())
-  userId              String   @unique @map("user_id")
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessName        String?  @map("business_name")
-  contactName         String?  @map("contact_name")
-  email               String?
-  phone               String?
-  address             String?
-  taxId               String?  @map("tax_id")
-  logoUrl             String?  @map("logo_url")
-  defaultCurrency     String   @default("USD") @map("default_currency")
-  invoicePrefix       String   @default("INV") @map("invoice_prefix")
-  paymentInstructions String?  @map("payment_instructions")
-  defaultTerms        String?  @map("default_terms")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                    String    @id @default(uuid())
+  userId                String    @unique @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName          String?   @map("business_name")
+  contactName           String?   @map("contact_name")
+  email                 String?
+  phone                 String?
+  address               String?
+  taxId                 String?   @map("tax_id")
+  logoUrl               String?   @map("logo_url")
+  defaultCurrency       String    @default("USD") @map("default_currency")
+  invoicePrefix         String    @default("INV") @map("invoice_prefix")
+  paymentInstructions   String?   @map("payment_instructions")
+  defaultTerms          String?   @map("default_terms")
+  // Invoice reminders and paid receipts (#66 PR 2). Off by default; the
+  // schedule holds preset step keys validated against
+  // INVOICE_REMINDER_STEPS in src/lib/domain-vocabulary.ts.
+  remindersEnabled      Boolean   @default(false) @map("reminders_enabled")
+  reminderSchedule      String[]  @default(["due_minus_3", "due_plus_1", "due_plus_7", "due_plus_14"]) @map("reminder_schedule")
+  paidReceiptEnabled    Boolean   @default(false) @map("paid_receipt_enabled")
+  remindersPromptSeenAt DateTime? @map("reminders_prompt_seen_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   @@map("invoice_profiles")
 }
@@ -374,6 +381,11 @@ model Client {
   tags               String[]
   status             String             @default("active")
   dataOrigin         String?            @map("data_origin")
+  // Invoice reminders (#66 PR 2): a client-scoped opt-out from the public
+  // unsubscribe link. Does not affect invoice-sent or receipt mail — only
+  // automated reminder emails from this owner's business.
+  remindersOptedOut            Boolean  @default(false) @map("reminders_opted_out")
+  remindersUnsubscribeTokenHash String? @unique @map("reminders_unsubscribe_token_hash")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
   projects           Project[]
@@ -688,6 +700,16 @@ model Invoice {
   deliveries        InvoiceDelivery[]
   payments          InvoicePayment[]
   events            InvoiceEvent[]
+  reminders         InvoiceReminder[]
+  // Invoice reminders and paid receipts (#66 PR 2).
+  remindersPaused       Boolean   @default(false) @map("reminders_paused")
+  paidReceiptSentAt     DateTime? @map("paid_receipt_sent_at")
+  // The same bearer token issued at send time, encrypted at rest (emailOutbox's
+  // AES-256-GCM, see src/utils/emailOutbox.ts) so a reminder days later can link
+  // to the identical public invoice URL instead of minting a second live link.
+  // Only the hash (publicTokenHash) is used to authenticate a request; this
+  // column exists solely so the sender side can recall what it already sent.
+  publicTokenEncrypted  String?   @map("public_token_encrypted")
 
   @@unique([userId, invoiceNumber], name: "unique_user_invoice_number")
   @@index([userId, createdAt])
@@ -742,6 +764,27 @@ model InvoiceEvent {
   @@index([invoiceId, createdAt])
   @@index([eventType, createdAt])
   @@map("invoice_events")
+}
+
+/**
+ * Records exactly one send per (invoice, step). The unique constraint is the
+ * source of truth against double sends across overlapping or retried cron
+ * runs; `sendDueInvoiceReminders` relies on the P2002 conflict, not on its
+ * own read-then-write ordering, to make each step idempotent.
+ */
+model InvoiceReminder {
+  id        String   @id @default(uuid())
+  invoiceId String   @map("invoice_id")
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  step      String
+  sentAt    DateTime @default(now()) @map("sent_at")
+  outboxId  String?  @map("outbox_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([invoiceId, step])
+  @@index([invoiceId])
+  @@index([sentAt])
+  @@map("invoice_reminders")
 }
 
 model Expense {

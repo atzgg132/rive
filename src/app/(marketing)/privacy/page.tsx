@@ -11,13 +11,14 @@ const toc = [
   { id: "collect",    label: "2. Information we collect" },
   { id: "use",        label: "3. How we use your information" },
   { id: "google",     label: "4. Google user data" },
-  { id: "security",   label: "5. How we protect your data" },
-  { id: "retention",  label: "6. Data retention" },
-  { id: "third",      label: "7. Third-party services" },
-  { id: "rights",     label: "8. Your rights" },
-  { id: "children",   label: "9. Children's privacy" },
-  { id: "changes",    label: "10. Changes to this policy" },
-  { id: "contact",    label: "11. Contact us" },
+  { id: "client-emails", label: "5. Emails we send to your clients on your behalf" },
+  { id: "security",   label: "6. How we protect your data" },
+  { id: "retention",  label: "7. Data retention" },
+  { id: "third",      label: "8. Third-party services" },
+  { id: "rights",     label: "9. Your rights" },
+  { id: "children",   label: "10. Children's privacy" },
+  { id: "changes",    label: "11. Changes to this policy" },
+  { id: "contact",    label: "12. Contact us" },
 ];
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -31,7 +32,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 export default function PrivacyPage() {
   return (
-    <ProseShell eyebrow="LEGAL" title="Privacy Policy" updated="Last updated · September 12, 2026">
+    <ProseShell eyebrow="LEGAL" title="Privacy Policy" updated="Last updated · September 24, 2026">
         <div className="flex flex-col gap-8 md:flex-row md:gap-12">
           <LegalToc items={toc} />
           <div className="min-w-0 max-w-2xl flex-1 overflow-x-clip">
@@ -72,11 +73,17 @@ export default function PrivacyPage() {
                 <p><strong>Google sign-in.</strong> When you sign in with Google, we request OpenID, email, and profile access. We receive your Google account identifier, email address, and name so we can create or authenticate your Rive account. We do not keep Google sign-in access or refresh tokens after that sign-in request finishes. We store the Google account identifier so later sign-ins can recognize the same account.</p>
                 <p><strong>Google Calendar.</strong> When you connect Google Calendar from the workspace, we request read-only access to your calendar list and access to calendar events (create, read, update, and delete) on the calendars you connect. We use that access so Rive can list those calendars and keep workspace events in sync with Google Calendar for your business workflow. We store the connected account email, the calendars you select, synced event data in your workspace, and the OAuth tokens needed to keep that connection working.</p>
                 <p>We use Google user data only to provide and improve these user-facing sign-in and calendar features. We do not use Google user data for advertising, personalized ads, retargeting, interest-based ads, selling to data brokers, credit-worthiness, lending, or any other unrelated purpose. We do not use Google user data to develop, improve, or train generalized or third-party AI or machine-learning models.</p>
-                <p>We do not sell Google user data. We do not share, transfer, or disclose Google user data to third parties for purposes other than providing the Service, except where required by law. Infrastructure we use to host the Service (see section 7) may process that data on our behalf under confidentiality terms, solely to run Rive.</p>
+                <p>We do not sell Google user data. We do not share, transfer, or disclose Google user data to third parties for purposes other than providing the Service, except where required by law. Infrastructure we use to host the Service (see section 8) may process that data on our behalf under confidentiality terms, solely to run Rive.</p>
                 <p>Rive&apos;s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-primary hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
               </Section>
 
-              <Section id="security" title="5. How we protect your data">
+              <Section id="client-emails" title="5. Emails we send to your clients on your behalf">
+                <p>When you use invoice reminders or paid receipts, Rive sends automated emails to your clients using the client contact details you enter. These emails cover: a scheduled reminder about an unpaid invoice (on the schedule you choose — up to 3 days before the due date and 1, 7, or 14 days after), and a receipt confirming an invoice has been paid in full. Both are off by default and only send if you turn them on.</p>
+                <p>For this purpose, Rive acts as a data processor on your behalf: we send the message using the invoice and client data already in your workspace, we do not use it for any other purpose, and we do not sell it. You are responsible for the accuracy of the client contact details you provide and for having the right to contact that client — see our <a href="/terms" className="text-primary hover:underline">Terms of Service</a>.</p>
+                <p>Every automated reminder email includes a one-click unsubscribe link that is specific to that client. Using it stops future reminder emails to that client from your account; it does not affect the original invoice-sent email, a paid receipt, or any other correspondence. Reminder emails are also subject to the send caps and suppression rules described in our infrastructure — a maximum of four reminders per invoice and a daily send limit per account.</p>
+              </Section>
+
+              <Section id="security" title="6. How we protect your data">
                 <p>Security procedures are in place to protect the confidentiality of your data, including Google user data stored in Rive&apos;s environment rather than only inside Google.</p>
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li><strong>Encryption in transit</strong> — The website, APIs, and database connections use TLS (HTTPS in the browser; TLS required to the database).</li>
@@ -87,31 +94,31 @@ export default function PrivacyPage() {
                 <p>No method of transmission or storage is perfectly secure. We apply these controls as a small SaaS operating on AWS; we do not claim third-party security certifications in this policy.</p>
               </Section>
 
-              <Section id="retention" title="6. Data retention">
+              <Section id="retention" title="7. Data retention">
                 <p>We retain account and workspace information for as long as you use the Service or as needed for legitimate business, security, and legal purposes. You can request access, correction, or deletion at any time by emailing <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a>.</p>
                 <p>If you disconnect Google Calendar in the workspace, we revoke Rive&apos;s Google grant and delete the stored connection tokens and calendars imported from that connection. You can also revoke Rive&apos;s access in your Google Account permissions. If you ask us to delete your Rive account, we delete the account and associated workspace data, including any Google account identifier and remaining Google Calendar connection data, unless a longer retention period is required or permitted by law.</p>
               </Section>
 
-              <Section id="third" title="7. Third-party services">
+              <Section id="third" title="8. Third-party services">
                 <p>We use privacy-respecting infrastructure providers for web hosting and database management. These services process data on our behalf under strict confidentiality terms. Production hosting and the encrypted database run on Amazon Web Services.</p>
                 <p>Usage analytics are first-party and stored on Rive&apos;s AWS infrastructure; no third-party analytics service processes them.</p>
                 <p>If you sign in with Google or connect Google Calendar, Google provides those APIs under Google&apos;s terms. Rive then stores and protects the Google user data described in sections 4 and 5 in order to provide the feature you enabled.</p>
               </Section>
 
-              <Section id="rights" title="8. Your rights">
+              <Section id="rights" title="9. Your rights">
                 <p>Depending on your jurisdiction, you may have the right to access, correct, or delete your personal data. To exercise these rights, email us at <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a>.</p>
               </Section>
 
-              <Section id="children" title="9. Children's privacy">
+              <Section id="children" title="10. Children's privacy">
                 <p>Rive is not directed at children under the age of 16. We do not knowingly collect personal information from anyone under 16. If you believe we have inadvertently collected data from a minor, please contact us immediately at <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a>.</p>
               </Section>
 
-              <Section id="changes" title="10. Changes to this policy">
+              <Section id="changes" title="11. Changes to this policy">
                 <p>We may update this Privacy Policy from time to time. When we do, we will revise the &quot;last updated&quot; date at the top of this page. For significant changes, we will notify account holders through the Service or by email.</p>
                 <p>Your continued use of Rive after any changes constitutes acceptance of the updated policy.</p>
               </Section>
 
-              <Section id="contact" title="11. Contact us">
+              <Section id="contact" title="12. Contact us">
                 <p>For any privacy-related questions, requests, or concerns — including Google user data — email <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a>.</p>
                 <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-[var(--inst-ink)]">
                   <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a></p>

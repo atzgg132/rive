@@ -20,7 +20,9 @@ export type EmailType =
   | "contract_void"
   | "contract_acceptance_due"
   | "invoice_ready"
-  | "invoice_sent";
+  | "invoice_sent"
+  | "invoice_reminder"
+  | "invoice_paid_receipt";
 
 export type EmailFailureReason = "not_configured" | "transient_failure" | "permanent_failure";
 
@@ -779,6 +781,103 @@ export function sendInvoiceSentEmail(input: {
   publicUrl?: string;
 }): Promise<EmailResult> {
   return deliver(buildInvoiceSentEmail(input));
+}
+
+const REMINDER_STEP_EYEBROW: Record<string, string> = {
+  due_minus_3: "due soon",
+  due_plus_1: "payment overdue",
+  due_plus_7: "payment overdue",
+  due_plus_14: "payment overdue",
+};
+
+const REMINDER_STEP_INTRO: Record<string, (senderName: string) => string> = {
+  due_minus_3: (senderName) => `A friendly reminder that an invoice from ${senderName} is due in a few days.`,
+  due_plus_1: (senderName) => `An invoice from ${senderName} is now overdue.`,
+  due_plus_7: (senderName) => `An invoice from ${senderName} is still outstanding.`,
+  due_plus_14: (senderName) => `An invoice from ${senderName} remains unpaid.`,
+};
+
+/**
+ * Automated reminder sent on the owner's chosen schedule
+ * (src/utils/invoiceReminders.ts). Every reminder carries a client-scoped
+ * unsubscribe link when one is available; the owner opts a client back in by
+ * simply sending or resending an invoice — see docs/agreements — the
+ * unsubscribe only silences future automated reminders, never the original
+ * invoice-sent or receipt mail.
+ */
+export function buildInvoiceReminderEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  dueDate: Date | null;
+  senderName: string;
+  publicUrl?: string;
+  step: string;
+  unsubscribeUrl?: string;
+}): PreparedEmail {
+  const due = input.dueDate
+    ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
+    : "not specified";
+  const safeClientName = escapeHtml(input.clientName);
+  const intro = (REMINDER_STEP_INTRO[input.step] || REMINDER_STEP_INTRO.due_plus_1)(input.senderName);
+  const asideParts = ["The invoice email is a reminder notice. Please verify the sender and payment details using a trusted channel before paying."];
+  if (input.unsubscribeUrl) {
+    asideParts.push(`<a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#1D4ED8;text-decoration:underline">Stop reminder emails for this business</a>.`);
+  }
+  return {
+    to: input.to,
+    type: "invoice_reminder",
+    subject: `Reminder: invoice ${input.invoiceNumber} from ${input.senderName}`,
+    html: baseTemplate({
+      eyebrow: REMINDER_STEP_EYEBROW[input.step] || "payment reminder",
+      title: `Invoice ${input.invoiceNumber}`,
+      intro,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, this is an automated reminder for an outstanding invoice.<br><br>Amount due: <strong style="color:#181511">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#181511">${escapeHtml(due)}</strong></p>`,
+      action: input.publicUrl ? "View invoice" : undefined,
+      actionUrl: input.publicUrl,
+      aside: asideParts.join(" "),
+      recipient: input.to,
+    }),
+    text: `Reminder: invoice ${input.invoiceNumber} from ${input.senderName}.\n\n${intro}\n\nAmount due: ${input.currency} ${input.total}\nDue: ${due}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}${input.unsubscribeUrl ? `\n\nStop reminder emails for this business: ${input.unsubscribeUrl}` : ""}`,
+  };
+}
+
+export function sendInvoiceReminderEmail(input: Parameters<typeof buildInvoiceReminderEmail>[0]): Promise<EmailResult> {
+  return deliver(buildInvoiceReminderEmail(input));
+}
+
+/** Sent once, automatically, when a payment fully pays an invoice and the owner opted in. */
+export function buildInvoicePaidReceiptEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  paidDate: Date;
+  senderName: string;
+}): PreparedEmail {
+  const paid = input.paidDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
+  const safeClientName = escapeHtml(input.clientName);
+  return {
+    to: input.to,
+    type: "invoice_paid_receipt",
+    subject: `Receipt: invoice ${input.invoiceNumber} paid in full`,
+    html: baseTemplate({
+      eyebrow: "payment received",
+      title: `Invoice ${input.invoiceNumber} is paid in full.`,
+      intro: `${input.senderName} has recorded your payment. This is your receipt.`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, thank you for your payment.<br><br>Amount paid: <strong style="color:#181511">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Paid on: <strong style="color:#181511">${escapeHtml(paid)}</strong></p>`,
+      aside: "This receipt confirms the invoice is fully paid. Keep it for your records.",
+      recipient: input.to,
+    }),
+    text: `Invoice ${input.invoiceNumber} is paid in full.\n\nAmount paid: ${input.currency} ${input.total}\nPaid on: ${paid}\n\nThis receipt confirms the invoice is fully paid.`,
+  };
+}
+
+export function sendInvoicePaidReceiptEmail(input: Parameters<typeof buildInvoicePaidReceiptEmail>[0]): Promise<EmailResult> {
+  return deliver(buildInvoicePaidReceiptEmail(input));
 }
 
 /**
