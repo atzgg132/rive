@@ -20,7 +20,8 @@ export type EmailType =
   | "contract_void"
   | "contract_acceptance_due"
   | "invoice_ready"
-  | "invoice_sent";
+  | "invoice_sent"
+  | "weekly_summary";
 
 export type EmailFailureReason = "not_configured" | "transient_failure" | "permanent_failure";
 
@@ -845,6 +846,70 @@ export function buildOwnerAcceptanceDueEmail(input: {
       recipient: input.to,
     }),
     text: `${input.clientName} recorded acceptance of “${input.contractTitle}”. Your acceptance is next.\n\nOpen the Agreement: ${input.agreementUrl}`,
+  };
+}
+
+export type WeeklySummaryEmailSection =
+  | { kind: "financials"; paidLastWeek: string; outstanding: string; overdue: string; currency: string }
+  | { kind: "deadlines"; items: { title: string; dueDate: string }[] }
+  | { kind: "meetings"; items: { title: string; startAt: string }[] }
+  | { kind: "agreements"; items: { title: string; clientName: string }[] };
+
+/**
+ * The opt-in weekly business summary (issue #66, PR 5). Callers pre-format
+ * every amount and date — this function only lays the sections out, matching
+ * `buildInvoiceReadyEmail`'s split between "the route knows the workspace's
+ * currency and time zone" and "the template just renders strings".
+ */
+export function buildWeeklySummaryEmail(input: {
+  to: string;
+  name: string;
+  weekLabel: string;
+  sections: WeeklySummaryEmailSection[];
+  unsubscribeUrl: string;
+  settingsUrl: string;
+}): PreparedEmail {
+  const firstName = input.name.trim().split(/\s+/)[0] || "there";
+  const rows: string[] = [];
+  for (const section of input.sections) {
+    if (section.kind === "financials") {
+      rows.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 4px">
+        <tr><td style="padding:6px 0;color:#55503F;font-size:15px">Paid last week</td><td align="right" style="padding:6px 0;color:#181511;font-size:15px;font-weight:700">${escapeHtml(section.paidLastWeek)}</td></tr>
+        <tr><td style="padding:6px 0;color:#55503F;font-size:15px">Outstanding</td><td align="right" style="padding:6px 0;color:#181511;font-size:15px;font-weight:700">${escapeHtml(section.outstanding)}</td></tr>
+        <tr><td style="padding:6px 0;color:#55503F;font-size:15px">Overdue</td><td align="right" style="padding:6px 0;color:#181511;font-size:15px;font-weight:700">${escapeHtml(section.overdue)}</td></tr>
+      </table>`);
+    } else if (section.kind === "deadlines" && section.items.length) {
+      rows.push(`<p style="margin:18px 0 6px;color:#1D4ED8;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase">Deadlines this week</p>` +
+        section.items.map((item) => `<p style="margin:0 0 4px;color:#55503F;font-size:14px">${escapeHtml(item.title)} — <strong style="color:#181511">${escapeHtml(item.dueDate)}</strong></p>`).join(""));
+    } else if (section.kind === "meetings" && section.items.length) {
+      rows.push(`<p style="margin:18px 0 6px;color:#1D4ED8;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase">Meetings this week</p>` +
+        section.items.map((item) => `<p style="margin:0 0 4px;color:#55503F;font-size:14px">${escapeHtml(item.title)} — <strong style="color:#181511">${escapeHtml(item.startAt)}</strong></p>`).join(""));
+    } else if (section.kind === "agreements" && section.items.length) {
+      rows.push(`<p style="margin:18px 0 6px;color:#1D4ED8;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase">Awaiting the client</p>` +
+        section.items.map((item) => `<p style="margin:0 0 4px;color:#55503F;font-size:14px">${escapeHtml(item.title)} — <strong style="color:#181511">${escapeHtml(item.clientName)}</strong></p>`).join(""));
+    }
+  }
+
+  return {
+    to: input.to,
+    type: "weekly_summary",
+    subject: `Your week at rive. — ${input.weekLabel}`,
+    html: baseTemplate({
+      eyebrow: "weekly summary",
+      title: `Here’s your week, ${firstName}.`,
+      intro: `A quick look at ${input.weekLabel.toLowerCase()} — money in, money owed, and what’s coming up.`,
+      body: rows.join(""),
+      action: "Open my dashboard",
+      actionUrl: `${appUrl}/dashboard`,
+      aside: `You’re getting this because weekly summaries are turned on for your account. <a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#1D4ED8;text-decoration:underline">Turn off weekly summaries</a> or manage this and other notifications in <a href="${escapeHtml(input.settingsUrl)}" style="color:#1D4ED8;text-decoration:underline">Settings</a>.`,
+      recipient: input.to,
+    }),
+    text: `Your week at rive. — ${input.weekLabel}\n\n${input.sections.map((section) => {
+      if (section.kind === "financials") return `Paid last week: ${section.paidLastWeek}\nOutstanding: ${section.outstanding}\nOverdue: ${section.overdue}`;
+      if (section.kind === "deadlines") return `Deadlines:\n${section.items.map((i) => `- ${i.title} (${i.dueDate})`).join("\n")}`;
+      if (section.kind === "meetings") return `Meetings:\n${section.items.map((i) => `- ${i.title} (${i.startAt})`).join("\n")}`;
+      return `Awaiting the client:\n${section.items.map((i) => `- ${i.title} — ${i.clientName}`).join("\n")}`;
+    }).join("\n\n")}\n\nOpen your dashboard: ${appUrl}/dashboard\n\nTurn off weekly summaries: ${input.unsubscribeUrl}\nManage notifications: ${input.settingsUrl}`,
   };
 }
 

@@ -17,6 +17,7 @@ import type { DashboardSignal } from "@/utils/signals";
 import { Badge, Card, EmptyState, MetricCard, Movement, PageHeader } from "@/components/ui";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { ActivationCard } from "@/components/dashboard/ActivationCard";
+import { WeeklySummaryOptInCard } from "@/components/dashboard/WeeklySummaryOptInCard";
 import type { ActivationPlan } from "@/lib/activation";
 import { useFeatureAvailability } from "@/components/FeatureAvailabilityContext";
 
@@ -279,6 +280,12 @@ export default function DashboardOverview() {
           onDismissed={() => setActivation((current) => current ? { ...current, guidanceDismissed: true } : current)}
         />
       )}
+
+      {/* Opt-in prompt for the weekly business summary email. Never shown while
+          guided-experience onboarding is still active, and shown at most once
+          per account regardless — see WeeklySummaryOptInCard and
+          `/api/workflow/weekly-summary/prompt`. */}
+      {!showActivationGuidance && <WeeklySummaryOptInCard />}
 
       {/* Metrics Row */}
       {!isFirstRun && <div className={metricsGridClassName}>
