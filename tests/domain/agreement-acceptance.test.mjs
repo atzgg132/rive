@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
-  acceptedWorkSetupBillingPark,
+  acceptedBillingOccurrence,
   persistAcceptedAgreementWorkSetup,
   WorkSetupError,
 } from "../../src/utils/projectGeneration.ts";
@@ -14,6 +14,14 @@ const contractSignRoute = await readFile(
 );
 const startSigningRoute = await readFile(
   new URL("../../src/app/api/workflow/contracts/[id]/start-signing/route.ts", import.meta.url),
+  "utf8",
+);
+const acceptanceSource = await readFile(
+  new URL("../../src/utils/agreementAcceptance.ts", import.meta.url),
+  "utf8",
+);
+const ownerAcceptRoute = await readFile(
+  new URL("../../src/app/api/workflow/contracts/[id]/accept/route.ts", import.meta.url),
   "utf8",
 );
 const finalizeRoute = await readFile(
@@ -127,23 +135,51 @@ function issueActiveSignLinks(existing, signerIds, { revokeFirst }) {
   return next;
 }
 
+/** Source text from `start` up to (not including) `end`, line endings normalized. */
+function sliceBetween(source, start, end) {
+  const text = source.replace(/\r\n/g, "\n");
+  const from = text.indexOf(start);
+  const to = text.indexOf(end, from);
+  assert.ok(from >= 0 && to > from, `source markers not found: ${start}`);
+  return text.slice(from, to);
+}
+
+// Both parties record acceptance through recordAgreementAcceptance; its
+// transaction is the only place an Agreement becomes executed.
+const acceptanceTransaction = sliceBetween(acceptanceSource, "return await prisma.$transaction(async (tx) => {", "\n  } catch (error) {");
+
 test("completing dual-party acceptance commits without generation or billing-park writes in that transaction", () => {
-  assert.match(contractSignRoute, /completion = await prisma\.\$transaction\(async \(tx\) => \{/);
-  assert.match(contractSignRoute, /from: "signing", to: "executed"/);
-  assert.match(contractSignRoute, /eventType: "contract_executed"/);
-  assert.match(contractSignRoute, /enqueueEmail\(buildContractExecutedEmail\([\s\S]*?\), tx\)/);
-  assert.doesNotMatch(contractSignRoute, /tx\.projectGenerationRecord/);
-  assert.doesNotMatch(contractSignRoute, /tx\.contractBillingOccurrence/);
-  assert.doesNotMatch(contractSignRoute, /tx\.contractPaymentPlanItem/);
+  assert.match(acceptanceTransaction, /from: "signing", to: "executed"/);
+  assert.match(acceptanceTransaction, /eventType: "contract_executed"/);
+  assert.match(acceptanceTransaction, /enqueueEmail\(buildContractExecutedEmail\([\s\S]*?\), tx\)/);
+  assert.doesNotMatch(acceptanceTransaction, /tx\.projectGenerationRecord/);
+  assert.doesNotMatch(acceptanceTransaction, /tx\.contractBillingOccurrence/);
+  assert.doesNotMatch(acceptanceTransaction, /tx\.contractPaymentPlanItem/);
 });
 
-test("work-setup persistence after accept is best-effort and cannot fail the recorded acceptance HTTP success", () => {
-  const afterTransaction = contractSignRoute.split(/completion = await prisma\.\$transaction\(async \(tx\) => \{[\s\S]*?\n      \}\);/)[1];
-  assert.match(afterTransaction, /if \(completion\.completed\) \{[\s\S]*ensureAcceptedAgreementWorkSetup\(prisma,[\s\S]*?\.catch\(/);
-  assert.match(afterTransaction, /return NextResponse\.json\(\{ success: true/);
-  const ensureBlock = afterTransaction.match(/await ensureAcceptedAgreementWorkSetup\(prisma,[\s\S]*?\.catch\([\s\S]*?\}\);/)[0];
+test("both acceptance channels use the one writer and run post-commit follow-up", () => {
+  for (const route of [contractSignRoute, ownerAcceptRoute]) {
+    assert.match(route, /await recordAgreementAcceptance\(/);
+    assert.match(route, /await finishAgreementAcceptance\(outcome\)/);
+  }
+  assert.match(ownerAcceptRoute, /channel: "workspace"/);
+  assert.match(contractSignRoute, /channel: "public_link"/);
+});
+
+test("work-setup persistence after accept is best-effort and cannot fail the recorded acceptance", () => {
+  const finish = sliceBetween(acceptanceSource, "export async function finishAgreementAcceptance", "\nexport async function notifyOwnerAcceptanceDue");
+  const ensureBlock = finish.match(/await ensureAcceptedAgreementWorkSetup\(prisma,[\s\S]*?\.catch\([\s\S]*?\}\);/)[0];
   assert.match(ensureBlock, /\.catch\(/);
   assert.doesNotMatch(ensureBlock, /throw /);
+});
+
+test("the owner is notified when the client accepts", () => {
+  const finish = sliceBetween(acceptanceSource, "export async function finishAgreementAcceptance", "\nexport async function notifyOwnerAcceptanceDue");
+  assert.match(finish, /!outcome\.completed && !outcome\.alreadySigned && outcome\.signerRole === "client"[\s\S]*notifyOwnerAcceptanceDue/);
+});
+
+test("a signed-in owner cannot accept on the client's public link", () => {
+  assert.match(contractSignRoute, /viewer\.userId === link!\.contract\.userId[\s\S]*?owner_on_client_link/);
 });
 
 test("work setup for an executed Agreement without a generation row backfills instead of 404ing first", () => {
@@ -153,13 +189,14 @@ test("work setup for an executed Agreement without a generation row backfills in
   assert.match(projectGenerationSource, /if \(occurrence\.status !== "awaiting_work_setup"\) continue/);
 });
 
-test("start-signing revokes active sign links for those signers before createMany", () => {
-  const transaction = startSigningRoute.match(/await prisma\.\$transaction\(async \(tx\) => \{[\s\S]*?\n      \}\);/)[0];
+test("start-signing revokes active sign links for both signers before issuing the client link", () => {
+  const transaction = sliceBetween(startSigningRoute, "await prisma.$transaction(async (tx) => {", "\n    } catch (error) {");
   const revokeIndex = transaction.indexOf("tx.contractReviewLink.updateMany");
-  const createIndex = transaction.indexOf("tx.contractReviewLink.createMany");
+  const createIndex = transaction.indexOf("tx.contractReviewLink.create(");
   assert.ok(revokeIndex >= 0 && createIndex > revokeIndex);
   assert.match(transaction, /signerId: \{ in: \[clientSigner\.id, ownerSigner\.id\] \}/);
   assert.match(transaction, /type: "sign", revokedAt: null/);
+  assert.doesNotMatch(startSigningRoute, /ownerSignUrl|ownerToken/);
 });
 
 test("retrying start-signing collides on the active-signer unique index unless existing sign links are revoked first", () => {
@@ -178,32 +215,32 @@ test("retrying start-signing collides on the active-signer unique index unless e
 });
 
 test("party-snapshot and typed-name errors stay strict and name the live vs snapshotted party", () => {
-  assert.match(contractSignRoute, /The typed name must match the named party exactly[\s\S]*save a new version/);
+  assert.match(acceptanceSource, /The typed name must match the named party exactly[\s\S]*save a new version/);
   assert.match(finalizeRoute, /live client is now[\s\S]*save a new version before finalizing/);
   assert.match(finalizeRoute, /live owner is now[\s\S]*save a new version before finalizing/);
   assert.match(startSigningRoute, /live client is now[\s\S]*save a new version before starting recorded acceptance/);
   assert.match(startSigningRoute, /live owner is now[\s\S]*save a new version before starting recorded acceptance/);
-  assert.match(contractSignRoute, /typedName\.toLocaleLowerCase\(\) !== link!\.signer!\.name\.trim\(\)\.toLocaleLowerCase\(\)/);
+  assert.match(acceptanceSource, /if \(!typedNameMatches\(typedName, signer\.name\)\)/);
 });
 
-test("accepted billing park keeps on-signing eligible-at as the executed timestamp", () => {
+test("accepted billing starts pending with on-signing eligible-at as the executed timestamp", () => {
   const executedAt = new Date("2026-09-05T12:00:00.000Z");
   const due = new Date("2026-10-01T12:00:00.000Z");
-  assert.deepEqual(acceptedWorkSetupBillingPark(executedAt, { triggerType: "on_signing", triggerDate: null }), {
-    status: "awaiting_work_setup",
+  assert.deepEqual(acceptedBillingOccurrence(executedAt, { triggerType: "on_signing", triggerDate: null }), {
+    status: "pending",
     eligibleAt: executedAt,
   });
-  assert.deepEqual(acceptedWorkSetupBillingPark(executedAt, { triggerType: "fixed_date", triggerDate: due }), {
-    status: "awaiting_work_setup",
+  assert.deepEqual(acceptedBillingOccurrence(executedAt, { triggerType: "fixed_date", triggerDate: due }), {
+    status: "pending",
     eligibleAt: due,
   });
-  assert.deepEqual(acceptedWorkSetupBillingPark(executedAt, { triggerType: "milestone_completed", triggerDate: null }), {
-    status: "awaiting_work_setup",
+  assert.deepEqual(acceptedBillingOccurrence(executedAt, { triggerType: "milestone_completed", triggerDate: null }), {
+    status: "pending",
     eligibleAt: null,
   });
 });
 
-test("work-setup persist creates a pending generation and parks missing occurrences on an executed Agreement", async () => {
+test("work-setup persist creates a pending generation and pending billing occurrences on an executed Agreement", async () => {
   const executedAt = new Date("2026-09-01T12:00:00.000Z");
   const { client, state } = createWorkSetupClient({
     contract: {
@@ -225,7 +262,7 @@ test("work-setup persist creates a pending generation and parks missing occurren
   assert.equal(state.generations.length, 1);
   assert.equal(state.generations[0].status, "pending");
   assert.equal(state.occurrences.length, 2);
-  assert.equal(state.occurrences[0].status, "awaiting_work_setup");
+  assert.equal(state.occurrences[0].status, "pending");
   assert.equal(state.planItems.every((item) => item.status === "active"), true);
 
   const again = await persistAcceptedAgreementWorkSetup(client, { userId: "owner-1", contractId: "contract-1" });
@@ -256,7 +293,7 @@ test("work-setup persist backfills a missing generation row without rewriting ex
   assert.equal(result.createdGeneration, true);
   assert.equal(result.parkedOccurrenceCount, 1);
   assert.equal(state.occurrences.find((row) => row.paymentPlanItemId === "item-existing").status, "eligible");
-  assert.equal(state.occurrences.find((row) => row.paymentPlanItemId === "item-missing").status, "awaiting_work_setup");
+  assert.equal(state.occurrences.find((row) => row.paymentPlanItemId === "item-missing").status, "pending");
   assert.equal(state.planItems.find((item) => item.id === "item-existing").status, "active");
   assert.equal(state.planItems.find((item) => item.id === "item-missing").status, "active");
 });

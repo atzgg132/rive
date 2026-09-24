@@ -45,7 +45,9 @@ async function resolveLinkById(id: string) {
 }
 
 function linkProblem(link: SignArtifactLink | null): string | null {
-  if (!link || link.type !== "sign") return "Accepted Agreement link not found or expired.";
+  // Void-confirmation links reach the same accepted-record page, so they must
+  // be able to download the record they are being asked to void.
+  if (!link || !["sign", "void"].includes(link.type)) return "Accepted Agreement link not found or expired.";
   if (link.revokedAt) return "Artifact link has been revoked.";
   if (link.expiresAt <= new Date()) return "Artifact link has expired.";
   if (!link.version || !link.signer) return "Artifact link is incomplete.";

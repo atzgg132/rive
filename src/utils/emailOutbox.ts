@@ -361,6 +361,19 @@ async function isDeliveryStillValid(email: PreparedEmail): Promise<boolean> {
     });
     return Boolean(activeLink);
   }
+  if (guard.kind === "contract_void") {
+    const activeLink = await prisma.contractReviewLink.findFirst({
+      where: {
+        id: guard.linkId,
+        tokenHash: guard.tokenHash,
+        type: "void",
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+    return Boolean(activeLink);
+  }
   if (guard.kind === "invoice_sent") {
     const invoice = await prisma.invoice.findUnique({
       where: { id: guard.invoiceId },

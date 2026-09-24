@@ -531,7 +531,8 @@ test("the artifact session path rejects other-purpose cookies and invalid bearer
 });
 
 test("route source contract: the signing transaction no longer writes the artifact row and no raw token is returned", async () => {
-  const signRoute = await readFile(new URL("../../src/app/api/public/contracts/sign/[token]/route.ts", import.meta.url), "utf8");
+  // Acceptance for both channels is written by src/utils/agreementAcceptance.ts.
+  const signRoute = await readFile(new URL("../../src/utils/agreementAcceptance.ts", import.meta.url), "utf8");
   assert.doesNotMatch(signRoute, /tx\.contractArtifact\.create/, "the append-only artifact is written post-commit by ensure");
   assert.match(signRoute, /ensureContractExecutedArtifact\(prisma/);
   const artifactApiRoute = await readFile(new URL("../../src/app/api/public/contracts/artifact/[token]/route.ts", import.meta.url), "utf8");

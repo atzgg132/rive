@@ -631,7 +631,7 @@ async function mockRestylePublic(page: Page) {
   let signStatus: "signing" | "executed" = "signing";
   let signerStatus: "pending" | "signed" = "pending";
   let signDownloadUrl: string | null = null;
-  let reviewMode: "review" | "read_only" = "review";
+  const reviewMode: "review" | "read_only" = "review";
   let reviewVersionStatus: "draft" | "approved" = "draft";
   const reviewComments: Array<Record<string, unknown>> = [];
 
@@ -723,7 +723,7 @@ async function mockRestylePublic(page: Page) {
     if (pathname === "/api/public/contracts/review/session" && request.method() === "POST") {
       const body = request.postDataJSON() as { action?: unknown; authorName?: string; authorEmail?: string; sectionKey?: string | null; body?: string };
       if (body.action === "approve") {
-        reviewMode = "read_only";
+        // Approval is a signal, not a lock: the page stays in review mode.
         reviewVersionStatus = "approved";
         return json(route, { success: true, approved: true, message: "The sender has been told this Agreement version is ready for finalization and recorded acceptance." });
       }
@@ -834,7 +834,7 @@ for (const theme of ["light", "dark"] as const) {
     await captureRestyle(page, theme, "review", "/review/restyle-token", "public", async (capturePage) => {
       await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
       expect(new URL(capturePage.url()).pathname).toBe("/review");
-      await expect(capturePage.getByRole("button", { name: /Looks good/ })).toBeVisible();
+      await expect(capturePage.getByRole("button", { name: /No more comments/ })).toBeVisible();
       await expect(capturePage.getByRole("textbox").first()).toHaveValue("Restyle Client");
     }, testInfo);
   });
@@ -854,7 +854,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1024, height: 768 
 
       await captureRestyle(page, theme, "review", "/review/restyle-token", "public", async (capturePage) => {
         await expect(capturePage.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
-        await expect(capturePage.getByRole("button", { name: /Looks good/ })).toBeVisible();
+        await expect(capturePage.getByRole("button", { name: /No more comments/ })).toBeVisible();
       }, testInfo, { viewport });
     });
   }
@@ -883,15 +883,15 @@ for (const theme of ["light", "dark"] as const) {
     await page.locator('input[placeholder="Restyle Client"]').fill("Restyle Client");
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Record acceptance" }).click();
-    await expect(page.getByText("Both parties have recorded acceptance.", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/^Both parties have recorded acceptance\./)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("button", { name: "Record acceptance" })).toHaveCount(0);
     await expectNoHorizontalOverflow(page, "/sign/restyle-token");
 
     await page.goto("/review/restyle-token", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Restyle Fixture Agreement" })).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Looks good/ }).click();
-    await expect(page.getByText(/You marked this draft ready\./)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole("button", { name: /Looks good/ })).toHaveCount(0);
+    await page.getByRole("button", { name: /No more comments/ }).click();
+    await expect(page.getByText(/You told the sender you have no more comments/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /No more comments/ })).toHaveCount(0);
     await expectNoHorizontalOverflow(page, "/review/restyle-token");
 
     await page.waitForTimeout(100);

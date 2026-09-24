@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
-import { assertContractsEnabled, transitionContractStatus } from "@/utils/contracts";
+import { agreementErrorResponse, AgreementActionError, assertContractsEnabled, transitionContractStatus } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { readJsonBody } from "@/utils/apiBoundary";
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (clientSigner.name.trim() !== contract.client.name.trim() || clientSigner.email.trim().toLowerCase() !== contract.client.email.trim().toLowerCase()) {
       return NextResponse.json({
         success: false,
-        message: `The client on this draft is snapshotted as “${clientSigner.name} <${clientSigner.email}>”, but the live client is now “${contract.client.name} <${contract.client.email || "missing email"}”. Edit the Agreement and save a new version before finalizing.`,
+        message: `The client on this draft is snapshotted as “${clientSigner.name} <${clientSigner.email}>”, but the live client is now “${contract.client.name} <${contract.client.email || "missing email"}>”. Edit the Agreement and save a new version before finalizing.`,
       }, { status: 409 });
     }
     if (ownerSigner.name.trim() !== ownerName.trim() || ownerSigner.email.trim().toLowerCase() !== contract.user.email.trim().toLowerCase()) {
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await prisma.$transaction(async (tx) => {
       const finalized = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: contract.status, to: "ready_to_sign", data: { finalizedAt: new Date(), reviewExpiresAt: null, ...(contract.status === "expired" ? { providerEnvelopeId: null } : {}) } });
-      if (finalized !== 1) throw new Error("The Agreement changed while it was being finalized. Reload and try again.");
+      if (finalized !== 1) throw new AgreementActionError("The Agreement changed while it was being finalized. Reload and try again.", 409);
       await tx.contractVersion.update({ where: { id: contract.versions[0].id }, data: { status: "final", finalizedAt: new Date() } });
       await tx.contractReviewLink.updateMany({ where: { contractId: id, type: "review", revokedAt: null }, data: { revokedAt: new Date() } });
       await tx.contractEvent.create({ data: { contractId: id, versionId: contract.versions[0].id, actorUserId: session.userId, eventType: "contract_finalized", metadata: { version: contract.versions[0].version, openCommentsAcknowledged: openCommentCount } } });
@@ -92,7 +92,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.agreementDraftReviewed, module: "contracts", entityType: "contract", entityId: id, dataOrigin: "user" });
     return NextResponse.json({ success: true, status: "ready_to_sign", version: contract.versions[0].version, message: "Agreement version finalized. Start recorded acceptance when you are ready." });
   } catch (error) {
-    console.error("Contract finalize error:", error);
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to finalize Agreement." }, { status: 500 });
+    return agreementErrorResponse(error, "Unable to finalize Agreement.", "Contract finalize error");
   }
 }

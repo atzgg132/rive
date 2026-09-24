@@ -105,7 +105,7 @@ export default function ContractWorkSetupCard({ contractId, project, acceptedCon
       confirmKeyRef.current = null;
       setPreviewHash(data.previewHash || null);
       if (data.plan) setForm(initialForm(project, acceptedContent, data.plan));
-      toast.success("Work setup preview saved.");
+      toast.success("Plan checked. Review the summary, then confirm.");
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : "Unable to preview work setup.";
       setError(message);
@@ -117,7 +117,7 @@ export default function ContractWorkSetupCard({ contractId, project, acceptedCon
 
   const confirm = async () => {
     if (!previewHash) {
-      setError("Preview the work setup before confirming it.");
+      setError("Review the plan before confirming it.");
       return;
     }
     setBusy("confirm");
@@ -132,7 +132,7 @@ export default function ContractWorkSetupCard({ contractId, project, acceptedCon
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) throw new Error(data.message || "Unable to confirm work setup.");
-      toast.success("Work setup created. Review the Project and billing triggers.");
+      toast.success("Work set up. Open the Project to start planning.");
       await onRefresh();
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : "Unable to confirm work setup.";
@@ -146,7 +146,7 @@ export default function ContractWorkSetupCard({ contractId, project, acceptedCon
   if (setup.status === "succeeded" && setup.result_ids?.projectId) {
     return (
       <Card id="work-setup" className="border-success/30 bg-success/10">
-        <CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2"><Check className="h-5 w-5 text-success" /> Work is set up</CardTitle><CardDescription className="mt-1">The accepted Agreement is connected to the Project and its billing triggers.</CardDescription></div><Badge variant="success">Complete</Badge></div></CardHeader>
+        <CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2"><Check className="h-5 w-5 text-success" /> Work is set up</CardTitle><CardDescription className="mt-1">The accepted Agreement is connected to its Project.</CardDescription></div><Badge variant="success">Complete</Badge></div></CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 pt-0 sm:pt-0">
           <Link href={`/workflow/projects/${encodeURIComponent(setup.result_ids.projectId)}`} className="inline-flex items-center gap-1.5 rounded-none bg-primary px-3 py-2 text-sm font-bold text-primary-foreground hover:opacity-90">Review the Project <ChevronRight className="h-4 w-4" /></Link>
           {setup.result_ids.milestoneIds?.length ? <span className="text-xs text-muted-foreground">{setup.result_ids.milestoneIds.length} milestone{setup.result_ids.milestoneIds.length === 1 ? "" : "s"}</span> : null}
@@ -162,7 +162,7 @@ export default function ContractWorkSetupCard({ contractId, project, acceptedCon
     <Card id="work-setup" className="border-primary/25 bg-primary/[0.035]">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5 text-primary" /> Set up the work</CardTitle><CardDescription className="mt-1 max-w-2xl">Acceptance is recorded. Choose the operational Project, optional milestones, and dated Tasks before Rive activates the accepted billing plan.</CardDescription></div>
+          <div><CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5 text-primary" /> Set up the work</CardTitle><CardDescription className="mt-1 max-w-2xl">Optional planning. Choose the Project, milestones, and dated Tasks for this work. The payment plan is already active and is not changed by this step.</CardDescription></div>
           <Badge variant={setup.status === "failed" ? "destructive" : previewSaved ? "default" : "warning"}>{setup.status.replaceAll("_", " ")}</Badge>
         </div>
       </CardHeader>
@@ -188,8 +188,20 @@ export default function ContractWorkSetupCard({ contractId, project, acceptedCon
         </section>
 
         {(error || setup.error) ? <Alert variant="destructive"><div><p className="font-bold">Work setup needs attention</p><p className="mt-1 text-xs leading-5">{error || setup.error}</p></div></Alert> : null}
-        {previewSaved ? <p className="text-xs text-muted-foreground">Preview saved. Confirming will activate the accepted payment plan; invoice drafting remains a separate post-commit step.</p> : null}
-        <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="outline" disabled={Boolean(busy)} onClick={() => void preview()}>{busy === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Preview plan</Button><Button type="button" disabled={Boolean(busy) || !previewSaved} onClick={() => void confirm()}>{busy === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm and create work</Button></div>
+        {previewSaved ? (
+          <Alert variant="info">
+            <div>
+              <p className="font-bold">Confirming will</p>
+              <ul className="mt-1 list-disc pl-5 text-xs leading-5">
+                <li>{project ? <>Use the linked Project <strong>{project.title}</strong>{form.startDate || form.dueDate ? " and set its dates where you filled them in" : ""}</> : <>Create the Project <strong>{form.title || "Untitled"}</strong></>}</li>
+                <li>{form.milestones.length ? `Add ${form.milestones.length} milestone${form.milestones.length === 1 ? "" : "s"}` : "Add no milestones"}</li>
+                <li>{form.tasks.length ? `Add ${form.tasks.length} dated task${form.tasks.length === 1 ? "" : "s"}` : "Add no tasks"}</li>
+                <li>Leave billing as it is — invoices already draft from the accepted payment plan</li>
+              </ul>
+            </div>
+          </Alert>
+        ) : null}
+        <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="outline" disabled={Boolean(busy)} onClick={() => void preview()}>{busy === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Review plan</Button><Button type="button" disabled={Boolean(busy) || !previewSaved} onClick={() => void confirm()}>{busy === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirm and create work</Button></div>
       </CardContent>
     </Card>
   );

@@ -247,15 +247,23 @@ type PublicLinkCheck = {
   revokedAt: Date | null;
   expiresAt: Date;
   version?: unknown;
-  signer?: unknown;
+  signer?: { role?: string | null } | null;
   contract: { status: string };
 } | null;
+
+/**
+ * Owners record acceptance (and confirm voids) inside their signed-in
+ * workspace. Owner-role public links issued before that change are refused
+ * so a forwarded or leaked owner link can never act for the owner.
+ */
+export const OWNER_LINK_RETIRED_MESSAGE = "Owner acceptance now happens in your Rive workspace. Sign in to Rive and open this Agreement to continue.";
 
 export function contractAcceptanceLinkProblem(link: PublicLinkCheck): string | null {
   if (!link || !["sign", "void"].includes(link.type)) return "Acceptance link not found.";
   if (link.revokedAt) return "This acceptance link has been revoked.";
   if (link.expiresAt <= new Date()) return "This acceptance link has expired. Ask the sender to reissue it.";
   if (!link.version || !link.signer) return "This acceptance link is incomplete.";
+  if (link.signer.role === "owner") return OWNER_LINK_RETIRED_MESSAGE;
   if (!["signing", "executed"].includes(link.contract.status)) return "This Agreement is not currently accepting recorded acceptance.";
   return null;
 }
@@ -265,6 +273,7 @@ export function contractVoidLinkProblem(link: PublicLinkCheck): string | null {
   if (link.revokedAt) return "This acceptance link has been revoked.";
   if (link.expiresAt <= new Date()) return "This acceptance link has expired. Ask the sender to reissue it.";
   if (!link.signer) return "This acceptance link is incomplete.";
+  if (link.signer.role === "owner") return OWNER_LINK_RETIRED_MESSAGE;
   if (link.contract.status !== "executed") return "This Agreement is not eligible for voiding through this link.";
   return null;
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
-import { assertContractsEnabled, classifyContractPublicLinkFailure, createNotification, getRequestId, getRequestIp, hashAccessToken, hashRequestValue, logContractPublicLinkAccess, CONTRACT_MAX_COMMENT_LENGTH } from "@/utils/contracts";
+import { agreementErrorResponse, AgreementActionError, assertContractsEnabled, classifyContractPublicLinkFailure, createNotification, getRequestId, getRequestIp, hashAccessToken, hashRequestValue, logContractPublicLinkAccess, CONTRACT_MAX_COMMENT_LENGTH } from "@/utils/contracts";
 import {
   contractPublicSessionLogOutcome,
   contractPublicSessionMessage,
@@ -18,6 +18,11 @@ const LINK_INCLUDE = {
   contract: { include: { client: { select: { name: true, email: true } } } },
   version: true,
 } satisfies Prisma.ContractReviewLinkInclude;
+
+/** Review closes once a version is finalized for acceptance, never on approval. */
+function reviewIsClosed(contractStatus: string, versionStatus: string): boolean {
+  return versionStatus === "final" || ["ready_to_sign", "starting", "signing", "executed", "void"].includes(contractStatus);
+}
 
 async function resolveLink(token: string) {
   return prisma.contractReviewLink.findUnique({
@@ -104,7 +109,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     });
     return NextResponse.json({
       success: true,
-      mode: link!.contract.status === "ready_to_sign" || link!.contract.status === "executed" || link!.version!.status === "approved" ? "read_only" : "review",
+      // Approval is a "ready for the final version" signal, not a lock: the
+      // client can still comment, which withdraws the approval.
+      mode: reviewIsClosed(link!.contract.status, link!.version!.status) ? "read_only" : "review",
       contract: {
         id: link!.contract.id,
         title: link!.contract.title,
@@ -121,8 +128,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
       },
     }, { headers: { "Cache-Control": "no-store", "Vary": "Cookie" } });
   } catch (error) {
-    console.error("Public contract review fetch error:", error);
-    return NextResponse.json({ success: false, message: "Unable to load this review link." }, { status: 500 });
+    return agreementErrorResponse(error, "Unable to load this review link.", "Public contract review fetch error");
   }
 }
 
@@ -139,7 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
       return NextResponse.json({ success: false, message: problem }, { status: problem.includes("not found") ? 404 : 410 });
     }
-    if (link!.contract.status === "ready_to_sign" || link!.contract.status === "executed" || link!.version!.status === "approved") {
+    if (reviewIsClosed(link!.contract.status, link!.version!.status)) {
       logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "read_only_mutation_rejected", revoked: false, expired: false, rateLimited: false });
       return NextResponse.json({ success: false, message: "This version is no longer accepting review comments." }, { status: 409 });
     }
@@ -167,7 +173,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
           where: { id: link!.version!.id, contractId: link!.contractId, status: { in: ["draft", "approved"] } },
           data: { status: "approved" },
         });
-        if (approved.count !== 1) throw new Error("This Agreement version changed while approval was being recorded.");
+        if (approved.count !== 1) throw new AgreementActionError("This Agreement version changed while your review was being recorded. Reload and try again.", 409);
         await tx.contractEvent.create({
           data: {
             contractId: link!.contractId,
@@ -179,23 +185,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         });
       });
       logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "approval_recorded", revoked: false, expired: false, rateLimited: false });
-      await createNotification({ userId: link!.contract.userId, type: "contract_review_approved", title: "Agreement review approved", message: `${reviewerName} marked ${link!.contract.title} ready for finalization.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
-      return NextResponse.json({ success: true, approved: true, message: "The sender has been told this Agreement version is ready for finalization and recorded acceptance." });
+      await createNotification({ userId: link!.contract.userId, type: "contract_review_approved", title: "Client is ready for the final version", message: `${reviewerName} has no more comments on ${link!.contract.title}. Finalize it and request acceptance when you are ready.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
+      return NextResponse.json({ success: true, approved: true, message: "Thanks — the sender has been told you have no more comments. You will get a separate link to record acceptance of the final version." });
     }
     const commentBody = typeof body?.body === "string" ? body.body.trim().slice(0, CONTRACT_MAX_COMMENT_LENGTH) : "";
     const sectionKey = typeof body?.sectionKey === "string" ? body.sectionKey.trim().slice(0, 80) : null;
     if (authorName.length < 2) return NextResponse.json({ success: false, message: "Enter your name so the sender can identify the comment." }, { status: 400 });
     if (!commentBody) return NextResponse.json({ success: false, message: "Write a comment before submitting." }, { status: 400 });
+    const withdrawsApproval = link!.version!.status === "approved";
     const comment = await prisma.$transaction(async (tx) => {
+      if (withdrawsApproval) {
+        await tx.contractVersion.updateMany({ where: { id: link!.version!.id, status: "approved" }, data: { status: "draft" } });
+        await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, eventType: "client_review_approval_withdrawn", metadata: { reason: "new_comment" }, ipHash: hashRequestValue(ip) } });
+      }
       const created = await tx.contractComment.create({ data: { contractId: link!.contractId, versionId: link!.versionId, reviewLinkId: link!.id, authorRole: "client", authorName, authorEmail, sectionKey: sectionKey || null, body: commentBody } });
       await tx.contractEvent.create({ data: { contractId: link!.contractId, versionId: link!.version!.id, eventType: "client_comment_added", metadata: { commentId: created.id, sectionKey: sectionKey || null }, ipHash: hashRequestValue(ip) } });
       return created;
     });
     logContractPublicLinkAccess({ request: req, requestId, purpose: "review", contractId: link!.contractId, versionId: link!.versionId, outcome: "comment_recorded", revoked: false, expired: false, rateLimited: false });
-    await createNotification({ userId: link!.contract.userId, type: "contract_comment", title: "Client commented on an Agreement", message: `${authorName} commented on ${link!.contract.title}.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
+    await createNotification({ userId: link!.contract.userId, type: "contract_comment", title: "Client commented on an Agreement", message: withdrawsApproval ? `${authorName} added a comment on ${link!.contract.title}, so it is no longer marked ready for the final version.` : `${authorName} commented on ${link!.contract.title}.`, href: `/workflow/contracts/${link!.contractId}` }).catch(() => undefined);
     return NextResponse.json({ success: true, comment: { id: comment.id, authorRole: comment.authorRole, authorName: comment.authorName, sectionKey: comment.sectionKey, body: comment.body, status: comment.status, createdAt: comment.createdAt }, message: "Comment added." }, { status: 201 });
   } catch (error) {
-    console.error("Public contract comment error:", error);
-    return NextResponse.json({ success: false, message: "Unable to add this comment." }, { status: 500 });
+    return agreementErrorResponse(error, "Unable to add this comment.", "Public contract comment error");
   }
 }

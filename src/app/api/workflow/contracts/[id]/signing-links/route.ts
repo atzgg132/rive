@@ -4,6 +4,8 @@ import { prisma } from "@/utils/db";
 import { buildContractSigningEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import {
+  agreementErrorResponse,
+  AgreementActionError,
   assertContractsEnabled,
   CONTRACT_TOKEN_TTL_DAYS,
   createAccessToken,
@@ -28,8 +30,10 @@ export async function POST(
     const parsedBody = await readJsonBody(request);
     if (!parsedBody.ok) return parsedBody.response;
     const body = parsedBody.body as { role?: unknown; sendEmail?: unknown };
-    const role = body.role === "client" ? "client" : body.role === "owner" ? "owner" : "";
-    if (!role) return NextResponse.json({ success: false, message: "Choose the client or owner acceptance link." }, { status: 400 });
+    // Only the client has a public acceptance link; the owner accepts in the
+    // workspace (POST /api/workflow/contracts/[id]/accept).
+    if (body.role === "owner") throw new AgreementActionError("You record your own acceptance on the Agreement page — there is no owner link.", 400, "owner_accepts_in_workspace");
+    const role = "client" as const;
 
     const contract = await prisma.contract.findFirst({
       where: { id, userId: session.userId },
@@ -73,7 +77,7 @@ export async function POST(
         where: { id, userId: session.userId, status: "signing" },
         data: { reviewExpiresAt: expiresAt },
       });
-      if (refreshedContract.count !== 1) throw new Error("This acceptance request changed before the new link was issued.");
+      if (refreshedContract.count !== 1) throw new AgreementActionError("This acceptance request changed before the new link was issued.", 409);
       await tx.contractEvent.create({
         data: {
           contractId: id,
@@ -108,15 +112,14 @@ export async function POST(
       email: shouldEmail ? { queued: true, sent: delivered } : null,
       message: shouldEmail
         ? delivered
-          ? `${role === "client" ? "Client" : "Owner"} acceptance link reissued and emailed.`
-          : "Acceptance link reissued. Share it if email delivery is still pending."
-        : `${role === "client" ? "Client" : "Owner"} acceptance link reissued.`,
+          ? "New client acceptance link emailed. The previous link no longer works."
+          : "New client acceptance link created. Email delivery is pending — copy it below and send it to the client."
+        : "New client acceptance link created. The previous link no longer works.",
     });
   } catch (error) {
-    console.error("Signing link reissue error:", error);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ success: false, message: "A signing link was already reissued. Refresh before trying again." }, { status: 409 });
     }
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Unable to reissue the acceptance link." }, { status: 500 });
+    return agreementErrorResponse(error, "Unable to reissue the acceptance link.", "Signing link reissue error");
   }
 }

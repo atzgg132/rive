@@ -6,6 +6,31 @@ import { buildInvoiceReadyEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { nextInvoiceNumber } from "@/utils/invoiceNumber";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
+import { Prisma } from "@prisma/client";
+
+/**
+ * Occurrence statuses the worker may draft from. `awaiting_work_setup` is a
+ * legacy park: billing used to wait for work setup, and those rows are now
+ * drafted like any other accepted trigger.
+ */
+export const BILLABLE_OCCURRENCE_STATUSES = ["pending", "eligible", "awaiting_work_setup"] as const;
+
+/**
+ * Database-side "is this trigger due now" filter. Filtering in SQL (not after
+ * the LIMIT) means future-dated triggers can never crowd due ones out of a
+ * batch, however many of them accumulate.
+ */
+export function dueTriggerWhere(now: Date): Prisma.ContractPaymentPlanItemWhereInput {
+  return {
+    OR: [
+      { triggerType: "on_signing" },
+      { triggerType: "fixed_date", triggerDate: { lte: now } },
+      { triggerType: "milestone_due", triggerDate: { lte: now } },
+      { triggerType: "milestone_due", triggerDate: null, milestone: { dueDate: { lte: now } } },
+      { triggerType: "milestone_completed", milestone: { completed: true } },
+    ],
+  };
+}
 
 function isEligible(item: {
   triggerType: string;
@@ -42,13 +67,14 @@ export async function processContractBilling(input: { userId?: string; contractI
 
   const occurrences = await prisma.contractBillingOccurrence.findMany({
     where: {
-      status: { in: ["pending", "eligible"] },
+      status: { in: [...BILLABLE_OCCURRENCE_STATUSES] },
       invoiceId: null,
+      paymentPlanItem: dueTriggerWhere(now),
       contract: { status: "executed", ...(input.userId ? { userId: input.userId } : {}), ...(input.contractId ? { id: input.contractId } : {}) },
     },
     include: {
       paymentPlanItem: { include: { milestone: { select: { dueDate: true, completed: true, completedAt: true } } } },
-      contract: { include: { client: { select: { id: true, name: true, email: true } }, project: { select: { id: true, title: true } }, user: { select: { name: true, email: true } } } },
+      contract: { include: { client: { select: { id: true, name: true, email: true } }, project: { select: { id: true, title: true } }, user: { select: { name: true, email: true, invoiceProfile: { select: { invoicePrefix: true } } } } } },
     },
     orderBy: { createdAt: "asc" },
     take: Math.min(Math.max(input.limit || 100, 1), 500),
@@ -65,14 +91,15 @@ export async function processContractBilling(input: { userId?: string; contractI
     eligible += 1;
     const eligibleAt = occurrence.eligibleAt || eligibilityDate(item, now);
     const claimed = await prisma.contractBillingOccurrence.updateMany({
-      where: { id: occurrence.id, invoiceId: null, status: { in: ["pending", "eligible"] } },
+      where: { id: occurrence.id, invoiceId: null, status: { in: [...BILLABLE_OCCURRENCE_STATUSES] } },
       data: { status: "processing", eligibleAt, lastError: null },
     });
     if (claimed.count !== 1) continue;
 
     try {
       const { invoice, outboxId } = await prisma.$transaction(async (tx) => {
-        const invoiceNumber = await nextInvoiceNumber(tx, occurrence.contract.userId, "RIVE", now);
+        // Same numbering as every other invoice the owner creates.
+        const invoiceNumber = await nextInvoiceNumber(tx, occurrence.contract.userId, occurrence.contract.user.invoiceProfile?.invoicePrefix || "INV", now);
         const created = await tx.invoice.create({
           data: {
             userId: occurrence.contract.userId,
