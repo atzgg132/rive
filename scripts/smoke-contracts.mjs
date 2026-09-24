@@ -222,6 +222,7 @@ async function main() {
   });
   fixtureUserId = user.id;
   session = sessionToken(user);
+  await prisma.invoiceProfile.create({ data: { userId: user.id, invoicePrefix: "SMK", defaultCurrency: "INR" } });
 
   const client = await prisma.client.create({
     data: {
@@ -316,22 +317,32 @@ async function main() {
   await expectJson(`/api/workflow/contracts/${contractId}/comments`, { method: "PATCH", body: { commentId: secondComment.comment.id, status: "resolved" } }, 200, "review comment resolution");
   await expectJson(secondReviewPath, { method: "POST", authenticated: false, body: { action: "approve", authorName: client.name, authorEmail: client.email } }, 200, "client review approval");
   const approvedReview = await expectJson(secondReviewPath, { authenticated: false }, 200, "approved review fetch");
-  assert(approvedReview.mode === "read_only" && approvedReview.contract.version.status === "approved", "Client approval did not lock the reviewed version.");
-  const commentAfterApproval = await request(secondReviewPath, { method: "POST", authenticated: false, body: { authorName: client.name, body: "This should be closed." } });
-  expectStatus(commentAfterApproval, 409, "approved review comment guard");
+  assert(approvedReview.mode === "review" && approvedReview.contract.version.status === "approved", "Client readiness should be recorded without locking the review.");
   assert(secondPublicReview.contract.version.hash === approvedReview.contract.version.hash, "Review approval changed the contract document hash.");
+  detail = await expectJson(`/api/workflow/contracts/${contractId}`, undefined, 200, "detail after client readiness");
+  assert(!detail.contract.signers.some((signer) => signer.signatures.length), "#94: a review readiness signal must never record acceptance.");
+  const commentAfterApproval = await expectJson(secondReviewPath, { method: "POST", authenticated: false, body: { authorName: client.name, body: "One more question before the final version." } }, 201, "comment after readiness");
+  const withdrawnReview = await expectJson(secondReviewPath, { authenticated: false }, 200, "review after withdrawn readiness");
+  assert(withdrawnReview.contract.version.status === "draft", "A comment after readiness did not withdraw the readiness signal.");
+  await expectJson(`/api/workflow/contracts/${contractId}/comments`, { method: "PATCH", body: { commentId: commentAfterApproval.comment.id, status: "resolved" } }, 200, "resolve follow-up comment");
+  await expectJson(secondReviewPath, { method: "POST", authenticated: false, body: { action: "approve", authorName: client.name } }, 200, "client readiness again");
   await expectJson(`/api/workflow/contracts/${contractId}/finalize`, { method: "POST" }, 200, "contract finalization");
 
   const firstSigning = await expectJson(`/api/workflow/contracts/${contractId}/start-signing`, { method: "POST" }, 200, "first signing start");
   const firstClientSignPath = apiPath(firstSigning.clientSignUrl, "sign");
-  const firstOwnerSignPath = apiPath(firstSigning.ownerSignUrl, "sign");
+  assert(!("ownerSignUrl" in firstSigning), "Start-signing must not issue an owner link.");
+  const ownerAccept = `/api/workflow/contracts/${contractId}/accept`;
   const signingPage = await expectJson(firstClientSignPath, { authenticated: false }, 200, "client signing consent page");
   assert(signingPage.consent?.version && signingPage.consent?.text?.includes("typed-name acceptance") && signingPage.consent?.text?.includes("not an OTP"), "Signing page did not expose the versioned consent text.");
-  const ownerEarly = await request(firstOwnerSignPath, { method: "POST", authenticated: false, body: { typedName: user.name, consentAccepted: true } });
-  expectStatus(ownerEarly, 400, "owner cannot sign before client");
+  const ownerEarly = await request(ownerAccept, { method: "POST", body: { typedName: user.name, consentAccepted: true } });
+  expectStatus(ownerEarly, 409, "owner cannot accept before client");
+  const ownerOnClientLink = await request(firstClientSignPath, { method: "POST", body: { typedName: client.name, consentAccepted: true } });
+  expectStatus(ownerOnClientLink, 403, "signed-in owner cannot accept on the client's link");
   const firstClientSign = await expectJson(firstClientSignPath, { method: "POST", authenticated: false, body: { typedName: client.name, consentAccepted: true } }, 200, "first client signature");
   assert(firstClientSign.completed === false, "Client signature incorrectly executed the two-party contract alone.");
-  await expectJson(firstOwnerSignPath, { method: "POST", authenticated: false, body: { action: "decline", reason: "The final signer needs one wording correction before execution." } }, 200, "owner decline after partial signature");
+  const ownerNotifications = await expectJson("/api/notifications", undefined, 200, "owner acceptance-due notification");
+  assert(ownerNotifications.notifications.some((notification) => notification.type === "contract_acceptance_due"), "The owner was not told the client accepted.");
+  await expectJson(ownerAccept, { method: "POST", body: { action: "decline", reason: "The final signer needs one wording correction before execution." } }, 200, "owner decline after partial signature");
   detail = await expectJson(`/api/workflow/contracts/${contractId}`, undefined, 200, "declined partial-signature detail");
   assert(detail.contract.status === "declined" && detail.contract.signers.some((signer) => signer.signatures.some((signature) => signature.versionId === detail.contract.versions[0].id)), "Partial signature evidence was not retained on the declined version.");
   const declinedOldLink = await request(firstClientSignPath, { authenticated: false });
@@ -343,15 +354,14 @@ async function main() {
   await expectJson(`/api/workflow/contracts/${contractId}/finalize`, { method: "POST" }, 200, "replacement version finalization");
   const signing = await expectJson(`/api/workflow/contracts/${contractId}/start-signing`, { method: "POST" }, 200, "replacement signing start");
   const originalClientSignPath = apiPath(signing.clientSignUrl, "sign");
-  const ownerSignPath = apiPath(signing.ownerSignUrl, "sign");
   const reissuedClient = await expectJson(`/api/workflow/contracts/${contractId}/signing-links`, { method: "POST", body: { role: "client", sendEmail: false } }, 200, "client signing link reissue");
   const clientSignPath = apiPath(reissuedClient.signUrl, "sign");
   const revokedOriginalClient = await request(originalClientSignPath, { authenticated: false });
   expectStatus(revokedOriginalClient, 410, "reissued signing link revocation");
   const clientSign = await expectJson(clientSignPath, { method: "POST", authenticated: false, body: { typedName: client.name, consentAccepted: true } }, 200, "replacement client signature");
   assert(clientSign.completed === false, "Replacement client signature incorrectly executed the two-party contract alone.");
-  const ownerSign = await expectJson(ownerSignPath, { method: "POST", authenticated: false, body: { typedName: user.name, consentAccepted: true } }, 200, "owner signature and execution");
-  assert(ownerSign.completed === true && ownerSign.downloadUrl, "Owner signature did not complete the contract or issue an artifact link.");
+  const ownerSign = await expectJson(ownerAccept, { method: "POST", body: { typedName: user.name, consentAccepted: true } }, 200, "owner workspace acceptance and execution");
+  assert(ownerSign.completed === true, "Owner acceptance did not complete the contract.");
   progress("review approval, decline recovery, link reissue, and two-party execution verified");
 
   const executed = await expectJson(`/api/workflow/contracts/${contractId}`, undefined, 200, "executed contract detail");
@@ -360,14 +370,17 @@ async function main() {
   const ownerArtifact = await request(`/api/workflow/contracts/${contractId}/artifact`);
   expectStatus(ownerArtifact, 200, "owner executed PDF");
   assert(ownerArtifact.response.headers.get("content-type")?.includes("application/pdf") && ownerArtifact.text.length > 0, "Owner executed PDF was empty or had the wrong content type.");
-  const publicArtifact = await request(new URL(ownerSign.downloadUrl, baseUrl).pathname, { authenticated: false });
+  const clientRecord = await expectJson(clientSignPath, { authenticated: false }, 200, "client record link after acceptance");
+  assert(clientRecord.mode === "completed" && clientRecord.downloadUrl, "The client's link did not become their accepted-record link.");
+  const publicArtifact = await request(`${clientSignPath}/artifact`, { authenticated: false });
   expectStatus(publicArtifact, 200, "public executed PDF");
   assert(publicArtifact.response.headers.get("x-contract-document-hash"), "Public PDF did not expose the document hash evidence header.");
   assert(publicArtifact.response.headers.get("x-contract-evidence-hash") && publicArtifact.response.headers.get("x-contract-evidence-hash") !== publicArtifact.response.headers.get("x-contract-document-hash"), "Public PDF did not expose a distinct execution evidence hash.");
   progress("executed PDFs and evidence headers verified");
 
   const signingInvoiceCount = (await expectJson("/api/workflow/invoices", undefined, 200, "automatic signing invoice list")).invoices.filter((invoice) => invoice.client_id === client.id && invoice.project_id === project.id && invoice.notes?.includes(contractTitle));
-  assert(signingInvoiceCount.length === 2 && signingInvoiceCount.every((invoice) => invoice.status === "draft"), "Execution did not create exactly the signing and already-due reviewable invoice drafts.");
+  assert(signingInvoiceCount.length === 2 && signingInvoiceCount.every((invoice) => invoice.status === "draft"), "Acceptance did not immediately draft exactly the signing and already-due invoices.");
+  assert(signingInvoiceCount.every((invoice) => invoice.invoice_number.startsWith("SMK-")), "Agreement invoices ignored the owner's invoice prefix.");
   const approvedUpdate = await expectJson(`/api/workflow/milestones/${milestoneCompleted.id}`, { method: "PATCH", body: { completed: true } }, 200, "completed milestone update");
   assert(approvedUpdate.billing?.drafted === 1, "Completing a milestone did not create its invoice draft.");
   const completionReversal = await request(`/api/workflow/milestones/${milestoneCompleted.id}`, { method: "PATCH", body: { completed: false } });
@@ -405,10 +418,33 @@ async function main() {
   expectStatus(clientDelete, 409, "contract client delete guard");
   progress("invoice recovery and destructive-action guards verified");
 
+  // A request whose client already accepted must never expire: the owner is
+  // reminded instead and can still complete it.
+  const lapsed = await expectJson("/api/workflow/contracts", { method: "POST", body: { title: `${contractTitle} (expiry)`, clientId: client.id, currency: "INR", paymentPlan: [{ label: "Deposit", amount: 50, currency: "INR", triggerType: "on_signing", dueDays: 7, milestoneId: null, triggerDate: null }] } }, 201, "expiry scenario creation");
+  await expectJson(`/api/workflow/contracts/${lapsed.contractId}/finalize`, { method: "POST" }, 200, "expiry scenario finalize");
+  const lapsedSigning = await expectJson(`/api/workflow/contracts/${lapsed.contractId}/start-signing`, { method: "POST" }, 200, "expiry scenario signing");
+  await expectJson(apiPath(lapsedSigning.clientSignUrl, "sign"), { method: "POST", authenticated: false, body: { typedName: client.name, consentAccepted: true } }, 200, "expiry scenario client acceptance");
+  await prisma.contract.update({ where: { id: lapsed.contractId }, data: { reviewExpiresAt: new Date(Date.now() - 60_000) } });
+  const lapsedMaintenance = await expectJson("/api/contracts/maintenance", { method: "POST", authenticated: false, headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }, 200, "expiry scenario maintenance");
+  const lapsedDetail = await expectJson(`/api/workflow/contracts/${lapsed.contractId}`, undefined, 200, "expiry scenario detail");
+  assert(lapsedDetail.contract.status === "signing" && lapsedMaintenance.ownerReminders >= 1, "A request whose client accepted was expired instead of reminding the owner.");
+  const lapsedOwner = await expectJson(`/api/workflow/contracts/${lapsed.contractId}/accept`, { method: "POST", body: { typedName: user.name, consentAccepted: true } }, 200, "expiry scenario owner acceptance");
+  assert(lapsedOwner.completed === true, "The owner could not complete a request after its reminder window.");
+  progress("expiry-after-client-acceptance recovery verified");
+
+  // Two-party void: the client asks from their record link, the owner
+  // confirms in the workspace; unsent drafts are cancelled, never deleted.
+  await expectJson(clientSignPath.replace("/sign/", "/void/"), { method: "POST", authenticated: false, body: { action: "request", note: "The engagement was cancelled by both sides." } }, 200, "client void request");
+  const voided = await expectJson(`/api/workflow/contracts/${contractId}/void`, { method: "POST", body: { action: "confirm", note: "Confirmed with the client by phone." } }, 200, "owner void confirmation");
+  assert(voided.billing?.cancelledDrafts?.length >= 1, "Voiding did not cancel the Agreement's unsent drafts.");
+  const afterVoid = (await expectJson("/api/workflow/invoices", undefined, 200, "invoices after void")).invoices.filter((invoice) => invoice.notes?.includes(contractTitle) && !invoice.notes?.includes("(expiry)"));
+  assert(afterVoid.length === 3 && afterVoid.every((invoice) => invoice.status !== "draft"), "Void left Agreement drafts open or deleted them.");
+  progress("two-party void and billing cancellation verified");
+
   const finalNotifications = await expectJson("/api/notifications", undefined, 200, "contract and invoice notifications");
   assert(finalNotifications.notifications.some((notification) => notification.type === "contract_executed"), "Execution notification was not created.");
   assert(finalNotifications.notifications.some((notification) => notification.type === "invoice_review" && notification.href?.includes("invoiceId=")), "Invoice review notification did not deep-link to the generated draft.");
-  console.log(JSON.stringify({ success: true, checked: ["project coverage decisions", "client/project reuse", "editable clauses and immutable versions", "comments and approval", "partial-signature decline recovery", "signing-link reissue", "two-party signing", "evidence PDF", "milestone date snapshots", "invoice review locks", "delivery recovery", "idempotency", "destructive-action guards", "notifications"], generatedInvoices: generatedInvoices.length }));
+  console.log(JSON.stringify({ success: true, checked: ["project coverage decisions", "client/project reuse", "editable clauses and immutable versions", "comments and approval", "partial-signature decline recovery", "signing-link reissue", "two-party signing (client link, owner in workspace)", "owner acceptance-due notification", "review readiness is not acceptance", "expiry after client acceptance", "invoice prefix", "two-party void billing cancellation", "evidence PDF", "milestone date snapshots", "invoice review locks", "delivery recovery", "idempotency", "destructive-action guards", "notifications"], generatedInvoices: generatedInvoices.length }));
 }
 
 try {
