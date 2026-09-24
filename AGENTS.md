@@ -43,8 +43,9 @@ Three kinds of branches exist:
 
 1. `git checkout dev && git pull --ff-only origin dev`, then branch:
    `git checkout -b feature/<slug>`.
-2. Commit and push the work branch. The `Quality` workflow runs the full
-   verify suite on the push and on the PR.
+2. Commit and push the work branch, and open its PR. The `Quality` workflow
+   runs the verify suite once per PR (`workflow_dispatch` runs it on a branch
+   without one).
 3. Open a PR to `dev`. The branch-policy check requires a `type/slug` name.
    Self-merge is allowed; migrations, security, payments, and public-token
    work ask for a second pair of eyes by convention, not by gate.
@@ -115,10 +116,21 @@ it never appeared in the Actions UI.
 
 ## Deploys can fail for reasons that are not yours
 
-`verify` has a 30-minute ceiling and `playwright install --with-deps` shells out
-to `apt`. A stalled Ubuntu mirror has consumed the entire budget with the job
-otherwise healthy. Check where the time went before assuming the change is at
-fault: if a step sat silent and the code-level gates all passed, re-run it.
+`playwright install --with-deps` shells out to `apt`. A stalled Ubuntu mirror
+has consumed a browser-test job's whole budget with the job otherwise healthy.
+Check where the time went before assuming the change is at fault: if a step sat
+silent and the code-level gates all passed, re-run it.
+
+## How CI avoids re-running the same tests
+
+`.github/workflows/verify.yml` is the one suite; `Quality` (PRs) and `Deploy`
+(dev/main pushes) both call it. Static checks and two browser-test shards run in
+parallel. A fully passing run uploads a `verified-tree-<git tree hash>` marker;
+a later run for the identical tree (the squash commit a PR became, or a
+dev → main promotion) skips straight to success, and a docs/`*.md`-only change
+on a verified parent does too. Any other change produces a new tree hash and the
+full suite runs. To force a full run, re-run the workflow after the marker
+expires (30 days) or change a non-doc file.
 <!-- END:release-conventions -->
 
 # Rive

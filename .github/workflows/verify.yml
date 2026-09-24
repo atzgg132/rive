@@ -1,0 +1,204 @@
+name: Verify
+
+# The one verification suite, called by Quality (pull requests) and Deploy
+# (dev/main pushes) so the two can never drift apart.
+#
+# Speed without skipping required tests:
+# - A code tree is verified once. After every job passes, the run uploads a
+#   `verified-tree-<tree hash>` marker. A later run for the identical tree — the
+#   squash commit a PR just became on dev, or the dev -> main promotion — finds
+#   the marker and skips straight to success. Any change to the tree, including
+#   dev moving between a PR's test and its merge, produces a new hash and runs
+#   the full suite.
+# - A change that touches only documentation (docs/ or *.md) on top of a
+#   verified parent tree is trusted without re-running the suite.
+# - Static checks and two browser-test shards run in parallel instead of one
+#   long serial job.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DATABASE_URL: postgresql://rive:rive@localhost:5432/rive_test
+  DATABASE_SSL: disable
+  SESSION_SECRET: ci-session-secret
+  CALENDAR_ENCRYPTION_KEY: ci-calendar-encryption-key
+  CRON_SECRET: ci-cron-secret
+  APP_URL: http://127.0.0.1:3000
+  APP_ENV: test
+  EMAIL_PROVIDER: ses
+  AWS_REGION: ap-south-1
+  ESIGN_PROVIDER: local
+  CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION: "true"
+  CONTRACTS_RECORDED_ACCEPTANCE_ENABLED: "true"
+  E2E_USER_EMAIL: e2e-workspace@rive.test
+  # Test-only admin credentials for the ephemeral CI database and CI app process.
+  # They are not used by, and have no meaning in, any deployed environment: the
+  # real values come from the deploy environment's own secrets.
+  ADMIN_USERNAME: e2e-admin
+  ADMIN_PASSWORD_HASH: scrypt:865ae7913b63f7f5bdc6235e489624e6:04e880f8bbb611921db676efec9d960dc29efea47fd1f9aca23f62410a08d4b8bee80458cf9273511e57a10a77df376a72e55cf037f6b216cc301951ac16155d
+  E2E_ADMIN_PASSWORD: e2e-admin-not-a-real-secret
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  gate:
+    name: already verified?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      verified: ${{ steps.check.outputs.verified }}
+      tree: ${{ steps.check.outputs.tree }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tree=$(git rev-parse 'HEAD^{tree}')
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+
+          # A marker counts only if an unexpired artifact from this repository
+          # (never a fork's run) was uploaded by a fully passing verify run.
+          trusted_markers() {
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=verified-tree-$1&per_page=20" \
+              --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)] | length'
+          }
+
+          verified=false
+          reason="not verified before — running the full suite"
+          if [ "$(trusted_markers "$tree")" -gt 0 ]; then
+            verified=true
+            reason="this exact tree already passed the full suite"
+          elif git rev-parse -q --verify 'HEAD^1' >/dev/null; then
+            changed=$(git diff --name-only 'HEAD^1' HEAD)
+            if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -vqE '^(docs/.*|.*\.md)$' \
+              && [ "$(trusted_markers "$(git rev-parse 'HEAD^1^{tree}')")" -gt 0 ]; then
+              verified=true
+              reason="documentation-only change on a verified parent tree"
+            fi
+          fi
+          echo "verified=$verified" >> "$GITHUB_OUTPUT"
+          echo "### Verify: $reason" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tree \`$tree\`" >> "$GITHUB_STEP_SUMMARY"
+
+  checks:
+    name: unit, types, lint, audit
+    needs: gate
+    if: needs.gate.outputs.verified != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+      - run: npx tsc --noEmit --incremental false
+      - run: npm run lint
+      - run: npm audit --omit=dev
+
+  e2e:
+    name: browser tests (${{ matrix.shard }}/2)
+    needs: gate
+    if: needs.gate.outputs.verified != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: rive
+          POSTGRES_PASSWORD: rive
+          POSTGRES_DB: rive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rive -d rive_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: node scripts/seed-e2e-user.mjs
+      # Next's incremental build cache. Restoring the nearest previous build
+      # cuts the production build; the output is still built from this tree.
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Run E2E tests
+        env:
+          # Exercise migration only in the ephemeral CI app process. This does
+          # not alter the operator-managed deployed kill switch.
+          MIGRATION_ENGINE_ENABLED: "true"
+          PLAYWRIGHT_SERVER: production
+          PLAYWRIGHT_WORKERS: 4
+        run: npx playwright test --shard=${{ matrix.shard }}/2
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-${{ matrix.shard }}
+          path: test-results
+          retention-days: 7
+
+  verified:
+    name: verified
+    needs: [gate, checks, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require the gate or every verification job to pass
+        env:
+          GATE: ${{ needs.gate.result }}
+          ALREADY_VERIFIED: ${{ needs.gate.outputs.verified }}
+          CHECKS: ${{ needs.checks.result }}
+          E2E: ${{ needs.e2e.result }}
+        run: |
+          if [ "$GATE" = "success" ] && [ "$ALREADY_VERIFIED" = "true" ]; then
+            echo "Tree already verified; the suite did not need to run again."
+            exit 0
+          fi
+          if [ "$GATE" = "success" ] && [ "$CHECKS" = "success" ] && [ "$E2E" = "success" ]; then
+            echo "All verification jobs passed."
+            exit 0
+          fi
+          echo "::error::Verification failed (gate=$GATE checks=$CHECKS e2e=$E2E)."
+          exit 1
+      - name: Record the verified tree
+        env:
+          TREE: ${{ needs.gate.outputs.tree }}
+        run: |
+          mkdir -p verified
+          printf 'tree=%s\nsha=%s\nrun=%s\n' "$TREE" "$GITHUB_SHA" "$GITHUB_RUN_ID" > verified/marker.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-tree-${{ needs.gate.outputs.tree }}
+          path: verified/marker.txt
+          retention-days: 30
+          overwrite: true
