@@ -82,6 +82,11 @@ export default function ExpensesPage() {
   const [description, setDescription] = useState("");
   const [categoryInput, setCategoryInput] = useState("software");
   const [amount, setAmount] = useState("");
+  // New expenses default to the workspace's default currency (Settings ->
+  // Workspace defaults), not the display currency — those are two different
+  // things: display currency is a read-only conversion preference, while
+  // this is the currency the expense is actually recorded in.
+  const [workspaceCurrency, setWorkspaceCurrency] = useState<string>("USD");
   const [currencyInput, setCurrencyInput] = useState<string>(displayCurrency);
   const [projectId, setProjectId] = useState("");
   const [date, setDate] = useState("");
@@ -128,6 +133,18 @@ export default function ExpensesPage() {
     }
   };
 
+  const loadWorkspaceCurrency = async () => {
+    try {
+      const res = await fetch("/api/settings", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && /^[A-Z]{3}$/.test(data.user?.currency || "")) setWorkspaceCurrency(data.user.currency);
+      }
+    } catch (err) {
+      console.error("Error loading workspace currency:", err);
+    }
+  };
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
@@ -147,6 +164,8 @@ export default function ExpensesPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadWorkspaceCurrency();
   }, []);
 
   const openCreate = () => {
@@ -154,7 +173,7 @@ export default function ExpensesPage() {
     setDescription("");
     setCategoryInput("software");
     setAmount("");
-    setCurrencyInput(displayCurrency);
+    setCurrencyInput(workspaceCurrency);
     setProjectId("");
     setDate("");
     setIsBillable(false);

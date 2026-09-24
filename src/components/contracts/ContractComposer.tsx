@@ -125,6 +125,7 @@ export function ContractComposer({
   sourceContracts,
   initialClientId = "",
   initialProjectId = "",
+  defaultCurrency = "USD",
   onCreated,
 }: {
   open: boolean;
@@ -134,6 +135,8 @@ export function ContractComposer({
   sourceContracts: ContractComposerSource[];
   initialClientId?: string;
   initialProjectId?: string;
+  /** Workspace default currency (Settings -> Workspace defaults). Overridden by a linked project's own currency, same as invoices. */
+  defaultCurrency?: string;
   onCreated: (contractId: string) => void;
 }) {
   const wasOpen = useRef(false);
@@ -168,7 +171,7 @@ export function ContractComposer({
       setClientId(initialProject?.client_id || initialClientId || "");
       setProjectId(initialProjectId || "");
       setTitle("");
-      setCurrency(initialProject?.currency || "USD");
+      setCurrency(initialProject?.currency || defaultCurrency);
       setGoverningLaw("India");
       setJurisdiction("");
       setSections([]);
@@ -178,7 +181,7 @@ export function ContractComposer({
       setAttemptedStep(false);
     }
     wasOpen.current = open;
-  }, [open, initialClientId, initialProjectId, projects]);
+  }, [open, initialClientId, initialProjectId, projects, defaultCurrency]);
 
   useEffect(() => {
     if (!open || !clientId) return;
