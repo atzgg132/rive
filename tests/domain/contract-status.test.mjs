@@ -71,7 +71,7 @@ test("expiry supports reissue and finalization without bypassing review", () => 
   transition("expired", "in_review");
   transition("expired", "ready_to_sign");
   transition("signing", "expired");
-  rejected("expired", "signing");
+  transition("expired", "signing");
 });
 
 test("void and executed records cannot be edited or accepted again", () => {

@@ -18,6 +18,7 @@ export type EmailType =
   | "contract_signing"
   | "contract_executed"
   | "contract_void"
+  | "contract_acceptance_due"
   | "invoice_ready"
   | "invoice_sent";
 
@@ -773,18 +774,27 @@ export function sendInvoiceSentEmail(input: {
   return deliver(buildInvoiceSentEmail(input));
 }
 
-export function sendContractVoidRequestedEmail(input: {
+/**
+ * A void request for an accepted Agreement. The client confirms through a
+ * purpose-bound void link; the owner is always sent into their workspace
+ * (`actionUrl` is the Agreement page), never handed a public bearer link.
+ */
+export function buildContractVoidRequestedEmail(input: {
   to: string;
   recipientName: string;
   contractTitle: string;
   requesterName: string;
   note: string;
-  voidUrl: string;
-}): Promise<EmailResult> {
+  actionUrl: string;
+  recipientIsOwner: boolean;
+}): PreparedEmail {
   const safeRecipient = escapeHtml(input.recipientName);
   const safeRequester = escapeHtml(input.requesterName);
   const safeNote = escapeHtml(input.note).replace(/\n/g, "<br>");
-  return deliver({
+  const how = input.recipientIsOwner
+    ? "Open the Agreement in your Rive workspace to confirm or decline the void."
+    : "Use the secure link below to confirm or decline the void.";
+  return {
     to: input.to,
     type: "contract_void",
     subject: `Void requested: ${input.contractTitle}`,
@@ -792,14 +802,43 @@ export function sendContractVoidRequestedEmail(input: {
       eyebrow: "void requested",
       title: `${safeRequester} requested to void an accepted Agreement.`,
       intro: `A void request was raised for “${escapeHtml(input.contractTitle)}”. Both parties must agree before it is voided.`,
-      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeRecipient}, use the secure link below to confirm or decline the void. The Agreement stays accepted and fully retained until the other party also confirms.</p><p style="margin:18px 0 0;padding:14px 16px;border:1px solid #DDD6C7;border-radius:12px;background:#F1EDE2;color:#55503F;font-size:13px;line-height:21px"><strong style="color:#181511">Reason:</strong><br>${safeNote}</p>`,
-      action: "Review void request",
-      actionUrl: input.voidUrl,
-      aside: "If you did not expect this message, you can safely ignore it. The Agreement is not voided unless you confirm through the secure link.",
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeRecipient}, ${how} The Agreement stays accepted and fully retained until the other party also confirms.</p><p style="margin:18px 0 0;padding:14px 16px;border:1px solid #DDD6C7;border-radius:12px;background:#F1EDE2;color:#55503F;font-size:13px;line-height:21px"><strong style="color:#181511">Reason:</strong><br>${safeNote}</p>`,
+      action: input.recipientIsOwner ? "Open the Agreement" : "Review void request",
+      actionUrl: input.actionUrl,
+      aside: input.recipientIsOwner
+        ? "The Agreement is not voided unless you confirm it in Rive."
+        : "If you did not expect this message, you can safely ignore it. The Agreement is not voided unless you confirm through the secure link.",
       recipient: input.to,
     }),
-    text: `${input.requesterName} requested to void “${input.contractTitle}”.\n\nReason: ${input.note}\n\nReview the void request: ${input.voidUrl}\n\nThe Agreement stays accepted until you confirm.`,
-  });
+    text: `${input.requesterName} requested to void “${input.contractTitle}”.\n\nReason: ${input.note}\n\n${input.recipientIsOwner ? "Open the Agreement" : "Review the void request"}: ${input.actionUrl}\n\nThe Agreement stays accepted until you confirm.`,
+  };
+}
+
+/** Tells the owner the client has accepted and their own acceptance is next. */
+export function buildOwnerAcceptanceDueEmail(input: {
+  to: string;
+  ownerName: string;
+  clientName: string;
+  contractTitle: string;
+  agreementUrl: string;
+}): PreparedEmail {
+  const safeClient = escapeHtml(input.clientName);
+  return {
+    to: input.to,
+    type: "contract_acceptance_due",
+    subject: `${input.clientName} accepted — your acceptance is next: ${input.contractTitle}`,
+    html: baseTemplate({
+      eyebrow: "your acceptance is next",
+      title: `${safeClient} recorded acceptance.`,
+      intro: `“${escapeHtml(input.contractTitle)}” is waiting for your acceptance before it becomes the accepted Agreement.`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${escapeHtml(input.ownerName)}, open the Agreement in Rive and record your acceptance. Once both parties have accepted, the payment plan starts and the first invoice drafts are prepared for your review.</p>`,
+      action: "Open the Agreement",
+      actionUrl: input.agreementUrl,
+      aside: "You record your acceptance while signed in to Rive. No link in this email records acceptance on its own.",
+      recipient: input.to,
+    }),
+    text: `${input.clientName} recorded acceptance of “${input.contractTitle}”. Your acceptance is next.\n\nOpen the Agreement: ${input.agreementUrl}`,
+  };
 }
 
 export type PreparedEmail = {
@@ -812,6 +851,7 @@ export type PreparedEmail = {
   deliveryGuard?:
     | { kind: "contract_signing"; signerId: string; tokenHash: string }
     | { kind: "contract_review"; linkId: string; tokenHash: string }
+    | { kind: "contract_void"; linkId: string; tokenHash: string }
     | { kind: "invoice_sent"; invoiceId: string; tokenHash: string };
 };
 

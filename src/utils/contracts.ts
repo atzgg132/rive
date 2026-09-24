@@ -1,8 +1,10 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
+import { AgreementActionError, describeAgreementError } from "@/utils/agreementErrors";
 import { buildContractStatusUpdate, type ContractStatus } from "@/utils/contractStatus";
 import { getRequestIp } from "@/utils/rateLimit";
 
@@ -12,9 +14,20 @@ export {
   CONTRACT_STATUS_TRANSITIONS,
 } from "@/utils/contractStatus";
 export type { ContractStatus } from "@/utils/contractStatus";
+export { AgreementActionError } from "@/utils/agreementErrors";
 
-export const CONTRACT_CONSENT_TEXT_VERSION = "2026-08-03-v2";
-export const CONTRACT_CONSENT_TEXT = "I confirm that I have read and approve this exact Agreement version, and that I am authorised to act for myself or the named organisation. I consent to Rive recording my typed-name acceptance, the displayed timestamp, and the associated acceptance evidence. I understand that this record describes the method used and is not an OTP or identity-verification result.";
+/**
+ * The one catch-block response for Agreement routes: an AgreementActionError
+ * keeps its message and status, anything else is logged and replaced with the
+ * route's generic fallback so internal errors never reach the browser.
+ */
+export function agreementErrorResponse(error: unknown, fallbackMessage: string, logLabel: string): NextResponse {
+  const result = describeAgreementError(error, fallbackMessage);
+  if (result.internal) console.error(`${logLabel}:`, error);
+  return NextResponse.json(result.body, { status: result.status });
+}
+
+export { CONTRACT_CONSENT_TEXT, CONTRACT_CONSENT_TEXT_VERSION } from "@/lib/agreementConsent";
 export const CONTRACT_TOKEN_TTL_DAYS = 14;
 export const CONTRACT_MAX_COMMENT_LENGTH = 4_000;
 export const CONTRACT_MAX_TITLE_LENGTH = 180;
@@ -248,6 +261,7 @@ export function classifyContractPublicLinkFailure(message: string | null): strin
   if (message.includes("revoked")) return "revoked";
   if (message.includes("expired")) return "expired";
   if (message.includes("voided")) return "voided";
+  if (message.includes("Rive workspace")) return "owner_link_retired";
   return "invalid";
 }
 
@@ -301,22 +315,28 @@ export function isRecordedAcceptanceEnabled(): boolean {
   return process.env[CONTRACTS_RECORDED_ACCEPTANCE_FLAG] === "true";
 }
 
+function agreementsUnavailable(reason: string): AgreementActionError {
+  // The reason names configuration (flags, secrets); log it, never show it.
+  console.warn(`Agreements unavailable: ${reason}`);
+  return new AgreementActionError("Agreements are not available right now. Try again later.", 503, "agreements_unavailable");
+}
+
 export function assertContractsEnabled(): void {
   if (process.env.CONTRACTS_ENABLED === "false") {
-    throw new Error("Contracts are disabled for this environment.");
+    throw agreementsUnavailable("Contracts are disabled for this environment.");
   }
   const provider = getConfiguredEsignProvider();
   if (![LOCAL_ESIGN_PROVIDER, RIVE_ESIGN_PROVIDER].includes(provider)) {
-    throw new Error("Contract signing provider is not configured.");
+    throw agreementsUnavailable("Contract signing provider is not configured.");
   }
   if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET?.trim()) {
-    throw new Error("SESSION_SECRET is required before Contracts can run in production.");
+    throw agreementsUnavailable("SESSION_SECRET is required before Contracts can run in production.");
   }
   if (process.env.NODE_ENV === "production" && provider === LOCAL_ESIGN_PROVIDER && process.env[CONTRACTS_ALLOW_LOCAL_PROVIDER_FLAG] !== "true") {
-    throw new Error("The local/demo Contract provider is disabled in production unless explicitly enabled.");
+    throw agreementsUnavailable("The local/demo Contract provider is disabled in production unless explicitly enabled.");
   }
   if (process.env.NODE_ENV === "production" && provider === RIVE_ESIGN_PROVIDER && !isRecordedAcceptanceEnabled()) {
-    throw new Error("The recorded-acceptance adapter is disabled in production until its feature flag is explicitly enabled.");
+    throw agreementsUnavailable("The recorded-acceptance adapter is disabled in production until its feature flag is explicitly enabled.");
   }
 }
 
@@ -404,7 +424,7 @@ export function validatePaymentPlanItem(input: unknown, index: number): {
   invoiceDescription: string | null;
   sequence: number;
 } {
-  if (!isRecord(input)) throw new Error(`Payment plan item ${index + 1} is invalid.`);
+  if (!isRecord(input)) throw new AgreementActionError(`Payment plan item ${index + 1} is invalid.`);
   const label = cleanText(input.label, 160);
   const amount = typeof input.amount === "number" ? input.amount : Number(input.amount);
   const currency = cleanText(input.currency, 3).toUpperCase();
@@ -416,16 +436,16 @@ export function validatePaymentPlanItem(input: unknown, index: number): {
   const dueDays = typeof input.dueDays === "number" ? input.dueDays : Number(input.dueDays ?? 7);
   const invoiceDescription = cleanText(input.invoiceDescription, 240) || null;
 
-  if (!label) throw new Error(`Payment plan item ${index + 1} needs a label.`);
+  if (!label) throw new AgreementActionError(`Payment plan item ${index + 1} needs a label.`);
   if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000) {
-    throw new Error(`Payment plan item ${index + 1} needs a positive amount.`);
+    throw new AgreementActionError(`Payment plan item ${index + 1} needs a positive amount.`);
   }
-  if (!/^[A-Z]{3}$/.test(currency)) throw new Error(`Payment plan item ${index + 1} needs a 3-letter currency.`);
-  if (!PAYMENT_TRIGGER_TYPES.includes(triggerType)) throw new Error(`Payment plan item ${index + 1} has an invalid trigger.`);
-  if (!Number.isInteger(dueDays) || dueDays < 0 || dueDays > 365) throw new Error(`Payment plan item ${index + 1} has an invalid due period.`);
-  if (triggerType === "fixed_date" && !triggerDate) throw new Error(`Payment plan item ${index + 1} needs a valid trigger date.`);
+  if (!/^[A-Z]{3}$/.test(currency)) throw new AgreementActionError(`Payment plan item ${index + 1} needs a 3-letter currency.`);
+  if (!PAYMENT_TRIGGER_TYPES.includes(triggerType)) throw new AgreementActionError(`Payment plan item ${index + 1} has an invalid trigger.`);
+  if (!Number.isInteger(dueDays) || dueDays < 0 || dueDays > 365) throw new AgreementActionError(`Payment plan item ${index + 1} has an invalid due period.`);
+  if (triggerType === "fixed_date" && !triggerDate) throw new AgreementActionError(`Payment plan item ${index + 1} needs a valid trigger date.`);
   if (usesMilestone && !milestoneId) {
-    throw new Error(`Payment plan item ${index + 1} must be linked to a milestone.`);
+    throw new AgreementActionError(`Payment plan item ${index + 1} must be linked to a milestone.`);
   }
 
   return {

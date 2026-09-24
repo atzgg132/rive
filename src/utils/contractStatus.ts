@@ -21,7 +21,9 @@ export const CONTRACT_STATUS_TRANSITIONS: Readonly<Record<ContractStatus, readon
   executed: ["void"],
   declined: ["draft", "in_review", "void"],
   void: [],
-  expired: ["draft", "in_review", "ready_to_sign", "void"],
+  // expired -> signing reopens a request whose client acceptance is already
+  // recorded, so the owner can still complete it (see agreementAcceptance.ts).
+  expired: ["draft", "in_review", "ready_to_sign", "signing", "void"],
 };
 
 export function isContractStatus(value: string): value is ContractStatus {

@@ -42,6 +42,7 @@ type SignData = {
   signer: { role: string; name: string; email: string; status: string; sequence: number };
   consent: { version: string; text: string };
   downloadUrl: string | null;
+  viewer_is_owner?: boolean;
 };
 
 export default function ContractSignPublicPage() {
@@ -166,10 +167,17 @@ export default function ContractSignPublicPage() {
           <p className="mt-1 text-xs text-muted-foreground">Governing law: {governingLaw}{jurisdiction ? ` · ${jurisdiction}` : ""}</p>
         </section>
 
+        {data.viewer_is_owner && !completed ? (
+          <Alert variant="warning">
+            <AlertTriangle className="h-5 w-5" />
+            <div><p className="font-bold">You are signed in as the sender of this Agreement</p><p className="mt-1 text-sm text-muted-foreground">This is your client’s acceptance link — only {data.signer.name} can accept here. You record your own acceptance on the Agreement page in Rive after they do.</p></div>
+          </Alert>
+        ) : null}
+
         {waiting ? (
           <Alert variant="info">
             <LockKeyhole className="h-5 w-5" />
-            <div><p className="font-bold">The client accepts first</p><p className="mt-1 text-sm text-muted-foreground">This owner link unlocks automatically after the client records acceptance.</p></div>
+            <div><p className="font-bold">Another party accepts first</p><p className="mt-1 text-sm text-muted-foreground">This page unlocks automatically once they have recorded acceptance.</p></div>
           </Alert>
         ) : null}
 
@@ -215,7 +223,7 @@ export default function ContractSignPublicPage() {
               <CardContent className="flex flex-col gap-4">
                 {completed ? (
                   <>
-                    <Alert variant="success"><CheckCircle2 className="h-5 w-5" /><p className="text-sm">{data.contract.status === "executed" ? "Both parties have recorded acceptance." : "Your acceptance is recorded. The next party can continue."}</p></Alert>
+                    <Alert variant="success"><CheckCircle2 className="h-5 w-5" /><p className="text-sm">{data.contract.status === "executed" ? "Both parties have recorded acceptance. Keep this page’s link: it lets you download the accepted Agreement later." : `Your acceptance is recorded. ${data.contract.content.ownerName || "The sender"} has been asked to record theirs; you will receive the accepted copy by email once they do.`}</p></Alert>
                     {downloadUrl && data.contract.status === "executed" ? <a href={downloadUrl} className="inline-flex h-10 items-center justify-center gap-2 rounded-none bg-primary px-4 text-sm font-semibold text-primary-foreground" download><Download className="h-4 w-4" /> Download accepted PDF</a> : null}
                     {data.contract.status === "executed" ? (
                       <Alert variant="warning">
@@ -247,7 +255,7 @@ export default function ContractSignPublicPage() {
                       </Alert>
                     ) : null}
                   </>
-                ) : waiting ? <p className="text-sm text-muted-foreground">The acceptance form unlocks after the prior party records acceptance.</p> : (
+                ) : waiting ? <p className="text-sm text-muted-foreground">The acceptance form unlocks after the prior party records acceptance.</p> : data.viewer_is_owner ? <p className="text-sm text-muted-foreground">Acceptance is disabled while you are signed in as the sender.</p> : (
                   <>
                     <label><span className="mb-1.5 block text-xs font-bold">Type your full name</span><Input value={typedName} onChange={(event) => setTypedName(event.target.value)} placeholder={data.signer.name} autoComplete="name" /></label>
                     <label className="flex gap-3 text-xs leading-5 text-muted-foreground"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-primary" /><span>{data.consent.text}<span className="mt-1 block font-mono text-[10px]">Consent version {data.consent.version}</span></span></label>

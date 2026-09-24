@@ -149,6 +149,64 @@ async function expectHealthyButtons(page: Page) {
   expect(undersizedTextButtons, `Undersized text buttons: ${JSON.stringify(undersizedTextButtons)}`).toEqual([]);
 }
 
+type DetailOptions = {
+  status: string;
+  versionStatus?: string;
+  clientSigned?: boolean;
+  activeClientLink?: boolean;
+  onAccept?: (payload: Record<string, unknown>) => void;
+};
+
+function agreementDetail(options: DetailOptions) {
+  const versionId = "version-2";
+  const clientSignature = options.clientSigned
+    ? [{ versionId, signedAt: "2026-09-20T10:00:00.000Z", consentTextVersion: "2026-08-03-v2" }]
+    : [];
+  return {
+    id: "agreement-1",
+    title: "Website redesign — Services agreement",
+    status: options.status,
+    provider: "rive",
+    governing_law: "India",
+    jurisdiction: "Bengaluru, Karnataka",
+    currency: "INR",
+    finalized_at: "2026-09-19T10:00:00.000Z",
+    executed_at: null,
+    voided_at: null,
+    void_requested_at: null,
+    void_requested_by_role: null,
+    void_request_note: null,
+    void_confirm_note: null,
+    client: { id: client.id, name: client.name, email: client.email, company: client.company, address: client.address },
+    project: { id: project.id, title: project.title, description: project.description, milestones: project.milestones },
+    versions: [{ id: versionId, version: 2, status: options.versionStatus || "final", content: { title: "Website redesign — Services agreement", ownerName: "Rive Freelancer", clientName: client.name, clientEmail: client.email, sections: template.sections, paymentPlan: { currency: "INR", items: [] } }, content_hash: "hash-fixture", created_at: "2026-09-18T10:00:00.000Z", finalized_at: "2026-09-19T10:00:00.000Z", artifacts: [] }],
+    signers: [
+      { id: "signer-client", role: "client", name: client.name, email: client.email, status: options.clientSigned ? "signed" : "pending", invited_at: "2026-09-19T10:00:00.000Z", signed_at: options.clientSigned ? "2026-09-20T10:00:00.000Z" : null, signatures: clientSignature },
+      { id: "signer-owner", role: "owner", name: "Rive Freelancer", email: "owner@rive.test", status: "pending", invited_at: "2026-09-19T10:00:00.000Z", signed_at: null, signatures: [] },
+    ],
+    review_links: options.activeClientLink
+      ? [{ id: "link-1", type: "sign", versionId, signerId: "signer-client", expiresAt: "2030-01-01T00:00:00.000Z", revokedAt: null, createdAt: "2026-09-19T10:00:00.000Z" }]
+      : [],
+    comments: [],
+    events: [{ id: "event-1", versionId, eventType: "signer_signed", metadata: { role: "client" }, createdAt: "2026-09-20T10:00:00.000Z" }],
+    payment_plan: [],
+    work_setup: { status: "not_started", accepted_version_id: null, preview_plan: null, preview_hash: null, result_ids: null, error: null },
+  };
+}
+
+async function mockAgreementDetail(page: Page, options: DetailOptions) {
+  await mockWorkspace(page);
+  await page.route("**/api/workflow/contracts/agreement-1**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === "/api/workflow/contracts/agreement-1/accept" && request.method() === "POST") {
+      options.onAccept?.(request.postDataJSON() as Record<string, unknown>);
+      return json(route, { success: true, completed: true, message: "Your acceptance is recorded. The Agreement is accepted by both parties." });
+    }
+    return json(route, { success: true, contract: agreementDetail(options) });
+  });
+}
+
 test.describe("contracts UX", () => {
   test("contract composer has padded actions, no nested controls, and a complete three-step flow", async ({ page }, testInfo) => {
     await mockWorkspace(page);
@@ -294,5 +352,55 @@ test.describe("contracts UX", () => {
     await expect(page.getByRole("button", { name: "Expand sidebar" })).toHaveCount(1);
     await page.getByRole("button", { name: "Expand sidebar" }).click();
     await expect(page.getByRole("button", { name: "Collapse sidebar" })).toHaveCount(1);
+  });
+
+  test("owner records their acceptance in the workspace after the client accepts", async ({ page }, testInfo) => {
+    let acceptPayload: Record<string, unknown> | null = null;
+    await mockAgreementDetail(page, { status: "signing", clientSigned: true, onAccept: (payload) => { acceptPayload = payload; } });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/workflow/contracts/agreement-1", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { name: "Your acceptance is next" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Owner acceptance link/)).toHaveCount(0);
+    await expect(page.getByText("Client links")).toHaveCount(0);
+    await testInfo.attach("owner-acceptance-next", { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+
+    await page.getByRole("button", { name: "Record your acceptance" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "Record your acceptance" })).toBeVisible();
+    const submit = dialog.getByRole("button", { name: "Record acceptance" });
+    await expect(submit).toBeDisabled();
+    await dialog.getByPlaceholder("Rive Freelancer").fill("Rive Freelancer");
+    await dialog.getByRole("checkbox").check();
+    await testInfo.attach("owner-acceptance-dialog", { body: await page.screenshot(), contentType: "image/png" });
+    await submit.click();
+    await expect.poll(() => acceptPayload).toEqual({ typedName: "Rive Freelancer", consentAccepted: true });
+  });
+
+  test("share panel shows two ordered client links and confirms before replacing a live one", async ({ page }, testInfo) => {
+    await mockAgreementDetail(page, { status: "signing", clientSigned: false, activeClientLink: true });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/workflow/contracts/agreement-1", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { name: "Waiting for the client to accept" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Review link — comments only")).toBeVisible();
+    await expect(page.getByText("Acceptance link — send only to the client")).toBeVisible();
+    await expect(page.getByText(/Active link created/)).toBeVisible();
+    await expect(page.getByText(/Owner acceptance link/)).toHaveCount(0);
+    await testInfo.attach("share-panel", { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+
+    await page.getByRole("button", { name: "New link" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "Replace the current acceptance link?" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Keep current link" }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test("a client's ready signal is labelled as readiness, not acceptance", async ({ page }) => {
+    await mockAgreementDetail(page, { status: "in_review", versionStatus: "approved" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/workflow/contracts/agreement-1", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Client is ready for the final version" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: "Finalize version" })).toBeVisible();
   });
 });

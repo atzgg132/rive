@@ -3,7 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { buildContractSigningEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
-import { assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, isLocalEsignDemo, transitionContractStatus } from "@/utils/contracts";
+import { agreementErrorResponse, AgreementActionError, assertContractsEnabled, createAccessToken, CONTRACT_TOKEN_TTL_DAYS, hashAccessToken, isLocalEsignDemo, transitionContractStatus } from "@/utils/contracts";
 import { getEsignProvider } from "@/utils/esign";
 
 function appUrl(): string {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (contract.signers.length !== 2 || !clientSigner || !ownerSigner || clientSigner.name.trim() !== contract.client.name.trim() || clientSigner.email.trim().toLowerCase() !== contract.client.email.trim().toLowerCase()) {
       return NextResponse.json({
         success: false,
-        message: `The client on this finalized version is snapshotted as “${clientSigner?.name || "missing"} <${clientSigner?.email || "missing"}>”, but the live client is now “${contract.client.name} <${contract.client.email || "missing email"}”. Edit the draft and save a new version before starting recorded acceptance.`,
+        message: `The client on this finalized version is snapshotted as “${clientSigner?.name || "missing"} <${clientSigner?.email || "missing"}>”, but the live client is now “${contract.client.name} <${contract.client.email || "missing email"}>”. Edit the draft and save a new version before starting recorded acceptance.`,
       }, { status: 409 });
     }
     if (ownerSigner.name.trim() !== ownerName.trim() || ownerSigner.email.trim().toLowerCase() !== contract.user.email.trim().toLowerCase()) {
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ],
       });
       if (envelope.provider !== provider.name || envelope.status !== "created" || !envelope.providerEnvelopeId.trim()) {
-        throw new Error("The configured provider returned an incomplete recorded-acceptance request.");
+        throw new AgreementActionError("The configured provider returned an incomplete recorded-acceptance request.", 502);
       }
     } catch (error) {
       await transitionContractStatus(prisma, { where: { id, userId: session.userId }, from: "starting", to: "ready_to_sign" }).catch(() => undefined);
@@ -75,12 +75,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const expiresAt = new Date(Date.now() + CONTRACT_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+    // Only the client gets a public acceptance link. The owner records their
+    // acceptance inside the signed-in workspace after the client accepts.
     const clientToken = createAccessToken();
-    const ownerToken = createAccessToken();
     const clientTokenHash = hashAccessToken(clientToken);
-    const ownerTokenHash = hashAccessToken(ownerToken);
     const clientSignUrl = `${appUrl()}/sign/${encodeURIComponent(clientToken)}`;
-    const ownerSignUrl = `${appUrl()}/sign/${encodeURIComponent(ownerToken)}`;
     const signingEmail = {
       ...buildContractSigningEmail({ to: clientSigner.email, signerName: clientSigner.name, contractTitle: contract.title, signUrl: clientSignUrl, expiresAt }),
       deliveryGuard: { kind: "contract_signing" as const, signerId: clientSigner.id, tokenHash: clientTokenHash },
@@ -89,16 +88,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     try {
       await prisma.$transaction(async (tx) => {
         const started = await transitionContractStatus(tx, { where: { id, userId: session.userId }, from: "starting", to: "signing", data: { provider: envelope.provider, providerEnvelopeId: envelope.providerEnvelopeId, reviewExpiresAt: expiresAt } });
-        if (started !== 1) throw new Error("Recorded acceptance was cancelled or changed while the provider was preparing the request.");
+        if (started !== 1) throw new AgreementActionError("Recorded acceptance was cancelled or changed while the provider was preparing the request.", 409);
         await tx.contractReviewLink.updateMany({
           where: { contractId: id, signerId: { in: [clientSigner.id, ownerSigner.id] }, type: "sign", revokedAt: null },
           data: { revokedAt: new Date() },
         });
-        await tx.contractReviewLink.createMany({
-          data: [
-            { contractId: id, versionId: version.id, signerId: clientSigner.id, tokenHash: clientTokenHash, type: "sign", expiresAt },
-            { contractId: id, versionId: version.id, signerId: ownerSigner.id, tokenHash: ownerTokenHash, type: "sign", expiresAt },
-          ],
+        await tx.contractReviewLink.create({
+          data: { contractId: id, versionId: version.id, signerId: clientSigner.id, tokenHash: clientTokenHash, type: "sign", expiresAt },
         });
         await tx.contractSigner.updateMany({ where: { contractId: id }, data: { invitedAt: new Date(), status: "pending" } });
         await tx.contractEvent.create({ data: { contractId: id, versionId: version.id, actorUserId: session.userId, eventType: "signing_started", metadata: { provider: envelope.provider, providerEnvelopeId: envelope.providerEnvelopeId } } });
@@ -124,17 +120,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       status: "signing",
       demo: isLocalEsignDemo(),
       clientSignUrl,
-      ownerSignUrl,
       email: { queued: true, sent: delivered },
-      message: isLocalEsignDemo()
-        ? "Local recorded-acceptance request started. Use the client acceptance link first, then the owner link."
-        : delivered
-          ? "Recorded acceptance request started."
-          : "Recorded acceptance request started. Share the client acceptance link if email delivery is still pending.",
+      message: delivered
+        ? "Acceptance requested. The client was emailed their acceptance link; you record yours here after they accept."
+        : "Acceptance requested. Email delivery is pending — copy the client acceptance link below and send it to the client.",
     });
   } catch (error) {
-    console.error("Contract start signing error:", error);
-    const message = error instanceof Error ? error.message : "Unable to start recorded acceptance.";
-    return NextResponse.json({ success: false, message }, { status: message.includes("production") || message.includes("provider") ? 503 : 500 });
+    return agreementErrorResponse(error, "Unable to start recorded acceptance.", "Contract start signing error");
   }
 }

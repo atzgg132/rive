@@ -14,6 +14,7 @@ import {
   contractPublicRedirectUrl,
   createContractPublicSession,
   isContractPublicSessionSegment,
+  OWNER_LINK_RETIRED_MESSAGE,
   setContractPublicSessionCookie,
 } from "@/utils/contractPublicSession";
 import { durableRateLimit } from "@/utils/durableRateLimit";
@@ -30,12 +31,12 @@ async function resolveLink(token: string) {
     include: {
       contract: { select: { id: true, status: true } },
       version: { select: { id: true } },
-      signer: { select: { id: true } },
+      signer: { select: { id: true, role: true } },
     },
   });
 }
 
-function redirectToClean(req: NextRequest, path: "/sign" | "/review"): NextResponse {
+function redirectToClean(req: NextRequest, path: string): NextResponse {
   return NextResponse.redirect(contractPublicRedirectUrl(path, req.url), 303);
 }
 
@@ -55,6 +56,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     const problem = contractAcceptanceLinkProblem(link);
     if (problem) {
       logContractPublicLinkAccess({ request: req, requestId, purpose: "acceptance", contractId: link?.contractId || null, versionId: link?.versionId || null, outcome: classifyContractPublicLinkFailure(problem), revoked: Boolean(link?.revokedAt), expired: Boolean(link && link.expiresAt <= new Date()), rateLimited: false });
+      // A retired owner link sends the owner to the signed-in Agreement page,
+      // where they accept or confirm a void. The workspace still requires login.
+      if (problem === OWNER_LINK_RETIRED_MESSAGE && link) return redirectToClean(req, `/workflow/contracts/${encodeURIComponent(link.contractId)}`);
       // The clean page renders the closed/unavailable state itself once the
       // session lookup fails — a redirect keeps this a page, not a JSON dump.
       return redirectToClean(req, "/sign");
