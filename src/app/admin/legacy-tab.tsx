@@ -7,6 +7,12 @@ import { ago, Empty, fetchAdmin, LoadError, Loading, Panel, type LegacyRow } fro
 
 const PAGE_LIMIT = 50;
 
+// Stored statuses are lowercase ("pending", "approved"); show them in the same
+// sentence case as the derived "Registered" so the column reads as one list.
+function legacyStatusLabel(status: string) {
+  return status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ") : "Unknown";
+}
+
 export function LegacyTab() {
   const [items, setItems] = useState<LegacyRow[]>([]);
   const [searchInput, setSearchInput] = useState("");
@@ -68,7 +74,7 @@ export function LegacyTab() {
                 <table className="w-full text-left text-sm">
                   <thead className="text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="pb-3">Email</th><th className="pb-3">Original source</th><th className="pb-3">Status</th><th className="pb-3">Created</th></tr></thead>
                   <tbody className="divide-y divide-border">
-                    {items.map((item) => <tr key={item.id}><td className="py-3">{item.email}</td><td className="py-3">{item.type}</td><td className="py-3">{item.registered ? "Registered" : item.status}</td><td className="py-3 font-mono tabular-nums">{ago(item.created_at)}</td></tr>)}
+                    {items.map((item) => <tr key={item.id}><td className="py-3">{item.email}</td><td className="py-3">{item.type}</td><td className="py-3">{item.registered ? "Registered" : legacyStatusLabel(item.status)}</td><td className="py-3 font-mono tabular-nums">{ago(item.created_at)}</td></tr>)}
                   </tbody>
                 </table>
               </div>

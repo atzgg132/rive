@@ -20,6 +20,7 @@ const productFunnel = {
     createdFlows: 1,
     medianHoursToCreate: 0.4,
     p75HoursToCreate: 0.4,
+    timedUsers: 1,
     firstSession: { completed: 1, started: 2, rate: 50 },
     sevenDay: { completed: 1, eligible: 2, rate: 50 },
     followThrough: { users: 1, eligible: 1, rate: 100 },
@@ -37,6 +38,7 @@ const productFunnel = {
   workflowDepth: { averageModules: 1.2, buckets: [{ label: "0–1 modules", count: 3 }, { label: "2 modules", count: 1 }, { label: "3+ modules", count: 0 }] },
   reliability: {
     productEvents24h: 9,
+    productEvents7d: 40,
     failedEmails24h: 0,
     queuedEmails: 0,
     migration: {
@@ -245,5 +247,130 @@ test.describe("admin control room", () => {
     await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
     await expect.poll(() => requested.some((url) => url.includes("stage=deeply_activated"))).toBe(true);
     await expect(page.getByRole("button", { name: /^Deeply activated/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("shows a loading state, not the error card, while metrics load", async ({ page }) => {
+    await page.route("**/api/admin/session", (route) => json(route, { success: true }));
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    await page.route("**/api/admin/analytics", async (route) => {
+      await gate;
+      await json(route, { success: true, data: { productFunnel } });
+    });
+
+    await page.goto("/admin");
+
+    await expect(page.getByRole("status").filter({ hasText: "Loading metrics" })).toBeVisible();
+    await expect(page.getByText("Metrics unavailable")).toHaveCount(0);
+    await expect(page.getByText("temporarily unavailable")).toHaveCount(0);
+
+    release();
+    await expect(page.getByRole("heading", { name: "All customer accounts" })).toBeVisible();
+  });
+
+  test("compares signups against an empty prior week instead of hiding it", async ({ page }) => {
+    await page.route("**/api/admin/session", (route) => json(route, { success: true }));
+    await page.route("**/api/admin/analytics", (route) => json(route, { success: true, data: { productFunnel } }));
+
+    await page.goto("/admin");
+
+    await expect(page.getByText("0 in prior 7d")).toBeVisible();
+    await expect(page.getByText("no prior week to compare")).toHaveCount(0);
+  });
+
+  test("scopes time to engagement to first flows after instrumentation", async ({ page }) => {
+    await page.route("**/api/admin/session", (route) => json(route, { success: true }));
+    await page.route("**/api/admin/analytics", (route) => json(route, { success: true, data: { productFunnel } }));
+
+    await page.goto("/admin?tab=funnel");
+
+    await expect(page.getByText(/first flow of 1 account that signed up after tracking began/)).toBeVisible();
+    await expect(page.getByText(/counts completed New client flows/)).toBeVisible();
+  });
+
+  test("lists only the reliability caveats that currently apply", async ({ page }) => {
+    await page.route("**/api/admin/session", (route) => json(route, { success: true }));
+    let funnel = productFunnel;
+    await page.route("**/api/admin/analytics", (route) => json(route, { success: true, data: { productFunnel: funnel } }));
+
+    await page.goto("/admin?tab=reliability");
+    await expect(page.getByText("All signals within normal range.")).toBeVisible();
+    await expect(page.getByText("Emails are failing.")).toHaveCount(0);
+    await expect(page.getByText("Contract rejects are non-zero.")).toHaveCount(0);
+
+    funnel = {
+      ...productFunnel,
+      reliability: { ...productFunnel.reliability, failedEmails24h: 2 },
+      quality: { ...productFunnel.quality, uncapturedSignups: 4, uncapturedSignupRate: 40 },
+    };
+    await page.reload();
+    await expect(page.getByText("Emails are failing.")).toBeVisible();
+    await expect(page.getByText("Uncaptured signup source is high.")).toBeVisible();
+    await expect(page.getByText("Contract rejects are non-zero.")).toHaveCount(0);
+    await expect(page.getByText("All signals within normal range.")).toHaveCount(0);
+  });
+
+  test("marks an account internal and refreshes the counts", async ({ page }) => {
+    await page.route("**/api/admin/session", (route) => json(route, { success: true }));
+    let analyticsRequests = 0;
+    await page.route("**/api/admin/analytics", (route) => {
+      analyticsRequests += 1;
+      return json(route, { success: true, data: { productFunnel } });
+    });
+    const account = {
+      id: "user-internal",
+      accountType: "customer",
+      email: "founder@example.com",
+      name: "Founder",
+      createdAt: "2026-08-01T00:00:00.000Z",
+      emailVerified: true,
+      onboardingStatus: "complete",
+      businessType: "studio",
+      profession: "designer",
+      goal: null,
+      startingPath: null,
+      qualified: true,
+      activated: true,
+      deeplyActivated: false,
+      stage: "activated",
+      realData: true,
+      qualificationBlockers: [],
+      activationPaths: ["native"],
+      attribution: null,
+      lastActivity: null,
+    };
+    const listRequests: string[] = [];
+    await page.route("**/api/admin/users?*", (route) => {
+      listRequests.push(route.request().url());
+      return json(route, { success: true, total: 1, hasMore: false, facets: { all: 1, registered: 0, qualified: 1, activated: 1, deeply_activated: 0, unverified: 0, realData: 1, internal: 0 }, sources: ["uncaptured"], data: [account] });
+    });
+    const patches: unknown[] = [];
+    await page.route("**/api/admin/users/user-internal", (route) => {
+      if (route.request().method() === "PATCH") {
+        patches.push(route.request().postDataJSON());
+        return json(route, { success: true, accountType: "internal", changed: true });
+      }
+      return json(route, {
+        success: true,
+        user: { email: account.email },
+        funnel: { stage: "activated", qualified: true, activated: true, realData: true, productGuidanceStage: "activated", qualificationBlockers: [], activation: { native: true, migration: false, portfolio: false, paths: ["native"], blockers: [] }, workspace: { clients: 1, projects: 1, invoices: 0, expenses: 0, calendarEvents: 0, publishedPortfolios: 0 } },
+        timeline: [],
+      });
+    });
+
+    await page.goto("/admin?tab=users");
+    await expect(page.getByRole("button", { name: /^Internal/ })).toBeVisible();
+    await page.getByText("founder@example.com").click();
+    await expect(page.locator("p").filter({ hasText: "Counted in metrics:" })).toContainText("Yes");
+
+    const listsBefore = listRequests.length;
+    const analyticsBefore = analyticsRequests;
+    await page.getByRole("button", { name: "Mark as internal" }).click();
+
+    await expect(page.getByRole("status").filter({ hasText: "Marked as internal" })).toBeVisible();
+    expect(patches).toEqual([{ accountType: "internal" }]);
+    await expect(page.getByRole("button", { name: "Mark as customer" })).toBeVisible();
+    await expect.poll(() => listRequests.length).toBeGreaterThan(listsBefore);
+    await expect.poll(() => analyticsRequests).toBeGreaterThan(analyticsBefore);
   });
 });

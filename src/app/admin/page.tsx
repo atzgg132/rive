@@ -66,7 +66,7 @@ function Dashboard({ onLogout, onSessionExpired }: { onLogout: () => void; onSes
     : tab === "funnel"
       ? <FunnelTab funnel={funnel} retry={load} loading={loading} error={error} />
       : tab === "users"
-        ? <UsersTab />
+        ? <UsersTab onCohortChanged={load} />
         : tab === "feedback"
           ? <FeedbackTab />
           : tab === "reliability"

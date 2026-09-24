@@ -8,6 +8,12 @@ import { hashRequestValue } from "@/utils/contracts";
 import { buildActivationPlan } from "@/lib/activation-plan";
 import { mergePortfolioContent } from "@/utils/portfolio";
 import { normalizeGuideProgress } from "@/lib/guides";
+import { readJsonBody } from "@/utils/apiBoundary";
+import { clearAdminMetricsCache } from "@/utils/adminMetrics";
+
+// The admin can only move an account between these two. Test, e2e, demo and
+// synthetic types belong to fixtures and seed scripts, so they stay read-only.
+const ADMIN_SETTABLE_ACCOUNT_TYPES = new Set(["customer", "internal"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -102,4 +108,35 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     timeline,
     calendarConnections,
   });
+}
+
+/**
+ * Marks an account as internal (excluded from every admin metric) or back to a
+ * customer. The change and its audit record commit together: an unaudited
+ * reclassification would silently move the funnel numbers.
+ */
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!await hasAdminSession(req)) return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+  const { id } = await params;
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const accountType = typeof parsedBody.body?.accountType === "string" ? parsedBody.body.accountType : "";
+  if (!ADMIN_SETTABLE_ACCOUNT_TYPES.has(accountType)) return NextResponse.json({ success: false, message: "Account type must be customer or internal." }, { status: 400 });
+
+  const user = await prisma.user.findUnique({ where: { id }, select: { id: true, accountType: true } });
+  if (!user) return NextResponse.json({ success: false, message: "User not found." }, { status: 404 });
+  if (!ADMIN_SETTABLE_ACCOUNT_TYPES.has(user.accountType)) {
+    return NextResponse.json({ success: false, message: `This is a ${user.accountType} account and cannot be reclassified here.` }, { status: 409 });
+  }
+  if (user.accountType === accountType) return NextResponse.json({ success: true, accountType, changed: false });
+
+  // The audit row keeps userId empty and names the account in targetId, like
+  // admin.users.view: audit_events is unique on (user_id, action), so keying
+  // it by user would refuse the second reclassification of the same account.
+  await prisma.$transaction([
+    prisma.user.update({ where: { id }, data: { accountType } }),
+    prisma.auditEvent.create({ data: { action: "admin.users.account_type", targetType: "user", targetId: id, metadata: { from: user.accountType, to: accountType }, ipHash: hashRequestValue(getRequestIp(req)) } }),
+  ]);
+  clearAdminMetricsCache();
+  return NextResponse.json({ success: true, accountType, changed: true });
 }
