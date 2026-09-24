@@ -1,4 +1,11 @@
+import { loadEnvConfig } from "@next/env";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { Pool } from "pg";
+
+loadEnvConfig(process.cwd());
 
 /**
  * The opt-in card for the weekly business summary email (issue #66, PR 5).
@@ -150,5 +157,48 @@ test.describe("weekly summary opt-in card", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await expect(page.getByTestId("weekly-summary-optin-card")).toHaveCount(0);
+  });
+});
+
+test.describe("weekly summary unsubscribe link", () => {
+  test.skip(!process.env.DATABASE_URL, "Requires DATABASE_URL with a migrated test database.");
+
+  test("opening the link changes nothing; confirming turns the summary off", async ({ page, request }) => {
+    const connectionString = new URL(process.env.DATABASE_URL!);
+    for (const parameter of ["channel_binding", "sslmode", "sslrootcert", "sslcert", "sslkey"]) connectionString.searchParams.delete(parameter);
+    const pool = new Pool({ connectionString: connectionString.toString(), ssl: false });
+    const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+    const user = await prisma.user.create({
+      data: { email: `wsummary-${randomUUID()}@rive.test`, passwordHash: "scrypt:unused:unused", weeklySummaryEnabled: true },
+      select: { id: true, email: true },
+    });
+    try {
+      const token = randomBytes(32).toString("base64url");
+      await prisma.authToken.create({
+        data: {
+          email: user.email,
+          userId: user.id,
+          type: "weekly_summary_unsubscribe",
+          tokenHash: createHash("sha256").update(token).digest("hex"),
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+      const url = `/api/public/weekly-summary/unsubscribe?token=${token}`;
+
+      expect((await request.get(url)).status()).toBe(200);
+      expect((await prisma.user.findUnique({ where: { id: user.id } }))?.weeklySummaryEnabled).toBe(true);
+
+      await page.goto(url);
+      await page.getByRole("button", { name: "Turn off weekly summaries" }).click();
+      await expect(page.getByText("You’re unsubscribed.")).toBeVisible();
+      expect((await prisma.user.findUnique({ where: { id: user.id } }))?.weeklySummaryEnabled).toBe(false);
+
+      // Used once; the link now reads as expired.
+      expect((await request.get(url)).status()).toBe(400);
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
+      await prisma.$disconnect();
+      await pool.end();
+    }
   });
 });
