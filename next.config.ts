@@ -81,6 +81,10 @@ const nextConfig: NextConfig = {
           // the LCP typeface. These files change only when replaced; rename them
           // if the bytes change so caches cannot keep a stale face.
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          // Emails load the brand face from this origin; mail clients fetch it
+          // cross-origin, and WebKit requires CORS for @font-face. These are
+          // public font binaries, so any origin may read them.
+          { key: "Access-Control-Allow-Origin", value: "*" },
         ],
       },
     ];

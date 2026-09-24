@@ -78,6 +78,13 @@ const transporter = smtpConfigured
   : null;
 
 const appUrl = (process.env.APP_URL || "https://www.rive.work").replace(/\/$/, "");
+
+/**
+ * Rive's typeface (Outfit, self-hosted — no third-party font request) with a
+ * system fallback chain for clients that ignore @font-face, such as Gmail and
+ * Outlook for Windows. Inline font stacks must use single quotes.
+ */
+const EMAIL_FONT_STACK = "'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
 const fromAddress = process.env.EMAIL_FROM || `"rive." <${process.env.SMTP_USER || "hello@rive.work"}>`;
 const replyTo = process.env.EMAIL_REPLY_TO || "hello@rive.work";
 
@@ -165,15 +172,15 @@ function baseTemplate({
   const button =
     action && actionUrl
       ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:30px 0 28px"><tr><td style="background:#181511">
-          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:14px 24px;color:#F7F5ED;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;border-left:4px solid #1D4ED8">${escapeHtml(action)} &rarr;</a>
+          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:14px 24px;color:#F7F5ED;font-size:15px;line-height:20px;font-weight:700;text-decoration:none">${escapeHtml(action)} &rarr;</a>
         </td></tr></table>
         <p style="margin:0 0 24px;color:#6F6757;font-size:12px;line-height:18px;word-break:break-all">If the button does not work, paste this link into your browser:<br><a href="${escapeHtml(actionUrl)}" style="color:#1D4ED8;text-decoration:underline">${escapeHtml(actionUrl)}</a></p>`
       : "";
 
   return `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(title)}</title></head>
-<body style="margin:0;background:#F7F5ED;color:#181511;font-family:Arial,'Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(title)}</title><style>@font-face{font-family:"Outfit";src:url("${appUrl}/fonts/outfit-marketing.woff2") format("woff2");font-weight:100 900;font-style:normal}</style></head>
+<body style="margin:0;background:#F7F5ED;color:#181511;font-family:${EMAIL_FONT_STACK};-webkit-font-smoothing:antialiased">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(intro)}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5ED">
     <tr><td align="center" style="padding:40px 16px">
@@ -188,7 +195,7 @@ function baseTemplate({
               <p style="margin:0 0 20px;color:#55503F;font-size:16px;line-height:26px">${escapeHtml(intro)}</p>
               ${body}
               ${button}
-              ${aside ? `<div style="margin-top:26px;padding:18px 20px;border:1px solid #DDD6C7;border-left:4px solid #1D4ED8;background:#F1EDE2;color:#55503F;font-size:13px;line-height:21px">${aside}</div>` : ""}
+              ${aside ? `<div style="margin-top:26px;padding:16px 20px;border:1px solid #DDD6C7;background:#F1EDE2;color:#55503F;font-size:13px;line-height:21px">${aside}</div>` : ""}
             </td></tr>
           </table>
         </td></tr>
