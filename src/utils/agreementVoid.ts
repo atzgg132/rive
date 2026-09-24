@@ -83,7 +83,8 @@ export async function queueOwnerVoidRequest(
 
 /**
  * Move an accepted Agreement to void once the other party confirmed. Revokes
- * every public link and records the two-party evidence.
+ * every public link, records the two-party evidence, and stops the payment
+ * plan (see cancelAgreementBilling).
  */
 export async function completeAgreementVoid(
   tx: Prisma.TransactionClient,
@@ -97,7 +98,7 @@ export async function completeAgreementVoid(
     ipHash: string;
     actorUserId?: string | null;
   },
-): Promise<void> {
+): Promise<AgreementBillingCancellation> {
   const voided = await transitionContractStatus(tx, {
     where: { id: input.contractId, status: "executed", voidRequestedAt: { not: null }, voidRequestedByRole: input.requesterRole },
     from: "executed",
@@ -109,6 +110,52 @@ export async function completeAgreementVoid(
   await tx.contractEvent.create({ data: { contractId: input.contractId, actorUserId: input.actorUserId || undefined, eventType: "void_confirmed", metadata: { confirmedByRole: input.confirmedByRole, requesterRole: input.requesterRole, note: input.note }, ipHash: input.ipHash } });
   await tx.contractEvent.create({ data: { contractId: input.contractId, eventType: "contract_voided", metadata: { via: "two_party", confirmedByRole: input.confirmedByRole, requesterRole: input.requesterRole } } });
   if (input.projectId) await resetProjectCoverageIfNoActiveContracts(tx, input.projectId, input.userId);
+  return cancelAgreementBilling(tx, input.contractId);
+}
+
+export type AgreementBillingCancellation = {
+  cancelledTriggers: number;
+  cancelledDrafts: Array<{ id: string; invoiceNumber: string }>;
+};
+
+/**
+ * Stop a voided Agreement's payment plan. Triggers that have not drafted yet
+ * are cancelled, and invoice drafts it generated that were never sent move to
+ * the invoice `cancelled` status (retained, not deleted — Agreement invoices
+ * are part of the billing record). Sent invoices are untouched; they are a
+ * matter between the parties. A trigger mid-draft ("processing") finishes as
+ * a normal draft.
+ */
+export async function cancelAgreementBilling(tx: Prisma.TransactionClient, contractId: string): Promise<AgreementBillingCancellation> {
+  const cancelled = await tx.contractBillingOccurrence.updateMany({
+    where: { contractId, invoiceId: null, status: { in: ["pending", "eligible", "awaiting_work_setup"] } },
+    data: { status: "cancelled", lastError: null },
+  });
+  await tx.contractPaymentPlanItem.updateMany({
+    where: { contractId, status: { notIn: ["draft_created", "cancelled"] }, occurrence: { is: { status: "cancelled" } } },
+    data: { status: "cancelled" },
+  });
+  const cancelledDrafts = await tx.invoice.findMany({
+    where: { status: "draft", sentAt: null, billingOccurrence: { is: { contractId } } },
+    select: { id: true, invoiceNumber: true },
+    orderBy: { createdAt: "asc" },
+  });
+  if (cancelledDrafts.length > 0) {
+    await tx.invoice.updateMany({ where: { id: { in: cancelledDrafts.map((invoice) => invoice.id) }, status: "draft", sentAt: null }, data: { status: "cancelled" } });
+  }
+  if (cancelled.count > 0 || cancelledDrafts.length > 0) {
+    await tx.contractEvent.create({ data: { contractId, eventType: "billing_cancelled", metadata: { cancelledTriggers: cancelled.count, cancelledDraftInvoiceIds: cancelledDrafts.map((invoice) => invoice.id) } } });
+  }
+  return { cancelledTriggers: cancelled.count, cancelledDrafts };
+}
+
+/** Owner-facing summary of what the void did to billing, or null if nothing. */
+export function voidBillingMessage(title: string, result: AgreementBillingCancellation): string | null {
+  if (result.cancelledDrafts.length === 0 && result.cancelledTriggers === 0) return null;
+  const parts: string[] = [];
+  if (result.cancelledDrafts.length > 0) parts.push(`unsent draft${result.cancelledDrafts.length === 1 ? "" : "s"} ${result.cancelledDrafts.map((invoice) => invoice.invoiceNumber).join(", ")} ${result.cancelledDrafts.length === 1 ? "was" : "were"} cancelled`);
+  if (result.cancelledTriggers > 0) parts.push(`${result.cancelledTriggers} upcoming invoice${result.cancelledTriggers === 1 ? "" : "s"} will not be drafted`);
+  return `${title} is void: ${parts.join("; ")}. Invoices already sent are unchanged.`;
 }
 
 /** Clear a pending void request (declined by the other party or withdrawn). */

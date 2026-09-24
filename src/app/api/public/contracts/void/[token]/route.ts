@@ -25,7 +25,7 @@ import {
   readContractPublicSessionToken,
   resolveContractPublicSession,
 } from "@/utils/contractPublicSession";
-import { clearAgreementVoidRequest, completeAgreementVoid, queueOwnerVoidRequest } from "@/utils/agreementVoid";
+import { clearAgreementVoidRequest, completeAgreementVoid, queueOwnerVoidRequest, voidBillingMessage } from "@/utils/agreementVoid";
 import { readJsonBody } from "@/utils/apiBoundary";
 
 // Client-party entry to the two-party void flow. The client reaches this from
@@ -127,8 +127,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       }
       if (note.length < 5) throw new AgreementActionError("Add a short confirmation note.", 400);
       const requesterRole = contract.voidRequestedByRole;
-      await prisma.$transaction((tx) => completeAgreementVoid(tx, { contractId: contract.id, userId: contract.userId, projectId: contract.projectId, requesterRole, confirmedByRole: signer.role, note, ipHash }));
-      await createNotification({ userId: contract.userId, type: "contract_voided", title: "Agreement voided", message: `${signer.name} confirmed the void of ${contract.title}.`, href: `/workflow/contracts/${contract.id}` }).catch(() => undefined);
+      const billing = await prisma.$transaction((tx) => completeAgreementVoid(tx, { contractId: contract.id, userId: contract.userId, projectId: contract.projectId, requesterRole, confirmedByRole: signer.role, note, ipHash }));
+      await createNotification({ userId: contract.userId, type: "contract_voided", title: "Agreement voided", message: [`${signer.name} confirmed the void of ${contract.title}.`, voidBillingMessage(contract.title, billing)].filter(Boolean).join(" "), href: `/workflow/contracts/${contract.id}` }).catch(() => undefined);
       return NextResponse.json({ success: true, message: "Agreement voided. Its history is retained." });
     }
 

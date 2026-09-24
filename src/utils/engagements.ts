@@ -271,6 +271,21 @@ function inquiryConversionNextAction(inquiryId: string): PortfolioInquiryConvers
   };
 }
 
+/**
+ * In agreement mode the first payment is part of the Agreement the client
+ * accepts (an on-acceptance payment-plan item), so no separate invoice is
+ * created — it drafts automatically on acceptance and can never be doubled.
+ */
+function expectsStandaloneInvoice(input: StartEngagementInput): boolean {
+  return Boolean(input.invoice) && input.scopeMode !== "agreement";
+}
+
+/** Whole days from now until the chosen due date, clamped to the plan limits. */
+export function engagementPaymentDueDays(dueDate: Date, now = new Date()): number {
+  const days = Math.ceil((dueDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+  return Math.min(Math.max(days, 0), 365);
+}
+
 function nextAction(input: StartEngagementInput, records: StartEngagementRecords): StartEngagementResult["nextAction"] {
   if (input.entryPoint === "inquiry") {
     return {
@@ -335,7 +350,7 @@ async function readCommittedEngagement(
     }
     const contractId = project.contracts[0]?.id;
     const invoiceId = project.invoices[0]?.id;
-    if ((input.scopeMode === "agreement") !== Boolean(contractId) || Boolean(input.invoice) !== Boolean(invoiceId) || Boolean(input.milestone) !== (project.milestones.length > 0)) {
+    if ((input.scopeMode === "agreement") !== Boolean(contractId) || expectsStandaloneInvoice(input) !== Boolean(invoiceId) || Boolean(input.milestone) !== (project.milestones.length > 0)) {
       throw new EngagementInputError("This enquiry was already used for different engagement options.", "idempotency_conflict", 409);
     }
     const records: StartEngagementRecords = {
@@ -354,7 +369,7 @@ async function readCommittedEngagement(
   }
   const contractId = project.contracts[0]?.id;
   const invoiceId = project.invoices[0]?.id;
-  if ((input.scopeMode === "agreement") !== Boolean(contractId) || Boolean(input.invoice) !== Boolean(invoiceId)) {
+  if ((input.scopeMode === "agreement") !== Boolean(contractId) || expectsStandaloneInvoice(input) !== Boolean(invoiceId)) {
     throw new EngagementInputError("This flow ID was already used for different engagement options.", "idempotency_conflict", 409);
   }
   const records: StartEngagementRecords = {
@@ -507,13 +522,25 @@ export async function createClientEngagement(userId: string, input: StartEngagem
           governingLaw: "India",
           jurisdiction: null,
           sections,
-          paymentPlan: [],
+          paymentPlan: input.invoice
+            ? [{
+                milestoneId: null,
+                label: input.milestone?.title ? `${input.milestone.title} — first payment` : "First payment",
+                amount: input.invoice.amount,
+                currency,
+                triggerType: "on_signing",
+                triggerDate: null,
+                dueDays: engagementPaymentDueDays(input.invoice.dueDate),
+                invoiceDescription: input.milestone?.title || project.title,
+                sequence: 0,
+              }]
+            : [],
         });
         contractId = agreement.contractId;
       }
 
       let invoiceId: string | undefined;
-      if (input.invoice) {
+      if (input.invoice && expectsStandaloneInvoice(input)) {
         const now = new Date();
         const invoiceNumber = await nextInvoiceNumber(tx, userId, owner.invoiceProfile?.invoicePrefix || "INV", now);
         const invoice = await tx.invoice.create({

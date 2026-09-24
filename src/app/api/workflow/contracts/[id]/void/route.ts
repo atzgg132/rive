@@ -11,7 +11,7 @@ import {
 } from "@/utils/contracts";
 import { getEmailProvider } from "@/utils/email";
 import { processEmailOutbox } from "@/utils/emailOutbox";
-import { clearAgreementVoidRequest, completeAgreementVoid, queueClientVoidRequest } from "@/utils/agreementVoid";
+import { clearAgreementVoidRequest, completeAgreementVoid, queueClientVoidRequest, voidBillingMessage } from "@/utils/agreementVoid";
 import { readJsonBody } from "@/utils/apiBoundary";
 
 // Two-party void for an EXECUTED Agreement. Either party may request; the OTHER
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         throw new AgreementActionError("There is no void request from the client to confirm.", 409);
       }
       if (note.length < 5) throw new AgreementActionError("Add a short confirmation note.", 400);
-      await prisma.$transaction((tx) => completeAgreementVoid(tx, {
+      const billing = await prisma.$transaction((tx) => completeAgreementVoid(tx, {
         contractId: id,
         userId: session.userId,
         projectId: contract.projectId,
@@ -114,7 +114,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ipHash,
         actorUserId: session.userId,
       }));
-      return NextResponse.json({ success: true, message: "Agreement voided. Its history is retained." });
+      const billingNote = voidBillingMessage("This Agreement", billing);
+      return NextResponse.json({ success: true, billing, message: billingNote || "Agreement voided. Its history is retained." });
     }
 
     if (action === "decline") {

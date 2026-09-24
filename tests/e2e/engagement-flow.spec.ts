@@ -75,7 +75,7 @@ async function installMocks(page: Page) {
   return () => command;
 }
 
-test("creates an Agreement-and-invoice engagement from one three-step composer", async ({ page }) => {
+test("creates an Agreement with its first payment from one three-step composer", async ({ page }) => {
   const errors = captureBrowserErrors(page);
   const readCommand = await installMocks(page);
   await page.goto("/workflow/start-engagement", { waitUntil: "domcontentloaded" });
@@ -92,12 +92,14 @@ test("creates an Agreement-and-invoice engagement from one three-step composer",
   await page.getByRole("button", { name: "Continue" }).click();
 
   await page.getByRole("button", { name: /Create editable Agreement draft/ }).click();
-  await page.getByRole("checkbox", { name: /Create a draft invoice/ }).check();
+  // In agreement mode the first payment is part of the Agreement the client
+  // accepts; its invoice drafts on acceptance instead of being created now.
+  await page.getByRole("checkbox", { name: /Add a first payment to the Agreement/ }).check();
   await page.getByLabel("Amount (USD)").fill("1250.50");
   const invoiceDueDate = isoDaysFromToday(14);
-  await page.getByLabel("Invoice due date").fill(invoiceDueDate);
+  await page.getByLabel("Pay by (if accepted today)").fill(invoiceDueDate);
   await expect(page.getByText("Editable Agreement draft", { exact: true })).toBeVisible();
-  await expect(page.getByText("Draft invoice", { exact: true })).toBeVisible();
+  await expect(page.getByText("First payment in the Agreement — invoice drafts on acceptance", { exact: true })).toBeVisible();
   const createResponse = page.waitForResponse((response) => response.url().includes("/api/workflow/start-engagement") && response.request().method() === "POST");
   await page.getByRole("main").getByRole("button", { name: "New client work" }).click();
   await expect((await createResponse).status()).toBe(201);

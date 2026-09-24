@@ -163,16 +163,22 @@ export async function getOwnedProjectGeneration(userId: string, contractId: stri
   });
 }
 
-export function acceptedWorkSetupBillingPark(
+/**
+ * The billing occurrence an accepted payment-plan item starts with. Accepting
+ * the Agreement activates its payment plan: occurrences start `pending` and
+ * the billing worker drafts each invoice when its trigger is due. Work setup
+ * is optional planning and no longer holds billing back.
+ */
+export function acceptedBillingOccurrence(
   executedAt: Date,
   item: { triggerType: string; triggerDate: Date | null },
-): { status: "awaiting_work_setup"; eligibleAt: Date | null } {
+): { status: "pending"; eligibleAt: Date | null } {
   const eligibleAt = item.triggerType === "on_signing"
     ? executedAt
     : ["fixed_date", "milestone_due"].includes(item.triggerType)
       ? item.triggerDate
       : null;
-  return { status: "awaiting_work_setup", eligibleAt };
+  return { status: "pending", eligibleAt };
 }
 
 type WorkSetupPersistenceClient = Prisma.TransactionClient | typeof prisma;
@@ -245,7 +251,7 @@ export async function persistAcceptedAgreementWorkSetup(
     .map((item) => ({
       contractId: contract.id,
       paymentPlanItemId: item.id,
-      ...acceptedWorkSetupBillingPark(executedAt, item),
+      ...acceptedBillingOccurrence(executedAt, item),
     }));
   let parkedOccurrenceCount = 0;
   if (missingParks.length > 0) {
@@ -481,11 +487,11 @@ function billingEligibilityDate(item: BillingItem, now: Date): Date {
 
 function parseSavedPlan(generation: OwnedProjectGeneration): WorkSetupPlan {
   if (!generation.previewPlan || !generation.previewHash) {
-    throw new WorkSetupError("Preview the work setup before confirming it.", "preview_required", 409);
+    throw new WorkSetupError("Review the plan before confirming it.", "preview_required", 409);
   }
   const plan = normalizeWorkSetupPlan(generation, generation.previewPlan);
   if (sha256(stableStringify(plan)) !== generation.previewHash) {
-    throw new WorkSetupError("The saved work setup preview is invalid. Preview it again before confirming.", "preview_corrupt", 409);
+    throw new WorkSetupError("The saved plan is invalid. Review the plan again before confirming.", "preview_corrupt", 409);
   }
   return plan;
 }
@@ -498,7 +504,7 @@ export async function confirmWorkSetup(
 ): Promise<{ generation: OwnedProjectGeneration; resultIds: WorkSetupResultIds; replayed: boolean }> {
   const generation = await requireOwnedProjectGeneration(userId, contractId);
   if (!previewHash || generation.previewHash !== previewHash) {
-    throw new WorkSetupError("This work setup preview is stale. Preview it again before confirming.", "stale_preview", 409);
+    throw new WorkSetupError("The plan changed since you reviewed it. Review the plan again before confirming.", "stale_preview", 409);
   }
   const normalizedIdempotencyKey = idempotencyKey.trim();
   if (!/^[A-Za-z0-9._:-]{16,160}$/.test(normalizedIdempotencyKey)) {
@@ -541,7 +547,7 @@ export async function confirmWorkSetup(
         }
         if (current?.status === "succeeded" && currentResult) return { replayed: true, resultIds: currentResult };
         if (current?.status === "running") throw new WorkSetupError("Work setup is already being confirmed.", "generation_in_progress", 409);
-        throw new WorkSetupError("Work setup changed while it was being confirmed. Reload and preview again.", "generation_conflict", 409);
+        throw new WorkSetupError("Work setup changed while it was being confirmed. Reload and review the plan again.", "generation_conflict", 409);
       }
 
       const contract = await tx.contract.findFirst({ where: { id: contractId, userId, status: "executed" }, select: contractSourceSelect });
@@ -551,7 +557,7 @@ export async function confirmWorkSetup(
 
       if (plan.project.mode === "reuse") {
         if (!linkedProject || contract.projectId !== plan.project.projectId) {
-          throw new WorkSetupError("The linked Project changed. Preview the work setup again.", "project_changed", 409);
+          throw new WorkSetupError("The linked Project changed. Review the plan again.", "project_changed", 409);
         }
         if (linkedProject.userId !== userId || linkedProject.clientId !== contract.clientId) {
           throw new WorkSetupError("The linked Project is not owned by this Agreement workspace.", "project_not_owned", 404);
@@ -560,8 +566,10 @@ export async function confirmWorkSetup(
         await tx.project.update({
           where: { id: projectId },
           data: {
-            startDate: toDate(plan.project.startDate),
-            dueDate: toDate(plan.project.dueDate),
+            // A blank date keeps the Project's existing date; work setup must
+            // never silently erase planning data.
+            ...(plan.project.startDate ? { startDate: toDate(plan.project.startDate) } : {}),
+            ...(plan.project.dueDate ? { dueDate: toDate(plan.project.dueDate) } : {}),
             contractCoverage: "rive",
             externalContractLabel: null,
             externalContractUrl: null,
@@ -569,7 +577,7 @@ export async function confirmWorkSetup(
           },
         });
       } else {
-        if (contract.projectId) throw new WorkSetupError("This Agreement now has a linked Project. Preview again to reuse it.", "project_changed", 409);
+        if (contract.projectId) throw new WorkSetupError("This Agreement now has a linked Project. Review the plan again to reuse it.", "project_changed", 409);
         projectId = deterministicWorkSetupId(`${generation.id}:project`);
         await tx.project.create({
           data: {
