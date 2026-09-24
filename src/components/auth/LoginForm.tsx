@@ -65,6 +65,13 @@ export function LoginForm({
       });
 
       const data = await res.json().catch(() => ({}));
+      if (data.success && data.twoFactorRequired) {
+        // Password verified, but the account needs its second factor. No
+        // session exists yet, so this is a full navigation, not onSuccess
+        // (which assumes a signed-in destination).
+        window.location.assign(`/login/two-factor?next=${encodeURIComponent(nextPath)}`);
+        return;
+      }
       if (data.success) {
         onSuccess(resolveLoginDestination(data.destination, nextPath));
         return;

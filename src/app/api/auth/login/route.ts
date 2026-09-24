@@ -8,6 +8,7 @@ import { isEmailVerificationSatisfied } from "@/utils/emailVerification";
 import { buildLoginSuccessEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { readJsonBody } from "@/utils/apiBoundary";
+import { createTwoFactorChallenge, setTwoFactorChallengeCookie } from "@/utils/twoFactorChallenge";
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +29,20 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail }
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        plan: true,
+        passwordHash: true,
+        googleSubject: true,
+        sessionVersion: true,
+        onboardingStatus: true,
+        emailVerifiedAt: true,
+        emailVerificationRequiredAt: true,
+        twoFactorEnabledAt: true,
+      },
     });
 
     if (!user) {
@@ -61,6 +75,22 @@ export async function POST(req: NextRequest) {
         where: { id: user.id },
         data: { passwordHash: hashPassword(password) },
       });
+    }
+
+    if (user.twoFactorEnabledAt) {
+      // Password verified, but the account requires a second factor: no
+      // session yet. Hand back a short-lived pending-challenge cookie and
+      // send the person to the code step instead of the sign-in notice —
+      // that email fires once the second factor also succeeds.
+      const challengeToken = await createTwoFactorChallenge(user.id, user.email);
+      const response = NextResponse.json({
+        success: true,
+        twoFactorRequired: true,
+        message: "Enter your authenticator code to finish signing in.",
+      });
+      setTwoFactorChallengeCookie(response, challengeToken);
+      response.headers.set("Cache-Control", "no-store");
+      return response;
     }
 
     if (getEmailProvider() !== "disabled") {

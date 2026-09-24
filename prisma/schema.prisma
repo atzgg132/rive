@@ -62,6 +62,11 @@ model User {
   displayCurrencySource       String                    @default("legacy") @map("display_currency_source")
   timeZone                    String                    @default("UTC") @map("time_zone")
   onboardingData              Json?                     @map("onboarding_data")
+  twoFactorSecretEncrypted    String?                   @map("two_factor_secret_encrypted")
+  twoFactorEnabledAt          DateTime?                 @map("two_factor_enabled_at")
+  // Highest TOTP step already accepted, so a code cannot be replayed within
+  // its own 30s validity window even though the six digits still match.
+  twoFactorLastUsedStep       Int?                      @map("two_factor_last_used_step")
   createdAt                   DateTime                  @default(now()) @map("created_at")
   updatedAt                   DateTime                  @updatedAt @map("updated_at")
   clients                     Client[]
@@ -97,8 +102,25 @@ model User {
   invoiceProfile              InvoiceProfile?
   invoiceNumberSequence       InvoiceNumberSequence?
   idempotencyRecords          IdempotencyRecord[]
+  twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
 
   @@map("users")
+}
+
+/// Single-use hashed recovery codes for workspace-user two-factor auth.
+/// Ten are issued when 2FA is enabled or recovery codes are regenerated;
+/// only the SHA-256 hash is stored, matching how the TOTP secret itself is
+/// kept encrypted rather than in a form that alone lets someone sign in.
+model TwoFactorRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, usedAt])
+  @@map("two_factor_recovery_codes")
 }
 
 model AuthToken {

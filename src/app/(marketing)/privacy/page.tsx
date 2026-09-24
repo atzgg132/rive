@@ -31,7 +31,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 export default function PrivacyPage() {
   return (
-    <ProseShell eyebrow="LEGAL" title="Privacy Policy" updated="Last updated · September 12, 2026">
+    <ProseShell eyebrow="LEGAL" title="Privacy Policy" updated="Last updated · September 24, 2026">
         <div className="flex flex-col gap-8 md:flex-row md:gap-12">
           <LegalToc items={toc} />
           <div className="min-w-0 max-w-2xl flex-1 overflow-x-clip">
@@ -83,6 +83,7 @@ export default function PrivacyPage() {
                   <li><strong>Encryption at rest</strong> — Workspace data is stored in a private, encrypted PostgreSQL database that is not publicly reachable. Google Calendar OAuth access and refresh tokens are encrypted at rest with AES-256-GCM using a dedicated application key, separate from session secrets.</li>
                   <li><strong>Access limited to the feature</strong> — Google data is used only to provide sign-in or calendar sync. Authenticated workspace queries are scoped to the signed-in account. The database is private, the application host does not accept inbound SSH, and operator access uses authenticated AWS sessions recorded in the AWS audit trail.</li>
                   <li><strong>Account credentials</strong> — Passwords are stored as salted scrypt hashes, not in plain text. Sessions use signed HttpOnly cookies (Secure in production, SameSite restrictions) rather than tokens exposed to page scripts.</li>
+                  <li><strong>Two-factor authentication</strong> — If you turn on two-factor authentication, your authenticator secret is encrypted at rest with the same AES-256-GCM scheme used for connected-account credentials. Recovery codes are stored only as hashes, never in a form that alone could sign you in.</li>
                 </ul>
                 <p>No method of transmission or storage is perfectly secure. We apply these controls as a small SaaS operating on AWS; we do not claim third-party security certifications in this policy.</p>
               </Section>
