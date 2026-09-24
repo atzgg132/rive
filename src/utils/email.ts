@@ -800,10 +800,9 @@ const REMINDER_STEP_INTRO: Record<string, (senderName: string) => string> = {
 /**
  * Automated reminder sent on the owner's chosen schedule
  * (src/utils/invoiceReminders.ts). Every reminder carries a client-scoped
- * unsubscribe link when one is available; the owner opts a client back in by
- * simply sending or resending an invoice — see docs/agreements — the
- * unsubscribe only silences future automated reminders, never the original
- * invoice-sent or receipt mail.
+ * unsubscribe link when one is available. The unsubscribe only silences
+ * future automated reminders, never the original invoice-sent or receipt
+ * mail, and nothing on the owner's side turns it back on.
  */
 export function buildInvoiceReminderEmail(input: {
   to: string;

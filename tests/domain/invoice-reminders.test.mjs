@@ -41,7 +41,7 @@ test("dateOnlyInTimeZone reads the calendar date in the given zone, not UTC", ()
   assert.equal(dateOnlyInTimeZone(instant, "Not/AZone"), "2026-01-01");
 });
 
-test("selectDueReminderStep picks the earliest due, not-yet-sent enabled step", () => {
+test("selectDueReminderStep steps through the schedule one arrived step at a time", () => {
   const dueDate = new Date("2026-09-24T00:00:00.000Z"); // due day itself
 
   // 3 days before due: eligible starting 2026-09-21.
@@ -73,6 +73,36 @@ test("selectDueReminderStep picks the earliest due, not-yet-sent enabled step", 
   // Every step already sent: nothing left to select (no double send).
   assert.equal(
     selectDueReminderStep({ dueDate, now: new Date("2026-12-01T00:00:00.000Z"), timeZone: "UTC", enabledSteps: ALL_STEPS, sentSteps: ALL_STEPS }),
+    null,
+  );
+});
+
+test("selectDueReminderStep never sends a stale or out-of-order step", () => {
+  const dueDate = new Date("2026-09-24T00:00:00.000Z");
+
+  // After a missed stretch, only the most current step goes out.
+  assert.equal(
+    selectDueReminderStep({ dueDate, now: new Date("2026-10-02T00:00:00.000Z"), timeZone: "UTC", enabledSteps: ALL_STEPS, sentSteps: [] }),
+    "due_plus_7",
+  );
+  // ...and the steps it overtook are not sent afterwards.
+  assert.equal(
+    selectDueReminderStep({ dueDate, now: new Date("2026-10-03T00:00:00.000Z"), timeZone: "UTC", enabledSteps: ALL_STEPS, sentSteps: ["due_plus_7"] }),
+    null,
+  );
+
+  // An invoice sent on its due date skips "due in 3 days" entirely.
+  assert.equal(
+    selectDueReminderStep({ dueDate, now: new Date("2026-09-24T12:00:00.000Z"), timeZone: "UTC", enabledSteps: ALL_STEPS, sentSteps: [], invoiceSentAt: new Date("2026-09-24T09:00:00.000Z") }),
+    null,
+  );
+  assert.equal(
+    selectDueReminderStep({ dueDate, now: new Date("2026-09-25T12:00:00.000Z"), timeZone: "UTC", enabledSteps: ALL_STEPS, sentSteps: [], invoiceSentAt: new Date("2026-09-24T09:00:00.000Z") }),
+    "due_plus_1",
+  );
+  // A step that falls on the send day itself is covered by the invoice email.
+  assert.equal(
+    selectDueReminderStep({ dueDate, now: new Date("2026-09-21T12:00:00.000Z"), timeZone: "UTC", enabledSteps: ALL_STEPS, sentSteps: [], invoiceSentAt: new Date("2026-09-21T08:00:00.000Z") }),
     null,
   );
 });

@@ -80,7 +80,7 @@ export default function PrivacyPage() {
               <Section id="client-emails" title="5. Emails we send to your clients on your behalf">
                 <p>When you use invoice reminders or paid receipts, Rive sends automated emails to your clients using the client contact details you enter. These emails cover: a scheduled reminder about an unpaid invoice (on the schedule you choose — up to 3 days before the due date and 1, 7, or 14 days after), and a receipt confirming an invoice has been paid in full. Both are off by default and only send if you turn them on.</p>
                 <p>For this purpose, Rive acts as a data processor on your behalf: we send the message using the invoice and client data already in your workspace, we do not use it for any other purpose, and we do not sell it. You are responsible for the accuracy of the client contact details you provide and for having the right to contact that client — see our <a href="/terms" className="text-primary hover:underline">Terms of Service</a>.</p>
-                <p>Every automated reminder email includes a one-click unsubscribe link that is specific to that client. Using it stops future reminder emails to that client from your account; it does not affect the original invoice-sent email, a paid receipt, or any other correspondence. Reminder emails are also subject to the send caps and suppression rules described in our infrastructure — a maximum of four reminders per invoice and a daily send limit per account.</p>
+                <p>Every automated reminder email includes an unsubscribe link that is specific to that client. Using it stops future reminder emails to that client from your account; it does not affect the original invoice-sent email, a paid receipt, or any other correspondence. Reminders are also capped: at most four per invoice, and a daily limit per account.</p>
               </Section>
 
               <Section id="security" title="6. How we protect your data">
@@ -102,7 +102,7 @@ export default function PrivacyPage() {
               <Section id="third" title="8. Third-party services">
                 <p>We use privacy-respecting infrastructure providers for web hosting and database management. These services process data on our behalf under strict confidentiality terms. Production hosting and the encrypted database run on Amazon Web Services.</p>
                 <p>Usage analytics are first-party and stored on Rive&apos;s AWS infrastructure; no third-party analytics service processes them.</p>
-                <p>If you sign in with Google or connect Google Calendar, Google provides those APIs under Google&apos;s terms. Rive then stores and protects the Google user data described in sections 4 and 5 in order to provide the feature you enabled.</p>
+                <p>If you sign in with Google or connect Google Calendar, Google provides those APIs under Google&apos;s terms. Rive then stores and protects the Google user data described in sections 4 and 6 in order to provide the feature you enabled.</p>
               </Section>
 
               <Section id="rights" title="9. Your rights">

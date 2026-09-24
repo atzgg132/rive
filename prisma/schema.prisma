@@ -386,6 +386,9 @@ model Client {
   // automated reminder emails from this owner's business.
   remindersOptedOut            Boolean  @default(false) @map("reminders_opted_out")
   remindersUnsubscribeTokenHash String? @unique @map("reminders_unsubscribe_token_hash")
+  // The same token, encrypted at rest (like Invoice.publicTokenEncrypted) so
+  // every reminder can carry the link, not only the one that minted it.
+  remindersUnsubscribeTokenEncrypted String? @map("reminders_unsubscribe_token_encrypted")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
   projects           Project[]

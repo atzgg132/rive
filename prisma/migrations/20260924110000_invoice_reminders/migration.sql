@@ -8,6 +8,7 @@ ADD COLUMN     "reminders_prompt_seen_at" TIMESTAMP(3);
 
 -- AlterTable
 ALTER TABLE "clients" ADD COLUMN     "reminders_opted_out" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "reminders_unsubscribe_token_encrypted" TEXT,
 ADD COLUMN     "reminders_unsubscribe_token_hash" TEXT;
 
 -- AlterTable

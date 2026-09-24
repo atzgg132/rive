@@ -11,8 +11,10 @@ import {
   type InvoiceReminderStep,
 } from "@/lib/domain-vocabulary";
 import { buildInvoiceReminderEmail, buildInvoicePaidReceiptEmail, getEmailProvider } from "@/utils/email";
-import { decryptOutboxSecret, enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
+import { decryptOutboxSecret, encryptOutboxSecret, enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { invoicePublicUrl } from "@/utils/invoicePublic";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Statuses that still owe money and are eligible for a reminder. */
 const REMINDABLE_STATUSES = ["sent", "viewed", "overdue", "partially_paid"];
@@ -69,10 +71,12 @@ function orderedSteps(steps: InvoiceReminderStep[]): InvoiceReminderStep[] {
 }
 
 /**
- * Picks the single earliest enabled, not-yet-sent step whose target date has
- * arrived (in the owner's timezone). Returns at most one step per call, so a
- * cron outage that misses several days catches up one step per run rather
- * than firing every missed step in the same batch.
+ * Picks the one step to send now, in the owner's timezone: the latest enabled
+ * step whose date has arrived and that comes after every step already sent.
+ * Steps that were already due on the day the invoice went out are skipped —
+ * the invoice email itself covered them — and a step overtaken by a later one
+ * (after a cron outage, or a late send) is never sent out of order, so a
+ * client never gets "due in 3 days" about an invoice that is already overdue.
  */
 export function selectDueReminderStep(input: {
   dueDate: Date;
@@ -80,16 +84,21 @@ export function selectDueReminderStep(input: {
   timeZone: string;
   enabledSteps: InvoiceReminderStep[];
   sentSteps: string[];
+  invoiceSentAt?: Date | null;
 }): InvoiceReminderStep | null {
   const todayOnly = dateOnlyInTimeZone(input.now, input.timeZone);
   const dueOnly = dateOnlyInTimeZone(input.dueDate, input.timeZone);
-  const sent = new Set(input.sentSteps);
+  const sentOnly = input.invoiceSentAt ? dateOnlyInTimeZone(input.invoiceSentAt, input.timeZone) : null;
+  const lastSentIndex = Math.max(-1, ...input.sentSteps.map((step) => INVOICE_REMINDER_STEPS.indexOf(step as InvoiceReminderStep)));
+  let selected: InvoiceReminderStep | null = null;
   for (const step of orderedSteps(input.enabledSteps)) {
-    if (sent.has(step)) continue;
+    if (INVOICE_REMINDER_STEPS.indexOf(step) <= lastSentIndex) continue;
     const target = addDaysToDateOnly(dueOnly, INVOICE_REMINDER_STEP_OFFSET_DAYS[step]);
-    if (target <= todayOnly) return step;
+    if (target > todayOnly) break;
+    if (sentOnly && target <= sentOnly) continue;
+    selected = step;
   }
-  return null;
+  return selected;
 }
 
 /** Whether an invoice can receive any further reminder at all (independent of which step). */
@@ -145,6 +154,7 @@ type ReminderCandidate = {
   dueDate: Date | null;
   status: string;
   remindersPaused: boolean;
+  sentAt: Date | null;
   publicTokenEncrypted: string | null;
   reminders: { step: string }[];
   user: {
@@ -154,7 +164,14 @@ type ReminderCandidate = {
     timeZone: string;
     invoiceProfile: { remindersEnabled: boolean; reminderSchedule: string[]; businessName: string | null } | null;
   };
-  client: { id: string; name: string; email: string | null; remindersOptedOut: boolean; remindersUnsubscribeTokenHash: string | null } | null;
+  client: {
+    id: string;
+    name: string;
+    email: string | null;
+    remindersOptedOut: boolean;
+    remindersUnsubscribeTokenHash: string | null;
+    remindersUnsubscribeTokenEncrypted: string | null;
+  } | null;
 };
 
 /** Start-of-day (UTC) count of reminders already sent for this user, used for the daily cap. */
@@ -175,6 +192,29 @@ function recoverInvoicePublicUrl(publicTokenEncrypted: string | null): string | 
   }
 }
 
+function decryptUnsubscribeUrl(encrypted: string | null): string | undefined {
+  if (!encrypted) return undefined;
+  try {
+    return reminderUnsubscribeUrl(decryptOutboxSecret(encrypted));
+  } catch {
+    return undefined;
+  }
+}
+
+/** The client's one reminder-unsubscribe link, minted on first use and recalled after. */
+async function clientUnsubscribeUrl(client: NonNullable<ReminderCandidate["client"]>): Promise<string | undefined> {
+  if (client.remindersUnsubscribeTokenHash) return decryptUnsubscribeUrl(client.remindersUnsubscribeTokenEncrypted);
+  const token = createReminderUnsubscribeToken();
+  const claimed = await prisma.client.updateMany({
+    where: { id: client.id, remindersUnsubscribeTokenHash: null },
+    data: { remindersUnsubscribeTokenHash: hashReminderUnsubscribeToken(token), remindersUnsubscribeTokenEncrypted: encryptOutboxSecret(token) },
+  });
+  if (claimed.count === 1) return reminderUnsubscribeUrl(token);
+  // Another run minted it first; use theirs.
+  const current = await prisma.client.findUnique({ where: { id: client.id }, select: { remindersUnsubscribeTokenEncrypted: true } });
+  return decryptUnsubscribeUrl(current?.remindersUnsubscribeTokenEncrypted ?? null);
+}
+
 /**
  * Enqueue exactly one reminder for one invoice/step. Relies on the unique
  * (invoiceId, step) constraint: a P2002 conflict means another process
@@ -185,18 +225,7 @@ async function enqueueReminder(candidate: ReminderCandidate, step: InvoiceRemind
   const client = candidate.client;
   if (!client?.email) return false;
 
-  // Issue the client's unsubscribe token once, lazily, the first time it's needed.
-  let unsubscribeTokenPlaintext: string | null = null;
-  if (!client.remindersUnsubscribeTokenHash) {
-    const token = createReminderUnsubscribeToken();
-    const claimed = await prisma.client.updateMany({
-      where: { id: client.id, remindersUnsubscribeTokenHash: null },
-      data: { remindersUnsubscribeTokenHash: hashReminderUnsubscribeToken(token) },
-    });
-    if (claimed.count === 1) unsubscribeTokenPlaintext = token;
-    // If another run won the race, this send goes out without an unsubscribe
-    // link this one time; the next reminder for this client will have one.
-  }
+  const unsubscribeUrl = await clientUnsubscribeUrl(client);
 
   const senderName = candidate.user.invoiceProfile?.businessName || candidate.user.name || candidate.user.email;
   const outstanding = (Number(candidate.total.toString()) - Number(candidate.amountPaid.toString())).toFixed(2);
@@ -210,7 +239,7 @@ async function enqueueReminder(candidate: ReminderCandidate, step: InvoiceRemind
     senderName,
     publicUrl: recoverInvoicePublicUrl(candidate.publicTokenEncrypted),
     step,
-    unsubscribeUrl: unsubscribeTokenPlaintext ? reminderUnsubscribeUrl(unsubscribeTokenPlaintext) : undefined,
+    unsubscribeUrl,
   });
 
   try {
@@ -241,10 +270,15 @@ export async function sendDueInvoiceReminders(now: Date = new Date()): Promise<{
   const invoices = await prisma.invoice.findMany({
     where: {
       status: { in: REMINDABLE_STATUSES },
-      dueDate: { not: null },
+      // Only the window any step can fall in (3 days before due to 14 after,
+      // with slack for time zones and missed runs), so long-overdue invoices
+      // that are done reminding never crowd due ones out of the batch.
+      dueDate: { gte: new Date(now.getTime() - 30 * DAY_MS), lte: new Date(now.getTime() + 4 * DAY_MS) },
       remindersPaused: false,
       user: { invoiceProfile: { remindersEnabled: true } },
+      client: { remindersOptedOut: false, email: { not: null } },
     },
+    orderBy: { dueDate: "asc" },
     select: {
       id: true,
       userId: true,
@@ -255,6 +289,7 @@ export async function sendDueInvoiceReminders(now: Date = new Date()): Promise<{
       dueDate: true,
       status: true,
       remindersPaused: true,
+      sentAt: true,
       publicTokenEncrypted: true,
       reminders: { select: { step: true } },
       user: {
@@ -266,7 +301,7 @@ export async function sendDueInvoiceReminders(now: Date = new Date()): Promise<{
           invoiceProfile: { select: { remindersEnabled: true, reminderSchedule: true, businessName: true } },
         },
       },
-      client: { select: { id: true, name: true, email: true, remindersOptedOut: true, remindersUnsubscribeTokenHash: true } },
+      client: { select: { id: true, name: true, email: true, remindersOptedOut: true, remindersUnsubscribeTokenHash: true, remindersUnsubscribeTokenEncrypted: true } },
     },
     take: 500,
   });
@@ -295,6 +330,7 @@ export async function sendDueInvoiceReminders(now: Date = new Date()): Promise<{
       timeZone: invoice.user.timeZone,
       enabledSteps: schedule,
       sentSteps: invoice.reminders.map((reminder) => reminder.step),
+      invoiceSentAt: invoice.sentAt,
     });
     if (!step) { skipped += 1; continue; }
 
