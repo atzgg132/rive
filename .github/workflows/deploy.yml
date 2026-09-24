@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
 concurrency:
@@ -16,76 +17,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The same suite pull requests run. A squash commit whose tree its PR already
+  # verified (or a dev -> main promotion of a verified dev tree) passes through
+  # instantly; anything else runs in full before it can deploy.
   verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: rive
-          POSTGRES_PASSWORD: rive
-          POSTGRES_DB: rive_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U rive -d rive_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgresql://rive:rive@localhost:5432/rive_test
-      DATABASE_SSL: disable
-      SESSION_SECRET: ci-session-secret
-      CALENDAR_ENCRYPTION_KEY: ci-calendar-encryption-key
-      CRON_SECRET: ci-cron-secret
-      APP_URL: http://127.0.0.1:3000
-      APP_ENV: test
-      EMAIL_PROVIDER: ses
-      AWS_REGION: ap-south-1
-      ESIGN_PROVIDER: local
-      CONTRACTS_ALLOW_LOCAL_PROVIDER_IN_PRODUCTION: "true"
-      CONTRACTS_RECORDED_ACCEPTANCE_ENABLED: "true"
-      E2E_USER_EMAIL: e2e-workspace@rive.test
-      # Test-only admin credentials for the ephemeral CI database and CI app process.
-      # They are not used by, and have no meaning in, any deployed environment: the
-      # real values come from the deploy environment's own secrets.
-      ADMIN_USERNAME: e2e-admin
-      ADMIN_PASSWORD_HASH: scrypt:865ae7913b63f7f5bdc6235e489624e6:04e880f8bbb611921db676efec9d960dc29efea47fd1f9aca23f62410a08d4b8bee80458cf9273511e57a10a77df376a72e55cf037f6b216cc301951ac16155d
-      E2E_ADMIN_PASSWORD: e2e-admin-not-a-real-secret
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run db:migrate
-      - run: node scripts/seed-e2e-user.mjs
-      - run: npm run test:unit
-      - run: npx tsc --noEmit --incremental false
-      - run: npm run lint
-      # dev is the only pre-production gate now that test is retired, so it runs
-      # the same browser suite as main rather than deploying less-verified code.
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-      - run: npm run build
-      - name: Run E2E tests
-        env:
-          # Exercise migration only in the ephemeral CI app process. This does
-          # not alter the operator-managed deployed kill switch.
-          MIGRATION_ENGINE_ENABLED: "true"
-          PLAYWRIGHT_SERVER: production
-          PLAYWRIGHT_WORKERS: 4
-        run: npm run test:e2e
-      - name: Upload Playwright artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-test-results
-          path: test-results
-          retention-days: 7
-      - run: npm audit --omit=dev
+    uses: ./.github/workflows/verify.yml
 
   deploy:
     needs: verify
@@ -110,8 +46,11 @@ jobs:
           build-args: |
             DEPLOYMENT_VERSION=${{ github.sha }}
             APP_URL=${{ github.ref_name == 'main' && 'https://www.rive.work' || 'https://dev.rive.work' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # No gha cache export: mode=max spent ~2.5 min uploading every
+          # intermediate layer and never hit, because both image builds shared
+          # one cache scope and overwrote each other. Dependency layers rebuild
+          # in parallel in ~30 s; the migration image reuses this builder's
+          # local layers within the job.
       - name: Build and push migration image
         uses: docker/build-push-action@v7
         with:
@@ -120,8 +59,6 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}-migrate
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
       # The runner ships the repo's deploy script and canonical Caddyfile to the
       # host so every deploy runs the reviewed versions, then the host-side
       # script performs the candidate/cutover/rollback flow.
