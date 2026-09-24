@@ -68,13 +68,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
       return { result, transitionedToComplete: changed.count === 1 && completed && !milestone.completed };
     });
-    const billing = await processContractBilling({ userId: session.userId, limit: 100 }).catch((error) => ({ error: error instanceof Error ? error.message : "Billing check failed." }));
+    const billing = await processContractBilling({ userId: session.userId, limit: 100 }).catch((error) => {
+      console.error("Milestone billing check failed:", error);
+      return { error: "Billing check failed." as const };
+    });
+    const drafted = "drafted" in billing ? billing.drafted : 0;
     if (updateResult.transitionedToComplete) {
       await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.milestoneCompleted, module: "projects", entityType: "milestone", entityId: id, dataOrigin: "user" });
     }
     return NextResponse.json({
       success: true,
-      message: updateResult.transitionedToComplete ? "Milestone completed. Any eligible contract invoice has been prepared as a draft for review." : "Milestone updated. Contract snapshots were not rewritten.",
+      // Say what actually happened: only claim a draft when one was created.
+      message: updateResult.transitionedToComplete
+        ? drafted > 0
+          ? `Milestone completed. ${drafted} Agreement invoice draft${drafted === 1 ? " was" : "s were"} created for your review.`
+          : "error" in billing
+            ? "Milestone completed. The Agreement billing check failed; it will retry automatically."
+            : "Milestone completed."
+        : "Milestone updated. Contract snapshots were not rewritten.",
       milestone: { id: updateResult.result.id, title: updateResult.result.title, due_date: updateResult.result.dueDate, completed: updateResult.result.completed, completed_at: updateResult.result.completedAt },
       billing,
       ...(updateResult.transitionedToComplete ? { proof_offer: projectProofOffer(milestone.project.id) } : {}),

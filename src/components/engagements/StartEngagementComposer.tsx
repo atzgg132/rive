@@ -347,11 +347,11 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
             <div className="rounded-none border border-border p-4 sm:p-5">
               <label className="flex cursor-pointer items-start gap-3">
                 <input type="checkbox" checked={includeInvoice} onChange={(event) => setIncludeInvoice(event.target.checked)} className="mt-1 h-4 w-4 rounded-none border-border accent-primary" />
-                <span><span className="flex items-center gap-2 text-sm font-black"><ReceiptText className="h-4 w-4 text-primary" /> Create a draft invoice</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">Optional. The invoice remains private until you review and send it.</span></span>
+                <span><span className="flex items-center gap-2 text-sm font-black"><ReceiptText className="h-4 w-4 text-primary" /> {scopeMode === "agreement" ? "Add a first payment to the Agreement" : "Create a draft invoice"}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{scopeMode === "agreement" ? "Optional. The payment becomes part of the terms your client accepts. Its invoice drafts automatically when they accept, for you to review before sending." : "Optional. The invoice remains private until you review and send it."}</span></span>
               </label>
               {includeInvoice ? <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
                 <label className="text-sm font-bold">Amount ({currency}) <span className="text-destructive">*</span><Input className="mt-2" type="number" min="0.01" max="1000000000" step="0.01" value={invoiceAmount} onChange={(event) => setInvoiceAmount(event.target.value)} /></label>
-                <label className="text-sm font-bold">Invoice due date <span className="text-destructive">*</span><Input className="mt-2" type="date" min={new Date().toISOString().slice(0, 10)} value={invoiceDueDate} onChange={(event) => setInvoiceDueDate(event.target.value)} /></label>
+                <label className="text-sm font-bold">{scopeMode === "agreement" ? "Pay by (if accepted today)" : "Invoice due date"} <span className="text-destructive">*</span><Input className="mt-2" type="date" min={new Date().toISOString().slice(0, 10)} value={invoiceDueDate} onChange={(event) => setInvoiceDueDate(event.target.value)} /></label>
               </div> : null}
             </div>
 
@@ -363,7 +363,7 @@ export function StartEngagementComposer({ entryPoint, currency, agreementsAvaila
                 {milestoneTitle.trim() ? <li className="flex items-center gap-2"><Check className="h-4 w-4" /> {milestoneTitle.trim()}{milestoneDueDate ? <> · due <span className="font-mono tabular-nums">{milestoneDueDate}</span></> : ""}</li> : null}
                 {projectDeadline ? <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Project deadline <span className="font-mono tabular-nums">{projectDeadline}</span></li> : null}
                 {scopeMode === "agreement" ? <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Editable Agreement draft</li> : null}
-                {includeInvoice ? <li className="flex items-center gap-2"><Check className="h-4 w-4" /> Draft invoice</li> : null}
+                {includeInvoice ? <li className="flex items-center gap-2"><Check className="h-4 w-4" /> {scopeMode === "agreement" ? "First payment in the Agreement — invoice drafts on acceptance" : "Draft invoice"}</li> : null}
               </ul>
             </div>
           </div>

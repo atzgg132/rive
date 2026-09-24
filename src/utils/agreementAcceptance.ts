@@ -16,6 +16,7 @@ import { buildContractExecutedEmail, buildOwnerAcceptanceDueEmail, getEmailProvi
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { ensureContractExecutedArtifact } from "@/utils/contractArtifacts";
 import { ensureAcceptedAgreementWorkSetup } from "@/utils/projectGeneration";
+import { processContractBilling } from "@/utils/contractBilling";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 
@@ -245,12 +246,18 @@ export async function finishAgreementAcceptance(outcome: AcceptanceOutcome): Pro
     await ensureAcceptedAgreementWorkSetup(prisma, { userId: contract.userId, contractId: contract.id, acceptedVersionId: outcome.versionId }).catch((error) => {
       console.error("Post-acceptance work-setup backfill failed:", error);
     });
+    // Acceptance activates the payment plan: draft whatever is already due
+    // (the deposit on acceptance, past fixed dates) right now rather than on
+    // the next maintenance run. Idempotent per occurrence.
+    await processContractBilling({ userId: contract.userId, contractId: contract.id, limit: 25 }).catch((error) => {
+      console.error("Post-acceptance billing run failed:", error);
+    });
   }
 
   if (outcome.completed && outcome.artifactToken) {
     await recordActivationEvent(contract.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { contractId: contract.id, workflow: "contract_executed" }).catch(() => undefined);
     await recordProductEvent({ userId: contract.userId, eventName: PRODUCT_EVENTS.agreementAccepted, module: "agreements", entityType: "contract", entityId: contract.id, source: outcome.signerRole === "owner" ? "workspace_acceptance" : "public_acceptance", dedupeKey: `agreement_accepted:${contract.id}` }).catch(() => undefined);
-    await createNotification({ userId: contract.userId, type: "contract_work_setup", title: "Agreement accepted — set up the work", message: `${contract.title} has both parties’ acceptance recorded. Set up the work when you’re ready.`, href: `/workflow/contracts/${contract.id}` }).catch(() => undefined);
+    await createNotification({ userId: contract.userId, type: "contract_executed", title: "Agreement accepted", message: `${contract.title} is accepted by both parties. Its payment plan is active — review any invoice drafts before sending.`, href: `/workflow/contracts/${contract.id}` }).catch(() => undefined);
   }
 
   if (!outcome.completed && !outcome.alreadySigned && outcome.signerRole === "client") {

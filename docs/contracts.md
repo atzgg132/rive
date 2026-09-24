@@ -9,8 +9,12 @@ The current compatibility workflow is exposed as Agreements in the product while
 3. Optional — share the **review link** (step 1 on the Agreement page). It is an unguessable bearer credential, expires, and is stored only as a hash. The client can comment and say they have no more comments ("ready for the final version"); a later comment withdraws that signal. It never records acceptance.
 4. Revise the draft. Every save creates a new immutable `ContractVersion`; old review links are revoked. Creating a new link while one is active asks for confirmation, because the old link stops working.
 5. Finalize the exact version and request acceptance. Only the **client** receives a public acceptance link (step 2), emailed and shown once. When the client accepts, the owner gets a notification and an email, and records their own acceptance on the Agreement page while signed in (`POST /api/workflow/contracts/[id]/accept`). There is no owner link; owner links issued before this change are refused and redirect to the workspace.
-6. After both parties record acceptance, Rive records the acceptance evidence, creates an accepted PDF on demand, and activates the payment plan.
-7. `on_signing`, milestone-completed, milestone-due, and fixed-date items create one idempotent draft invoice per payment-plan item. The owner is notified and prompted to review. An invoice becomes `sent` only after the explicit send action records successful email delivery.
+6. After both parties record acceptance, Rive records the acceptance evidence, stores the accepted PDF, and **activates the payment plan immediately**. Anything already due (the on-acceptance deposit, past fixed dates) is drafted in the same request.
+7. `on_signing`, milestone-completed, milestone-due, and fixed-date items create one idempotent draft invoice per payment-plan item, numbered with the owner's invoice prefix. The owner is notified and prompted to review. An invoice becomes `sent` only after the explicit send action records successful email delivery.
+8. Work setup (project, milestones, dated tasks) is optional planning after acceptance. It never gates billing, and a blank date keeps the linked Project's existing date.
+9. Voiding an accepted Agreement (both parties) cancels triggers that have not drafted yet and moves never-sent drafts to the `cancelled` invoice status (retained, not deleted). Sent invoices are unchanged.
+
+Start-engagement in agreement mode puts the first payment into the Agreement as an on-acceptance payment-plan item instead of creating a separate invoice, so the client accepts the price and the invoice cannot be duplicated.
 
 The composer reuses the existing client name, email, company, and address, plus the linked project title, brief, currency, and milestones. Those values are snapshotted into each editable Agreement version; the user only supplies Agreement-specific choices such as clauses, payment amounts, due periods, governing law, and jurisdiction. Project budgets are not silently converted into payment plans because that could create an unintended financial obligation.
 
@@ -29,7 +33,7 @@ The composer reuses the existing client name, email, company, and address, plus 
 - Typed-name acceptance is an alpha acceptance record. It is not an OTP result, independent identity verification, regulated/digital-signature claim, or substitute for any transaction-specific formality.
 - Review and acceptance links are token-hashed, expiry-checked, revocable, rate-limited, and never returned from database reads.
 - Contract-linked invoices and sent/paid invoices cannot be deleted through the normal invoice action.
-- Scheduled billing claims an occurrence before creating an invoice, recovers stale claims, and uses a unique occurrence/invoice relationship to prevent duplicate drafts.
+- Scheduled billing claims an occurrence before creating an invoice, recovers stale claims, and uses a unique occurrence/invoice relationship to prevent duplicate drafts. It selects only triggers that are due in the database query, so future-dated triggers cannot starve due ones. Occurrences parked as `awaiting_work_setup` by the earlier release are drafted like any other due trigger.
 
 ## Provider configuration
 
