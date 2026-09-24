@@ -285,6 +285,9 @@ test.describe("admin control room", () => {
     await page.goto("/admin?tab=funnel");
 
     await expect(page.getByText(/first flow of 1 account that signed up after tracking began/)).toBeVisible();
+    // 0.4h reads as minutes, not as a rounded-down fraction of an hour.
+    await expect(page.getByText("24m", { exact: true })).toBeVisible();
+    await expect(page.getByText(/P75 24m/)).toBeVisible();
     await expect(page.getByText(/counts completed New client flows/)).toBeVisible();
   });
 
