@@ -1,7 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { createHmac, randomBytes, randomUUID, scryptSync } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID, scryptSync } from "node:crypto";
 import { checkServerIdentity } from "node:tls";
 import { expect, test, type APIRequestContext, type BrowserContext } from "@playwright/test";
 import { Pool } from "pg";
@@ -70,6 +70,9 @@ async function createTestUser(label: string): Promise<TestUser> {
   });
 }
 
+// Enrolment consumes the current 30s step, and the replay guard then rejects
+// any code from that step; the next step is still inside the accepted window.
+// (Codes below that use `Date.now() + 30_000` rely on this.)
 async function deleteTestUser(userId: string) {
   await db.prisma.user.delete({ where: { id: userId } }).catch(() => undefined);
 }
@@ -107,7 +110,8 @@ test.describe("two-factor authentication", () => {
     await db?.pool.end();
   });
 
-  test("enroll, sign out, sign back in with a TOTP code, then with a recovery code", async ({ request, context, baseURL }) => {
+  test("enroll, sign out, sign back in with a TOTP code, then with a recovery code", async ({ context, baseURL }) => {
+    const request = context.request;
     const user = await createTestUser("enroll-flow");
     try {
       await authenticateBrowser(context, baseURL!, generateUserToken(user.id, user.email, user.plan, user.sessionVersion));
@@ -142,7 +146,7 @@ test.describe("two-factor authentication", () => {
       expect(sessionAfterPassword.status()).toBe(401); // no session yet, only the pending challenge
 
       const verifyResponse = await request.post("/api/auth/two-factor/verify", {
-        data: { code: totpCode(manualKey, Date.now()) },
+        data: { code: totpCode(manualKey, Date.now() + 30_000) },
       });
       expect(verifyResponse.status()).toBe(200);
       expect((await json(verifyResponse)).success).toBe(true);
@@ -176,7 +180,8 @@ test.describe("two-factor authentication", () => {
     }
   });
 
-  test("a wrong TOTP code is rejected and the same code cannot be replayed", async ({ request, context, baseURL }) => {
+  test("a wrong TOTP code is rejected and the same code cannot be replayed", async ({ context, baseURL }) => {
+    const request = context.request;
     const user = await createTestUser("replay");
     try {
       await authenticateBrowser(context, baseURL!, generateUserToken(user.id, user.email, user.plan, user.sessionVersion));
@@ -190,7 +195,7 @@ test.describe("two-factor authentication", () => {
       const wrongAttempt = await request.post("/api/auth/two-factor/verify", { data: { code: "000000" } });
       expect(wrongAttempt.status()).toBe(401);
 
-      const code = totpCode(manualKey, Date.now());
+      const code = totpCode(manualKey, Date.now() + 30_000);
       const firstUse = await request.post("/api/auth/two-factor/verify", { data: { code } });
       expect(firstUse.status()).toBe(200);
 
@@ -205,7 +210,8 @@ test.describe("two-factor authentication", () => {
     }
   });
 
-  test("disabling requires the current password and a current code, and turns 2FA fully off", async ({ request, context, baseURL }) => {
+  test("disabling requires the current password and a current code, and turns 2FA fully off", async ({ context, baseURL }) => {
+    const request = context.request;
     const user = await createTestUser("disable");
     try {
       await authenticateBrowser(context, baseURL!, generateUserToken(user.id, user.email, user.plan, user.sessionVersion));
@@ -214,17 +220,17 @@ test.describe("two-factor authentication", () => {
       await request.post("/api/workflow/two-factor/enroll/confirm", { data: { code: totpCode(manualKey, Date.now()) } });
 
       const missingPassword = await request.post("/api/workflow/two-factor/disable", {
-        data: { code: totpCode(manualKey, Date.now()) },
+        data: { code: totpCode(manualKey, Date.now() + 30_000) },
       });
       expect(missingPassword.status()).toBe(401);
 
       const wrongPassword = await request.post("/api/workflow/two-factor/disable", {
-        data: { password: "not-the-password", code: totpCode(manualKey, Date.now()) },
+        data: { password: "not-the-password", code: totpCode(manualKey, Date.now() + 30_000) },
       });
       expect(wrongPassword.status()).toBe(401);
 
       const disableResponse = await request.post("/api/workflow/two-factor/disable", {
-        data: { password: PASSWORD, code: totpCode(manualKey, Date.now()) },
+        data: { password: PASSWORD, code: totpCode(manualKey, Date.now() + 30_000) },
       });
       expect(disableResponse.status()).toBe(200);
 
@@ -246,7 +252,8 @@ test.describe("two-factor authentication", () => {
     }
   });
 
-  test("cross-tenant isolation: another user's recovery code and challenge cannot be used", async ({ request, context, baseURL }) => {
+  test("cross-tenant isolation: another user's recovery code and challenge cannot be used", async ({ context, baseURL }) => {
+    const request = context.request;
     const owner = await createTestUser("cross-owner");
     const other = await createTestUser("cross-other");
     try {
@@ -270,6 +277,36 @@ test.describe("two-factor authentication", () => {
     } finally {
       await deleteTestUser(owner.id);
       await deleteTestUser(other.id);
+    }
+  });
+
+  test("an email verification link does not sign in an account that has 2FA on", async ({ context, baseURL }) => {
+    const request = context.request;
+    const user = await createTestUser("verify-email");
+    try {
+      await authenticateBrowser(context, baseURL!, generateUserToken(user.id, user.email, user.plan, user.sessionVersion));
+      const started = await json(await request.post("/api/workflow/two-factor/enroll/start"));
+      const manualKey = String(started.manualKey).replace(/\s+/g, "");
+      expect((await request.post("/api/workflow/two-factor/enroll/confirm", { data: { code: totpCode(manualKey, Date.now()) } })).status()).toBe(200);
+
+      const token = randomBytes(32).toString("base64url");
+      await db.prisma.authToken.create({
+        data: {
+          email: user.email,
+          userId: user.id,
+          type: "email_verification",
+          tokenHash: createHash("sha256").update(token).digest("hex"),
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      await context.clearCookies();
+      const verified = await request.post("/api/auth/verify-email", { data: { token } });
+      expect(verified.status()).toBe(200);
+      expect((await json(verified)).destination).toBe("/login");
+      expect((await request.get("/api/auth/session")).status()).toBe(401);
+    } finally {
+      await deleteTestUser(user.id);
     }
   });
 });

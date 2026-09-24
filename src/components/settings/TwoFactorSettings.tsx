@@ -39,35 +39,54 @@ async function readJson(response: Response): Promise<Record<string, unknown>> {
   return response.json().catch(() => ({}));
 }
 
+type StatusResult = { ok: true; status: Status } | { ok: false; message: string };
+
+async function fetchStatus(): Promise<StatusResult> {
+  try {
+    const response = await fetch("/api/workflow/two-factor", { cache: "no-store" });
+    const data = await readJson(response);
+    if (!response.ok || !data.success) {
+      return { ok: false, message: typeof data.message === "string" ? data.message : "Could not load two-factor status." };
+    }
+    return {
+      ok: true,
+      status: {
+        enabled: Boolean(data.enabled),
+        enabledAt: typeof data.enabledAt === "string" ? data.enabledAt : null,
+        remainingRecoveryCodes: typeof data.remainingRecoveryCodes === "number" ? data.remainingRecoveryCodes : 0,
+      },
+    };
+  } catch {
+    return { ok: false, message: "Could not reach the server." };
+  }
+}
+
 export function TwoFactorSettings() {
   const [status, setStatus] = useState<Status | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: "loading" });
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const loadStatus = useCallback(async () => {
-    setStage({ kind: "loading" });
-    try {
-      const response = await fetch("/api/workflow/two-factor", { cache: "no-store" });
-      const data = await readJson(response);
-      if (!response.ok || !data.success) {
-        setStage({ kind: "error", message: typeof data.message === "string" ? data.message : "Could not load two-factor status." });
-        return;
-      }
-      setStatus({
-        enabled: Boolean(data.enabled),
-        enabledAt: typeof data.enabledAt === "string" ? data.enabledAt : null,
-        remainingRecoveryCodes: typeof data.remainingRecoveryCodes === "number" ? data.remainingRecoveryCodes : 0,
-      });
-      setStage({ kind: "idle" });
-    } catch {
-      setStage({ kind: "error", message: "Could not reach the server." });
+  const applyStatus = useCallback((result: StatusResult) => {
+    if (!result.ok) {
+      setStage({ kind: "error", message: result.message });
+      return;
     }
+    setStatus(result.status);
+    setStage({ kind: "idle" });
   }, []);
 
+  const loadStatus = useCallback(async () => applyStatus(await fetchStatus()), [applyStatus]);
+
   useEffect(() => {
-    void loadStatus();
-  }, [loadStatus]);
+    let cancelled = false;
+    void fetchStatus().then((result) => {
+      if (!cancelled) applyStatus(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [applyStatus]);
 
   async function startEnroll() {
     setBusy(true);
@@ -176,7 +195,7 @@ export function TwoFactorSettings() {
         </CardHeader>
         <CardContent>
           <Alert variant="destructive" className="text-sm">{stage.message}</Alert>
-          <Button variant="outline" className="mt-3" onClick={() => void loadStatus()}>Retry</Button>
+          <Button variant="outline" className="mt-3" onClick={() => { setStage({ kind: "loading" }); void loadStatus(); }}>Retry</Button>
         </CardContent>
       </Card>
     );

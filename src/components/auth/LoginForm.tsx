@@ -4,6 +4,7 @@ import { Alert, FormField, Input } from "@/components/ui";
 import { Dialog as BaseDialog } from "@base-ui/react/dialog";
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import PasswordInput from "@/components/PasswordInput";
 import { resolveLoginDestination } from "@/utils/safeNextPath";
 import { googleLoginErrorMessage } from "@/utils/googleLogin";
@@ -23,6 +24,7 @@ export function LoginForm({
   onForgot: () => void;
   onRegister: (email: string) => void;
 }) {
+  const router = useRouter();
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,9 +69,9 @@ export function LoginForm({
       const data = await res.json().catch(() => ({}));
       if (data.success && data.twoFactorRequired) {
         // Password verified, but the account needs its second factor. No
-        // session exists yet, so this is a full navigation, not onSuccess
-        // (which assumes a signed-in destination).
-        window.location.assign(`/login/two-factor?next=${encodeURIComponent(nextPath)}`);
+        // session exists yet, so this skips onSuccess (which assumes a
+        // signed-in destination).
+        router.push(`/login/two-factor?next=${encodeURIComponent(nextPath)}`);
         return;
       }
       if (data.success) {
