@@ -695,7 +695,18 @@ async function computeAdminSnapshot(): Promise<AdminSnapshot> {
 
   // Internal and test accounts stay out of every number, but they are listed
   // separately so an admin can find one and mark it back as a customer.
-  const internal: AdminUserIndexEntry[] = users.filter((user) => INTERNAL_ACCOUNT_TYPES.has(user.accountType)).map((user) => ({
+  // The cohort query above reads customers only, so they need their own read.
+  const internalUsers = await prisma.user.findMany({
+    where: { accountType: { in: Array.from(INTERNAL_ACCOUNT_TYPES) } },
+    select: {
+      id: true, email: true, name: true, createdAt: true, accountType: true, emailVerifiedAt: true, emailVerificationRequiredAt: true,
+      onboardingStatus: true, businessType: true, profession: true, onboardingData: true,
+      attribution: { select: { firstTouchSource: true, lastTouchSource: true, firstTouchMedium: true, firstTouchCampaign: true, referralSource: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 2_000,
+  }) as UserRow[];
+  const internal: AdminUserIndexEntry[] = internalUsers.map((user) => ({
     id: user.id,
     accountType: user.accountType,
     email: user.email,
