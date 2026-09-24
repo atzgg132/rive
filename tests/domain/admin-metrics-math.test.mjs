@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   activeReliabilityCaveats,
   createSharedLoader,
+  formatHours,
   hoursToFirstEngagement,
   trailingTrend,
 } from "../../src/lib/analytics/adminMetricsMath.ts";
@@ -93,4 +94,16 @@ test("clear() during a load keeps the stale result out of the cache", async () =
   release("after-change");
   assert.equal(await after, "after-change");
   assert.equal(loads, 2);
+});
+
+test("engagement durations read in the unit a person would use", () => {
+  assert.equal(formatHours(0), "under 1m");
+  assert.equal(formatHours(0.01), "under 1m");
+  assert.equal(formatHours(0.05), "3m");
+  assert.equal(formatHours(0.999), "1h");
+  assert.equal(formatHours(0.5), "30m");
+  assert.equal(formatHours(1), "1h");
+  assert.equal(formatHours(3.46), "3.5h");
+  assert.equal(formatHours(47.9), "47.9h");
+  assert.equal(formatHours(50), "2.1d");
 });

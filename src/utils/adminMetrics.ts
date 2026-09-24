@@ -131,10 +131,11 @@ function addToMap(map: Map<string, number>, key: string, count = 1): void {
   map.set(key, (map.get(key) || 0) + count);
 }
 
-function percentile(values: number[], position: number): number | null {
+function percentile(values: number[], position: number, decimals = 1): number | null {
   if (!values.length) return null;
   const sorted = [...values].sort((a, b) => a - b);
-  return Math.round(sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * position) - 1)] * 10) / 10;
+  const scale = 10 ** decimals;
+  return Math.round(sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * position) - 1)] * scale) / scale;
 }
 
 export type AdminMetrics = {
@@ -653,8 +654,10 @@ async function computeAdminSnapshot(): Promise<AdminSnapshot> {
       prospectiveSince: prospectiveSinceDate?.toISOString() || null,
       createdUsers: engagementCreatedUsers.size,
       createdFlows: engagementCreatedFlows.size,
-      medianHoursToCreate: percentile(hoursToCreate, 0.5),
-      p75HoursToCreate: percentile(hoursToCreate, 0.75),
+      // Hours to 3 decimals (~4s): most first flows happen inside the signup
+      // session, and 0.1h steps rounded all of them to "0h".
+      medianHoursToCreate: percentile(hoursToCreate, 0.5, 3),
+      p75HoursToCreate: percentile(hoursToCreate, 0.75, 3),
       timedUsers: hoursToCreate.length,
       firstSession: { completed: completedSessions.size, started: startedSessions.size, rate: pct(completedSessions.size, startedSessions.size) },
       sevenDay: { completed: sevenDayCompleted.length, eligible: sevenDayEligible.length, rate: pct(sevenDayCompleted.length, sevenDayEligible.length) },

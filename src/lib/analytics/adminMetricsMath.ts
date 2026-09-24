@@ -23,6 +23,16 @@ export function hoursToFirstEngagement(
   return Array.from(first.entries()).map(([userId, occurredAt]) => Math.max(0, (occurredAt.getTime() - signups.get(userId)!.getTime()) / 3_600_000));
 }
 
+/** A duration given in hours, in the unit a person would say it in: "under 1m", "14m", "3.5h", "2.1d". */
+export function formatHours(hours: number): string {
+  const minutes = hours * 60;
+  if (minutes < 1) return "under 1m";
+  // Round before choosing the unit so 59.9 minutes reads "1h", not "60m".
+  if (Math.round(minutes) < 60) return `${Math.round(minutes)}m`;
+  if (hours < 48) return `${Math.round(hours * 10) / 10}h`;
+  return `${Math.round((hours / 24) * 10) / 10}d`;
+}
+
 // Trend over the trailing 7 days against the 7 before it. The daily series is
 // 14 days long, which is exactly one comparison and no more. A zero prior week
 // has no percentage change, but it is still a prior week — the caller says
