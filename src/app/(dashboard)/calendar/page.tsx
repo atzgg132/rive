@@ -7,6 +7,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Briefcase,
+  CalendarDays,
   CalendarRange,
   Check,
   ChevronLeft,
@@ -90,7 +91,6 @@ type Connection = {
   externalCalendars: Array<{ id: string; providerCalendarId: string; name: string; color: string | null; selected: boolean; accessRole: string | null }>;
 };
 
-type SyncOutboxSummary = { pending: number; failed: number };
 
 const READ_ONLY_ACCESS_ROLES = ["reader", "freeBusyReader"];
 
@@ -231,7 +231,6 @@ export default function CalendarPage() {
   const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [outbox, setOutbox] = useState<SyncOutboxSummary>({ pending: 0, failed: 0 });
   const [userTimeZone, setUserTimeZone] = useState("");
   const [googleCalendarAvailable, setGoogleCalendarAvailable] = useState(false);
   const [visibleCalendars, setVisibleCalendars] = useState<Set<string>>(new Set());
@@ -287,7 +286,6 @@ export default function CalendarPage() {
       setCalendars(calendarData.calendars || []);
       setTasks(taskData.tasks || []);
       setConnections(connectionData.connections || []);
-      setOutbox(connectionData.outbox || { pending: 0, failed: 0 });
       setGoogleCalendarAvailable(connectionData.connectorAvailability?.googleCalendar === true);
       setVisibleCalendars((current) => current.size ? current : new Set((calendarData.calendars || []).filter((item: CalendarItem) => item.isVisible).map((item: CalendarItem) => item.id)));
     } catch (error) {

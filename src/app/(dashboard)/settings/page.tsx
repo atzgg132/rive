@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui";
+import { SETTINGS_SECTIONS } from "@/lib/settingsSections";
 import { ProfileSection, type ProfileSectionData } from "@/components/settings/ProfileSection";
 import { WorkspaceDefaultsSection } from "@/components/settings/WorkspaceDefaultsSection";
 import { BusinessInvoicingSection } from "@/components/settings/BusinessInvoicingSection";
@@ -10,15 +11,6 @@ import { NotificationsSection } from "@/components/settings/NotificationsSection
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
 import { SecuritySection } from "@/components/settings/SecuritySection";
 
-const SECTIONS = [
-  { id: "profile", label: "Profile" },
-  { id: "invoicing", label: "Business & invoicing" },
-  { id: "workspace", label: "Workspace defaults" },
-  { id: "preferences", label: "Preferences" },
-  { id: "notifications", label: "Notifications" },
-  { id: "integrations", label: "Integrations" },
-  { id: "security", label: "Security" },
-] as const;
 
 type SettingsPayload = {
   user: ProfileSectionData & {
@@ -62,6 +54,15 @@ export default function SettingsPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // Sections render only after the fetch, so the browser's own jump to
+  // `#invoicing` (old invoice-settings links, the command palette) has
+  // nothing to land on. Scroll once the sections exist.
+  useEffect(() => {
+    if (!data) return;
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [data]);
+
   if (loading) return <div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Loading settings…</div>;
   if (error || !data) return <div className="grid min-h-[60vh] place-items-center text-sm text-destructive">{error || "Settings could not be loaded."}</div>;
 
@@ -71,7 +72,7 @@ export default function SettingsPage() {
 
       {/* Mobile: horizontally scrollable section links. */}
       <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
-        {SECTIONS.map((section) => (
+        {SETTINGS_SECTIONS.map((section) => (
           <a key={section.id} href={`#${section.id}`} className="shrink-0 whitespace-nowrap rounded-none border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:border-primary hover:text-foreground">
             {section.label}
           </a>
@@ -81,7 +82,7 @@ export default function SettingsPage() {
       <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
         {/* Desktop: sticky left nav. */}
         <nav className="hidden md:sticky md:top-24 md:block md:h-fit md:space-y-1">
-          {SECTIONS.map((section) => (
+          {SETTINGS_SECTIONS.map((section) => (
             <a key={section.id} href={`#${section.id}`} className="block rounded-none px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-accent hover:text-foreground">
               {section.label}
             </a>

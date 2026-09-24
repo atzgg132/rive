@@ -9,7 +9,7 @@ export function PreferencesSection() {
   return (
     <section id="preferences" className="scroll-mt-24 rounded-none border border-border bg-card p-5">
       <h2 className="font-semibold">Preferences</h2>
-      <p className="mt-1 text-xs text-muted-foreground">Personal display choices — these don't change what anyone else sees.</p>
+      <p className="mt-1 text-xs text-muted-foreground">Personal display choices — these don&apos;t change what anyone else sees.</p>
       <div className="mt-5 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
           <div>

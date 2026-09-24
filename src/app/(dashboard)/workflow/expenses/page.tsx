@@ -164,7 +164,6 @@ export default function ExpensesPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadWorkspaceCurrency();
   }, []);
 

@@ -218,6 +218,9 @@ export async function POST(req: NextRequest) {
     const project = await validateOwnedProject(session.userId, project_id);
     if (!project.ok) return project.response;
 
+    // No currency in the request: the workspace default (Settings), not USD.
+    const owner = currency ? null : await prisma.user.findUnique({ where: { id: session.userId }, select: { currency: true } });
+
     const expense = await prisma.expense.create({
       data: {
         userId: session.userId,
@@ -225,7 +228,7 @@ export async function POST(req: NextRequest) {
         category: category || "other",
         description,
         amount: Number(amount),
-        currency: currency || "USD",
+        currency: currency || owner?.currency || "USD",
         date: date ? new Date(date) : new Date(),
         receiptUrl: receipt_url || null,
         isBillable: is_billable || false,
@@ -288,7 +291,8 @@ export async function PUT(req: NextRequest) {
         category: category || "other",
         description,
         amount: Number(amount),
-        currency: currency || "USD",
+        // Omitted on edit keeps the recorded currency.
+        currency: currency || undefined,
         date: date ? new Date(date) : new Date(),
         receiptUrl: receipt_url || null,
         isBillable: is_billable || false,

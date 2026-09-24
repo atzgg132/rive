@@ -57,7 +57,10 @@ export function CalendarConnectionsPanel({ onChange }: { onChange?: () => void }
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
 
   const googleConnections = connections.filter((connection) => connection.provider === "google");
 

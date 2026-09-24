@@ -425,6 +425,14 @@ export default function DashboardSidebar({
 
               <div className="mt-6 flex shrink-0 flex-col gap-2 border-t border-border pt-4">
                 <IdentityBlock user={user} />
+                <Link
+                  href="/settings"
+                  onClick={() => onMobileOpenChange(false)}
+                  className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <Settings className="h-5 w-5" aria-hidden="true" />
+                  <span>Settings</span>
+                </Link>
                 <Button
                   type="button"
                   variant="ghost"
