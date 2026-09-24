@@ -36,29 +36,34 @@ jobs:
           aws-region: ap-south-1
       - uses: aws-actions/amazon-ecr-login@v2
       - uses: docker/setup-buildx-action@v4
-      - name: Build and push application image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          platforms: linux/arm64
-          push: true
-          tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
-          build-args: |
-            DEPLOYMENT_VERSION=${{ github.sha }}
-            APP_URL=${{ github.ref_name == 'main' && 'https://www.rive.work' || 'https://dev.rive.work' }}
-          # No gha cache export: mode=max spent ~2.5 min uploading every
-          # intermediate layer and never hit, because both image builds shared
-          # one cache scope and overwrote each other. Dependency layers rebuild
-          # in parallel in ~30 s; the migration image reuses this builder's
-          # local layers within the job.
-      - name: Build and push migration image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          target: migrator
-          platforms: linux/arm64
-          push: true
-          tags: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}-migrate
+      # Both images build concurrently on one builder: the migration image
+      # (~90 s alone) finishes while the application build (~150 s) is still
+      # running, instead of adding to it. No gha layer-cache export: mode=max
+      # spent ~2.5 min uploading layers and never hit.
+      - name: Build and push application and migration images
+        env:
+          REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
+          IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
+          APP_URL: ${{ github.ref_name == 'main' && 'https://www.rive.work' || 'https://dev.rive.work' }}
+        run: |
+          set -euo pipefail
+          docker buildx build --platform linux/arm64 --target migrator --push \
+            --tag "$REPOSITORY_URL:$IMAGE_TAG-migrate" . > migrator-build.log 2>&1 &
+          migrator=$!
+          app_status=0
+          docker buildx build --platform linux/arm64 --push \
+            --build-arg "DEPLOYMENT_VERSION=$GITHUB_SHA" \
+            --build-arg "APP_URL=$APP_URL" \
+            --tag "$REPOSITORY_URL:$IMAGE_TAG" . || app_status=$?
+          migrator_status=0
+          wait "$migrator" || migrator_status=$?
+          echo "::group::Migration image build log"
+          cat migrator-build.log
+          echo "::endgroup::"
+          if [ "$app_status" -ne 0 ] || [ "$migrator_status" -ne 0 ]; then
+            echo "::error::Image build failed (application=$app_status migration=$migrator_status)."
+            exit 1
+          fi
       # The runner ships the repo's deploy script and canonical Caddyfile to the
       # host so every deploy runs the reviewed versions, then the host-side
       # script performs the candidate/cutover/rollback flow.
