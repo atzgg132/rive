@@ -21,6 +21,9 @@ export type EmailType =
   | "contract_acceptance_due"
   | "invoice_ready"
   | "invoice_sent"
+  | "two_factor_enabled"
+  | "two_factor_disabled"
+  | "two_factor_recovery_codes_regenerated"
   | "invoice_reminder"
   | "invoice_paid_receipt"
   | "weekly_summary";
@@ -505,6 +508,69 @@ export function buildLoginSuccessEmail(to: string): PreparedEmail {
 
 export function sendLoginSuccessEmail(to: string): Promise<EmailResult> {
   return deliver(buildLoginSuccessEmail(to));
+}
+
+export function buildTwoFactorEnabledEmail(to: string): PreparedEmail {
+  return {
+    to,
+    type: "two_factor_enabled",
+    subject: "Two-factor authentication is on for your rive. account",
+    html: baseTemplate({
+      eyebrow: "security notice",
+      title: "Two-factor authentication is on.",
+      intro: "Your rive. account now requires an authenticator code to sign in, in addition to your password.",
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">We also issued 10 recovery codes. Keep them somewhere safe — each one signs you in exactly once if you lose access to your authenticator app.</p>`,
+      aside: "If you didn’t turn this on, contact hello@rive.work immediately so we can help secure your account.",
+      recipient: to,
+    }),
+    text: `Two-factor authentication is now on for your rive. account.\n\nIf this wasn't you, contact hello@rive.work immediately.`,
+  };
+}
+
+export function sendTwoFactorEnabledEmail(to: string): Promise<EmailResult> {
+  return deliver(buildTwoFactorEnabledEmail(to));
+}
+
+export function buildTwoFactorDisabledEmail(to: string): PreparedEmail {
+  return {
+    to,
+    type: "two_factor_disabled",
+    subject: "Two-factor authentication was turned off",
+    html: baseTemplate({
+      eyebrow: "security notice",
+      title: "Two-factor authentication is off.",
+      intro: "Your rive. account no longer requires an authenticator code to sign in.",
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Your password alone now signs you in. You can turn two-factor authentication back on from Settings at any time.</p>`,
+      aside: "If you didn’t make this change, contact hello@rive.work immediately so we can help secure your account.",
+      recipient: to,
+    }),
+    text: `Two-factor authentication was turned off for your rive. account.\n\nIf this wasn't you, contact hello@rive.work immediately.`,
+  };
+}
+
+export function sendTwoFactorDisabledEmail(to: string): Promise<EmailResult> {
+  return deliver(buildTwoFactorDisabledEmail(to));
+}
+
+export function buildTwoFactorRecoveryCodesRegeneratedEmail(to: string): PreparedEmail {
+  return {
+    to,
+    type: "two_factor_recovery_codes_regenerated",
+    subject: "Your rive. recovery codes were regenerated",
+    html: baseTemplate({
+      eyebrow: "security notice",
+      title: "New recovery codes were issued.",
+      intro: "Your old two-factor recovery codes were just replaced with a fresh set of 10.",
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">The old codes no longer work. Save the new codes somewhere safe — each signs you in exactly once if you lose access to your authenticator app.</p>`,
+      aside: "If you didn’t request this, contact hello@rive.work immediately so we can help secure your account.",
+      recipient: to,
+    }),
+    text: `Your rive. two-factor recovery codes were regenerated. The old codes no longer work.\n\nIf this wasn't you, contact hello@rive.work immediately.`,
+  };
+}
+
+export function sendTwoFactorRecoveryCodesRegeneratedEmail(to: string): Promise<EmailResult> {
+  return deliver(buildTwoFactorRecoveryCodesRegeneratedEmail(to));
 }
 
 export function buildContactMessageEmail(input: {

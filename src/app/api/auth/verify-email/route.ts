@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       return tx.user.update({
         where: { id: authToken.userId! },
         data: { emailVerifiedAt: now },
-        select: { id: true, email: true, name: true, plan: true, sessionVersion: true, onboardingStatus: true, onboardingData: true },
+        select: { id: true, email: true, name: true, plan: true, sessionVersion: true, onboardingStatus: true, onboardingData: true, twoFactorEnabledAt: true },
       });
     });
     if (!result) {
@@ -53,6 +53,19 @@ export async function POST(req: NextRequest) {
       dedupeKey: `email_verified:${result.id}`,
     });
     await recordActivationEvent(result.id, ACTIVATION_EVENTS.registered, { verified: true });
+
+    // A verification link proves the mailbox, not the second factor: an
+    // account with 2FA on verifies here but signs in through the login flow.
+    if (result.twoFactorEnabledAt) {
+      const response = NextResponse.json({
+        success: true,
+        message: "Email verified. Sign in to continue.",
+        destination: "/login",
+        user: { id: result.id, email: result.email, name: result.name, plan: result.plan },
+      });
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    }
 
     const onboardingData = result.onboardingData as Record<string, unknown> | null;
     const migrationIntent = onboardingData?.goal === "migrate";

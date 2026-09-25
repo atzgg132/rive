@@ -88,6 +88,9 @@ export const changelogContent: MarketingPageContent = {
       { title: "Import", body: "Preview supported CSV and XLSX records, with relationship review before approval." },
       { title: "Portfolio Studio", body: "Build a public portfolio, publish selected work, review analytics, and receive enquiries." },
     ] },
+    { eyebrow: "Account & security", title: "Optional two-factor authentication.", cards: [
+      { title: "Authenticator codes", body: "Turn on two-factor authentication from Settings, using any TOTP authenticator app, with recovery codes for backup access." },
+    ] },
   ],
   cta: { headline: "Try the current product with real work.", label: "Start free", href: "/register", note: "Free during beta. No credit card required." },
 };

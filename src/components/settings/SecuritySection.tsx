@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button, Input } from "@/components/ui";
+import { TwoFactorSettings } from "@/components/settings/TwoFactorSettings";
 
 export function SecuritySection({ isGoogleOnlyAccount }: { isGoogleOnlyAccount: boolean }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -62,7 +63,9 @@ export function SecuritySection({ isGoogleOnlyAccount }: { isGoogleOnlyAccount: 
           <Button type="submit" disabled={savingPassword}>{savingPassword ? "Saving…" : isGoogleOnlyAccount ? "Set password" : "Change password"}</Button>
         </div>
       </form>
-      {/* Mount point for TwoFactorSettings (PR 3, issue #66). */}
+      <div className="border-b border-border py-5">
+        <TwoFactorSettings />
+      </div>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">Sign out of all other devices</p>

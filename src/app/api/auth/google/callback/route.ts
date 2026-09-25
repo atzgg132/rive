@@ -14,6 +14,7 @@ import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { getRequestIp } from "@/utils/rateLimit";
 import { durableRateLimit } from "@/utils/durableRateLimit";
 import { inferCurrencyFromRequest, resolveDisplayCurrency } from "@/lib/currency";
+import { createTwoFactorChallenge, setTwoFactorChallengeCookie } from "@/utils/twoFactorChallenge";
 
 function loginError(req: NextRequest, code: string) {
   return NextResponse.redirect(new URL(`/login?google_error=${code}`, process.env.APP_URL || req.url));
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
       plan: string;
       sessionVersion: number;
       onboardingStatus: string;
+      twoFactorEnabledAt: Date | null;
       loginAlertsEnabled: boolean;
     };
 
@@ -106,7 +108,7 @@ export async function GET(req: NextRequest) {
             displayCurrencySource: displayCurrencyPreference.source,
             onboardingData: state.next === "/migrate" ? { goal: "migrate", startingPath: "import" } : undefined,
           },
-          select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, loginAlertsEnabled: true },
+          select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true, loginAlertsEnabled: true },
         });
         await saveUserAttribution(created.id, attribution, tx);
         await recordProductEvent({
@@ -127,13 +129,30 @@ export async function GET(req: NextRequest) {
           googleSubject: profile.sub,
           emailVerifiedAt: new Date(),
         },
-        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, loginAlertsEnabled: true },
+        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true, loginAlertsEnabled: true },
       });
     } else {
       user = await prisma.user.findUniqueOrThrow({
         where: { id: decision.userId },
-        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, loginAlertsEnabled: true },
+        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true, loginAlertsEnabled: true },
       });
+    }
+
+    if (decision.action !== "create" && user.twoFactorEnabledAt) {
+      // Google confirmed identity, but the account still requires its second
+      // factor before a session is issued — same pending-challenge handoff
+      // as the password login route. A brand-new account can't have 2FA
+      // enabled yet, so this only applies to `link`/`existing`.
+      const challengeToken = await createTwoFactorChallenge(user.id, user.email);
+      // Pass the raw candidate `next`, unresolved — the two-factor page
+      // combines it with the verify API's onboarding-aware destination the
+      // same way LoginForm does for the password flow (resolveLoginDestination).
+      const response = NextResponse.redirect(
+        new URL(`/login/two-factor?next=${encodeURIComponent(state.next || "")}`, process.env.APP_URL || req.url),
+      );
+      setTwoFactorChallengeCookie(response, challengeToken);
+      response.headers.set("Cache-Control", "no-store");
+      return response;
     }
 
     // The sign-in notice fires for an existing account returning — a fresh
