@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     if (result.twoFactorEnabledAt) {
       const response = NextResponse.json({
         success: true,
-        message: "Email verified. Sign in to continue.",
+        message: "Sign in with your password and authenticator code to continue.",
         destination: "/login",
         user: { id: result.id, email: result.email, name: result.name, plan: result.plan },
       });
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const migrationIntent = onboardingData?.goal === "migrate";
     const response = NextResponse.json({
       success: true,
-      message: "Email verified. Your workspace is ready.",
+      message: "Your workspace is ready.",
       destination: migrationIntent
         ? "/migrate"
         : result.onboardingStatus === "complete" || result.onboardingStatus === "skipped" ? "/dashboard" : "/onboarding",

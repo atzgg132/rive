@@ -369,6 +369,7 @@ export async function enqueuePaidReceiptIfEnabled(
     paidDate: Date;
     clientName: string;
     clientEmail: string | null;
+    publicTokenEncrypted?: string | null;
   },
 ): Promise<void> {
   if (!input.clientEmail) return;
@@ -390,6 +391,7 @@ export async function enqueuePaidReceiptIfEnabled(
       currency: input.currency,
       paidDate: input.paidDate,
       senderName: profile.businessName || owner.name || owner.email,
+      publicUrl: recoverInvoicePublicUrl(input.publicTokenEncrypted ?? null),
     }),
     tx,
   );

@@ -73,7 +73,7 @@ export default function SettingsPage() {
       {/* Mobile: horizontally scrollable section links. */}
       <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
         {SETTINGS_SECTIONS.map((section) => (
-          <a key={section.id} href={`#${section.id}`} className="shrink-0 whitespace-nowrap rounded-none border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:border-primary hover:text-foreground">
+          <a key={section.id} href={`#${section.id}`} className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-none border border-border bg-card px-3 text-xs font-semibold text-muted-foreground hover:border-primary hover:text-foreground">
             {section.label}
           </a>
         ))}
@@ -89,7 +89,8 @@ export default function SettingsPage() {
           ))}
         </nav>
 
-        <div className="min-w-0 space-y-6">
+        {/* Bottom room so the last sections (Security) can still scroll to the top when linked to. */}
+        <div className="min-w-0 space-y-6 md:pb-[40vh]">
           <ProfileSection data={data.user} />
           <BusinessInvoicingSection data={data.invoiceProfile || {
             businessName: null, contactName: null, email: null, phone: null, address: null, taxId: null,

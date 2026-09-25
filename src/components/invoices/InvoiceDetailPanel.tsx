@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, StatusBadge, Textarea } from "@/components/ui";
+import { Button, Input, StatusBadge, Textarea, useConfirm } from "@/components/ui";
 import Portal from "@/components/ui/Portal";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { formatMoney } from "@/lib/currency";
@@ -50,6 +50,7 @@ export type InvoiceDetail = {
   viewed_at: string | null;
   notes: string | null;
   reminders_paused: boolean;
+  reminders_enabled: boolean;
   client_id: string | null;
   client_name: string | null;
   client_company: string | null;
@@ -75,10 +76,13 @@ function dateTimeLabel(value: string): string {
 
 export default function InvoiceDetailPanel({
   invoiceId,
+  offerReminders = false,
   onClose,
   onChanged,
 }: {
   invoiceId: string;
+  /** Show the one-time reminders offer on open (the invoice was just sent from the list). */
+  offerReminders?: boolean;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -92,7 +96,8 @@ export default function InvoiceDetailPanel({
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentReceivedOn, setPaymentReceivedOn] = useState("");
-  const [reminderOffer, setReminderOffer] = useState(false);
+  const [reminderOffer, setReminderOffer] = useState(offerReminders);
+  const [confirm, confirmDialog] = useConfirm();
   const [remindersBusy, setRemindersBusy] = useState(false);
 
   const load = async (signal?: AbortSignal) => {
@@ -122,7 +127,12 @@ export default function InvoiceDetailPanel({
 
   // Escape closes the panel, matching every other overlay in the workspace.
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      // A confirm dialog on top handles its own Escape; don't close the panel under it.
+      if (event.target instanceof Element && event.target.closest("[data-confirm-dialog]")) return;
+      onClose();
+    };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
@@ -209,7 +219,10 @@ export default function InvoiceDetailPanel({
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.message);
-      if (action === "enable") toast.success("Invoice reminders turned on with the default schedule.");
+      if (action === "enable") {
+        toast.success("Invoice reminders turned on with the default schedule.");
+        await load();
+      }
     } catch {
       toast.error("Could not save your reminder preference. You can turn reminders on later from Settings.");
     }
@@ -255,7 +268,7 @@ export default function InvoiceDetailPanel({
 
   const voidInvoice = async () => {
     if (!invoice || busy) return;
-    if (!window.confirm(`Void ${invoice.invoice_number}? The client's copy stops resolving and this cannot be undone.`)) return;
+    if (!(await confirm({ title: `Void ${invoice.invoice_number}?`, description: "The client's copy stops resolving and this can't be undone.", confirmLabel: "Void invoice", destructive: true }))) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/workflow/invoices/${invoice.id}/void`, { method: "POST" });
@@ -540,7 +553,7 @@ export default function InvoiceDetailPanel({
                       <Ban className="h-3.5 w-3.5" /> Void
                     </Button>
                   ) : null}
-                  {invoice.due_date && ["sent", "viewed", "overdue", "partially_paid"].includes(invoice.status) ? (
+                  {invoice.reminders_enabled && invoice.due_date && ["sent", "viewed", "overdue", "partially_paid"].includes(invoice.status) ? (
                     <Button size="sm" variant="outline" disabled={remindersBusy} onClick={() => void toggleReminders()} className="gap-1.5">
                       {remindersBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : invoice.reminders_paused ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
                       {invoice.reminders_paused ? "Resume reminders" : "Pause reminders"}
@@ -552,6 +565,7 @@ export default function InvoiceDetailPanel({
           ) : null}
         </div>
       </div>
+      {confirmDialog}
     </Portal>
   );
 }

@@ -78,6 +78,12 @@ export function invoiceEventLabel(eventType: string): string {
     paid: "Paid in full",
     voided: "Voided",
     reminder_sent: "Reminder sent",
+    send_started: "Sending to client",
+    invoice_sent: "Sent to client",
+    overdue: "Marked overdue",
+    void_confirmed: "Voided",
+    billing_draft_created: "Draft created from agreement",
+    billing_cancelled: "Billing cancelled",
   };
   return labels[eventType] || eventType.replaceAll("_", " ");
 }

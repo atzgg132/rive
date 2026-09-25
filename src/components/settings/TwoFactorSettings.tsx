@@ -9,7 +9,8 @@
 // dropping it into any authenticated page works without wiring.
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, ShieldCheck, ShieldOff } from "lucide-react";
+import QRCode from "qrcode";
+import { Check, Copy, Download, Loader2, ShieldCheck, ShieldOff } from "lucide-react";
 import {
   Alert,
   Button,
@@ -262,7 +263,7 @@ export function TwoFactorSettings() {
         </CardTitle>
         <CardDescription>
           {status.enabled
-            ? `On since ${status.enabledAt ? new Date(status.enabledAt).toLocaleDateString() : "—"}. ${status.remainingRecoveryCodes} unused recovery code${status.remainingRecoveryCodes === 1 ? "" : "s"} left.`
+            ? `On since ${status.enabledAt ? new Date(status.enabledAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"}. ${status.remainingRecoveryCodes} unused recovery code${status.remainingRecoveryCodes === 1 ? "" : "s"} left.`
             : "Require an authenticator app code, in addition to your password, when signing in."}
         </CardDescription>
       </CardHeader>
@@ -302,19 +303,34 @@ function EnrollConfirmPanel({
   onConfirm: (code: string) => void;
 }) {
   const [code, setCode] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(otpauthUri, { margin: 1, width: 176, errorCorrectionLevel: "M" })
+      .then((url) => { if (!cancelled) setQrDataUrl(url); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [otpauthUri]);
   return (
     <Card data-testid="two-factor-settings">
       <CardHeader>
         <CardTitle>Set up your authenticator app</CardTitle>
         <CardDescription>
-          Add this account in your authenticator app. Most apps accept the setup link directly; if yours needs a QR code
-          instead, use the manual key below.
+          Scan the QR code with your authenticator app, or enter the manual key. On this phone? Open the setup link instead.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {error ? <Alert variant="destructive" className="text-sm">{error}</Alert> : null}
-        <div className="break-all rounded-none border border-border bg-muted/40 p-3 text-xs" data-testid="two-factor-otpauth-uri">
-          {otpauthUri}
+        <div className="flex flex-wrap items-center gap-4">
+          {qrDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- locally generated data URL
+            <img src={qrDataUrl} alt="QR code for your authenticator app" width={176} height={176} className="border border-border bg-white p-2" data-testid="two-factor-qr" />
+          ) : (
+            <div className="grid h-44 w-44 place-items-center border border-border text-xs text-muted-foreground">Preparing QR code…</div>
+          )}
+          <a href={otpauthUri} className="text-sm font-semibold text-primary underline-offset-4 hover:underline" data-testid="two-factor-otpauth-uri">
+            Open setup link in authenticator app
+          </a>
         </div>
         <FormField label="Manual entry key" htmlFor="two-factor-manual-key">
           <Input id="two-factor-manual-key" readOnly value={manualKey} data-testid="two-factor-manual-key" />
@@ -409,6 +425,23 @@ function RecoveryCodesPanel({
   onDone: () => void;
 }) {
   const [confirmed, setConfirmed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const codesText = `rive. recovery codes\nEach code signs you in once if you lose your authenticator app.\n\n${codes.join("\n")}\n`;
+  const copyCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(codesText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {}
+  };
+  const downloadCodes = () => {
+    const url = URL.createObjectURL(new Blob([codesText], { type: "text/plain" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "rive-recovery-codes.txt";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <Card data-testid="two-factor-settings">
       <CardHeader>
@@ -427,6 +460,16 @@ function RecoveryCodesPanel({
             <li key={code}>{code}</li>
           ))}
         </ul>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => void copyCodes()} className="gap-1.5">
+            {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+            {copied ? "Copied" : "Copy codes"}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={downloadCodes} className="gap-1.5">
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Download .txt
+          </Button>
+        </div>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

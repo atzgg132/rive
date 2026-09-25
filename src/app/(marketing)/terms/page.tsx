@@ -65,6 +65,7 @@ export default function TermsPage() {
               <Section id="client-communications" title="5. Communications sent to your clients">
                 <p>Rive lets you turn on automated emails to your clients on your behalf — currently invoice payment reminders and paid receipts. By enabling these features, you confirm that you have the right to contact each client you send them to, and you are responsible for the accuracy of the content in those invoices and the client contact details you provide.</p>
                 <p>You remain responsible for complying with applicable law in the jurisdictions where your clients are located, including any consent or opt-out requirements that apply to your business relationship with them. Rive includes an unsubscribe link on every automated reminder email and will honor a client&apos;s opt-out for future reminders, but this does not substitute for your own obligations to your clients.</p>
+                <p>How we handle your clients&apos; data when sending these emails is described in section 5 of our <a href="/privacy#client-emails" className="text-primary hover:underline">Privacy Policy</a>.</p>
               </Section>
 
               <Section id="ip" title="6. Intellectual property">

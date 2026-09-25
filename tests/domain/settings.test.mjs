@@ -27,6 +27,8 @@ test("workspace currency validation matches the existing 3-letter ISO-ish patter
   assert.equal(isValidWorkspaceCurrency("USD"), true);
   assert.equal(isValidWorkspaceCurrency("usd"), false);
   assert.equal(isValidWorkspaceCurrency("US"), false);
+  assert.equal(isValidWorkspaceCurrency("ZZZ"), false, "not an ISO 4217 code");
+  assert.equal(isValidWorkspaceCurrency("INR"), true);
   assert.equal(isValidWorkspaceCurrency(""), false);
   assert.equal(isValidWorkspaceCurrency(42), false);
 });

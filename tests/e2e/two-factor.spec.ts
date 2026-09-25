@@ -316,10 +316,13 @@ test.describe("two-factor authentication", () => {
       await authenticateBrowser(context, baseURL!, generateUserToken(user.id, user.email, user.plan, user.sessionVersion));
       await page.goto("/settings#security");
       await page.getByTestId("two-factor-enable-button").click({ timeout: 30_000 });
+      await expect(page.getByTestId("two-factor-qr")).toBeVisible();
       const manualKey = (await page.getByTestId("two-factor-manual-key").inputValue()).replace(/\s+/g, "");
       await page.getByTestId("two-factor-confirm-input").fill(totpCode(manualKey, Date.now()) || "");
       await page.getByTestId("two-factor-confirm-button").click();
       await expect(page.getByTestId("two-factor-recovery-codes").locator("li")).toHaveCount(10);
+      await expect(page.getByRole("button", { name: "Copy codes" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download .txt" })).toBeVisible();
       await page.getByTestId("two-factor-recovery-confirm-checkbox").check();
       await page.getByTestId("two-factor-recovery-confirm-button").click();
       await expect(page.getByText(/On since/)).toBeVisible();

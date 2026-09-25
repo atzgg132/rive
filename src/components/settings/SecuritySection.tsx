@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, useConfirm } from "@/components/ui";
 import { TwoFactorSettings } from "@/components/settings/TwoFactorSettings";
 
 export function SecuritySection({ isGoogleOnlyAccount }: { isGoogleOnlyAccount: boolean }) {
@@ -10,6 +10,7 @@ export function SecuritySection({ isGoogleOnlyAccount }: { isGoogleOnlyAccount: 
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [confirm, confirmDialog] = useConfirm();
 
   const changePassword = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -34,7 +35,7 @@ export function SecuritySection({ isGoogleOnlyAccount }: { isGoogleOnlyAccount: 
   };
 
   const signOutAll = async () => {
-    if (!window.confirm("Sign out of every other device? This one stays signed in.")) return;
+    if (!(await confirm({ title: "Sign out of every other device?", description: "Every other session ends. This device stays signed in.", confirmLabel: "Sign out everywhere else" }))) return;
     setSigningOut(true);
     try {
       const response = await fetch("/api/settings/security/sign-out-all", { method: "POST" });
@@ -73,6 +74,7 @@ export function SecuritySection({ isGoogleOnlyAccount }: { isGoogleOnlyAccount: 
         </div>
         <Button type="button" variant="outline" onClick={() => void signOutAll()} disabled={signingOut}>{signingOut ? "Signing out…" : "Sign out everywhere else"}</Button>
       </div>
+      {confirmDialog}
     </section>
   );
 }

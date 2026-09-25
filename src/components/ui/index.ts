@@ -4,6 +4,7 @@ export * from "@/components/ui/badge";
 export * from "@/components/ui/button";
 export * from "@/components/ui/card";
 export * from "@/components/ui/dialog";
+export * from "@/components/ui/confirm-dialog";
 export * from "@/components/ui/empty-state";
 export * from "@/components/ui/form-field";
 export * from "@/components/ui/input";

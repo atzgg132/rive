@@ -222,6 +222,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           paidDate: paidAt,
           clientName: invoice.client?.name || "there",
           clientEmail: invoice.client?.email || null,
+          publicTokenEncrypted: invoice.publicTokenEncrypted,
         }).catch((error) => console.error("Paid receipt enqueue failed:", error));
       }
       return { created, duplicate: false, receivedOn };

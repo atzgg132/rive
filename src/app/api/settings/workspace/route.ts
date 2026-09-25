@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest) {
   if (Object.prototype.hasOwnProperty.call(body, "currency")) {
     const currency = typeof body.currency === "string" ? body.currency.trim().toUpperCase() : "";
     if (!isValidWorkspaceCurrency(currency)) {
-      return NextResponse.json({ success: false, message: "Use a valid 3-letter currency code." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Use a valid ISO 4217 currency code." }, { status: 400 });
     }
     data.currency = currency;
   }
