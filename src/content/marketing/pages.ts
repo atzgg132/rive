@@ -79,6 +79,7 @@ export const changelogContent: MarketingPageContent = {
       { title: "Clients & delivery", body: "Manage clients, projects, tasks, and milestones with the dates and records connected to the work." },
       { title: "Agreements", body: "Prepare agreements, share them for review, record acceptance, and connect supported billing actions." },
       { title: "Invoices & expenses", body: "Create invoices, record payments, log expenses, and preserve native amounts across currencies." },
+      { title: "Invoice reminders & receipts", body: "Turn on automatic payment reminders for unpaid invoices and a paid receipt once an invoice is settled, both off by default and pausable per invoice." },
       { title: "Calendar", body: "Review project and task dates in Rive, keep them in sync with Google Calendar, or subscribe through a private Apple Calendar feed." },
       { title: "Weekly summary", body: "Opt in to a short Monday morning email covering what was paid last week, what's outstanding, and what's coming up. Off by default; unsubscribe any time." },
       { title: "Settings", body: "One place for your profile, business and invoice details, default currency and time zone, integrations, password, and sign-in alerts." },

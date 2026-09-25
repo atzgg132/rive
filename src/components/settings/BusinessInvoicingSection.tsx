@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import InvoiceRemindersSettings from "@/components/settings/InvoiceRemindersSettings";
 import { toast } from "sonner";
 import { Button, Input, Textarea } from "@/components/ui";
 import { uploadImage } from "@/utils/clientUploads";
@@ -99,13 +100,14 @@ export function BusinessInvoicingSection({ data }: { data: InvoiceProfileData })
           <label className="text-xs font-semibold text-muted-foreground sm:col-span-2">Payment instructions<Textarea rows={3} value={form.paymentInstructions} onChange={(e) => update("paymentInstructions", e.target.value)} className="mt-2 resize-none" placeholder="Bank details or payment instructions" /></label>
           <label className="text-xs font-semibold text-muted-foreground sm:col-span-2">Default terms<Textarea rows={3} value={form.defaultTerms} onChange={(e) => update("defaultTerms", e.target.value)} className="mt-2 resize-none" placeholder="Payment due within…" /></label>
         </div>
-        {/* Mount point for InvoiceRemindersSettings (PR 2, issue #66) — reminder
-            schedule and pause controls belong here, alongside the rest of
-            invoicing behavior. */}
         <div className="flex justify-end">
           <Button type="submit" disabled={saving || uploading}>{saving ? "Saving…" : "Save business & invoicing"}</Button>
         </div>
       </form>
+      {/* Saves on its own, so it sits outside the form's submit. */}
+      <div className="mt-6 border-t border-border pt-5">
+        <InvoiceRemindersSettings />
+      </div>
     </section>
   );
 }
