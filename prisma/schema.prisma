@@ -61,6 +61,7 @@ model User {
   displayCurrency             String                    @default("USD") @map("display_currency")
   displayCurrencySource       String                    @default("legacy") @map("display_currency_source")
   timeZone                    String                    @default("UTC") @map("time_zone")
+  loginAlertsEnabled          Boolean                   @default(true) @map("login_alerts_enabled")
   onboardingData              Json?                     @map("onboarding_data")
   createdAt                   DateTime                  @default(now()) @map("created_at")
   updatedAt                   DateTime                  @updatedAt @map("updated_at")
@@ -207,6 +208,7 @@ model InvoiceProfile {
   invoicePrefix         String    @default("INV") @map("invoice_prefix")
   paymentInstructions   String?   @map("payment_instructions")
   defaultTerms          String?   @map("default_terms")
+  defaultPaymentTermsDays Int?    @map("default_payment_terms_days")
   // Invoice reminders and paid receipts (#66 PR 2). Off by default; the
   // schedule holds preset step keys validated against
   // INVOICE_REMINDER_STEPS in src/lib/domain-vocabulary.ts.

@@ -20,13 +20,9 @@ type Settings = {
 };
 
 /**
- * Self-contained invoice reminders & receipts settings (#66 PR 2).
- *
- * Deliberately standalone — the Business & invoicing settings page that will
- * host this (PR 1, `feature/settings-page`) has not landed yet. This
- * component takes no required props: it loads and saves its own state so it
- * can be mounted into that page's layout later with no wiring beyond
- * `<InvoiceRemindersSettings />`.
+ * Invoice reminders & paid receipts, shown under Settings -> Business &
+ * invoicing. Loads and saves its own state against
+ * `/api/workflow/invoice-reminders/settings`.
  */
 export default function InvoiceRemindersSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);

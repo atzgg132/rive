@@ -7,6 +7,13 @@
  * product enforces, so the sets live here and both sides import them.
  */
 
+// Shared with onboarding (`src/app/api/onboarding/route.ts`) and Settings'
+// profile section (`src/app/api/settings/profile/route.ts`) — both write
+// `User.businessType` / `User.businessTypes` and must accept exactly the
+// same values.
+export const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"] as const;
+export type BusinessType = (typeof BUSINESS_TYPES)[number];
+
 export const PROJECT_STATUSES = ["active", "paused", "completed", "archived"] as const;
 export const PROJECT_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 // `partially_paid` and `voided` are written by the payment and void routes but

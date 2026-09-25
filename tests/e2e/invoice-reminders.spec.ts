@@ -96,7 +96,7 @@ test.describe("invoice reminders", () => {
     await pool?.end();
   });
 
-  test("settings start off, reject unknown steps, and persist", async ({ request }) => {
+  test("settings start off, reject unknown steps, persist, and show in Settings", async ({ request, page }) => {
     const user = await createUser("settings");
     try {
       const initial = await json(await request.get("/api/workflow/invoice-reminders/settings", { headers: auth(user) }));
@@ -112,6 +112,13 @@ test.describe("invoice reminders", () => {
       expect(saved.ok()).toBe(true);
       const profile = await prisma.invoiceProfile.findUnique({ where: { userId: user.id } });
       expect(profile).toMatchObject({ remindersEnabled: true, reminderSchedule: ["due_plus_1", "due_plus_7"], paidReceiptEnabled: true });
+
+      // The saved state shows in Settings -> Business & invoicing.
+      const url = new URL(test.info().project.use.baseURL || "http://localhost:3000");
+      await page.context().addCookies([{ name: "rive_session", value: sessionToken(user), domain: url.hostname, path: "/", httpOnly: true, sameSite: "Lax" }]);
+      await page.goto("/settings#invoicing");
+      const reminders = page.locator("#invoicing").getByRole("heading", { name: "Invoice reminders" });
+      await expect(reminders).toBeVisible({ timeout: 30_000 });
 
       const anonymous = await request.get("/api/workflow/invoice-reminders/settings");
       expect(anonymous.status()).toBe(401);
