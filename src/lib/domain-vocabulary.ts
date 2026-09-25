@@ -31,11 +31,30 @@ export const EXPENSE_CATEGORIES = [
   "other",
 ] as const;
 
+// Invoice reminder schedule presets (#66 PR 2). Order is the send order:
+// one pre-due nudge, then three post-due follow-ups. `InvoiceProfile.reminderSchedule`
+// and `sendDueInvoiceReminders` (src/utils/invoiceReminders.ts) both validate
+// against this set so a stored step can never drift from what the sender understands.
+export const INVOICE_REMINDER_STEPS = ["due_minus_3", "due_plus_1", "due_plus_7", "due_plus_14"] as const;
+export const DEFAULT_INVOICE_REMINDER_SCHEDULE: string[] = [...INVOICE_REMINDER_STEPS];
+/** Calendar-day offset from the due date for each step; negative is before due. */
+export const INVOICE_REMINDER_STEP_OFFSET_DAYS: Record<(typeof INVOICE_REMINDER_STEPS)[number], number> = {
+  due_minus_3: -3,
+  due_plus_1: 1,
+  due_plus_7: 7,
+  due_plus_14: 14,
+};
+/** Per-invoice send ceiling — at most one email per step, at most one step per day. */
+export const MAX_INVOICE_REMINDERS_PER_INVOICE = 4;
+/** Per-owner daily ceiling across all of their invoices, to bound a single runaway sender. */
+export const MAX_INVOICE_REMINDERS_PER_USER_PER_DAY = 50;
+
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 export type ProjectPriority = (typeof PROJECT_PRIORITIES)[number];
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+export type InvoiceReminderStep = (typeof INVOICE_REMINDER_STEPS)[number];
 
 /** Field length ceilings enforced by the workflow APIs. */
 export const FIELD_LIMITS = {
@@ -63,3 +82,4 @@ export const PROJECT_PRIORITY_SET: ReadonlySet<string> = new Set(PROJECT_PRIORIT
 export const INVOICE_STATUS_SET: ReadonlySet<string> = new Set(INVOICE_STATUSES);
 export const CLIENT_STATUS_SET: ReadonlySet<string> = new Set(CLIENT_STATUSES);
 export const EXPENSE_CATEGORY_SET: ReadonlySet<string> = new Set(EXPENSE_CATEGORIES);
+export const INVOICE_REMINDER_STEP_SET: ReadonlySet<string> = new Set(INVOICE_REMINDER_STEPS);

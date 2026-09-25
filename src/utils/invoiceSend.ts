@@ -87,6 +87,7 @@ export async function reclaimStaleSendingInvoice(
       status: "draft",
       sentAt: null,
       publicTokenHash: null,
+      publicTokenEncrypted: null,
       sentSnapshot: Prisma.JsonNull,
       sentSnapshotAt: null,
     },

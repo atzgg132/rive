@@ -36,13 +36,14 @@ export type ProcessEmailOutboxOptions = {
   deliver?: (email: PreparedEmail) => Promise<EmailResult>;
 };
 
-function encryptPayload(payload: PreparedEmail): string {
+/** Generic AES-256-GCM string encryption on the same key material as outbox payloads. */
+export function encryptOutboxSecret(value: string): string {
   const key = outboxKeys()[0];
   if (!key) throw new Error("Email outbox encryption is not configured.");
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(OUTBOX_ALGORITHM, key.material, iv);
   const encrypted = Buffer.concat([
-    cipher.update(JSON.stringify(payload), "utf8"),
+    cipher.update(value, "utf8"),
     cipher.final(),
   ]);
   const tag = cipher.getAuthTag();
@@ -58,26 +59,31 @@ function decryptWithKey(key: { material: Buffer }, ivValue: string, tagValue: st
   ]).toString("utf8");
 }
 
-function decryptPayload(value: string): PreparedEmail {
+/** Inverse of `encryptOutboxSecret`. Throws on a malformed or undecryptable value. */
+export function decryptOutboxSecret(value: string): string {
   const parts = value.split(".");
   const versioned = parts.length === 4;
   const keyId = versioned ? parts[0] : null;
   const [ivValue, tagValue, encryptedValue] = versioned ? parts.slice(1) : parts;
   if (!ivValue || !tagValue || !encryptedValue || (versioned && !keyId)) {
-    throw new Error("Invalid email outbox payload.");
+    throw new Error("Invalid encrypted value.");
   }
-
   const configuredKeys = outboxKeys();
   const keys = keyId ? configuredKeys.filter((key) => key.id === keyId) : configuredKeys;
-  let decrypted: string | null = null;
   for (const key of keys) {
     try {
-      decrypted = decryptWithKey(key, ivValue, tagValue, encryptedValue);
-      break;
+      return decryptWithKey(key, ivValue, tagValue, encryptedValue);
     } catch {}
   }
-  if (decrypted === null) throw new Error("Email outbox payload cannot be decrypted.");
+  throw new Error("Value cannot be decrypted.");
+}
 
+function encryptPayload(payload: PreparedEmail): string {
+  return encryptOutboxSecret(JSON.stringify(payload));
+}
+
+function decryptPayload(value: string): PreparedEmail {
+  const decrypted = decryptOutboxSecret(value);
   const parsed = JSON.parse(decrypted) as Partial<PreparedEmail>;
   if (!parsed.to || !parsed.type || !parsed.subject || !parsed.html || !parsed.text) {
     throw new Error("Email outbox payload is incomplete.");
