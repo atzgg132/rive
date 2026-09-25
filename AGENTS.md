@@ -131,6 +131,15 @@ has consumed a browser-test job's whole budget with the job otherwise healthy.
 Check where the time went before assuming the change is at fault: if a step sat
 silent and the code-level gates all passed, re-run it.
 
+## Release browser QA
+
+Browser-facing changes get a manual pass on dev.rive.work with the standing QA
+accounts before they are promoted to `main`. Follow
+`docs/qa/release-browser-qa.md`: seed or refresh the QA account, run the
+baseline checklist plus the feature checks for the release, and put the report
+in the promotion PR. Add the release's feature checks to that file in the same
+PR as the feature. Never commit QA credentials.
+
 ## How CI avoids re-running the same tests
 
 `.github/workflows/verify.yml` is the one suite; `Quality` (PRs) and `Deploy`
@@ -238,6 +247,7 @@ work rather than going quiet.
 | Funnels | `docs/funnel-definitions.md` |
 | Local beta | `docs/open-beta-local-testing.md` |
 | AWS | `infrastructure/README.md` |
+| Release QA | `docs/qa/release-browser-qa.md` |
 
 # Codebase questions
 
