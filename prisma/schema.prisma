@@ -63,6 +63,7 @@ model User {
   timeZone                    String                    @default("UTC") @map("time_zone")
   weeklySummaryEnabled        Boolean                   @default(false) @map("weekly_summary_enabled")
   weeklySummaryLastSentAt     DateTime?                 @map("weekly_summary_last_sent_at")
+  loginAlertsEnabled          Boolean                   @default(true) @map("login_alerts_enabled")
   onboardingData              Json?                     @map("onboarding_data")
   createdAt                   DateTime                  @default(now()) @map("created_at")
   updatedAt                   DateTime                  @updatedAt @map("updated_at")
@@ -209,6 +210,7 @@ model InvoiceProfile {
   invoicePrefix       String   @default("INV") @map("invoice_prefix")
   paymentInstructions String?  @map("payment_instructions")
   defaultTerms        String?  @map("default_terms")
+  defaultPaymentTermsDays Int? @map("default_payment_terms_days")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 

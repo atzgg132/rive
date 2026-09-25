@@ -4,16 +4,8 @@ import { useEffect, useState } from "react";
 import { Mail } from "lucide-react";
 
 /**
- * Self-contained Notifications-section control for the opt-in weekly
- * business summary email (issue #66, PR 5).
- *
- * Built ahead of the `/settings` Notifications section that PR 1 (a parallel
- * branch, `feature/settings-page`) is adding — see the PR body for this
- * branch. It takes no required props and manages its own load/save against
- * `/api/workflow/weekly-summary`, so it can be dropped into that Notifications
- * section (next to the login-alerts toggle PR 1 adds) once that PR lands,
- * with no wiring beyond `<WeeklySummarySettings />`. It is not mounted
- * anywhere in this PR.
+ * Settings -> Notifications control for the opt-in weekly business summary
+ * email. Loads and saves its own state against `/api/workflow/weekly-summary`.
  */
 export function WeeklySummarySettings() {
   const [loading, setLoading] = useState(true);

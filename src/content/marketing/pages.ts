@@ -80,7 +80,8 @@ export const changelogContent: MarketingPageContent = {
       { title: "Agreements", body: "Prepare agreements, share them for review, record acceptance, and connect supported billing actions." },
       { title: "Invoices & expenses", body: "Create invoices, record payments, log expenses, and preserve native amounts across currencies." },
       { title: "Calendar", body: "Review project and task dates in Rive, keep them in sync with Google Calendar, or subscribe through a private Apple Calendar feed." },
-      { title: "Weekly summary", body: "Opt in to a short Monday morning email covering what was paid last week, what's outstanding, and what's coming up. Off by default; one click to stop." },
+      { title: "Weekly summary", body: "Opt in to a short Monday morning email covering what was paid last week, what's outstanding, and what's coming up. Off by default; unsubscribe any time." },
+      { title: "Settings", body: "One place for your profile, business and invoice details, default currency and time zone, integrations, password, and sign-in alerts." },
     ] },
     { eyebrow: "Starting and showing", title: "Bring records in. Put selected work out.", cards: [
       { title: "Import", body: "Preview supported CSV and XLSX records, with relationship review before approval." },

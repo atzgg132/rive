@@ -28,7 +28,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import CommandPalette from "@/components/dashboard/CommandPalette";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
-import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
 import { type ActivationPlan } from "@/lib/activation";
 import { GuidedExperience, openHelpFromMobileShell } from "@/components/dashboard/GuidedExperience";
@@ -265,7 +264,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Plus className="h-5 w-5" />
               </Button>
             )}
-            <CurrencySwitcher compact />
             <div className="max-[359px]:hidden"><ThemeToggle /></div>
             <Button variant="ghost" size="icon" onClick={() => setCommandPaletteOpen(true)} aria-label="Search workspace" aria-haspopup="dialog" aria-expanded={commandPaletteOpen} className="text-muted-foreground"><Search className="h-5 w-5" /></Button><Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="hidden min-[390px]:inline-flex text-muted-foreground">
               <CircleHelp className="h-5 w-5" />
@@ -312,7 +310,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 New client work
               </Button>
             )}
-            <CurrencySwitcher />
             <ThemeToggle />
             <GuidedExperience activation={activation} pathname={pathname} onActivationChange={setActivation} onLayerVisibilityChange={setGuidanceLayerActive} />
             <div className="relative">

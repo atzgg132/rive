@@ -8,6 +8,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Settings,
   X,
 } from "lucide-react";
 import { Avatar, Badge, Button } from "@/components/ui";
@@ -321,6 +322,14 @@ export default function DashboardSidebar({
                   <p className="break-words whitespace-normal text-sm font-semibold text-foreground" title={user?.name || undefined}>{user?.name || "Workspace account"}</p>
                   <p className="mt-0.5 break-words whitespace-normal text-xs text-muted-foreground" title={user?.email || undefined}>{user?.email || ""}</p>
                   {user?.plan ? <Badge variant="outline" className="mt-2 capitalize">{user.plan}</Badge> : null}
+                  <Link
+                    href="/settings"
+                    onClick={() => setIdentityPopoverOpen(false)}
+                    className="mt-3 flex w-full items-center gap-2 px-0 text-xs font-semibold text-foreground hover:underline"
+                  >
+                    <Settings className="h-4 w-4" aria-hidden="true" />
+                    Settings
+                  </Link>
                   <Button
                     type="button"
                     variant="ghost"
@@ -329,7 +338,7 @@ export default function DashboardSidebar({
                       setIdentityPopoverOpen(false);
                       void onLogout();
                     }}
-                    className="mt-3 w-full justify-start px-0 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                    className="mt-2 w-full justify-start px-0 text-xs font-semibold text-destructive hover:bg-destructive/10"
                   >
                     <LogOut className="h-4 w-4" aria-hidden="true" />
                     Sign out
@@ -338,17 +347,26 @@ export default function DashboardSidebar({
               ) : null}
             </div>
             {!collapsed ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="default"
-                onClick={() => void onLogout()}
-                aria-label="Sign out"
-                className="w-full justify-start px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="h-5 w-5" aria-hidden="true" />
-                <span>Sign out</span>
-              </Button>
+              <>
+                <Link
+                  href="/settings"
+                  className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <Settings className="h-5 w-5" aria-hidden="true" />
+                  <span>Settings</span>
+                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="default"
+                  onClick={() => void onLogout()}
+                  aria-label="Sign out"
+                  className="w-full justify-start px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-5 w-5" aria-hidden="true" />
+                  <span>Sign out</span>
+                </Button>
+              </>
             ) : null}
           </div>
         </div>
@@ -407,6 +425,14 @@ export default function DashboardSidebar({
 
               <div className="mt-6 flex shrink-0 flex-col gap-2 border-t border-border pt-4">
                 <IdentityBlock user={user} />
+                <Link
+                  href="/settings"
+                  onClick={() => onMobileOpenChange(false)}
+                  className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <Settings className="h-5 w-5" aria-hidden="true" />
+                  <span>Settings</span>
+                </Link>
                 <Button
                   type="button"
                   variant="ghost"

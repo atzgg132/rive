@@ -40,6 +40,19 @@ async function mockCurrencyWorkspace(page: Page) {
       displayCurrency = request.postDataJSON().displayCurrency;
       return json(route, { success: true, displayCurrency });
     }
+    if (pathname === "/api/settings") {
+      return json(route, {
+        success: true,
+        user: {
+          id: "user-1", email: "currency@rive.test", name: "Currency Tester", avatarUrl: null, profession: null,
+          businessType: "freelancer", businessTypes: ["freelancer"], currency: "USD", displayCurrency, displayCurrencySource: "user",
+          timeZone: "UTC", loginAlertsEnabled: true, isGoogleOnlyAccount: false,
+        },
+        invoiceProfile: null,
+        connectorConnections: [],
+        connectorAvailability: { googleCalendar: false, zohoBooks: false },
+      });
+    }
     if (pathname === "/api/rates") {
       return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { INR: 83, EUR: 0.9, GBP: 0.8 } } });
     }
@@ -124,18 +137,23 @@ test("mixed invoices use a persistent display currency without changing native a
   await mockCurrencyWorkspace(page);
   await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
 
-  const selector = page.getByLabel("Display currency").last();
-  await expect(selector).toHaveValue("INR", { timeout: 20_000 });
+  await expect(page.getByText(/₹16,600\.00/).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Multiple currencies")).toHaveCount(0);
-  await expect(page.getByText(/₹16,600\.00/).first()).toBeVisible();
   await expect(page.getByText(/Originally \$100\.00/)).toBeVisible();
+  // Display currency now lives in Settings, not the header.
+  await expect(page.getByLabel("Display currency")).toHaveCount(0);
 
+  await page.goto("/settings#preferences", { waitUntil: "domcontentloaded" });
+  const selector = page.getByLabel("Display currency");
+  await expect(selector).toHaveValue("INR", { timeout: 20_000 });
   await selector.selectOption("USD");
   await expect(selector).toHaveValue("USD");
-  await expect(page.getByText("$200.00", { exact: true }).first()).toBeVisible();
 
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("Display currency").last()).toHaveValue("USD", { timeout: 20_000 });
+  await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("$200.00", { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+
+  await page.goto("/settings#preferences", { waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel("Display currency")).toHaveValue("USD", { timeout: 20_000 });
 });
 
 test("invoice rows expose page size choices and keep headers sticky", async ({ page }) => {
@@ -199,9 +217,9 @@ test("project budgets follow the selected display currency on the list and detai
 test("currency options stay readable in dark mode", async ({ page }) => {
   await mockCurrencyWorkspace(page);
   await page.addInitScript(() => window.localStorage.setItem("rive-color-theme", "dark"));
-  await page.goto("/workflow/revenue", { waitUntil: "domcontentloaded" });
+  await page.goto("/settings#preferences", { waitUntil: "domcontentloaded" });
 
-  const selector = page.getByLabel("Display currency").last();
+  const selector = page.getByLabel("Display currency");
   const option = selector.locator("option").first();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect(selector).toHaveValue("INR", { timeout: 20_000 });
