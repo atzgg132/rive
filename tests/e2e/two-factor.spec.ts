@@ -331,6 +331,7 @@ test.describe("two-factor authentication", () => {
       await page.locator("#login-password").fill(PASSWORD);
       await page.getByTestId("login-submit").click();
       await expect(page).toHaveURL(/\/login\/two-factor/, { timeout: 30_000 });
+      await expect(page.locator('form[data-testid="two-factor-form"][data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
       await page.locator("#two-factor-code").fill(totpCode(manualKey, Date.now() + 30_000) || "");
       await page.getByTestId("two-factor-submit").click();
       await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });

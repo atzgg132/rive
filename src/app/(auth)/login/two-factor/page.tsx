@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, FormField, Input } from "@/components/ui";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { AuthHeading } from "@/components/auth/AuthHeading";
@@ -15,6 +15,9 @@ export default function TwoFactorLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [expired, setExpired] = useState(false);
+  // Until hydration the form would post natively and drop the code, so the
+  // submit stays disabled until the handler is attached.
+  const hydrated = useSyncExternalStore(() => () => undefined, () => true, () => false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -72,7 +75,7 @@ export default function TwoFactorLoginPage() {
             : "Open your authenticator app and enter the 6-digit code for your rive. account."
         }
       />
-      <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-5" aria-busy={loading} data-testid="two-factor-form">
+      <form method="post" onSubmit={handleSubmit} className="flex flex-col gap-5" aria-busy={loading} data-testid="two-factor-form" data-hydrated={hydrated ? "true" : "false"}>
         {error ? <Alert variant="destructive" className="text-sm" data-testid="two-factor-alert">{error}</Alert> : null}
         <FormField label={useRecoveryCode ? "Recovery code" : "Authenticator code"} htmlFor="two-factor-code">
           <Input
@@ -91,7 +94,7 @@ export default function TwoFactorLoginPage() {
             data-testid="two-factor-input"
           />
         </FormField>
-        <button type="submit" className={authSubmitClassName} disabled={loading} aria-busy={loading} data-testid="two-factor-submit">
+        <button type="submit" className={authSubmitClassName} disabled={loading || !hydrated} aria-busy={loading} data-testid="two-factor-submit">
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

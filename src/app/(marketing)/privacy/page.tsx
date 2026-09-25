@@ -64,6 +64,7 @@ export default function PrivacyPage() {
                   <li>Detect and prevent spam, abuse, or unauthorized access.</li>
                 </ul>
                 <p>We <strong>never sell your data</strong> or share it with third-party advertisers.</p>
+                <p><strong>Service emails.</strong> We send a small number of account-related emails: a login-alert notice each time your account is signed in to, and, only if you turn it on, a weekly business summary sent Monday mornings in your local time. These are not marketing email. Both can be turned off from Settings → Notifications; the weekly summary can also be turned off from the unsubscribe link in the email itself.</p>
               </Section>
 
               <Section id="google" title="4. Google user data">

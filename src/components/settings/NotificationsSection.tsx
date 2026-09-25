@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui";
+import { WeeklySummarySettings } from "@/components/settings/WeeklySummarySettings";
 
 export function NotificationsSection({ loginAlertsEnabled }: { loginAlertsEnabled: boolean }) {
   const [enabled, setEnabled] = useState(loginAlertsEnabled);
@@ -39,9 +40,9 @@ export function NotificationsSection({ loginAlertsEnabled }: { loginAlertsEnable
         </div>
         <Switch checked={enabled} onCheckedChange={(value) => void toggle(Boolean(value))} disabled={saving} aria-label="Login alert emails" />
       </div>
-      {/* Mount point for InvoiceRemindersSettings and WeeklySummarySettings
-          (PRs 2 and 5, issue #66) — each is its own opt-in email preference
-          block; add them here as additional rows in this section. */}
+      <div className="mt-5">
+        <WeeklySummarySettings />
+      </div>
     </section>
   );
 }
