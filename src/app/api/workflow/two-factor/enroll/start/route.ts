@@ -3,6 +3,7 @@ import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { rateLimit } from "@/utils/rateLimit";
 import { buildOtpAuthUri, encryptTwoFactorSecret, formatManualKey, generateTotpSecret } from "@/utils/twoFactor";
+import { isProductionAdminEnvironment } from "@/utils/adminTotp";
 
 // Starts (or restarts) enrollment: generates a fresh secret, stores it
 // encrypted, but does not enable 2FA yet — enroll/confirm does that once a
@@ -30,7 +31,9 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    otpauthUri: buildOtpAuthUri(secret, user.email),
+    // Outside production the authenticator entry says which environment it is,
+    // so a dev code is never mistaken for the real account's.
+    otpauthUri: buildOtpAuthUri(secret, user.email, isProductionAdminEnvironment(process.env.APP_ENV) ? "rive.work" : `rive.work (${(process.env.APP_ENV || "local").toLowerCase()})`),
     manualKey: formatManualKey(secret),
   });
 }

@@ -87,6 +87,8 @@ test.describe("settings", () => {
 
       const invalid = await request.patch("/api/settings/workspace", { headers, data: { currency: "EURO" } });
       expect(invalid.status()).toBe(400);
+      const notIso = await request.patch("/api/settings/workspace", { headers, data: { currency: "ZZZ" } });
+      expect(notIso.status()).toBe(400);
       const badZone = await request.patch("/api/settings/workspace", { headers, data: { timeZone: "Mars/Olympus" } });
       expect(badZone.status()).toBe(400);
 
@@ -171,6 +173,34 @@ test.describe("settings", () => {
       const alerts = await request.patch("/api/settings/notifications", { headers: auth(sessionToken(user, user.sessionVersion + 2)), data: { loginAlertsEnabled: false } });
       expect(alerts.ok()).toBe(true);
       expect((await prisma.user.findUnique({ where: { id: user.id } }))?.loginAlertsEnabled).toBe(false);
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
+    }
+  });
+
+  test("sign out everywhere asks in a styled dialog, and the mobile menu fits a short screen", async ({ page, context, baseURL }) => {
+    const user = await createUser("ui");
+    try {
+      await authenticateBrowser(context, baseURL!, sessionToken(user));
+      await page.goto("/settings#security");
+      await page.getByRole("button", { name: "Sign out everywhere else" }).click({ timeout: 30_000 });
+      const dialog = page.getByRole("dialog", { name: "Sign out of every other device?" });
+      await expect(dialog).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      expect((await prisma.user.findUnique({ where: { id: user.id } }))?.sessionVersion).toBe(user.sessionVersion);
+
+      await page.setViewportSize({ width: 375, height: 640 });
+      await page.getByRole("button", { name: "Open navigation" }).click();
+      const drawer = page.getByRole("dialog", { name: "Workspace navigation" });
+      const lastLink = drawer.getByRole("navigation", { name: "Mobile workspace navigation" }).getByRole("link").last();
+      const settingsLink = drawer.getByRole("link", { name: "Settings" });
+      await expect(settingsLink).toBeAttached();
+      const linkBox = await lastLink.boundingBox();
+      const settingsBox = await settingsLink.boundingBox();
+      expect(linkBox && settingsBox).toBeTruthy();
+      // The account block sits below the links instead of on top of them.
+      expect(settingsBox!.y).toBeGreaterThanOrEqual(linkBox!.y + linkBox!.height);
     } finally {
       await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
     }

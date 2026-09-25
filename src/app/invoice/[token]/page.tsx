@@ -56,8 +56,11 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
         <div className="inverse-block p-8">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
-              {snapshot.sender.logoUrl ? <Image loader={({ src }) => src} unoptimized src={snapshot.sender.logoUrl} width={160} height={40} alt="" className="mb-5 h-10 max-w-40 object-contain object-left" /> : <p className="mb-5 text-xl font-bold tracking-tight">{snapshot.sender.name}</p>}
+              {snapshot.sender.logoUrl ? <Image loader={({ src }) => src} unoptimized src={snapshot.sender.logoUrl} width={160} height={40} alt="" className="mb-3 h-10 max-w-40 object-contain object-left" /> : null}
+              <p className="mb-2 text-xl font-bold tracking-tight">{snapshot.sender.name}</p>
+              {snapshot.sender.address ? <p className="whitespace-pre-line text-sm opacity-80">{snapshot.sender.address}</p> : null}
               <p className="text-sm opacity-80">{snapshot.sender.email}{snapshot.sender.phone ? ` · ${snapshot.sender.phone}` : ""}</p>
+              {snapshot.sender.taxId ? <p className="text-sm opacity-80">Tax ID: {snapshot.sender.taxId}</p> : null}
             </div>
             <div className="text-right">
               <Kicker className="text-background">Invoice</Kicker>
@@ -94,7 +97,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
           <div className="ml-auto mt-6 max-w-xs space-y-2 text-sm"><div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="font-mono tabular-nums">{money(snapshot.subtotal)}</span></div>{Number(snapshot.discountAmount || 0) > 0 ? <div className="flex justify-between text-muted-foreground"><span>Discount{Number(snapshot.discountRate || 0) > 0 ? ` (${snapshot.discountRate}%)` : ""}</span><span className="font-mono tabular-nums">-{money(snapshot.discountAmount || "0")}</span></div> : null}{Number(snapshot.taxRate) > 0 ? <div className="flex justify-between text-muted-foreground"><span>Tax ({snapshot.taxRate}%)</span><span className="font-mono tabular-nums">{money(snapshot.taxAmount)}</span></div> : null}<div className="flex justify-between border-t border-border pt-3 text-base font-bold"><span>Total</span><span className="font-mono tabular-nums">{money(snapshot.total)}</span></div></div>
         </div>
 
-        {snapshot.notes || snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <div className="grid gap-5 px-6 py-8 sm:grid-cols-2 sm:px-10"><div>{snapshot.notes ? <><Kicker tone="muted">Notes</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.notes}</p></> : null}</div><div>{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <><Kicker tone="muted">Payment information</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms}</p></> : null}</div></div> : null}
+        {snapshot.notes || snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <div className="grid gap-5 px-6 py-8 sm:grid-cols-2 sm:px-10"><div>{snapshot.notes ? <><Kicker tone="muted">Notes</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.notes}</p></> : null}</div><div>{snapshot.sender.paymentInstructions || snapshot.sender.defaultTerms ? <><Kicker tone="muted">Payment information</Kicker>{snapshot.sender.paymentInstructions ? <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.sender.paymentInstructions}</p> : null}{snapshot.sender.defaultTerms ? <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{snapshot.sender.defaultTerms}</p> : null}</> : null}</div></div> : null}
         <div className="border-t border-border px-6 py-5 text-center text-xs text-muted-foreground sm:px-10">This invoice was shared securely by {snapshot.sender.name}. Verify payment details with the sender before transferring funds. · <Link href="/" className="text-primary hover:underline">rive.</Link></div>
       </Card>
     </main>

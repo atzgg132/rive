@@ -3,6 +3,7 @@ import "server-only";
 import nodemailer from "nodemailer";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { prisma } from "@/utils/db";
+import { formatMoney } from "@/lib/currency";
 
 export type EmailType =
   | "waitlist_joined"
@@ -887,8 +888,9 @@ export function buildInvoiceReminderEmail(input: {
     ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
     : "not specified";
   const safeClientName = escapeHtml(input.clientName);
+  const amount = formatMoney(Number(input.total), input.currency);
   const intro = (REMINDER_STEP_INTRO[input.step] || REMINDER_STEP_INTRO.due_plus_1)(input.senderName);
-  const asideParts = ["The invoice email is a reminder notice. Please verify the sender and payment details using a trusted channel before paying."];
+  const asideParts = ["Please verify the sender and payment details through a trusted channel before paying."];
   if (input.unsubscribeUrl) {
     asideParts.push(`<a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#1D4ED8;text-decoration:underline">Stop reminder emails for this business</a>.`);
   }
@@ -900,13 +902,13 @@ export function buildInvoiceReminderEmail(input: {
       eyebrow: REMINDER_STEP_EYEBROW[input.step] || "payment reminder",
       title: `Invoice ${input.invoiceNumber}`,
       intro,
-      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, this is an automated reminder for an outstanding invoice.<br><br>Amount due: <strong style="color:#181511">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Due date: <strong style="color:#181511">${escapeHtml(due)}</strong></p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, this is an automated reminder for an outstanding invoice.<br><br>Amount due: <strong style="color:#181511">${escapeHtml(amount)}</strong><br>Due date: <strong style="color:#181511">${escapeHtml(due)}</strong></p>`,
       action: input.publicUrl ? "View invoice" : undefined,
       actionUrl: input.publicUrl,
       aside: asideParts.join(" "),
       recipient: input.to,
     }),
-    text: `Reminder: invoice ${input.invoiceNumber} from ${input.senderName}.\n\n${intro}\n\nAmount due: ${input.currency} ${input.total}\nDue: ${due}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}${input.unsubscribeUrl ? `\n\nStop reminder emails for this business: ${input.unsubscribeUrl}` : ""}`,
+    text: `Reminder: invoice ${input.invoiceNumber} from ${input.senderName}.\n\n${intro}\n\nAmount due: ${amount}\nDue: ${due}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}${input.unsubscribeUrl ? `\n\nStop reminder emails for this business: ${input.unsubscribeUrl}` : ""}`,
   };
 }
 
@@ -923,9 +925,11 @@ export function buildInvoicePaidReceiptEmail(input: {
   currency: string;
   paidDate: Date;
   senderName: string;
+  publicUrl?: string;
 }): PreparedEmail {
   const paid = input.paidDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
   const safeClientName = escapeHtml(input.clientName);
+  const amount = formatMoney(Number(input.total), input.currency);
   return {
     to: input.to,
     type: "invoice_paid_receipt",
@@ -934,11 +938,13 @@ export function buildInvoicePaidReceiptEmail(input: {
       eyebrow: "payment received",
       title: `Invoice ${input.invoiceNumber} is paid in full.`,
       intro: `${input.senderName} has recorded your payment. This is your receipt.`,
-      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, thank you for your payment.<br><br>Amount paid: <strong style="color:#181511">${escapeHtml(input.currency)} ${escapeHtml(input.total)}</strong><br>Paid on: <strong style="color:#181511">${escapeHtml(paid)}</strong></p>`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, thank you for your payment.<br><br>Amount paid: <strong style="color:#181511">${escapeHtml(amount)}</strong><br>Paid on: <strong style="color:#181511">${escapeHtml(paid)}</strong></p>`,
+      action: input.publicUrl ? "View invoice" : undefined,
+      actionUrl: input.publicUrl,
       aside: "This receipt confirms the invoice is fully paid. Keep it for your records.",
       recipient: input.to,
     }),
-    text: `Invoice ${input.invoiceNumber} is paid in full.\n\nAmount paid: ${input.currency} ${input.total}\nPaid on: ${paid}\n\nThis receipt confirms the invoice is fully paid.`,
+    text: `Invoice ${input.invoiceNumber} is paid in full.\n\nAmount paid: ${amount}\nPaid on: ${paid}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}\n\nThis receipt confirms the invoice is fully paid.`,
   };
 }
 

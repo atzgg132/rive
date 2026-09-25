@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, Button, Input } from "@/components/ui";
 import { BUSINESS_TYPES } from "@/lib/domain-vocabulary";
@@ -24,6 +24,7 @@ export type ProfileSectionData = {
 };
 
 export function ProfileSection({ data }: { data: ProfileSectionData }) {
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(data.name || "");
   const [profession, setProfession] = useState(data.profession || "");
   const [businessTypes, setBusinessTypes] = useState<string[]>(data.businessTypes.length ? data.businessTypes : []);
@@ -63,6 +64,8 @@ export function ProfileSection({ data }: { data: ProfileSectionData }) {
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.success) throw new Error(payload?.message || "Profile could not be saved.");
       toast.success("Profile saved.");
+      // The workspace shell shows the name and photo in the sidebar; let it update without a reload.
+      window.dispatchEvent(new CustomEvent("rive:profile-updated", { detail: { name: payload.user?.name ?? name, avatar_url: payload.user?.avatarUrl ?? null } }));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Profile could not be saved.");
     } finally {
@@ -82,11 +85,13 @@ export function ProfileSection({ data }: { data: ProfileSectionData }) {
             <Avatar size="lg" className="h-16 w-16 text-lg">{(name || data.email || "?").slice(0, 1).toUpperCase()}</Avatar>
           )}
           <div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-none border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-accent">
+            {/* A real button, so the upload is reachable by keyboard; the file input stays hidden. */}
+            <Button type="button" variant="outline" size="sm" onClick={() => photoInputRef.current?.click()} disabled={uploading}>
               {uploading ? "Uploading…" : "Change photo"}
-              <input type="file" accept="image/*" className="hidden" onChange={(event) => void onPickAvatar(event)} disabled={uploading} />
-            </label>
+            </Button>
+            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" tabIndex={-1} aria-hidden="true" onChange={(event) => void onPickAvatar(event)} disabled={uploading} />
             {avatarUrl ? <Button type="button" variant="ghost" size="sm" className="ml-2 text-muted-foreground" onClick={() => setAvatarUrl("")}>Remove</Button> : null}
+            <p className="mt-2 max-w-sm text-xs text-muted-foreground">Also used as your portfolio photo. It appears publicly only if you turn on &ldquo;Show on public portfolio&rdquo; in Portfolio Studio.</p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">

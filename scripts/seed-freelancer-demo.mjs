@@ -28,8 +28,18 @@ const connectionString = process.env.DATABASE_URL
 const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-function stableUuid(key) {
+/* Ids are scoped to the target account so seeding a second account can never
+   upsert (and so re-home) the first one's demo rows. Accounts seeded before
+   scoping keep their original unscoped ids; see resolveIdScope. */
+let idScope = "";
+
+function unscopedUuid(key) {
   const hex = crypto.createHash("sha256").update(`rive-freelancer-demo:${key}`).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function stableUuid(key) {
+  const hex = crypto.createHash("sha256").update(`rive-freelancer-demo:${idScope}${key}`).digest("hex");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
@@ -310,7 +320,17 @@ const calendarEventDefinitions = [
   ["finance-review", "Monthly finance & pipeline review", "Reconcile expenses, follow up overdue invoices, and plan August capacity.", "2026-08-01T10:00:00+05:30", "2026-08-01T11:00:00+05:30", null, null, null],
 ];
 
+async function resolveIdScope(user) {
+  const legacy = await prisma.client.findUnique({ where: { id: unscopedUuid(`client:${clients[0].key}`) }, select: { userId: true } });
+  // Seeded before scoping, by this same account: keep its ids so re-running stays idempotent.
+  idScope = legacy?.userId === user.id ? "" : `${user.id}:`;
+  if (legacy && legacy.userId !== user.id) {
+    console.log("Unscoped demo ids belong to another account; using account-scoped ids so its records are untouched.");
+  }
+}
+
 async function seed(user) {
+  await resolveIdScope(user);
   const clientIds = Object.fromEntries(clients.map((client) => [client.key, stableUuid(`client:${client.key}`)]));
   const projectIds = Object.fromEntries(projects.map((project) => [project.key, stableUuid(`project:${project.key}`)]));
   const milestoneIds = Object.fromEntries(milestoneDefinitions.map(([key]) => [key, stableUuid(`milestone:${key}`)]));

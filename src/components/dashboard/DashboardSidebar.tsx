@@ -26,6 +26,7 @@ export interface DashboardSidebarUser {
   name?: string | null;
   email?: string | null;
   plan?: string | null;
+  avatar_url?: string | null;
 }
 
 interface DashboardSidebarProps {
@@ -42,7 +43,18 @@ interface DashboardSidebarProps {
 }
 
 function initials(name: string | null | undefined): string {
-  return name?.trim().substring(0, 2) || "U";
+  const words = name?.trim().split(/\s+/).filter(Boolean) || [];
+  if (!words.length) return "U";
+  if (words.length === 1) return words[0].substring(0, 2);
+  return `${words[0][0]}${words[words.length - 1][0]}`;
+}
+
+function AvatarFace({ user }: { user: DashboardSidebarUser | null }) {
+  if (user?.avatar_url) {
+    // eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from our own asset route
+    return <img src={user.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />;
+  }
+  return <span>{initials(user?.name)}</span>;
 }
 
 function identityLabel(user: DashboardSidebarUser | null): string {
@@ -91,7 +103,7 @@ function IdentityBlock({
         data-sidebar-identity
       >
         <Avatar size="md" className="pointer-events-none" aria-hidden="true">
-          <span>{initials(user?.name)}</span>
+          <AvatarFace user={user} />
         </Avatar>
       </Button>
     );
@@ -101,7 +113,7 @@ function IdentityBlock({
     <div className="min-w-0 px-3 py-2" data-sidebar-identity>
       <div className="flex min-w-0 items-center gap-3" title={label}>
         <Avatar size="md" aria-hidden="true">
-          <span>{initials(user?.name)}</span>
+          <AvatarFace user={user} />
         </Avatar>
         <div className="min-w-0 flex-1">
           <span className="block truncate whitespace-nowrap text-sm font-semibold text-foreground" title={user?.name || "Workspace account"}>
@@ -405,7 +417,8 @@ export default function DashboardSidebar({
                 </Button>
               </div>
 
-              <nav className="flex min-h-0 flex-1 flex-col">
+              {/* No min-h-0: on short screens the drawer scrolls instead of letting the links run under the account block. */}
+              <nav className="flex flex-1 flex-col">
                 {engagementFlowEnabled ? (
                   <Button
                     type="button"

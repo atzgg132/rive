@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AlertCircle, RefreshCw } from "lucide-react";
-import { Badge, Button } from "@/components/ui";
+import { Badge, Button, useConfirm } from "@/components/ui";
 import { CalendarConnectionsPanel } from "@/components/settings/CalendarConnectionsPanel";
 
 type ZohoConnection = {
@@ -24,6 +24,7 @@ function statusVariant(status: string): "success" | "warning" | "destructive" {
 function ZohoBooksPanel({ available }: { available: boolean }) {
   const [connections, setConnections] = useState<ZohoConnection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirm, confirmDialog] = useConfirm();
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -65,7 +66,13 @@ function ZohoBooksPanel({ available }: { available: boolean }) {
   };
 
   const disconnect = async (connectionId: string) => {
-    if (!window.confirm("Disconnect Zoho Books? Nothing already imported into rive. is removed.")) return;
+    const confirmed = await confirm({
+      title: "Disconnect Zoho Books?",
+      description: "Nothing already imported into rive. is removed.",
+      confirmLabel: "Disconnect",
+      destructive: true,
+    });
+    if (!confirmed) return;
     const response = await fetch(`/api/connectors?id=${encodeURIComponent(connectionId)}`, { method: "DELETE" });
     const data = await response.json();
     if (!response.ok) return toast.error(data.message || "The connection could not be removed.");
@@ -97,6 +104,7 @@ function ZohoBooksPanel({ available }: { available: boolean }) {
           {connection.lastError ? <div className="mt-2 flex gap-2 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{connection.lastError}</div> : null}
         </div>
       ))}
+      {confirmDialog}
     </section>
   );
 }
@@ -105,7 +113,7 @@ export function IntegrationsSection({ zohoBooksAvailable }: { zohoBooksAvailable
   return (
     <section id="integrations" className="scroll-mt-24 rounded-none border border-border bg-card p-5">
       <h2 className="font-semibold">Integrations</h2>
-      <p className="mt-1 text-xs text-muted-foreground">Google Calendar, Apple Calendar, and Zoho Books in one place.</p>
+      <p className="mt-1 text-xs text-muted-foreground">{zohoBooksAvailable ? "Google Calendar, Apple Calendar, and Zoho Books in one place." : "Calendar connections in one place."}</p>
       <div className="mt-5 space-y-4">
         <CalendarConnectionsPanel />
         <ZohoBooksPanel available={zohoBooksAvailable} />

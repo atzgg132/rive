@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Mail } from "lucide-react";
+import { Switch } from "@/components/ui";
 
 /**
  * Settings -> Notifications control for the opt-in weekly business summary
@@ -55,33 +55,21 @@ export function WeeklySummarySettings() {
   }
 
   return (
-    <div className="flex items-start justify-between gap-4 rounded-none border border-border bg-card p-4" data-testid="weekly-summary-settings">
-      <div className="flex items-start gap-3">
-        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-        <div>
-          <p className="text-sm font-bold text-foreground">Weekly business summary</p>
-          <p className="mt-0.5 max-w-md text-xs text-muted-foreground">
-            A Monday morning email covering what was paid last week, what&apos;s outstanding, and what&apos;s coming up in the next 7 days. Off by default.
-          </p>
-          {lastSentAt && (
-            <p className="mt-1 text-xs text-muted-foreground">Last sent {new Date(lastSentAt).toLocaleDateString()}.</p>
-          )}
-          {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
-        </div>
+    <div className="flex items-center justify-between gap-3" data-testid="weekly-summary-settings">
+      <div>
+        <p className="text-sm font-semibold">Weekly business summary</p>
+        <p className="text-xs text-muted-foreground">
+          A Monday morning email: what was paid last week, what&apos;s outstanding, and what&apos;s coming up in the next 7 days.
+        </p>
+        {lastSentAt && <p className="mt-1 text-xs text-muted-foreground">Last sent {new Date(lastSentAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}.</p>}
+        {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={enabled}
-        aria-label="Weekly business summary emails"
+      <Switch
+        checked={enabled}
+        onCheckedChange={(value) => void toggle(Boolean(value))}
         disabled={loading || saving}
-        onClick={() => toggle(!enabled)}
-        className={`relative h-6 w-11 shrink-0 rounded-none border transition-colors disabled:opacity-55 ${enabled ? "border-primary bg-primary" : "border-border bg-muted"}`}
-      >
-        <span
-          className={`absolute top-0.5 h-4 w-4 rounded-none bg-card transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`}
-        />
-      </button>
+        aria-label="Weekly business summary emails"
+      />
     </div>
   );
 }

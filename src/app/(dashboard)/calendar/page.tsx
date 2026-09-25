@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ContextualEmptyState, Input, PageHeader, Select, Switch, Tabs, Textarea } from "@/components/ui";
+import { Button, ContextualEmptyState, Dialog, DialogContent, DialogTitle, Input, PageHeader, Select, Switch, Tabs, Textarea } from "@/components/ui";
 
 import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -786,7 +786,16 @@ function ValueCard({ icon, tone, value, title, description }: { icon: ReactNode;
 }
 
 function ModalShell({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
-  return <div className="fixed inset-0 z-[100] grid place-items-center bg-foreground/50 p-4 backdrop-blur-sm" onMouseDown={onClose}><div className={`max-h-[90vh] w-full overflow-y-auto rounded-none border border-border bg-popover p-5 shadow-overlay ${wide ? "max-w-2xl" : "max-w-lg"}`} onMouseDown={(event) => event.stopPropagation()}><div className="mb-5 flex items-start justify-between gap-4"><h2 className="text-lg font-extrabold tracking-[-0.03em] text-foreground">{title}</h2><Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></Button></div>{children}</div></div>;
+  // The shared dialog primitive supplies the focus trap, Escape to close,
+  // aria-modal, and returning focus to the control that opened it.
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className={`max-h-[90vh] overflow-y-auto p-5 ${wide ? "max-w-2xl" : "max-w-lg"}`}>
+        <DialogTitle className="mb-5 pr-8 text-lg font-extrabold tracking-[-0.03em] text-foreground">{title}</DialogTitle>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function MonthView({ rangeStart, groupedEvents, onCreate, onSelect }: { rangeStart: Date; groupedEvents: Map<string, CalendarEvent[]>; onCreate: (date: Date) => void; onSelect: (event: CalendarEvent) => void }) {

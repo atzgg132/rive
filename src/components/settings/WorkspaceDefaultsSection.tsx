@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
-import { Alert, Button, Input, Select } from "@/components/ui";
+import { Alert, Button, Select } from "@/components/ui";
+import { DISPLAY_CURRENCIES } from "@/lib/currency";
+import { isValidWorkspaceCurrency, workspaceCurrencyOptions } from "@/lib/settingsDomain";
 import { supportedTimeZones } from "@/lib/calendar-time";
 
 export type WorkspaceDefaultsData = { currency: string; timeZone: string };
@@ -13,11 +15,22 @@ export function WorkspaceDefaultsSection({ data }: { data: WorkspaceDefaultsData
   const [timeZone, setTimeZone] = useState(data.timeZone);
   const [saving, setSaving] = useState(false);
   const timeZones = supportedTimeZones();
+  if (!timeZones.includes(timeZone)) timeZones.unshift(timeZone);
+  const common: string[] = DISPLAY_CURRENCIES.map((option) => option.code);
+  const others = workspaceCurrencyOptions().filter((code) => !common.includes(code));
+  if (!common.includes(currency) && !others.includes(currency)) others.unshift(currency);
+  const currencyName = (code: string) => {
+    try {
+      return new Intl.DisplayNames(["en"], { type: "currency" }).of(code) || code;
+    } catch {
+      return code;
+    }
+  };
   const timeZoneChanged = timeZone !== data.timeZone;
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!/^[A-Z]{3}$/.test(currency)) { toast.error("Use a valid 3-letter currency code."); return; }
+    if (!isValidWorkspaceCurrency(currency)) { toast.error("Choose a currency from the list."); return; }
     setSaving(true);
     try {
       const response = await fetch("/api/settings/workspace", {
@@ -41,7 +54,10 @@ export function WorkspaceDefaultsSection({ data }: { data: WorkspaceDefaultsData
       <p className="mt-1 text-xs text-muted-foreground">The currency new projects, invoices, agreements, expenses, and imports use unless a linked project says otherwise. Your display currency (Preferences) is separate — it only changes how amounts are shown to you.</p>
       <form onSubmit={save} className="mt-5 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-muted-foreground">Default currency<Input value={currency} maxLength={3} onChange={(event) => setCurrency(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))} className="mt-2 uppercase" required /></label>
+          <label className="text-xs font-semibold text-muted-foreground">Default currency<Select value={currency} onChange={(event) => setCurrency(event.target.value)} className="mt-2">
+            <optgroup label="Common">{common.map((code) => <option key={code} value={code}>{code} — {currencyName(code)}</option>)}</optgroup>
+            <optgroup label="All currencies">{others.map((code) => <option key={code} value={code}>{code} — {currencyName(code)}</option>)}</optgroup>
+          </Select></label>
           <label className="text-xs font-semibold text-muted-foreground">Time zone<Select value={timeZone} onChange={(event) => setTimeZone(event.target.value)} className="mt-2">{timeZones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}</Select></label>
         </div>
         {timeZoneChanged ? (

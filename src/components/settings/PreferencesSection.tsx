@@ -3,7 +3,7 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { Button } from "@/components/ui";
-import { openHelpFromMobileShell } from "@/components/dashboard/GuidedExperience";
+import { startGuidedTour } from "@/components/dashboard/GuidedExperience";
 
 export function PreferencesSection() {
   return (
@@ -28,9 +28,9 @@ export function PreferencesSection() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold">Guided tour</p>
-            <p className="text-xs text-muted-foreground">Replay the walkthrough for any part of rive.</p>
+            <p className="text-xs text-muted-foreground">Walk through the workspace again. More guides are under Help &amp; guides.</p>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => openHelpFromMobileShell()}>Replay guided tour</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => startGuidedTour()}>Replay guided tour</Button>
         </div>
       </div>
     </section>

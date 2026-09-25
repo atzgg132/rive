@@ -8,9 +8,30 @@
 
 import { BUSINESS_TYPES, type BusinessType } from "@/lib/domain-vocabulary";
 
-/** Same shape the projects/invoices/contracts APIs already validate against — a generic ISO-ish 3-letter code, not the narrower display-currency picker list. */
+function knownCurrencyCodes(): ReadonlySet<string> | null {
+  try {
+    const codes = Intl.supportedValuesOf("currency");
+    return codes.length ? new Set(codes) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** ISO 4217 codes this runtime knows, for the workspace-currency picker. */
+export function workspaceCurrencyOptions(): string[] {
+  const codes = knownCurrencyCodes();
+  return codes ? [...codes].sort() : [];
+}
+
+/**
+ * A real ISO 4217 code: three capital letters that the runtime's currency
+ * list recognises, so `ZZZ` is rejected. Falls back to the shape check only
+ * where `Intl.supportedValuesOf` is unavailable.
+ */
 export function isValidWorkspaceCurrency(value: unknown): value is string {
-  return typeof value === "string" && /^[A-Z]{3}$/.test(value);
+  if (typeof value !== "string" || !/^[A-Z]{3}$/.test(value)) return false;
+  const codes = knownCurrencyCodes();
+  return codes ? codes.has(value) : true;
 }
 
 /**

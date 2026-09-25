@@ -68,7 +68,6 @@ async function installCalendarMocks(page: Page, connections: ReturnType<typeof g
 test.describe("calendar connection health", () => {
   test("a revoked grant shows Reconnect needed with working Reconnect and Disconnect", async ({ page }) => {
     const deleted = await installCalendarMocks(page, [googleConnection("needs_reconnect")]);
-    page.on("dialog", (dialog) => void dialog.accept());
     await page.goto("/calendar", { waitUntil: "load" });
 
     await page.getByRole("button", { name: /Calendar feeds|synced/ }).click();
@@ -79,6 +78,9 @@ test.describe("calendar connection health", () => {
     await expect(page.getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/api/calendar/connections/google/start");
 
     await page.getByRole("button", { name: "Disconnect" }).click();
+    const confirmDisconnect = page.getByRole("dialog", { name: /Disconnect staging\.tester@gmail\.com/ });
+    await expect(confirmDisconnect).toBeVisible();
+    await confirmDisconnect.getByRole("button", { name: "Disconnect" }).click();
     await expect.poll(() => deleted()).toContain("conn-needs_reconnect");
   });
 

@@ -149,7 +149,7 @@ export default function FeedbackWidget({ promptKey = "workspace_general", module
         onClick={() => { setOpen(true); void syncCooldown(); }}
         className="gap-2 rounded-full"
       >
-        <MessageSquare className="h-3.5 w-3.5" /> {label}
+        <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" /> <span className="max-[400px]:sr-only">{label}</span>
       </Button>
       {open ? (
         <div className="fixed inset-0 z-[120] flex items-end justify-center bg-foreground/25 p-4 sm:items-center" onClick={() => close("snooze")}>

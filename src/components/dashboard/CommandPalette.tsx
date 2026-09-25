@@ -337,7 +337,8 @@ export default function CommandPalette({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const handleShortcut = (event: globalThis.KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) return;
+      // Autofill fires keydown events with no `key`.
+      if (typeof event.key !== "string" || event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) return;
       event.preventDefault();
       setOpen(!open);
     };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import InvoiceRemindersSettings from "@/components/settings/InvoiceRemindersSettings";
 import { toast } from "sonner";
 import { Button, Input, Textarea } from "@/components/ui";
@@ -21,6 +21,7 @@ export type InvoiceProfileData = {
 };
 
 export function BusinessInvoicingSection({ data }: { data: InvoiceProfileData }) {
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     businessName: data.businessName || "",
     contactName: data.contactName || "",
@@ -81,10 +82,11 @@ export function BusinessInvoicingSection({ data }: { data: InvoiceProfileData })
         <div className="flex items-center gap-4">
           {form.logoUrl ? <img src={form.logoUrl} alt="" className="h-14 w-14 shrink-0 rounded-none border border-border object-contain bg-muted" /> : <div className="grid h-14 w-14 shrink-0 place-items-center rounded-none border border-dashed border-border text-xs text-muted-foreground">Logo</div>}
           <div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-none border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-accent">
+            {/* A real button, so the upload is reachable by keyboard; the file input stays hidden. */}
+            <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={uploading}>
               {uploading ? "Uploading…" : "Change logo"}
-              <input type="file" accept="image/*" className="hidden" onChange={(event) => void onPickLogo(event)} disabled={uploading} />
-            </label>
+            </Button>
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" tabIndex={-1} aria-hidden="true" onChange={(event) => void onPickLogo(event)} disabled={uploading} />
             {form.logoUrl ? <Button type="button" variant="ghost" size="sm" className="ml-2 text-muted-foreground" onClick={() => update("logoUrl", "")}>Remove</Button> : null}
           </div>
         </div>

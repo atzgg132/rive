@@ -56,6 +56,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
 
   const [user, setUser] = useState<UserProfile | null>(null);
+  useEffect(() => {
+    // Settings -> Profile saves the name and photo shown in the sidebar.
+    const onProfileUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ name?: string; avatar_url?: string | null }>).detail || {};
+      setUser((current) => (current ? { ...current, name: detail.name ?? current.name, avatar_url: detail.avatar_url ?? undefined } : current));
+    };
+    window.addEventListener("rive:profile-updated", onProfileUpdated);
+    return () => window.removeEventListener("rive:profile-updated", onProfileUpdated);
+  }, []);
   const [agreementsEnabled, setAgreementsEnabled] = useState(false);
   const [engagementFlowEnabled, setEngagementFlowEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -232,7 +241,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled, engagementFlow: engagementFlowEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency} initialSource={user?.display_currency_source}>
     <div data-dashboard-shell className="fixed inset-0 flex min-h-0 overflow-hidden overscroll-none bg-background">
-      <Toaster position="bottom-right" theme="system" toastOptions={{ classNames: { toast: "rounded-none border border-border bg-popover text-foreground shadow-overlay" } }} />
+      <Toaster position="bottom-right" theme="system" offset={{ bottom: 72, right: 16 }} mobileOffset={{ bottom: 72, right: 12, left: 12 }} toastOptions={{ classNames: { toast: "rounded-none border border-border bg-popover text-foreground shadow-overlay" } }} />
       <DashboardSidebar
         user={user}
         navLinks={navLinks}

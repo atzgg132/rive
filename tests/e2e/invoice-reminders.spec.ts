@@ -127,11 +127,21 @@ test.describe("invoice reminders", () => {
     }
   });
 
-  test("the first send with a due date offers reminders once", async ({ request }) => {
+  test("the first send with a due date offers reminders once, and the public copy shows the business", async ({ request, page }) => {
     const user = await createUser("offer");
     try {
+      const profile = await request.patch("/api/settings/invoicing", {
+        headers: auth(user),
+        data: { businessName: "Offer Test Studio", address: "12 Test Lane", taxId: "GSTIN-TEST-1" },
+      });
+      expect(profile.ok()).toBe(true);
       const dueDate = new Date(Date.now() + 14 * DAY_MS).toISOString().slice(0, 10);
       const first = await createSentInvoice(request, user, dueDate);
+      // The client-facing copy carries the business identity, not just a logo.
+      await page.goto(String(first.send.publicUrl));
+      await expect(page.getByText("Offer Test Studio").first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("Tax ID: GSTIN-TEST-1")).toBeVisible();
+      await expect(page.getByText("12 Test Lane")).toBeVisible();
       expect(first.send.offerReminders).toBe(true);
       const stored = await prisma.invoice.findUnique({ where: { id: first.invoiceId }, select: { publicTokenEncrypted: true, publicTokenHash: true } });
       expect(stored?.publicTokenHash).toBeTruthy();
