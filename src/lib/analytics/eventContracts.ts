@@ -46,6 +46,10 @@ export const PRODUCT_EVENTS = {
   projectCompleted: "project_completed",
   portfolioCaseStudyDraftCreated: "portfolio_case_study_draft_created",
   portfolioInquiryConverted: "portfolio_inquiry_converted",
+  weeklySummaryOptinShown: "weekly_summary_optin_shown",
+  weeklySummaryEnabled: "weekly_summary_enabled",
+  weeklySummaryDisabled: "weekly_summary_disabled",
+  weeklySummarySent: "weekly_summary_sent",
 } as const;
 
 type CoreProductEventName = (typeof PRODUCT_EVENTS)[keyof typeof PRODUCT_EVENTS];
@@ -151,6 +155,10 @@ export const PRODUCT_EVENT_CONTRACTS: Record<ProductEventName, ProductEventContr
   project_completed: { version: 1, requirements: realDataEntityEvent, description: "A Project reached completed status." },
   portfolio_case_study_draft_created: { version: 1, requirements: realDataEntityEvent, description: "A private portfolio case-study draft was created or completed from work." },
   portfolio_inquiry_converted: { version: 1, requirements: realDataEntityEvent, description: "A public portfolio inquiry was converted into an owner follow-up graph." },
+  weekly_summary_optin_shown: { version: 1, requirements: identityAndModule, description: "The weekly summary opt-in card was shown." },
+  weekly_summary_enabled: { version: 1, requirements: identityAndModule, description: "The weekly business summary email was turned on." },
+  weekly_summary_disabled: { version: 1, requirements: identityAndModule, description: "The weekly business summary email was turned off." },
+  weekly_summary_sent: { version: 1, requirements: identityAndModule, description: "A weekly business summary email was sent." },
   "activation.registered": { version: 1, requirements: identityAndModule, description: "The registered activation milestone was recorded." },
   "activation.onboarding_started": { version: 1, requirements: identityAndModule, description: "The onboarding activation milestone was recorded." },
   "activation.profile_substantially_completed": { version: 1, requirements: identityAndModule, description: "The profile activation milestone was recorded." },

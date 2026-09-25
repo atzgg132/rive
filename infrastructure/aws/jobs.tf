@@ -127,6 +127,17 @@ locals {
         { environment = "dev", path = "/api/cron/email-outbox" },
       ]
     }
+    # Opt-in weekly business summary (issue #66, PR 5). Hourly so every time
+    # zone's Monday 08:00-08:59 local window gets exactly one pass; the route
+    # itself is the source of truth for who is actually due — this schedule
+    # only has to run at least once an hour, not on the hour precisely.
+    weekly_summary = {
+      expression = "rate(1 hour)"
+      targets = [
+        { environment = "prod", path = "/api/cron/weekly-summary" },
+        { environment = "dev", path = "/api/cron/weekly-summary" },
+      ]
+    }
   }
 }
 

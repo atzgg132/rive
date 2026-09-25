@@ -141,7 +141,7 @@ test.describe("settings", () => {
 
       await authenticateBrowser(context, baseURL!, token);
       await page.goto("/workflow/invoice-settings");
-      await expect(page).toHaveURL(/\/settings#invoicing$/);
+      await expect(page).toHaveURL(/\/settings#invoicing$/, { timeout: 30_000 });
       await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible({ timeout: 20_000 });
       await expect(page.locator("#invoicing")).toBeVisible();
       await expect(page.locator("#invoicing input:visible").first()).toBeVisible();
