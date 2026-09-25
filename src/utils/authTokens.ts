@@ -1,12 +1,15 @@
 import crypto from "crypto";
 import { prisma } from "@/utils/db";
 
-export type AuthTokenType = "waitlist_invite" | "password_reset" | "email_verification";
+export type AuthTokenType = "waitlist_invite" | "password_reset" | "email_verification" | "weekly_summary_unsubscribe";
 
 const TOKEN_TTLS: Record<AuthTokenType, number> = {
   waitlist_invite: 7 * 24 * 60 * 60 * 1000,
   password_reset: 60 * 60 * 1000,
   email_verification: 24 * 60 * 60 * 1000,
+  // Every weekly summary carries its own fresh link, so this only needs to
+  // outlive the time someone might plausibly act on an old email.
+  weekly_summary_unsubscribe: 90 * 24 * 60 * 60 * 1000,
 };
 
 export function hashAuthToken(token: string): string {
