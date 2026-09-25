@@ -16,8 +16,8 @@ import { normalizeEmailAddress } from "@/lib/email-address";
 import { contractsAvailable } from "@/utils/contracts";
 import { engagementFlowAvailable } from "@/utils/engagements";
 import { readJsonBody } from "@/utils/apiBoundary";
+import { BUSINESS_TYPES } from "@/lib/domain-vocabulary";
 
-const BUSINESS_TYPES = ["freelancer", "contractor", "studio", "consultant", "creator", "small_business"];
 const GOALS = ["organize", "get_paid", "understand_finances", "publish_portfolio", "migrate"];
 const STARTING_SOURCES = ["spreadsheets", "zoho_books", "quickbooks", "xero", "freshbooks", "google_calendar", "project_tool", "starting_fresh"];
 
@@ -97,7 +97,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Choose at least one valid business type." }, { status: 400 });
     }
     const requestedBusinessTypes = body.businessTypes as unknown[];
-    if (requestedBusinessTypes.some((value) => typeof value !== "string" || !BUSINESS_TYPES.includes(value))) {
+    if (requestedBusinessTypes.some((value) => typeof value !== "string" || !(BUSINESS_TYPES as readonly string[]).includes(value))) {
       return NextResponse.json({ success: false, message: "Choose only supported business types." }, { status: 400 });
     }
     const businessTypes = Array.from(new Set(requestedBusinessTypes as string[]));
@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest) {
     data.businessTypes = businessTypes;
     data.businessType = businessTypes[0];
   } else if (Object.prototype.hasOwnProperty.call(body, "businessType")) {
-    if (typeof body.businessType !== "string" || !BUSINESS_TYPES.includes(body.businessType)) {
+    if (typeof body.businessType !== "string" || !(BUSINESS_TYPES as readonly string[]).includes(body.businessType)) {
       return NextResponse.json({ success: false, message: "Choose a supported business type." }, { status: 400 });
     }
     data.businessType = body.businessType;

@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (getEmailProvider() !== "disabled") {
+    if (getEmailProvider() !== "disabled" && user.loginAlertsEnabled) {
       const outboxId = await enqueueEmail(buildLoginSuccessEmail(user.email)).catch(() => null);
       if (outboxId) {
         await processEmailOutbox({ jobId: outboxId }).catch((mailError) => {
