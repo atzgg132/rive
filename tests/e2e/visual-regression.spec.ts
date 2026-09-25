@@ -589,8 +589,21 @@ async function mockRestyleWorkspace(page: Page, engagementFlow: boolean) {
     if (pathname === "/api/rates") return json(route, { success: true, data: { base: "USD", date: "2026-08-07", rates: { USD: 1, INR: 83, EUR: 0.9, GBP: 0.8 } } });
     if (pathname === "/api/engagement-events") return json(route, { success: true });
     if (pathname === "/api/workflow/clients") return json(route, { success: true, clients: [] });
-    if (pathname === "/api/workflow/invoice-profile") {
-      return json(route, { success: true, profile: { businessName: "Restyle Studio", contactName: "Rive Restyle Tester", email: "restyle@rive.test", defaultCurrency: "USD", invoicePrefix: "INV" } });
+    if (pathname === "/api/settings") {
+      return json(route, {
+        success: true,
+        user: {
+          id: "restyle-user", email: "restyle@rive.test", name: "Rive Restyle Tester", avatarUrl: null, profession: null,
+          businessType: "freelancer", businessTypes: ["freelancer"], currency: "USD", displayCurrency: "USD", displayCurrencySource: "user",
+          timeZone: "UTC", loginAlertsEnabled: true, isGoogleOnlyAccount: false,
+        },
+        invoiceProfile: {
+          businessName: "Restyle Studio", contactName: "Rive Restyle Tester", email: "restyle@rive.test", phone: null, address: null, taxId: null,
+          logoUrl: null, invoicePrefix: "INV", paymentInstructions: null, defaultTerms: null, defaultPaymentTermsDays: 14,
+        },
+        connectorConnections: [],
+        connectorAvailability: { googleCalendar: false, zohoBooks: false },
+      });
     }
     if (pathname === "/api/workflow/projects/visual-project") {
       return json(route, {
@@ -793,8 +806,8 @@ for (const theme of ["light", "dark"] as const) {
   });
 
   test(`restyle capture invoice-settings ${theme}`, async ({ page }, testInfo) => {
-    await captureRestyle(page, theme, "invoice-settings", "/workflow/invoice-settings", "workspace", async (capturePage) => {
-      await expect(capturePage.getByRole("heading", { name: "Invoice settings" })).toBeVisible({ timeout: 20_000 });
+    await captureRestyle(page, theme, "invoice-settings", "/settings#invoicing", "workspace", async (capturePage) => {
+      await expect(capturePage.getByRole("heading", { name: "Business & invoicing" })).toBeVisible({ timeout: 20_000 });
     }, testInfo);
   });
 

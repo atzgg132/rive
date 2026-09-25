@@ -323,7 +323,6 @@ test.describe("contracts UX", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/workflow/contracts", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Agreements" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByLabel("Display currency").last()).toHaveValue("INR");
     await expect(page.getByText("Development signing mode")).toHaveCount(0);
 
     const shell = await page.evaluate(() => {

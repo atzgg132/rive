@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
       sessionVersion: number;
       onboardingStatus: string;
       twoFactorEnabledAt: Date | null;
+      loginAlertsEnabled: boolean;
     };
 
     if (decision.action === "create") {
@@ -107,7 +108,7 @@ export async function GET(req: NextRequest) {
             displayCurrencySource: displayCurrencyPreference.source,
             onboardingData: state.next === "/migrate" ? { goal: "migrate", startingPath: "import" } : undefined,
           },
-          select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true },
+          select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true, loginAlertsEnabled: true },
         });
         await saveUserAttribution(created.id, attribution, tx);
         await recordProductEvent({
@@ -128,12 +129,12 @@ export async function GET(req: NextRequest) {
           googleSubject: profile.sub,
           emailVerifiedAt: new Date(),
         },
-        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true },
+        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true, loginAlertsEnabled: true },
       });
     } else {
       user = await prisma.user.findUniqueOrThrow({
         where: { id: decision.userId },
-        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true },
+        select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true, loginAlertsEnabled: true },
       });
     }
 
@@ -156,7 +157,7 @@ export async function GET(req: NextRequest) {
 
     // The sign-in notice fires for an existing account returning — a fresh
     // signup just created the account, so a "new sign-in" email would be noise.
-    if (decision.action !== "create" && getEmailProvider() !== "disabled") {
+    if (decision.action !== "create" && getEmailProvider() !== "disabled" && user.loginAlertsEnabled) {
       const outboxId = await enqueueEmail(buildLoginSuccessEmail(user.email)).catch(() => null);
       if (outboxId) {
         await processEmailOutbox({ jobId: outboxId }).catch((mailError) => {

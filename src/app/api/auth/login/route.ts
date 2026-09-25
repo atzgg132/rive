@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
         emailVerifiedAt: true,
         emailVerificationRequiredAt: true,
         twoFactorEnabledAt: true,
+        loginAlertsEnabled: true,
       },
     });
 
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    if (getEmailProvider() !== "disabled") {
+    if (getEmailProvider() !== "disabled" && user.loginAlertsEnabled) {
       const outboxId = await enqueueEmail(buildLoginSuccessEmail(user.email)).catch(() => null);
       if (outboxId) {
         await processEmailOutbox({ jobId: outboxId }).catch((mailError) => {

@@ -309,4 +309,33 @@ test.describe("two-factor authentication", () => {
       await deleteTestUser(user.id);
     }
   });
+
+  test("turning 2FA on from Settings, then signing in through the browser with a code", async ({ context, page, baseURL }) => {
+    const user = await createTestUser("browser");
+    try {
+      await authenticateBrowser(context, baseURL!, generateUserToken(user.id, user.email, user.plan, user.sessionVersion));
+      await page.goto("/settings#security");
+      await page.getByTestId("two-factor-enable-button").click({ timeout: 30_000 });
+      const manualKey = (await page.getByTestId("two-factor-manual-key").inputValue()).replace(/\s+/g, "");
+      await page.getByTestId("two-factor-confirm-input").fill(totpCode(manualKey, Date.now()) || "");
+      await page.getByTestId("two-factor-confirm-button").click();
+      await expect(page.getByTestId("two-factor-recovery-codes").locator("li")).toHaveCount(10);
+      await page.getByTestId("two-factor-recovery-confirm-checkbox").check();
+      await page.getByTestId("two-factor-recovery-confirm-button").click();
+      await expect(page.getByText(/On since/)).toBeVisible();
+
+      await context.clearCookies();
+      await page.goto("/login");
+      await expect(page.locator('form[data-testid="login-form"][data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
+      await page.locator("#login-email").fill(user.email);
+      await page.locator("#login-password").fill(PASSWORD);
+      await page.getByTestId("login-submit").click();
+      await expect(page).toHaveURL(/\/login\/two-factor/, { timeout: 30_000 });
+      await page.locator("#two-factor-code").fill(totpCode(manualKey, Date.now() + 30_000) || "");
+      await page.getByTestId("two-factor-submit").click();
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
+    } finally {
+      await deleteTestUser(user.id);
+    }
+  });
 });

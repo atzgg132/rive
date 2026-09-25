@@ -78,6 +78,13 @@ export function TwoFactorSettings() {
 
   const loadStatus = useCallback(async () => applyStatus(await fetchStatus()), [applyStatus]);
 
+  // After an action: update the counts without leaving the screen the action
+  // just showed (the one-time recovery codes must stay until confirmed).
+  async function refreshStatus() {
+    const result = await fetchStatus();
+    if (result.ok) setStatus(result.status);
+  }
+
   useEffect(() => {
     let cancelled = false;
     void fetchStatus().then((result) => {
@@ -121,7 +128,7 @@ export function TwoFactorSettings() {
         return;
       }
       setStage({ kind: "recovery_codes", codes: Array.isArray(data.recoveryCodes) ? data.recoveryCodes.map(String) : [], purpose: "enabled" });
-      await loadStatus();
+      await refreshStatus();
     } catch {
       setFormError("Could not reach the server.");
     } finally {
@@ -166,7 +173,7 @@ export function TwoFactorSettings() {
         return;
       }
       setStage({ kind: "recovery_codes", codes: Array.isArray(data.recoveryCodes) ? data.recoveryCodes.map(String) : [], purpose: "regenerated" });
-      await loadStatus();
+      await refreshStatus();
     } catch {
       setFormError("Could not reach the server.");
     } finally {
