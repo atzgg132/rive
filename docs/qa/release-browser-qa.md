@@ -176,19 +176,28 @@ next pass can re-run it.
   days before due, and 1, 7 and 14 days after; each step can be toggled. "Send
   paid receipts" is OFF by default.
 - Create two draft invoices for the reminder client, named with today's date:
-  R1 due yesterday with no project, R2 due in 14 days linked to the GBP
-  project.
+  R1 due yesterday with no project (backdate its issue date, since a due date
+  can't be earlier than the issue date), and R2 due in 14 days linked to the
+  GBP project. For a reminder you can check the next day, also send an R3 due
+  in 4 days.
 - Sending R2 shows a one-time "Turn on invoice reminders?" prompt in the
   invoice panel, only if the account has never seen it. "Turn on" enables
   reminders, and the prompt never appears again. An invoice without a due date
   never triggers it.
 - A sent, unpaid invoice with a due date has "Pause reminders" / "Resume
   reminders".
-- Send R1. Within a couple of minutes (the email job runs every minute) the
-  client gets a "1 day overdue" reminder with a "View invoice" link to the
-  same public link as the original invoice email. A step is never sent twice.
-  An invoice sent on or after its due date gets no "due in 3 days" reminder.
-  Paused, paid and void invoices get no reminders.
+- **Reminder timing.** The job skips every step whose date falls on or before
+  the day the invoice was sent (`selectDueReminderStep` in
+  `src/utils/invoiceReminders.ts`), because the invoice email covers it. An
+  invoice sent today never gets a reminder today. To see one, send an invoice
+  at least a day before one of its step dates (for example, due in 4 days, so
+  "due in 3 days" falls tomorrow) and check on that date. The email job runs
+  every minute, and a queued reminder goes out on the next tick.
+- When a step's date arrives, the client gets the reminder (e.g. "1 day
+  overdue") with a "View invoice" link to the same public link as the
+  original invoice email. A step is never sent twice. An invoice sent on or
+  after its due date gets no "due in 3 days" reminder. Paused, paid and void
+  invoices get no reminders.
 - Every reminder has "Stop reminder emails for this business". Opening it only
   shows a confirmation page; nothing changes until "Stop reminder emails" is
   clicked, which then shows "Done…". After that the client gets no reminders
