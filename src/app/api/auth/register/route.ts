@@ -9,6 +9,7 @@ import { durableRateLimit } from "@/utils/durableRateLimit";
 import { getRequestIp } from "@/utils/rateLimit";
 import { hashRequestValue } from "@/utils/contracts";
 import { attributionFromRequest, saveUserAttribution } from "@/utils/attribution";
+import { recordReferralAtSignup } from "@/utils/referrals";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { evaluatePublicFormGate, PUBLIC_FORM_RATE_LIMITS } from "@/utils/publicFormGate";
@@ -146,6 +147,7 @@ export async function POST(req: NextRequest) {
       });
       const outboxId = await enqueueEmail(verificationEmail, tx);
       await saveUserAttribution(created.id, { ...attribution, referralSource }, tx);
+      await recordReferralAtSignup(tx, { userId: created.id, referralSource: rawAttribution.referralSource });
       await recordProductEvent({
         userId: created.id,
         anonymousId,

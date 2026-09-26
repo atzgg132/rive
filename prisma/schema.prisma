@@ -70,6 +70,9 @@ model User {
   // Highest TOTP step already accepted, so a code cannot be replayed within
   // its own 30s validity window even though the six digits still match.
   twoFactorLastUsedStep       Int?                      @map("two_factor_last_used_step")
+  // Personal referral code for `/register?ref=<code>`. Issued the first time
+  // the user opens Settings -> Referrals, so existing accounts need no backfill.
+  referralCode                String?                   @unique @map("referral_code")
   createdAt                   DateTime                  @default(now()) @map("created_at")
   updatedAt                   DateTime                  @updatedAt @map("updated_at")
   clients                     Client[]
@@ -106,6 +109,8 @@ model User {
   invoiceNumberSequence       InvoiceNumberSequence?
   idempotencyRecords          IdempotencyRecord[]
   twoFactorRecoveryCodes      TwoFactorRecoveryCode[]
+  referralsMade               Referral[]                @relation("ReferralReferrer")
+  referredBy                  Referral?                 @relation("ReferralReferred")
 
   @@map("users")
 }
@@ -215,6 +220,27 @@ model UserAttribution {
   @@index([firstTouchSource, createdAt])
   @@index([lastTouchSource, createdAt])
   @@map("user_attributions")
+}
+
+/// One row per account that signed up through another user's referral link.
+/// Written once at signup and never reassigned, so a later link visit cannot
+/// move the credit. `activatedAt` is stamped the first time the referred user
+/// is seen meeting the activated-user definition (docs/funnel-definitions.md);
+/// each stamped row is one launch-credit month for both sides, capped for the
+/// referrer by REFERRAL_CREDIT_CAP_MONTHS. Credit is recorded here, not redeemed:
+/// there is no billing yet.
+model Referral {
+  id             String    @id @default(uuid())
+  referrerId     String    @map("referrer_id")
+  referrer       User      @relation("ReferralReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId String    @unique @map("referred_user_id")
+  referredUser   User      @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+  code           String
+  activatedAt    DateTime? @map("activated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([referrerId, createdAt])
+  @@map("referrals")
 }
 
 model InvoiceProfile {

@@ -11,6 +11,7 @@ const questions = [
   ["Is this a team plan?", "No. Rive currently supports one operator per account. Shared workspaces, roles, and team permissions are not available."],
   ["Do I need a credit card?", "No credit card is required to create an account during beta."],
   ["Will it stay free forever?", "Free access applies during beta. Paid pricing has not yet been published."],
+  ["Do referrals earn anything?", "Yes. Each account that joins through your referral link and activates earns you one free month once paid pricing launches, up to five months. The new account earns one free month too."],
   ["Can I export my whole workspace?", "Full workspace export is not currently available. Review this limitation before moving essential business records."],
 ] as const;
 
