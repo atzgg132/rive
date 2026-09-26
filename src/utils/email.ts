@@ -3,6 +3,7 @@ import "server-only";
 import nodemailer from "nodemailer";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { prisma } from "@/utils/db";
+import { formatMoney } from "@/lib/currency";
 
 export type EmailType =
   | "waitlist_joined"
@@ -20,7 +21,13 @@ export type EmailType =
   | "contract_void"
   | "contract_acceptance_due"
   | "invoice_ready"
-  | "invoice_sent";
+  | "invoice_sent"
+  | "two_factor_enabled"
+  | "two_factor_disabled"
+  | "two_factor_recovery_codes_regenerated"
+  | "invoice_reminder"
+  | "invoice_paid_receipt"
+  | "weekly_summary";
 
 export type EmailFailureReason = "not_configured" | "transient_failure" | "permanent_failure";
 
@@ -504,6 +511,69 @@ export function sendLoginSuccessEmail(to: string): Promise<EmailResult> {
   return deliver(buildLoginSuccessEmail(to));
 }
 
+export function buildTwoFactorEnabledEmail(to: string): PreparedEmail {
+  return {
+    to,
+    type: "two_factor_enabled",
+    subject: "Two-factor authentication is on for your rive. account",
+    html: baseTemplate({
+      eyebrow: "security notice",
+      title: "Two-factor authentication is on.",
+      intro: "Your rive. account now requires an authenticator code to sign in, in addition to your password.",
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">We also issued 10 recovery codes. Keep them somewhere safe — each one signs you in exactly once if you lose access to your authenticator app.</p>`,
+      aside: "If you didn’t turn this on, contact hello@rive.work immediately so we can help secure your account.",
+      recipient: to,
+    }),
+    text: `Two-factor authentication is now on for your rive. account.\n\nIf this wasn't you, contact hello@rive.work immediately.`,
+  };
+}
+
+export function sendTwoFactorEnabledEmail(to: string): Promise<EmailResult> {
+  return deliver(buildTwoFactorEnabledEmail(to));
+}
+
+export function buildTwoFactorDisabledEmail(to: string): PreparedEmail {
+  return {
+    to,
+    type: "two_factor_disabled",
+    subject: "Two-factor authentication was turned off",
+    html: baseTemplate({
+      eyebrow: "security notice",
+      title: "Two-factor authentication is off.",
+      intro: "Your rive. account no longer requires an authenticator code to sign in.",
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Your password alone now signs you in. You can turn two-factor authentication back on from Settings at any time.</p>`,
+      aside: "If you didn’t make this change, contact hello@rive.work immediately so we can help secure your account.",
+      recipient: to,
+    }),
+    text: `Two-factor authentication was turned off for your rive. account.\n\nIf this wasn't you, contact hello@rive.work immediately.`,
+  };
+}
+
+export function sendTwoFactorDisabledEmail(to: string): Promise<EmailResult> {
+  return deliver(buildTwoFactorDisabledEmail(to));
+}
+
+export function buildTwoFactorRecoveryCodesRegeneratedEmail(to: string): PreparedEmail {
+  return {
+    to,
+    type: "two_factor_recovery_codes_regenerated",
+    subject: "Your rive. recovery codes were regenerated",
+    html: baseTemplate({
+      eyebrow: "security notice",
+      title: "New recovery codes were issued.",
+      intro: "Your old two-factor recovery codes were just replaced with a fresh set of 10.",
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">The old codes no longer work. Save the new codes somewhere safe — each signs you in exactly once if you lose access to your authenticator app.</p>`,
+      aside: "If you didn’t request this, contact hello@rive.work immediately so we can help secure your account.",
+      recipient: to,
+    }),
+    text: `Your rive. two-factor recovery codes were regenerated. The old codes no longer work.\n\nIf this wasn't you, contact hello@rive.work immediately.`,
+  };
+}
+
+export function sendTwoFactorRecoveryCodesRegeneratedEmail(to: string): Promise<EmailResult> {
+  return deliver(buildTwoFactorRecoveryCodesRegeneratedEmail(to));
+}
+
 export function buildContactMessageEmail(input: {
   name: string;
   email: string;
@@ -781,6 +851,107 @@ export function sendInvoiceSentEmail(input: {
   return deliver(buildInvoiceSentEmail(input));
 }
 
+const REMINDER_STEP_EYEBROW: Record<string, string> = {
+  due_minus_3: "due soon",
+  due_plus_1: "payment overdue",
+  due_plus_7: "payment overdue",
+  due_plus_14: "payment overdue",
+};
+
+const REMINDER_STEP_INTRO: Record<string, (senderName: string) => string> = {
+  due_minus_3: (senderName) => `A friendly reminder that an invoice from ${senderName} is due in a few days.`,
+  due_plus_1: (senderName) => `An invoice from ${senderName} is now overdue.`,
+  due_plus_7: (senderName) => `An invoice from ${senderName} is still outstanding.`,
+  due_plus_14: (senderName) => `An invoice from ${senderName} remains unpaid.`,
+};
+
+/**
+ * Automated reminder sent on the owner's chosen schedule
+ * (src/utils/invoiceReminders.ts). Every reminder carries a client-scoped
+ * unsubscribe link when one is available. The unsubscribe only silences
+ * future automated reminders, never the original invoice-sent or receipt
+ * mail, and nothing on the owner's side turns it back on.
+ */
+export function buildInvoiceReminderEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  dueDate: Date | null;
+  senderName: string;
+  publicUrl?: string;
+  step: string;
+  unsubscribeUrl?: string;
+}): PreparedEmail {
+  const due = input.dueDate
+    ? input.dueDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })
+    : "not specified";
+  const safeClientName = escapeHtml(input.clientName);
+  const amount = formatMoney(Number(input.total), input.currency);
+  const intro = (REMINDER_STEP_INTRO[input.step] || REMINDER_STEP_INTRO.due_plus_1)(input.senderName);
+  const asideParts = ["Please verify the sender and payment details through a trusted channel before paying."];
+  if (input.unsubscribeUrl) {
+    asideParts.push(`<a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#1D4ED8;text-decoration:underline">Stop reminder emails for this business</a>.`);
+  }
+  return {
+    to: input.to,
+    type: "invoice_reminder",
+    subject: `Reminder: invoice ${input.invoiceNumber} from ${input.senderName}`,
+    html: baseTemplate({
+      eyebrow: REMINDER_STEP_EYEBROW[input.step] || "payment reminder",
+      title: `Invoice ${input.invoiceNumber}`,
+      intro,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, this is an automated reminder for an outstanding invoice.<br><br>Amount due: <strong style="color:#181511">${escapeHtml(amount)}</strong><br>Due date: <strong style="color:#181511">${escapeHtml(due)}</strong></p>`,
+      action: input.publicUrl ? "View invoice" : undefined,
+      actionUrl: input.publicUrl,
+      aside: asideParts.join(" "),
+      recipient: input.to,
+    }),
+    text: `Reminder: invoice ${input.invoiceNumber} from ${input.senderName}.\n\n${intro}\n\nAmount due: ${amount}\nDue: ${due}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}${input.unsubscribeUrl ? `\n\nStop reminder emails for this business: ${input.unsubscribeUrl}` : ""}`,
+  };
+}
+
+export function sendInvoiceReminderEmail(input: Parameters<typeof buildInvoiceReminderEmail>[0]): Promise<EmailResult> {
+  return deliver(buildInvoiceReminderEmail(input));
+}
+
+/** Sent once, automatically, when a payment fully pays an invoice and the owner opted in. */
+export function buildInvoicePaidReceiptEmail(input: {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  paidDate: Date;
+  senderName: string;
+  publicUrl?: string;
+}): PreparedEmail {
+  const paid = input.paidDate.toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
+  const safeClientName = escapeHtml(input.clientName);
+  const amount = formatMoney(Number(input.total), input.currency);
+  return {
+    to: input.to,
+    type: "invoice_paid_receipt",
+    subject: `Receipt: invoice ${input.invoiceNumber} paid in full`,
+    html: baseTemplate({
+      eyebrow: "payment received",
+      title: `Invoice ${input.invoiceNumber} is paid in full.`,
+      intro: `${input.senderName} has recorded your payment. This is your receipt.`,
+      body: `<p style="margin:0;color:#55503F;font-size:15px;line-height:25px">Hi ${safeClientName}, thank you for your payment.<br><br>Amount paid: <strong style="color:#181511">${escapeHtml(amount)}</strong><br>Paid on: <strong style="color:#181511">${escapeHtml(paid)}</strong></p>`,
+      action: input.publicUrl ? "View invoice" : undefined,
+      actionUrl: input.publicUrl,
+      aside: "This receipt confirms the invoice is fully paid. Keep it for your records.",
+      recipient: input.to,
+    }),
+    text: `Invoice ${input.invoiceNumber} is paid in full.\n\nAmount paid: ${amount}\nPaid on: ${paid}${input.publicUrl ? `\n\nView invoice: ${input.publicUrl}` : ""}\n\nThis receipt confirms the invoice is fully paid.`,
+  };
+}
+
+export function sendInvoicePaidReceiptEmail(input: Parameters<typeof buildInvoicePaidReceiptEmail>[0]): Promise<EmailResult> {
+  return deliver(buildInvoicePaidReceiptEmail(input));
+}
+
 /**
  * A void request for an accepted Agreement. The client confirms through a
  * purpose-bound void link; the owner is always sent into their workspace
@@ -845,6 +1016,70 @@ export function buildOwnerAcceptanceDueEmail(input: {
       recipient: input.to,
     }),
     text: `${input.clientName} recorded acceptance of “${input.contractTitle}”. Your acceptance is next.\n\nOpen the Agreement: ${input.agreementUrl}`,
+  };
+}
+
+export type WeeklySummaryEmailSection =
+  | { kind: "financials"; paidLastWeek: string; outstanding: string; overdue: string; currency: string }
+  | { kind: "deadlines"; items: { title: string; dueDate: string }[] }
+  | { kind: "meetings"; items: { title: string; startAt: string }[] }
+  | { kind: "agreements"; items: { title: string; clientName: string }[] };
+
+/**
+ * The opt-in weekly business summary (issue #66, PR 5). Callers pre-format
+ * every amount and date — this function only lays the sections out, matching
+ * `buildInvoiceReadyEmail`'s split between "the route knows the workspace's
+ * currency and time zone" and "the template just renders strings".
+ */
+export function buildWeeklySummaryEmail(input: {
+  to: string;
+  name: string;
+  weekLabel: string;
+  sections: WeeklySummaryEmailSection[];
+  unsubscribeUrl: string;
+  settingsUrl: string;
+}): PreparedEmail {
+  const firstName = input.name.trim().split(/\s+/)[0] || "there";
+  const rows: string[] = [];
+  for (const section of input.sections) {
+    if (section.kind === "financials") {
+      rows.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 4px">
+        <tr><td style="padding:6px 0;color:#55503F;font-size:15px">Paid last week</td><td align="right" style="padding:6px 0;color:#181511;font-size:15px;font-weight:700">${escapeHtml(section.paidLastWeek)}</td></tr>
+        <tr><td style="padding:6px 0;color:#55503F;font-size:15px">Outstanding</td><td align="right" style="padding:6px 0;color:#181511;font-size:15px;font-weight:700">${escapeHtml(section.outstanding)}</td></tr>
+        <tr><td style="padding:6px 0;color:#55503F;font-size:15px">Overdue</td><td align="right" style="padding:6px 0;color:#181511;font-size:15px;font-weight:700">${escapeHtml(section.overdue)}</td></tr>
+      </table>`);
+    } else if (section.kind === "deadlines" && section.items.length) {
+      rows.push(`<p style="margin:18px 0 6px;color:#1D4ED8;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase">Deadlines this week</p>` +
+        section.items.map((item) => `<p style="margin:0 0 4px;color:#55503F;font-size:14px">${escapeHtml(item.title)} — <strong style="color:#181511">${escapeHtml(item.dueDate)}</strong></p>`).join(""));
+    } else if (section.kind === "meetings" && section.items.length) {
+      rows.push(`<p style="margin:18px 0 6px;color:#1D4ED8;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase">Meetings this week</p>` +
+        section.items.map((item) => `<p style="margin:0 0 4px;color:#55503F;font-size:14px">${escapeHtml(item.title)} — <strong style="color:#181511">${escapeHtml(item.startAt)}</strong></p>`).join(""));
+    } else if (section.kind === "agreements" && section.items.length) {
+      rows.push(`<p style="margin:18px 0 6px;color:#1D4ED8;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase">Awaiting the client</p>` +
+        section.items.map((item) => `<p style="margin:0 0 4px;color:#55503F;font-size:14px">${escapeHtml(item.title)} — <strong style="color:#181511">${escapeHtml(item.clientName)}</strong></p>`).join(""));
+    }
+  }
+
+  return {
+    to: input.to,
+    type: "weekly_summary",
+    subject: `Your week at rive. — ${input.weekLabel}`,
+    html: baseTemplate({
+      eyebrow: "weekly summary",
+      title: `Here’s your week, ${firstName}.`,
+      intro: `A quick look at ${input.weekLabel.toLowerCase()} — money in, money owed, and what’s coming up.`,
+      body: rows.join(""),
+      action: "Open my dashboard",
+      actionUrl: `${appUrl}/dashboard`,
+      aside: `You’re getting this because weekly summaries are turned on for your account. <a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#1D4ED8;text-decoration:underline">Turn off weekly summaries</a> or manage this and other notifications in <a href="${escapeHtml(input.settingsUrl)}" style="color:#1D4ED8;text-decoration:underline">Settings</a>.`,
+      recipient: input.to,
+    }),
+    text: `Your week at rive. — ${input.weekLabel}\n\n${input.sections.map((section) => {
+      if (section.kind === "financials") return `Paid last week: ${section.paidLastWeek}\nOutstanding: ${section.outstanding}\nOverdue: ${section.overdue}`;
+      if (section.kind === "deadlines") return `Deadlines:\n${section.items.map((i) => `- ${i.title} (${i.dueDate})`).join("\n")}`;
+      if (section.kind === "meetings") return `Meetings:\n${section.items.map((i) => `- ${i.title} (${i.startAt})`).join("\n")}`;
+      return `Awaiting the client:\n${section.items.map((i) => `- ${i.title} — ${i.clientName}`).join("\n")}`;
+    }).join("\n\n")}\n\nOpen your dashboard: ${appUrl}/dashboard\n\nTurn off weekly summaries: ${input.unsubscribeUrl}\nManage notifications: ${input.settingsUrl}`,
   };
 }
 

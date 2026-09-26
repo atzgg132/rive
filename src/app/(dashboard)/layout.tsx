@@ -28,7 +28,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import CommandPalette from "@/components/dashboard/CommandPalette";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { CurrencyProvider } from "@/components/currency/CurrencyProvider";
-import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { FeatureAvailabilityProvider } from "@/components/FeatureAvailabilityContext";
 import { type ActivationPlan } from "@/lib/activation";
 import { GuidedExperience, openHelpFromMobileShell } from "@/components/dashboard/GuidedExperience";
@@ -57,6 +56,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
 
   const [user, setUser] = useState<UserProfile | null>(null);
+  useEffect(() => {
+    // Settings -> Profile saves the name and photo shown in the sidebar.
+    const onProfileUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ name?: string; avatar_url?: string | null }>).detail || {};
+      setUser((current) => (current ? { ...current, name: detail.name ?? current.name, avatar_url: detail.avatar_url ?? undefined } : current));
+    };
+    window.addEventListener("rive:profile-updated", onProfileUpdated);
+    return () => window.removeEventListener("rive:profile-updated", onProfileUpdated);
+  }, []);
   const [agreementsEnabled, setAgreementsEnabled] = useState(false);
   const [engagementFlowEnabled, setEngagementFlowEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -233,7 +241,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <FeatureAvailabilityProvider value={{ agreements: agreementsEnabled, engagementFlow: engagementFlowEnabled }}>
     <CurrencyProvider initialCurrency={user?.display_currency} initialSource={user?.display_currency_source}>
     <div data-dashboard-shell className="fixed inset-0 flex min-h-0 overflow-hidden overscroll-none bg-background">
-      <Toaster position="bottom-right" theme="system" toastOptions={{ classNames: { toast: "rounded-none border border-border bg-popover text-foreground shadow-overlay" } }} />
+      <Toaster position="bottom-right" theme="system" offset={{ bottom: 72, right: 16 }} mobileOffset={{ bottom: 72, right: 12, left: 12 }} toastOptions={{ classNames: { toast: "rounded-none border border-border bg-popover text-foreground shadow-overlay" } }} />
       <DashboardSidebar
         user={user}
         navLinks={navLinks}
@@ -265,7 +273,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Plus className="h-5 w-5" />
               </Button>
             )}
-            <CurrencySwitcher compact />
             <div className="max-[359px]:hidden"><ThemeToggle /></div>
             <Button variant="ghost" size="icon" onClick={() => setCommandPaletteOpen(true)} aria-label="Search workspace" aria-haspopup="dialog" aria-expanded={commandPaletteOpen} className="text-muted-foreground"><Search className="h-5 w-5" /></Button><Button variant="ghost" size="icon" onClick={openHelpFromMobileShell} aria-label="Open Help & guides" className="hidden min-[390px]:inline-flex text-muted-foreground">
               <CircleHelp className="h-5 w-5" />
@@ -312,7 +319,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 New client work
               </Button>
             )}
-            <CurrencySwitcher />
             <ThemeToggle />
             <GuidedExperience activation={activation} pathname={pathname} onActivationChange={setActivation} onLayerVisibilityChange={setGuidanceLayerActive} />
             <div className="relative">

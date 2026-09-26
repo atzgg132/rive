@@ -11,12 +11,13 @@ const toc = [
   { id: "service",     label: "2. Description of service" },
   { id: "access",      label: "3. Open beta access" },
   { id: "conduct",     label: "4. User conduct" },
-  { id: "ip",          label: "5. Intellectual property" },
-  { id: "disclaimer",  label: "6. Disclaimers and limitation of liability" },
-  { id: "termination", label: "7. Termination" },
-  { id: "law",         label: "8. Governing law" },
-  { id: "changes",     label: "9. Changes to terms" },
-  { id: "contact",     label: "10. Contact" },
+  { id: "client-communications", label: "5. Communications sent to your clients" },
+  { id: "ip",          label: "6. Intellectual property" },
+  { id: "disclaimer",  label: "7. Disclaimers and limitation of liability" },
+  { id: "termination", label: "8. Termination" },
+  { id: "law",         label: "9. Governing law" },
+  { id: "changes",     label: "10. Changes to terms" },
+  { id: "contact",     label: "11. Contact" },
 ];
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -30,7 +31,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 export default function TermsPage() {
   return (
-    <ProseShell eyebrow="LEGAL" title="Terms of Service" updated="Last updated · July 13, 2026">
+    <ProseShell eyebrow="LEGAL" title="Terms of Service" updated="Last updated · September 24, 2026">
         <div className="flex flex-col gap-8 md:flex-row md:gap-12">
           <LegalToc items={toc} />
           <div className="min-w-0 max-w-2xl flex-1 overflow-x-clip">
@@ -61,30 +62,36 @@ export default function TermsPage() {
                 </ul>
               </Section>
 
-              <Section id="ip" title="5. Intellectual property">
+              <Section id="client-communications" title="5. Communications sent to your clients">
+                <p>Rive lets you turn on automated emails to your clients on your behalf — currently invoice payment reminders and paid receipts. By enabling these features, you confirm that you have the right to contact each client you send them to, and you are responsible for the accuracy of the content in those invoices and the client contact details you provide.</p>
+                <p>You remain responsible for complying with applicable law in the jurisdictions where your clients are located, including any consent or opt-out requirements that apply to your business relationship with them. Rive includes an unsubscribe link on every automated reminder email and will honor a client&apos;s opt-out for future reminders, but this does not substitute for your own obligations to your clients.</p>
+                <p>How we handle your clients&apos; data when sending these emails is described in section 5 of our <a href="/privacy#client-emails" className="text-primary hover:underline">Privacy Policy</a>.</p>
+              </Section>
+
+              <Section id="ip" title="6. Intellectual property">
                 <p>All content, design, code, trademarks, and brand assets on the rive. platform are the exclusive property of rive. and its founders. Nothing in these Terms grants you any rights to use rive.&apos;s intellectual property without explicit written permission.</p>
                 <p>Any feedback, suggestions, or ideas you submit to rive. may be used by us freely without any obligation or compensation to you.</p>
               </Section>
 
-              <Section id="disclaimer" title="6. Disclaimers and limitation of liability">
+              <Section id="disclaimer" title="7. Disclaimers and limitation of liability">
                 <p>The Service is provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind, express or implied. During open beta, we make no warranties about reliability, accuracy, fitness for a particular purpose, or non-infringement.</p>
                 <p>To the fullest extent permitted by law, rive. shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Service, even if we have been advised of the possibility of such damages.</p>
               </Section>
 
-              <Section id="termination" title="7. Termination">
+              <Section id="termination" title="8. Termination">
                 <p>rive. reserves the right to suspend or terminate your access to the Service at any time, for any reason, without notice. During open beta in particular, access may be revoked as we iterate on the platform.</p>
                 <p>Upon termination, provisions that by their nature should survive (including IP, disclaimers, and governing law) will remain in effect.</p>
               </Section>
 
-              <Section id="law" title="8. Governing law">
+              <Section id="law" title="9. Governing law">
                 <p>These Terms shall be governed by and construed in accordance with the laws of India, without regard to its conflict of law provisions. Any disputes shall be subject to the exclusive jurisdiction of the courts of India.</p>
               </Section>
 
-              <Section id="changes" title="9. Changes to terms">
+              <Section id="changes" title="10. Changes to terms">
                 <p>We may revise these Terms at any time. Material changes will be communicated through the Service or by email. The &quot;last updated&quot; date at the top of this page reflects the most recent revision. Continued use of the Service after changes constitutes acceptance.</p>
               </Section>
 
-              <Section id="contact" title="10. Contact">
+              <Section id="contact" title="11. Contact">
                 <p>For questions about these Terms:</p>
                 <div className="mt-2 rounded-xl bg-[var(--surface-glass)] p-4 text-[var(--inst-ink)]">
                   <p><strong>Email:</strong> <a href="mailto:hello@rive.work" className="text-primary hover:underline">hello@rive.work</a></p>

@@ -506,6 +506,12 @@ export function GuidedExperience({ activation, pathname, onActivationChange, onL
     return () => window.removeEventListener("rive:open-help", openFromShell);
   }, [guideOpen, minimizeGuide]);
 
+  useEffect(() => {
+    const startFromSettings = () => startGuide("orientation");
+    window.addEventListener("rive:start-guided-tour", startFromSettings);
+    return () => window.removeEventListener("rive:start-guided-tour", startFromSettings);
+  }, [startGuide]);
+
   useEffect(() => () => {
     if (minimizeTimerRef.current) window.clearTimeout(minimizeTimerRef.current);
   }, []);
@@ -819,6 +825,11 @@ export function GuidedExperience({ activation, pathname, onActivationChange, onL
 
 export function openHelpFromMobileShell() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("rive:open-help"));
+}
+
+/** Starts the workspace orientation walkthrough from anywhere in the shell (e.g. Settings). */
+export function startGuidedTour() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("rive:start-guided-tour"));
 }
 
 export const ACTIVATION_GUIDE_GOALS = ACTIVATION_GOALS;

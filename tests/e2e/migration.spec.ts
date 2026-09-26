@@ -419,8 +419,6 @@ test.describe("migration", () => {
     await gotoReview(page);
     await expect(page.getByText(/possible duplicate/i)).toBeVisible({ timeout: 30_000 });
 
-    // Confirm the dialog the abandon control shows.
-    page.once("dialog", (dialog) => void dialog.accept());
 
     // Abandoning is a POST to the migration route (non-destructive — the
     // server transitions to `abandoned`, never deletes staged rows' targets).
@@ -428,6 +426,8 @@ test.describe("migration", () => {
       (response) => response.url().includes(`/api/migrations/${migrationId}`) && response.request().method() === "POST",
     );
     await page.getByRole("button", { name: "Discard and start over" }).click();
+    // Confirm in the styled dialog the abandon control shows.
+    await page.getByRole("dialog", { name: "Discard this import?" }).getByRole("button", { name: "Discard import" }).click();
     expect((await abandon).status()).toBeLessThan(400);
 
     // Back at the upload screen, the abandoned migration is gone from history.

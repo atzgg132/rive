@@ -8,9 +8,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Settings,
   X,
 } from "lucide-react";
 import { Avatar, Badge, Button } from "@/components/ui";
+import { initialsOf } from "@/lib/initials";
 import Portal from "@/components/ui/Portal";
 import RiveLogo from "@/components/RiveLogo";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,7 @@ export interface DashboardSidebarUser {
   name?: string | null;
   email?: string | null;
   plan?: string | null;
+  avatar_url?: string | null;
 }
 
 interface DashboardSidebarProps {
@@ -40,8 +43,12 @@ interface DashboardSidebarProps {
   onLogout: () => void | Promise<void>;
 }
 
-function initials(name: string | null | undefined): string {
-  return name?.trim().substring(0, 2) || "U";
+function AvatarFace({ user }: { user: DashboardSidebarUser | null }) {
+  if (user?.avatar_url) {
+    // eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from our own asset route
+    return <img src={user.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />;
+  }
+  return <span>{initialsOf(user?.name)}</span>;
 }
 
 function identityLabel(user: DashboardSidebarUser | null): string {
@@ -90,7 +97,7 @@ function IdentityBlock({
         data-sidebar-identity
       >
         <Avatar size="md" className="pointer-events-none" aria-hidden="true">
-          <span>{initials(user?.name)}</span>
+          <AvatarFace user={user} />
         </Avatar>
       </Button>
     );
@@ -100,7 +107,7 @@ function IdentityBlock({
     <div className="min-w-0 px-3 py-2" data-sidebar-identity>
       <div className="flex min-w-0 items-center gap-3" title={label}>
         <Avatar size="md" aria-hidden="true">
-          <span>{initials(user?.name)}</span>
+          <AvatarFace user={user} />
         </Avatar>
         <div className="min-w-0 flex-1">
           <span className="block truncate whitespace-nowrap text-sm font-semibold text-foreground" title={user?.name || "Workspace account"}>
@@ -321,6 +328,14 @@ export default function DashboardSidebar({
                   <p className="break-words whitespace-normal text-sm font-semibold text-foreground" title={user?.name || undefined}>{user?.name || "Workspace account"}</p>
                   <p className="mt-0.5 break-words whitespace-normal text-xs text-muted-foreground" title={user?.email || undefined}>{user?.email || ""}</p>
                   {user?.plan ? <Badge variant="outline" className="mt-2 capitalize">{user.plan}</Badge> : null}
+                  <Link
+                    href="/settings"
+                    onClick={() => setIdentityPopoverOpen(false)}
+                    className="mt-3 flex w-full items-center gap-2 px-0 text-xs font-semibold text-foreground hover:underline"
+                  >
+                    <Settings className="h-4 w-4" aria-hidden="true" />
+                    Settings
+                  </Link>
                   <Button
                     type="button"
                     variant="ghost"
@@ -329,7 +344,7 @@ export default function DashboardSidebar({
                       setIdentityPopoverOpen(false);
                       void onLogout();
                     }}
-                    className="mt-3 w-full justify-start px-0 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                    className="mt-2 w-full justify-start px-0 text-xs font-semibold text-destructive hover:bg-destructive/10"
                   >
                     <LogOut className="h-4 w-4" aria-hidden="true" />
                     Sign out
@@ -338,17 +353,26 @@ export default function DashboardSidebar({
               ) : null}
             </div>
             {!collapsed ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="default"
-                onClick={() => void onLogout()}
-                aria-label="Sign out"
-                className="w-full justify-start px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="h-5 w-5" aria-hidden="true" />
-                <span>Sign out</span>
-              </Button>
+              <>
+                <Link
+                  href="/settings"
+                  className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <Settings className="h-5 w-5" aria-hidden="true" />
+                  <span>Settings</span>
+                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="default"
+                  onClick={() => void onLogout()}
+                  aria-label="Sign out"
+                  className="w-full justify-start px-3 text-sm font-medium text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-5 w-5" aria-hidden="true" />
+                  <span>Sign out</span>
+                </Button>
+              </>
             ) : null}
           </div>
         </div>
@@ -387,7 +411,8 @@ export default function DashboardSidebar({
                 </Button>
               </div>
 
-              <nav className="flex min-h-0 flex-1 flex-col">
+              {/* No min-h-0: on short screens the drawer scrolls instead of letting the links run under the account block. */}
+              <nav className="flex flex-1 flex-col">
                 {engagementFlowEnabled ? (
                   <Button
                     type="button"
@@ -407,6 +432,14 @@ export default function DashboardSidebar({
 
               <div className="mt-6 flex shrink-0 flex-col gap-2 border-t border-border pt-4">
                 <IdentityBlock user={user} />
+                <Link
+                  href="/settings"
+                  onClick={() => onMobileOpenChange(false)}
+                  className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <Settings className="h-5 w-5" aria-hidden="true" />
+                  <span>Settings</span>
+                </Link>
                 <Button
                   type="button"
                   variant="ghost"

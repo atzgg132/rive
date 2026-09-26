@@ -1,12 +1,18 @@
 import crypto from "crypto";
 import { prisma } from "@/utils/db";
 
-export type AuthTokenType = "waitlist_invite" | "password_reset" | "email_verification";
+export type AuthTokenType = "waitlist_invite" | "password_reset" | "email_verification" | "two_factor_challenge" | "weekly_summary_unsubscribe";
 
 const TOKEN_TTLS: Record<AuthTokenType, number> = {
   waitlist_invite: 7 * 24 * 60 * 60 * 1000,
   password_reset: 60 * 60 * 1000,
   email_verification: 24 * 60 * 60 * 1000,
+  // The pending second-login-step window: long enough for an operator to open
+  // their authenticator app, short enough that a stolen cookie decays fast.
+  two_factor_challenge: 10 * 60 * 1000,
+  // Every weekly summary carries its own fresh link, so this only needs to
+  // outlive the time someone might plausibly act on an old email.
+  weekly_summary_unsubscribe: 90 * 24 * 60 * 60 * 1000,
 };
 
 export function hashAuthToken(token: string): string {

@@ -6,6 +6,7 @@ import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { currencyFractionDigits } from "@/utils/invoiceMath";
 import { readJsonBody } from "@/utils/apiBoundary";
 import { InvalidIdempotencyKeyError, normalizeIdempotencyKey } from "@/utils/idempotency";
+import { enqueuePaidReceiptIfEnabled } from "@/utils/invoiceReminders";
 
 function clean(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
@@ -178,7 +179,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const payment = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "invoices" WHERE "id" = ${id} AND "user_id" = ${session.userId} FOR UPDATE`);
-      const invoice = await tx.invoice.findFirst({ where: { id, userId: session.userId } });
+      const invoice = await tx.invoice.findFirst({ where: { id, userId: session.userId }, include: { client: { select: { name: true, email: true } } } });
       if (!invoice) throw new Error("NOT_FOUND");
 
       const owner = await tx.user.findUnique({ where: { id: session.userId }, select: { timeZone: true } });
@@ -211,6 +212,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const created = await tx.invoicePayment.create({ data: { invoiceId: id, amount, paidAt, method, reference, notes, idempotencyKey } });
       await tx.invoice.update({ where: { id }, data: { amountPaid: nextAmountPaid, status: fullyPaid ? "paid" : "partially_paid", paidDate: fullyPaid ? paidAt : null } });
       await tx.invoiceEvent.create({ data: { invoiceId: id, userId: session.userId, eventType: fullyPaid ? "paid" : "payment_recorded", metadata: { amount: amount.toString(), method, receivedOn } } });
+      if (fullyPaid) {
+        await enqueuePaidReceiptIfEnabled(tx, {
+          invoiceId: id,
+          userId: session.userId,
+          invoiceNumber: invoice.invoiceNumber,
+          currency: invoice.currency,
+          total: invoice.total.toString(),
+          paidDate: paidAt,
+          clientName: invoice.client?.name || "there",
+          clientEmail: invoice.client?.email || null,
+          publicTokenEncrypted: invoice.publicTokenEncrypted,
+        }).catch((error) => console.error("Paid receipt enqueue failed:", error));
+      }
       return { created, duplicate: false, receivedOn };
     });
     if (!payment.duplicate) await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.paymentRecorded, module: "invoices", entityType: "invoice", entityId: id, properties: { method } });

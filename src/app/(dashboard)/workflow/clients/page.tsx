@@ -1,6 +1,6 @@
 "use client";
 
-import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea } from "@/components/ui";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Textarea, useConfirm } from "@/components/ui";
 import { statusTone } from "@/lib/status-tone";
 
 import React, { useState, useEffect } from "react";
@@ -53,6 +53,7 @@ export default function ClientsPage() {
   const router = useRouter();
   const { engagementFlow } = useFeatureAvailability();
   const { displayCurrency, convert, format } = useCurrency();
+  const [confirm, confirmDialog] = useConfirm();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -156,7 +157,7 @@ export default function ClientsPage() {
   };
 
   const handleDelete = async (id: string, clientName: string) => {
-    if (!window.confirm(`Are you sure you want to delete ${clientName}? This action cannot be undone.`)) {
+    if (!(await confirm({ title: `Delete ${clientName}?`, description: "This can't be undone.", confirmLabel: "Delete client", destructive: true }))) {
       return;
     }
 
@@ -518,6 +519,7 @@ export default function ClientsPage() {
           </div>
         </Portal>
       )}
+      {confirmDialog}
     </div>
   );
 }

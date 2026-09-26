@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowRight, ChevronRight, Download, FileText, MoreVertical, Plus, Search, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Button, Input, Kicker, PageHeader, PaginationControls, StatusBadge } from "@/components/ui";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Button, Input, Kicker, PageHeader, PaginationControls, StatusBadge, useConfirm } from "@/components/ui";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCurrency } from "@/components/currency/CurrencyProvider";
 import { formatMoney } from "@/lib/currency";
@@ -78,6 +78,9 @@ function RevenueWorkspace() {
   const searchParams = useSearchParams();
   const { displayCurrency, convert, formatConverted, ratesStatus } = useCurrency();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [confirm, confirmDialog] = useConfirm();
+  // Set when a send from the list qualifies for the one-time reminders offer; the panel shows it.
+  const [reminderOfferInvoiceId, setReminderOfferInvoiceId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<CurrencySummary[]>([]);
   const [aging, setAging] = useState<AgingRow[]>([]);
   const [monthly, setMonthly] = useState<MonthlyRow[]>([]);
@@ -215,7 +218,7 @@ function RevenueWorkspace() {
   const refresh = () => { void load(); };
 
   const sendInvoice = async (invoice: Invoice) => {
-    if (!window.confirm(`Send ${invoice.invoice_number} to ${invoice.client_name || "the client"}?`)) return;
+    if (!(await confirm({ title: `Send ${invoice.invoice_number}?`, description: `It goes to ${invoice.client_name || "the client"} and its client-facing copy is frozen.`, confirmLabel: "Send invoice" }))) return;
     try {
       const response = await fetch(`/api/workflow/invoices/${invoice.id}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) });
       const data = await response.json().catch(() => null);
@@ -226,12 +229,16 @@ function RevenueWorkspace() {
       } else {
         toast.success(data.message || "Invoice sent and delivery recorded.");
       }
+      if (data.offerReminders) {
+        setReminderOfferInvoiceId(invoice.id);
+        setSelectedInvoice(invoice.id);
+      }
       refresh();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Invoice was not sent."); }
   };
 
   const deleteInvoice = async (invoice: Invoice) => {
-    if (!window.confirm(`Delete draft ${invoice.invoice_number}?`)) return;
+    if (!(await confirm({ title: `Delete draft ${invoice.invoice_number}?`, description: "This draft is removed. Sent invoices can't be deleted.", confirmLabel: "Delete draft", destructive: true }))) return;
     const response = await fetch(`/api/workflow/invoices?id=${encodeURIComponent(invoice.id)}`, { method: "DELETE" });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.success) toast.error(data?.message || "Invoice could not be deleted.");
@@ -260,7 +267,7 @@ function RevenueWorkspace() {
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="rounded-none border border-border bg-card p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><Kicker>Collection health</Kicker><h2 className="mt-1 text-xl font-semibold">{collectionRate === null ? "—" : `${collectionRate}%`} collected</h2><p className="mt-1 text-sm text-muted-foreground">Collected against issued invoice value, using server-side payment ledger totals.</p></div><Link href="/workflow/invoice-settings" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">Invoice settings <ArrowRight className="h-3.5 w-3.5" /></Link></div>
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><Kicker>Collection health</Kicker><h2 className="mt-1 text-xl font-semibold">{collectionRate === null ? "—" : `${collectionRate}%`} collected</h2><p className="mt-1 text-sm text-muted-foreground">Collected against issued invoice value, using server-side payment ledger totals.</p></div><Link href="/settings#invoicing" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">Invoice settings <ArrowRight className="h-3.5 w-3.5" /></Link></div>
           <div className="mt-6 h-3 overflow-hidden rounded-none bg-muted"><div className="h-full rounded-none bg-success transition-all" style={{ width: `${Math.min(collectionRate || 0, 100)}%` }} /></div>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">{summaries.map((summary) => <div key={summary.currency} className="rounded-none border border-border/70 bg-background p-3"><div className="flex justify-between text-xs text-muted-foreground"><span>{summary.currency}</span><span>{summary.invoiceCount} invoices</span></div><p className="mt-2 font-mono text-sm font-semibold tabular-nums">{formatConverted(summary.collected, summary.currency) || `${summary.currency} ${summary.collected.toFixed(2)}`}</p><p className="mt-1 text-xs text-muted-foreground">{summary.collectionRate === null ? "No issued value" : `${summary.collectionRate}% collection rate`}</p></div>)}</div>
         </section>
@@ -445,11 +452,14 @@ function RevenueWorkspace() {
 
       {selectedInvoiceId ? (
         <InvoiceDetailPanel
+          key={selectedInvoiceId}
           invoiceId={selectedInvoiceId}
-          onClose={() => setSelectedInvoice(null)}
+          offerReminders={reminderOfferInvoiceId === selectedInvoiceId}
+          onClose={() => { setReminderOfferInvoiceId(null); setSelectedInvoice(null); }}
           onChanged={refresh}
         />
       ) : null}
+      {confirmDialog}
 
       <p className="text-center text-xs text-muted-foreground">All totals are calculated from the server-side invoice and payment ledger. {ratesStatus === "ready" ? `Converted to ${displayCurrency} for display.` : "Original currencies are shown while exchange rates load."}</p>
     </div>

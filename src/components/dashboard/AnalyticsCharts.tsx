@@ -14,6 +14,7 @@ function makeCurrencyFormatter(currency: string, compact: boolean): Intl.NumberF
       style: "currency",
       currency,
       notation: compact ? "compact" : "standard",
+      ...(compact ? { minimumFractionDigits: 0 } : {}),
       maximumFractionDigits: compact ? 1 : 2,
     });
   } catch {
@@ -45,7 +46,9 @@ export default function AnalyticsCharts({ data, currency = "USD", pace = null }:
   const fullFormatter = useMemo(() => makeCurrencyFormatter(currency, false), [currency]);
   const compactFormatter = useMemo(() => makeCurrencyFormatter(currency, true), [currency]);
   const fullMoney = (value: number) => fullFormatter?.format(value) || `${currency} ${value.toLocaleString(localeForCurrency(currency), { maximumFractionDigits: 2 })}`;
-  const compactMoney = (value: number) => compactFormatter?.format(value) || `${currency} ${value.toLocaleString(localeForCurrency(currency), { notation: "compact", maximumFractionDigits: 1 })}`;
+  // Server (Node) and browser ICU disagree on a trailing ".0" in compact
+  // notation ("₹2.0L" vs "₹2L"), which breaks hydration; drop it on both.
+  const compactMoney = (value: number) => (compactFormatter?.format(value) || `${currency} ${value.toLocaleString(localeForCurrency(currency), { notation: "compact", maximumFractionDigits: 1 })}`).replace(/([0-9])[.,]0(?=[^0-9]*$)/, "$1");
   const { up, down } = chart.netExtent;
   const baselinePct = chart.baselineShare * 100;
   const netHeight = (value: number) => {

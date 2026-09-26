@@ -42,6 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         voidedAt: true,
         notes: true,
         createdAt: true,
+        remindersPaused: true,
         client: { select: { id: true, name: true, company: true, email: true } },
         project: { select: { id: true, title: true } },
         billingOccurrence: { select: { contract: { select: { id: true, title: true } } } },
@@ -85,6 +86,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const amountPaid = Number(invoice.amountPaid);
     const contract = invoice.billingOccurrence?.contract || null;
 
+    const reminderProfile = await prisma.invoiceProfile.findUnique({ where: { userId: session.userId }, select: { remindersEnabled: true } });
     return NextResponse.json({
       success: true,
       invoice: {
@@ -113,6 +115,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         voided_at: invoice.voidedAt,
         notes: invoice.notes,
         created_at: invoice.createdAt,
+        reminders_paused: invoice.remindersPaused,
+        reminders_enabled: Boolean(reminderProfile?.remindersEnabled),
         client_name: invoice.client?.name || null,
         client_company: invoice.client?.company || null,
         client_email: invoice.client?.email || null,

@@ -19,6 +19,7 @@ import {
   PlusCircle,
   Receipt,
   Search,
+  Settings,
   SunMoon,
   Users,
   X,
@@ -28,6 +29,7 @@ import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 import { Button, Kicker } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { SETTINGS_SECTIONS } from "@/lib/settingsSections";
 
 type SearchGroupKey = "clients" | "projects" | "invoices" | "agreements" | "expenses";
 
@@ -300,6 +302,8 @@ const NAVIGATION_COMMANDS: Array<{ label: string; href: string; icon: LucideIcon
   { label: "Go to Clients", href: "/workflow/clients", icon: Users },
   { label: "Go to Revenue & Invoices", href: "/workflow/revenue", icon: DollarSign },
   { label: "Go to Expenses", href: "/workflow/expenses", icon: Receipt },
+  { label: "Open settings", href: "/settings", icon: Settings },
+  ...SETTINGS_SECTIONS.map((section) => ({ label: `Settings: ${section.label}`, href: `/settings#${section.id}`, icon: Settings })),
 ];
 
 const COMMAND_ITEM_CLASS = "relative mt-1 flex min-h-11 cursor-pointer items-center gap-2 rounded-none px-3 py-2.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground aria-selected:bg-accent aria-selected:text-accent-foreground aria-selected:before:absolute aria-selected:before:bottom-[20%] aria-selected:before:left-0 aria-selected:before:top-[20%] aria-selected:before:w-[2px] aria-selected:before:bg-primary";
@@ -333,7 +337,8 @@ export default function CommandPalette({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const handleShortcut = (event: globalThis.KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) return;
+      // Autofill fires keydown events with no `key`.
+      if (typeof event.key !== "string" || event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) return;
       event.preventDefault();
       setOpen(!open);
     };

@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
 import { buildInvoiceSentEmail, getEmailProvider } from "@/utils/email";
-import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
+import { enqueueEmail, encryptOutboxSecret, processEmailOutbox } from "@/utils/emailOutbox";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { createInvoicePublicToken, hashInvoicePublicToken, invoicePublicUrl } from "@/utils/invoicePublic";
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     try {
       await renderInvoicePdf(snapshot);
     } catch (error) {
-      await prisma.invoice.updateMany({ where: { id: invoice.id, userId: session.userId, status: "sending", publicTokenHash: tokenHash }, data: { status: invoice.status, publicTokenHash: null, sentSnapshot: Prisma.JsonNull, sentSnapshotAt: null } }).catch(() => undefined);
+      await prisma.invoice.updateMany({ where: { id: invoice.id, userId: session.userId, status: "sending", publicTokenHash: tokenHash }, data: { status: invoice.status, publicTokenHash: null, publicTokenEncrypted: null, sentSnapshot: Prisma.JsonNull, sentSnapshotAt: null } }).catch(() => undefined);
       throw error;
     }
 
@@ -109,6 +109,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           sentAt: issuedAt,
           reviewedAt: issuedAt,
           publicTokenHash: tokenHash,
+          // Kept so a later invoice reminder (#66 PR 2) can link to this exact
+          // public URL instead of minting a second live bearer link. Never
+          // used to authenticate a request — publicTokenHash still does that.
+          publicTokenEncrypted: encryptOutboxSecret(token),
           sentSnapshot: snapshot,
           sentSnapshotAt: issuedAt,
         },
@@ -155,10 +159,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     await recordActivationEvent(session.userId, ACTIVATION_EVENTS.firstMeaningfulWorkflowCompleted, { invoiceId: invoice.id }).catch((eventError) => console.error("Invoice activation event failed:", eventError));
     await recordProductEvent({ userId: session.userId, eventName: PRODUCT_EVENTS.invoiceSent, module: "invoices", entityType: "invoice", entityId: invoice.id, dataOrigin: invoice.dataOrigin || "user" }).catch((eventError) => console.error("Invoice product event failed:", eventError));
+    // One-time offer to turn on invoice reminders (#66 PR 2): only when this
+    // invoice has a due date to remind against, reminders are not already on,
+    // and this owner has never been shown the prompt before.
+    const offerReminders = Boolean(invoice.dueDate) && !profile?.remindersEnabled && !profile?.remindersPromptSeenAt;
     return NextResponse.json({
       success: true,
       delivered,
       publicUrl,
+      offerReminders,
       message: delivered
         ? "Invoice sent and delivery recorded."
         : "Invoice is issued. Share the public link if email delivery is still pending.",

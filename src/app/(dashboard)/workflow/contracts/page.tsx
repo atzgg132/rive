@@ -117,6 +117,7 @@ function ContractsWorkspace() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [initialClientId, setInitialClientId] = useState("");
   const [initialProjectId, setInitialProjectId] = useState("");
+  const [defaultCurrency, setDefaultCurrency] = useState("USD");
 
   const load = async (signal?: AbortSignal) => {
     setLoading(true);
@@ -149,16 +150,21 @@ function ContractsWorkspace() {
   // once instead of on every keystroke and every page change.
   const loadComposerOptions = async () => {
     try {
-      const [clientResponse, projectResponse, sourceContractResponse] = await Promise.all([
+      const [clientResponse, projectResponse, sourceContractResponse, settingsResponse] = await Promise.all([
         fetch("/api/workflow/clients?mode=options&pageSize=100", { cache: "no-store" }),
         fetch("/api/workflow/projects?mode=options&pageSize=100", { cache: "no-store" }),
         fetch("/api/workflow/contracts?mode=options&pageSize=100", { cache: "no-store" }),
+        fetch("/api/settings", { cache: "no-store" }),
       ]);
-      const [clientData, projectData, sourceContractData] = await Promise.all([
+      const [clientData, projectData, sourceContractData, settingsData] = await Promise.all([
         clientResponse.json(),
         projectResponse.json(),
         sourceContractResponse.json(),
+        settingsResponse.json().catch(() => null),
       ]);
+      if (settingsResponse.ok && settingsData?.success && /^[A-Z]{3}$/.test(settingsData.user?.currency || "")) {
+        setDefaultCurrency(settingsData.user.currency);
+      }
       if (clientResponse.ok && clientData.success) {
         setClients(clientData.clients.map((client: ContractComposerClient) => ({
           id: client.id,
@@ -354,6 +360,7 @@ function ContractsWorkspace() {
         clients={clients}
         projects={projects}
         sourceContracts={sourceContracts}
+        defaultCurrency={defaultCurrency}
         initialClientId={initialClientId}
         initialProjectId={initialProjectId}
         onCreated={(contractId) => router.push(`/workflow/contracts/${contractId}`)}

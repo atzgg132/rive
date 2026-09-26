@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectEmailOutboxMetrics, processEmailOutbox, CRON_PROCESSING_DEADLINE_MS } from "@/utils/emailOutbox";
 import { refreshOverdueInvoices } from "@/utils/invoiceLifecycle";
+import { sendDueInvoiceReminders } from "@/utils/invoiceReminders";
 import { logger, logMetric, requestLogContext } from "@/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +13,15 @@ export async function POST(req: NextRequest) {
   }
   const context = requestLogContext(req);
   try {
-    const [result, overdueUpdated] = await Promise.all([
+    const overdueUpdated = await refreshOverdueInvoices();
+    const [result, reminders] = await Promise.all([
       processEmailOutbox({ limit: 8, deadlineMs: CRON_PROCESSING_DEADLINE_MS }),
-      refreshOverdueInvoices(),
+      // Runs after the overdue refresh commits so a status flip this tick is
+      // visible to reminder eligibility right away instead of next run.
+      sendDueInvoiceReminders().catch((error) => {
+        logger.error("invoice_reminders_failed", { ...context, error });
+        return { sent: 0, skipped: 0, considered: 0 };
+      }),
     ]);
     const metrics = await collectEmailOutboxMetrics().catch((error) => {
       logger.warn("email_outbox_metrics_failed", { ...context, error });
@@ -25,7 +32,8 @@ export async function POST(req: NextRequest) {
       logMetric("email_outbox_terminal_failures_last_hour", metrics.terminalFailuresLastHour, context);
       logMetric("email_outbox_processing_count", metrics.processingCount, context);
     }
-    return NextResponse.json({ success: true, overdueUpdated, ...result });
+    logMetric("invoice_reminders_sent", reminders.sent, context);
+    return NextResponse.json({ success: true, overdueUpdated, reminders, ...result });
   } catch (error) {
     logger.error("email_outbox_cron_failed", { ...context, error });
     return NextResponse.json({ success: false, message: "Email outbox processing failed." }, { status: 500 });

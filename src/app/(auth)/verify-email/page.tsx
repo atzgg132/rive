@@ -41,7 +41,7 @@ export default function VerifyEmailPage() {
         }
         setState("success");
         setDestination(data.destination || "/onboarding");
-        setMessage(data.message || "Email verified. Your workspace is ready.");
+        setMessage(data.message || "Your workspace is ready.");
       }).catch(() => {
         setState("error");
         setMessage("We could not reach Rive. Try the link again in a moment.");
@@ -67,9 +67,16 @@ export default function VerifyEmailPage() {
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
       ) : null}
       {state === "success" ? (
-        <button type="button" className={authSubmitClassName} onClick={() => enterWorkspace(destination)}>
-          Open my workspace
-        </button>
+        destination === "/login" ? (
+          // Accounts with two-factor authentication sign in (password + code) instead.
+          <Link href="/login" className={authSubmitClassName}>
+            Sign in
+          </Link>
+        ) : (
+          <button type="button" className={authSubmitClassName} onClick={() => enterWorkspace(destination)}>
+            Open my workspace
+          </button>
+        )
       ) : null}
       {state === "error" ? (
         <Link href={resendHref} className={authSubmitClassName}>

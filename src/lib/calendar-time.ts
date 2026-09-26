@@ -123,7 +123,10 @@ export function supportedTimeZones(): string[] {
   try {
     const list = Intl.supportedValuesOf("timeZone");
     if (Array.isArray(list) && list.length) {
-      return [...new Set(list.map((zone) => canonicalTimeZone(zone) ?? zone))];
+      // Canonicalising renames zones (Asia/Calcutta -> Asia/Kolkata), so sort
+      // after mapping; Intl omits UTC itself, which people expect to find first.
+      const zones = [...new Set(list.map((zone) => canonicalTimeZone(zone) ?? zone))].filter((zone) => zone !== "UTC").sort();
+      return ["UTC", ...zones];
     }
   } catch {}
   return [
