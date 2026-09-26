@@ -57,3 +57,12 @@ test("default payment terms prefill a due date from the issue date", () => {
   assert.equal(addDaysToIsoDate("not-a-date", 15), null);
   assert.equal(addDaysToIsoDate("2026-09-24", NaN), null);
 });
+
+test("initialsOf takes the first and last word, matching the sidebar and Settings", async () => {
+  const { initialsOf } = await import("../../src/lib/initials.ts");
+  assert.equal(initialsOf("Rive QA Main"), "RM");
+  assert.equal(initialsOf("Priya Sharma"), "PS");
+  assert.equal(initialsOf("madonna"), "MA");
+  assert.equal(initialsOf("  "), "U");
+  assert.equal(initialsOf(null, "?"), "?");
+});
