@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 
-import { Alert, Button, Card, CardContent, PageHeader, Select } from "@/components/ui";
+import { Alert, Button, Card, CardContent, PageHeader, Select, useConfirm } from "@/components/ui";
 import UploadStep from "./steps/UploadStep";
 import AnalysisStep from "./steps/AnalysisStep";
 import ReviewStep from "./steps/ReviewStep";
@@ -43,6 +43,7 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
   const searchParams = useSearchParams();
   const resumeId = searchParams.get("id");
 
+  const [confirm, confirmDialog] = useConfirm();
   const [migrationId, setMigrationId] = useState<string | null>(resumeId);
   const [detail, setDetail] = useState<MigrationDetail | null>(null);
   const [step, setStep] = useState<Step>(resumeId ? "analyzing" : "upload");
@@ -155,7 +156,7 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
         return;
       }
       if (response.status === 409 && data.code === "identical_import_completed" && data.migrationId) {
-        const importAgain = window.confirm("These exact files were imported before. Import the same bytes again intentionally?");
+        const importAgain = await confirm({ title: "Import these files again?", description: "These exact files were imported before. Importing them again adds the same records a second time.", confirmLabel: "Import again" });
         if (!importAgain) {
           router.push(`/migrate?id=${data.migrationId}`);
           return;
@@ -327,7 +328,7 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
       reset();
       return;
     }
-    if (!window.confirm("Discard this import? Nothing has been added to your workspace yet.")) return;
+    if (!(await confirm({ title: "Discard this import?", description: "Nothing has been added to your workspace yet.", confirmLabel: "Discard import", destructive: true }))) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/migrations/${migrationId}`, { method: "POST" });
@@ -471,6 +472,7 @@ export default function MigrationWizard({ limits }: { limits: MigrationLimits })
       {step === "done" && result ? (
         <SuccessStep result={result} migrationId={migrationId} onStartAnother={reset} />
       ) : null}
+      {confirmDialog}
     </div>
   );
 }

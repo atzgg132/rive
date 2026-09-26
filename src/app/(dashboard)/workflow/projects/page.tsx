@@ -1,6 +1,6 @@
 "use client";
 
-import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Kicker, PageHeader, PaginationControls, Select, StatusBadge, Tabs, Textarea } from "@/components/ui";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Button, ContextualEmptyState, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Kicker, PageHeader, PaginationControls, Select, StatusBadge, Tabs, Textarea, useConfirm } from "@/components/ui";
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -116,6 +116,7 @@ function ProjectsWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { agreements, engagementFlow } = useFeatureAvailability();
+  const [confirm, confirmDialog] = useConfirm();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
@@ -274,7 +275,7 @@ function ProjectsWorkspace() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+    if (!(await confirm({ title: `Delete ${name}?`, description: "This can't be undone.", confirmLabel: "Delete project", destructive: true }))) {
       return;
     }
 
@@ -748,6 +749,7 @@ function ProjectsWorkspace() {
           </div>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

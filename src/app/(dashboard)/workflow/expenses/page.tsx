@@ -1,6 +1,6 @@
 "use client";
 
-import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select, StatusBadge } from "@/components/ui";
+import { AnchoredMenu, AnchoredMenuItem, AnchoredMenuSelect, Badge, Button, ContextualEmptyState, Input, PageHeader, PaginationControls, Select, StatusBadge, useConfirm } from "@/components/ui";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -61,6 +61,7 @@ const EXPENSE_CATEGORY_OPTIONS = [
 
 export default function ExpensesPage() {
   const { displayCurrency, convert, format, formatConverted, ratesAsOf, ratesStatus } = useCurrency();
+  const [confirm, confirmDialog] = useConfirm();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState("");
@@ -203,7 +204,7 @@ export default function ExpensesPage() {
   };
 
   const handleDelete = async (id: string, merchant: string) => {
-    if (!window.confirm(`Are you sure you want to delete ${merchant}? This action cannot be undone.`)) {
+    if (!(await confirm({ title: `Delete ${merchant}?`, description: "This can't be undone.", confirmLabel: "Delete expense", destructive: true }))) {
       return;
     }
 
@@ -609,6 +610,7 @@ export default function ExpensesPage() {
           </div>
         </Portal>
       )}
+      {confirmDialog}
     </div>
   );
 }
