@@ -27,6 +27,12 @@ type InvoiceSnapshot = {
   sender: { name: string; contactName: string | null; email: string; phone: string | null; address: string | null; taxId: string | null; logoUrl: string | null; paymentInstructions: string | null; defaultTerms: string | null };
 };
 
+/** The invoice's calendar dates in a short, unambiguous style ("26 Sept 2026" / "Sep 26, 2026"), read as UTC so the day never shifts. */
+function invoiceDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
 export default function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
   const [snapshot, setSnapshot] = useState<InvoiceSnapshot | null>(null);
   const [token, setToken] = useState("");
@@ -65,8 +71,8 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ token:
             <div className="text-right">
               <Kicker className="text-background">Invoice</Kicker>
               <p className="mt-2 font-mono text-2xl font-semibold tabular-nums">{snapshot.invoiceNumber}</p>
-              <p className="mt-2 text-sm font-mono tabular-nums opacity-80">Issued {new Date(snapshot.issueDate).toLocaleDateString()}</p>
-              {snapshot.dueDate ? <p className="text-sm font-mono tabular-nums opacity-80">Due {new Date(snapshot.dueDate).toLocaleDateString()}</p> : null}
+              <p className="mt-2 text-sm font-mono tabular-nums opacity-80">Issued {invoiceDate(snapshot.issueDate)}</p>
+              {snapshot.dueDate ? <p className="text-sm font-mono tabular-nums opacity-80">Due {invoiceDate(snapshot.dueDate)}</p> : null}
               {token ? <Button nativeButton={false} variant="outline" size="sm" className="mt-4 border-background/40 text-background hover:border-background hover:bg-background hover:text-foreground" render={<a href={`/api/public/invoices/${encodeURIComponent(token)}/pdf`} />}>Download PDF</Button> : null}
             </div>
           </div>

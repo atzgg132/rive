@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, Button, Input } from "@/components/ui";
 import { BUSINESS_TYPES } from "@/lib/domain-vocabulary";
+import { initialsOf } from "@/lib/initials";
 import { uploadImage } from "@/utils/clientUploads";
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
@@ -82,7 +83,7 @@ export function ProfileSection({ data }: { data: ProfileSectionData }) {
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="h-16 w-16 shrink-0 rounded-full object-cover" />
           ) : (
-            <Avatar size="lg" className="h-16 w-16 text-lg">{(name || data.email || "?").slice(0, 1).toUpperCase()}</Avatar>
+            <Avatar size="lg" className="h-16 w-16 text-lg">{initialsOf(name || data.email, "?")}</Avatar>
           )}
           <div>
             {/* A real button, so the upload is reachable by keyboard; the file input stays hidden. */}

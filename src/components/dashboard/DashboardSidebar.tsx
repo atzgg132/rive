@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Avatar, Badge, Button } from "@/components/ui";
+import { initialsOf } from "@/lib/initials";
 import Portal from "@/components/ui/Portal";
 import RiveLogo from "@/components/RiveLogo";
 import { cn } from "@/lib/utils";
@@ -42,19 +43,12 @@ interface DashboardSidebarProps {
   onLogout: () => void | Promise<void>;
 }
 
-function initials(name: string | null | undefined): string {
-  const words = name?.trim().split(/\s+/).filter(Boolean) || [];
-  if (!words.length) return "U";
-  if (words.length === 1) return words[0].substring(0, 2);
-  return `${words[0][0]}${words[words.length - 1][0]}`;
-}
-
 function AvatarFace({ user }: { user: DashboardSidebarUser | null }) {
   if (user?.avatar_url) {
     // eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from our own asset route
     return <img src={user.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />;
   }
-  return <span>{initials(user?.name)}</span>;
+  return <span>{initialsOf(user?.name)}</span>;
 }
 
 function identityLabel(user: DashboardSidebarUser | null): string {
