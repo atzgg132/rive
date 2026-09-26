@@ -1,0 +1,17 @@
+# Copy to local.auto.tfvars (gitignored) and fill in. Non-secret inputs only.
+#
+# Secrets (SMTP_PASS, Google/Zoho OAuth, admin credentials, encryption keys) are
+# operator-managed in SSM Parameter Store and never go in a tfvars file.
+# Terraform ignores their values after creation, so a plan needs none of them.
+
+billing_alert_email = "ops@example.com"
+
+# Match the live /rive/prod/EMAIL_PROVIDER value; a plan otherwise rewrites it.
+email_provider = "smtp"
+
+# Only set these when the live /rive/prod/SMTP_* values differ from the
+# variables.tf defaults (smtp.gmail.com, 587, false, hello@rive.work).
+# smtp_host   = "smtp.gmail.com"
+# smtp_port   = 587
+# smtp_secure = false
+# smtp_user   = "hello@rive.work"

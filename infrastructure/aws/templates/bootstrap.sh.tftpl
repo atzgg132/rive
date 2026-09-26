@@ -54,19 +54,17 @@ cat >/opt/rive/cloudwatch-agent.json <<'JSON'
     "append_dimensions": {
       "InstanceId": "$${aws:InstanceId}"
     },
+    "aggregation_dimensions": [["InstanceId"]],
     "metrics_collected": {
       "disk": {
         "measurement": ["used_percent"],
-        "resources": ["/"],
-        "aggregation_dimensions": [["InstanceId"]]
+        "resources": ["/"]
       },
       "mem": {
-        "measurement": ["used_percent"],
-        "aggregation_dimensions": [["InstanceId"]]
+        "measurement": ["used_percent"]
       },
       "swap": {
-        "measurement": ["used_percent"],
-        "aggregation_dimensions": [["InstanceId"]]
+        "measurement": ["used_percent"]
       }
     }
   }

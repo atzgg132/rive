@@ -1,0 +1,5 @@
+# Terraform hashes files it packages or renders (the job-runner Lambda zip, the
+# EC2 bootstrap). Pin LF so Windows and Linux checkouts produce the same bytes
+# and plans do not flap between operators.
+infrastructure/** text eol=lf
+scripts/*.sh text eol=lf
