@@ -136,7 +136,7 @@ next pass can re-run it.
   and the command palette (Ctrl/Cmd+K → "Open settings", plus one
   "Settings: <section>" entry per section).
 - Sections in order: Profile, Business & invoicing, Workspace defaults,
-  Preferences, Notifications, Integrations, Security. The left nav is sticky on
+  Preferences, Notifications, Integrations, Referrals, Security. The left nav is sticky on
   desktop; a horizontal chip row on mobile. Links scroll to their section;
   `/settings#security` lands there directly.
 - Profile: edit name, profession, business types and photo, then save and
@@ -260,6 +260,34 @@ next pass can re-run it.
   rest of the app (fonts, spacing, square corners, button styles).
 - With seeded data present, Settings still loads quickly and currency defaults
   behave sensibly next to existing records.
+
+### 2026-09 — Referral programme with launch credit (#81)
+
+**Settings -> Referrals, QA main**
+
+- The section shows a personal link ending `/register?ref=<8-character code>`.
+  The copy button copies it, and the code stays the same after a reload.
+- Joined, Activated and "Free months earned: N of 5" read 0 for an account
+  that has referred no one.
+
+**Referred signup, fresh synthetic account in a private window**
+
+- Open the QA main referral link, register a uniquely labelled synthetic
+  account, and verify its email. QA main's Joined goes up by one, and
+  Activated stays the same.
+- In the new account, finish onboarding, then add a client and a project with
+  a due date linked to it. Reload QA main's Settings: Activated and months
+  earned each go up by one. The new account's Referrals section says it
+  earned 1 free month.
+- A `?ref=` value that is not an issued code (for example `?ref=newsletter`)
+  still signs up normally and adds nothing to anyone's Joined count.
+
+**Pricing and admin**
+
+- `/pricing` has the "Do referrals earn anything?" answer: one month per
+  activated referral, up to five, plus one month for the new account.
+- Admin -> Funnel has a Referrals panel showing referred signups, activated
+  referrals, referrers and launch-credit months owed.
 
 ## Report format
 

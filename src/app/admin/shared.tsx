@@ -34,6 +34,7 @@ export type Funnel = {
     };
   };
   window?: { label: string; signupSparklineDays: number; activationWindowDays: number; deepActivationWindowDays: number };
+  referrals?: { referredSignups: number; activatedReferrals: number; referrers: number; creditMonths: number };
   dropOff?: { unqualified: number; qualifiedNotActivated: number; blockerCounts: Array<{ blocker: string; count: number }> };
   quality: { schemaVersion: number; contractRejections24h: number; unknownEventNames24h: number; missingIdentityEvents24h: number; missingDataOriginEvents24h: number; unknownOriginRecords: number; latestEventAt: string | null; eventLagMinutes: number | null; uncapturedSignups: number; uncapturedSignupRate: number | null; alerts: FunnelQualityAlert[] };
 };
