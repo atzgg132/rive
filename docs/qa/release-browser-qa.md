@@ -75,13 +75,9 @@ portfolio name to "Arnav Bhattacharya"; that is expected. It uses stable ids,
 so re-running it each release refreshes the same demo records instead of
 duplicating them.
 
-> **Caution: the stable ids are global, not per account.** They are derived
-> from fixed keys such as `client:northstar`, with no user id in the key. If
-> the seeder has already been applied to another account on dev, `--apply`
-> for QA main rewrites that account's demo records instead of creating QA
-> main's, and moves its portfolio enquiries to QA main. Before the first
-> `--apply`, confirm read-only that no other account owns those ids. If one
-> does, don't apply; raise it with the owner.
+Ids are scoped to the target account, so seeding QA main never touches another
+account's demo records. An account seeded before scoping keeps its original
+ids, so re-seeding it stays idempotent.
 
 Run it through the same SSM tunnel that `scripts/dev-aws.ps1` opens. The
 script has no action for this seeder, so in PowerShell do what it does:
@@ -152,10 +148,11 @@ next pass can re-run it.
   `/workflow/invoice-settings` redirects here. After saving, the Create
   invoice preview shows the real business name and logo, and a new invoice's
   due date is prefilled as today + terms.
-- Workspace defaults: currency (3-letter code) and time zone. With EUR set, a
-  new invoice with no project, a new expense and a new agreement default to
-  EUR. A linked project's currency (e.g. GBP) wins over the workspace default.
-  Invalid values are rejected.
+- Workspace defaults: currency (a picker; codes that aren't ISO 4217, such as
+  `ZZZ`, are rejected by the API) and time zone (sorted, UTC first). With EUR
+  set, a new invoice with no project, a new expense and a new agreement default
+  to EUR. A linked project's currency (e.g. GBP) wins over the workspace
+  default.
 - Preferences: the display currency lives here and is **not** in the top
   header (desktop or mobile). Changing it changes how amounts are shown, not
   what's stored. Theme toggle. "Replay guided tour" starts the walkthrough.
@@ -180,12 +177,14 @@ next pass can re-run it.
   can't be earlier than the issue date), and R2 due in 14 days linked to the
   GBP project. For a reminder you can check the next day, also send an R3 due
   in 4 days.
-- Sending R2 shows a one-time "Turn on invoice reminders?" prompt in the
-  invoice panel, only if the account has never seen it. "Turn on" enables
+- Sending R2 (from the invoice panel or from the invoice list) shows a one-time
+  "Turn on invoice reminders?" prompt in the invoice panel, only if the account
+  has never seen it. "Turn on" enables
   reminders, and the prompt never appears again. An invoice without a due date
   never triggers it.
-- A sent, unpaid invoice with a due date has "Pause reminders" / "Resume
-  reminders".
+- With reminders on, a sent, unpaid invoice with a due date has "Pause
+  reminders" / "Resume reminders" (hidden while reminders are off). The
+  client-facing invoice shows the business name, address and tax ID.
 - **Reminder timing.** The job skips every step whose date falls on or before
   the day the invoice was sent (`selectDueReminderStep` in
   `src/utils/invoiceReminders.ts`), because the invoice email covers it. An
@@ -203,7 +202,8 @@ next pass can re-run it.
   clicked, which then shows "Done…". After that the client gets no reminders
   but still receives invoices. This opt-out persists on the client.
 - Turn on "Send paid receipts" and record R2's full payment. The client gets
-  exactly one receipt.
+  exactly one receipt, with the amount formatted (e.g. £250.00) and a
+  "View invoice" link.
 
 **Weekly summary, QA main**
 
@@ -217,10 +217,11 @@ next pass can re-run it.
 
 **Two-factor authentication, QA 2FA only**
 
-- Settings → Security → "Turn on two-factor authentication" shows a setup link,
-  a manual key and a 6-digit code field. A valid code shows 10 recovery codes,
-  which stay on screen until "I've saved these recovery codes" is ticked and
-  Done is clicked. Status then reads "On since <date>. 10 unused recovery codes
+- Settings → Security → "Turn on two-factor authentication" shows a QR code, a
+  setup link (for phones), a manual key and a 6-digit code field. On dev the
+  authenticator entry is labelled "rive.work (dev)". A valid code shows 10
+  recovery codes with Copy and Download buttons; they stay on screen until
+  "I've saved these recovery codes" is ticked and Done is clicked. Status then reads "On since <date>. 10 unused recovery codes
   left." A security email is sent.
 - Sign out, then sign in with email and password. You land on "Enter your
   code" (`/login/two-factor`), not the dashboard. A wrong code shows an error,
