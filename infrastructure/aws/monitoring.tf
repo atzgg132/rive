@@ -376,7 +376,7 @@ resource "aws_cloudwatch_log_metric_filter" "email_outbox_oldest_queued" {
     namespace  = "Rive/Application"
     value      = "$.metricValue"
     unit       = "Seconds"
-    dimensions = { Environment = each.key }
+    dimensions = { Environment = "$.environment" }
   }
 }
 
@@ -390,7 +390,7 @@ resource "aws_cloudwatch_log_metric_filter" "email_outbox_terminal_failures" {
     name       = "email_outbox_terminal_failures_last_hour"
     namespace  = "Rive/Application"
     value      = "$.metricValue"
-    dimensions = { Environment = each.key }
+    dimensions = { Environment = "$.environment" }
   }
 }
 
@@ -404,7 +404,7 @@ resource "aws_cloudwatch_log_metric_filter" "email_outbox_processing" {
     name       = "email_outbox_processing_count"
     namespace  = "Rive/Application"
     value      = "$.metricValue"
-    dimensions = { Environment = each.key }
+    dimensions = { Environment = "$.environment" }
   }
 }
 

@@ -177,6 +177,47 @@ terraform -chdir=infrastructure/aws plan `
 Never commit `.tfvars`, state files, plans, credentials, database exports, or
 generated environment files.
 
+### Planning without secrets
+
+Copy `infrastructure/aws/terraform.tfvars.example` to
+`infrastructure/aws/local.auto.tfvars` (gitignored; Terraform loads it
+automatically) and set only the non-secret inputs: `billing_alert_email`,
+`email_provider` equal to the live `/rive/prod/EMAIL_PROVIDER`, and any
+`smtp_*` value where live prod differs from the defaults. Read the live values
+first. The `aws_ssm_parameter.environment` values are not ignored, so a wrong
+input here rewrites production configuration.
+
+Do not supply Google, Zoho, SMTP or admin secrets. Operator-managed, rotating
+and admin parameters ignore their values after creation, so a plan against
+existing parameters needs none of them. A plan that shows one of those
+parameters being **created** would write the placeholder default: stop, and
+`terraform import` the live parameter if it exists.
+
+`ADMIN_TOTP_SECRET` is created by hand when an admin enrols and is not in
+state. Leave `TF_VAR_admin_totp_secret` unset. Any non-empty value makes the
+plan create both parameters and overwrite the live seeds.
+
+Authenticate as the Identity Center administrator, not the root user:
+
+```powershell
+aws sso login --profile rive-bootstrap
+terraform -chdir=infrastructure/aws init -reconfigure `
+  -backend-config="bucket=rive-terraform-state-453393998202" `
+  -backend-config="profile=rive-bootstrap"
+```
+
+### After merging infrastructure changes
+
+Any PR that touches `infrastructure/aws` is followed, once it reaches `main`,
+by a full saved plan (`-out`), a read of the whole plan, an apply of exactly
+that plan, and a re-plan that says `No changes.`. Record the plan summary and
+the final `No changes.` line in the promotion PR. Merged-but-unapplied code is
+how the 2026-09 drift happened: alarms, operator roles and SNS wiring existed
+only in the repository, and nothing paged anyone.
+
+Last full reconciliation: 2026-09-26 (plan on `main` + `chore/infra-stabilize`
+said `No changes.`).
+
 Before planning or applying email-related infrastructure, provide the Google
 Workspace app password only in the current shell:
 

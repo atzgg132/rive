@@ -90,14 +90,15 @@ locals {
   # read while new writes use the new key.
   rotating_parameters = merge([
     for environment in local.environments : {
-      "${environment}/EMAIL_OUTBOX_KEY"                    = random_password.email_outbox[environment].result
-      "${environment}/EMAIL_OUTBOX_KEY_ID"                 = "v2"
-      "${environment}/EMAIL_OUTBOX_KEY_PREVIOUS"           = random_password.session[environment].result
-      "${environment}/EMAIL_OUTBOX_KEY_PREVIOUS_ID"        = "v1"
-      "${environment}/CALENDAR_ENCRYPTION_KEY"             = random_password.calendar[environment].result
-      "${environment}/CALENDAR_ENCRYPTION_KEY_ID"          = "v1"
-      "${environment}/CALENDAR_ENCRYPTION_KEY_PREVIOUS"    = ""
-      "${environment}/CALENDAR_ENCRYPTION_KEY_PREVIOUS_ID" = "v0"
+      "${environment}/EMAIL_OUTBOX_KEY"             = random_password.email_outbox[environment].result
+      "${environment}/EMAIL_OUTBOX_KEY_ID"          = "v2"
+      "${environment}/EMAIL_OUTBOX_KEY_PREVIOUS"    = random_password.session[environment].result
+      "${environment}/EMAIL_OUTBOX_KEY_PREVIOUS_ID" = "v1"
+      "${environment}/CALENDAR_ENCRYPTION_KEY"      = random_password.calendar[environment].result
+      "${environment}/CALENDAR_ENCRYPTION_KEY_ID"   = "v1"
+      # CALENDAR_ENCRYPTION_KEY_PREVIOUS and _PREVIOUS_ID are created by the
+      # operator at rotation time, when a previous key actually exists. SSM
+      # rejects empty values, so they cannot be bootstrapped empty here.
     }
   ]...)
 }

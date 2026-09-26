@@ -22,7 +22,10 @@ resource "aws_instance" "app" {
     volume_size = 16
   }
 
-  user_data = templatefile("${path.module}/templates/bootstrap.sh.tftpl", {
+  # Gzipped because the rendered script (which embeds the Caddyfile and
+  # deploy-runtime.sh) outgrew EC2's 16 KiB user_data limit; cloud-init
+  # decompresses gzip user data natively.
+  user_data_base64 = base64gzip(templatefile("${path.module}/templates/bootstrap.sh.tftpl", {
     region           = var.aws_region
     account_id       = data.aws_caller_identity.current.account_id
     repository_url   = aws_ecr_repository.app.repository_url
@@ -30,7 +33,7 @@ resource "aws_instance" "app" {
     db_master_secret = aws_db_instance.postgres.master_user_secret[0].secret_arn
     caddyfile        = file("${path.module}/caddy/Caddyfile")
     deploy_runtime   = file("${path.module}/../../scripts/deploy-runtime.sh")
-  })
+  }))
 
   depends_on = [
     aws_ssm_parameter.database_password,
@@ -50,7 +53,7 @@ resource "aws_instance" "app" {
   # `terraform apply -replace=aws_instance.app`) during a planned window, and
   # expect Caddy to re-issue certificates on first boot.
   lifecycle {
-    ignore_changes = [ami, user_data]
+    ignore_changes = [ami, user_data, user_data_base64]
   }
 
   tags = {
