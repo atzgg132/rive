@@ -1,0 +1,47 @@
+.band {
+  position: relative;
+  padding-block: clamp(5rem, 11vw, 11rem);
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+  overflow: clip;
+  isolation: isolate;
+}
+
+.thread {
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: clamp(9rem, 22vw, 20rem);
+  color: var(--s-accent-on-ink);
+  opacity: 0.55;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.inner {
+  display: grid;
+  gap: clamp(1.75rem, 3vw, 2.75rem);
+  justify-items: start;
+}
+
+.title {
+  margin: 0;
+  max-width: 15ch;
+  font-family: var(--s-font);
+  font-size: clamp(2.4rem, 0.9rem + 5.6vw, 8rem);
+  font-weight: 780;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  color: var(--s-on-ink);
+}
+
+.actions {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+.note {
+  margin: 0;
+}

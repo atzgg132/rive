@@ -1,0 +1,32 @@
+.root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  --ink-p: 0;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 1400ms var(--s-ease-out, ease-out);
+}
+
+.ready {
+  opacity: 1;
+}
+
+/* No WebGL, or the context was lost: radial gradients that stand in for the
+   ink, deepening with the same progress value. */
+.fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(70% 46% at 74% 112%, rgb(9 17 31 / calc(0.55 + var(--ink-p) * 0.4)) 0%, rgb(26 58 143 / 0.28) 52%, transparent 78%),
+    radial-gradient(36% 36% at 104% 56%, rgb(26 58 143 / calc(0.3 + var(--ink-p) * 0.2)), transparent 72%),
+    radial-gradient(60% 30% at 20% 116%, rgb(26 58 143 / 0.16), transparent 70%);
+}

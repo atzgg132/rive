@@ -1,0 +1,274 @@
+.hero {
+  --hero-nav: 4.25rem;
+  --hero-frame-w: min(92vw, 1400px);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  overflow: clip;
+  background: var(--s-paper);
+  color: var(--s-text);
+}
+
+@media (min-width: 640px) {
+  .hero { --hero-nav: 4.75rem; }
+}
+@media (min-width: 1024px) {
+  .hero { --hero-nav: 5.25rem; }
+}
+@media (min-width: 2200px) {
+  .hero { --hero-frame-w: 1500px; }
+}
+
+.ink {
+  z-index: 0;
+}
+
+/* ── Copy ──────────────────────────────────────────────────────── */
+.content {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  padding-top: calc(var(--hero-nav) + clamp(0.75rem, 3.6svh, 3.25rem));
+}
+
+.inner {
+  width: min(100% - 2 * var(--s-gutter), 120rem);
+  margin-inline: auto;
+}
+
+.kicker {
+  margin: 0 0 clamp(1rem, 2.6svh, 1.9rem);
+  max-width: 34rem;
+  text-wrap: balance;
+}
+
+.grid {
+  display: grid;
+  gap: clamp(1.25rem, 3svh, 2rem);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--s-font);
+  font-size: max(var(--s-t-hero), calc(3.3vw + 2.3rem));
+  font-weight: 780;
+  font-stretch: 100%;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  font-kerning: normal;
+  color: var(--s-text);
+}
+
+.line {
+  display: block;
+  white-space: nowrap;
+  /* Mask: clips top and bottom to the line box, never the sides. */
+  clip-path: inset(-0.04em -60vw -0.16em -60vw);
+}
+
+.lineInner {
+  display: block;
+  transform-origin: 0 100%;
+  animation: rise 900ms var(--s-ease-out) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+.lastLine {
+  position: relative;
+  display: block;
+  width: fit-content;
+}
+
+.underline {
+  position: absolute;
+  left: -0.5%;
+  bottom: -0.11em;
+  width: 101%;
+  height: 0.2em;
+  overflow: visible;
+  pointer-events: none;
+}
+.underline path {
+  stroke-width: clamp(3px, 0.62vw, 9px);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: draw 620ms var(--s-ease-out) 860ms backwards;
+}
+
+.threadEnd {
+  position: absolute;
+  left: 99.5%;
+  bottom: calc(-0.11em + 0.2em * 0.73);
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.aside {
+  display: grid;
+  gap: 1.35rem;
+  justify-items: start;
+  align-content: end;
+}
+
+.lead {
+  margin: 0;
+  max-width: 38ch;
+  font-size: clamp(1.02rem, 0.94rem + 0.42vw, 1.32rem);
+  /* The largest text on a phone, so it is the LCP element: it rises into
+     place but is painted from the first frame (an opacity-0 start delays
+     LCP until the fade runs, ~2.6s on a throttled phone). */
+  animation: lift 800ms var(--s-ease-out) 120ms both;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  animation: fade-up 800ms var(--s-ease-out) 600ms both;
+}
+
+.assurance {
+  margin: 0;
+  animation: fade-up 800ms var(--s-ease-out) 700ms both;
+}
+
+.kicker {
+  animation: fade-up 800ms var(--s-ease-out) 200ms both;
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) clamp(16rem, 34%, 26rem);
+    column-gap: clamp(2rem, 4vw, 6rem);
+    align-items: end;
+  }
+  .aside { padding-bottom: 0.6rem; }
+}
+
+@media (max-width: 639.98px) and (max-height: 700px) {
+  .content { padding-top: calc(var(--hero-nav) + 0.25rem); }
+  .kicker { margin-bottom: 0.65rem; }
+  .grid { gap: 0.8rem; }
+  .aside { gap: 0.8rem; }
+  .lead { font-size: 0.98rem; line-height: 1.4; }
+  .actions { gap: 0.5rem; }
+  .actions > :global(.s-btn) { min-height: 48px; }
+  .assurance { line-height: 1.35; }
+}
+
+@media (max-width: 420px) {
+  .actions { width: 100%; }
+  .actions > :global(.s-btn) { flex: 1 1 auto; padding-inline: 1.25rem; }
+}
+
+/* ── Product ───────────────────────────────────────────────────── */
+.stage {
+  position: relative;
+  z-index: 3;
+  flex: 1 1 auto;
+  min-height: clamp(6rem, 18svh, 15rem);
+  margin-top: clamp(1.4rem, 3.6svh, 3rem);
+  pointer-events: none;
+  animation: fade-in 900ms ease-out 650ms both;
+}
+
+.frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: var(--hero-frame-w);
+  margin-inline: auto;
+  transform-origin: 50% 0;
+  transform: perspective(1400px) rotateX(24deg) scale(0.9);
+  backface-visibility: hidden;
+}
+
+@media (max-width: 639.98px) {
+  .frame { transform: perspective(1000px) rotateX(20deg) scale(0.92); }
+}
+
+.sample {
+  position: absolute;
+  left: 0.25rem;
+  bottom: 100%;
+  margin: 0 0 0.7rem;
+}
+
+/* After the base .stage rule so it wins: room for the sample label above the
+   frame without colliding with the assurance line on short phones. */
+@media (max-width: 639.98px) and (max-height: 700px) {
+  .stage { margin-top: 1.9rem; min-height: 5rem; }
+  .sample { margin-bottom: 0.45rem; }
+}
+
+.surface {
+  overflow: hidden;
+  border-radius: var(--s-radius-lg);
+  border: 1px solid var(--s-hair-strong);
+  background: var(--s-card);
+  box-shadow: var(--s-shadow-float);
+}
+
+@media (max-width: 639.98px) {
+  .surface { border-radius: 18px; }
+}
+
+/* ── Pause ─────────────────────────────────────────────────────── */
+.pause {
+  position: absolute;
+  z-index: 6;
+  right: max(0.75rem, calc(var(--s-gutter) - 0.75rem));
+  bottom: 0.9rem;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--s-hair-strong);
+  border-radius: 999px;
+  background: rgb(243 240 232 / 0.9);
+  color: var(--s-text);
+  cursor: pointer;
+  transition: background-color var(--s-dur-fast) ease, transform var(--s-dur-fast) var(--s-ease-out);
+}
+.pause:hover { background: var(--s-card); transform: scale(1.06); }
+.pause:focus-visible { outline: 2px solid var(--s-accent); outline-offset: 3px; }
+.pause svg { width: 16px; height: 16px; }
+
+/* ── Motion ────────────────────────────────────────────────────── */
+@keyframes rise {
+  from { transform: translateY(118%); font-stretch: 125%; }
+  to { transform: translateY(0); font-stretch: 100%; }
+}
+@keyframes lift {
+  from { transform: translateY(14px); }
+  to { transform: none; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Reduced motion: everything is in place, flat, and arrives with one short
+   fade. The product sits below the copy in normal flow. */
+@media (prefers-reduced-motion: reduce) {
+  .hero { min-height: 0; }
+  .lineInner { animation: fade-in 300ms ease-out both; animation-delay: 0ms; }
+  .kicker, .lead, .actions, .assurance, .stage { animation: fade-in 300ms ease-out both; animation-delay: 0ms; }
+  .underline path { animation: fade-in 300ms ease-out both; }
+  .line { clip-path: none; }
+  .stage { flex: none; min-height: 0; margin-top: clamp(2rem, 5svh, 3.5rem); padding-bottom: clamp(3.5rem, 7svh, 5rem); }
+  .frame { position: relative; transform: none; }
+}

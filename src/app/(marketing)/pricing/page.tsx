@@ -2,8 +2,14 @@ import { Check } from "lucide-react";
 import { MarketingButton } from "@/components/marketing/primitives";
 import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
 import { marketingMetadata } from "@/lib/marketingMetadata";
+import { siteRouteMetadata } from "@/content/site/metadata";
 
-export const metadata = marketingMetadata("Rive pricing — Free during open beta", "Create a Rive account without a credit card and use one complete workspace free during open beta.", "/pricing");
+const v2 = siteRouteMetadata["/pricing"];
+
+export const metadata =
+  process.env.MARKETING_SITE_V2 === "1"
+    ? marketingMetadata(v2.title, v2.description, "/pricing")
+    : marketingMetadata("Rive pricing — Free during open beta", "Create a Rive account without a credit card and use one complete workspace free during open beta.", "/pricing");
 
 const included = ["Client and project management", "Tasks, milestones, and calendar", "Agreement review and recorded acceptance", "Invoices, payment records, and expenses", "Portfolio publishing and enquiries"];
 const questions = [
@@ -14,7 +20,12 @@ const questions = [
   ["Can I export my whole workspace?", "Full workspace export is not currently available. Review this limitation before moving essential business records."],
 ] as const;
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  // Must stay an inline `process.env` comparison: see `env` in next.config.ts.
+  if (process.env.MARKETING_SITE_V2 === "1") {
+    const { SitePricingPage } = await import("@/components/site/pages/SitePricingPage");
+    return <SitePricingPage />;
+  }
   return (
     <>
       <ReadingHero

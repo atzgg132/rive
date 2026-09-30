@@ -1,0 +1,170 @@
+.block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2.5rem, 7vw, 4rem);
+  align-items: center;
+}
+.text { max-width: 40rem; }
+.note {
+  margin: 0.5rem 0 0;
+  padding-block: 0.15rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--s-text);
+  max-width: 34rem;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .block { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: clamp(3rem, 6vw, 8rem); }
+  .text h2 { font-size: clamp(2.1rem, min(3.6vw + 0.4rem, 8.4svh), 5rem); max-width: 14ch; }
+  .text { gap: clamp(0.75rem, 1.6svh, 1.4rem); }
+  .text :global(.s-lead) { font-size: clamp(1.02rem, min(0.6vw + 0.7rem, 2.6svh), 1.4rem); }
+  .text li { padding-block: clamp(0.55rem, 1.3svh, 0.95rem); }
+}
+
+/* ── Phone ─────────────────────────────────────────────────────── */
+.phone {
+  --phone-h: min(72svh, 40rem);
+  position: relative;
+  height: var(--phone-h);
+  aspect-ratio: 9 / 18.2;
+  padding: clamp(7px, 1.1svh, 10px);
+  border-radius: calc(var(--phone-h) * 0.085);
+  background: linear-gradient(160deg, #1b2740, #0a1120 55%);
+  box-shadow: 0 0 0 1px rgb(12 30 54 / 0.5), inset 0 0 0 1.5px rgb(255 255 255 / 0.1), 0 60px 90px -40px rgb(9 17 31 / 0.55), 0 24px 40px -24px rgb(9 17 31 / 0.4);
+}
+.button {
+  position: absolute;
+  right: -3px;
+  top: 22%;
+  width: 3px;
+  height: 11%;
+  border-radius: 0 3px 3px 0;
+  background: #0a1120;
+}
+.screen {
+  position: relative;
+  height: 100%;
+  border-radius: calc(var(--phone-h) * 0.072);
+  overflow: hidden;
+  background: var(--s-card);
+  isolation: isolate;
+}
+.statusBar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 3;
+  height: clamp(18px, 3.4svh, 26px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--s-card);
+}
+.island {
+  width: 30%;
+  height: 52%;
+  border-radius: 999px;
+  background: #0a1120;
+}
+.viewport {
+  position: absolute;
+  inset: clamp(18px, 3.4svh, 26px) 0 0 0;
+  overflow: hidden;
+}
+.scaler {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  transform: scale(var(--doc-scale, 0.6));
+}
+.scroll { position: relative; will-change: transform; }
+.doc { position: relative; }
+.doc :global(.wp-doc-split) { display: grid; gap: 1.5rem; }
+.doc :global(.wp-cols-auto) { display: grid; gap: 0.25rem; }
+
+.typed {
+  display: none;
+  position: absolute;
+  align-items: center;
+  padding-inline: 12px;
+  pointer-events: none;
+}
+.phone[data-armed] .typed { display: flex; }
+.phone[data-armed] .doc :global(input) {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.typedText {
+  font-family: var(--s-font);
+  font-size: 20px;
+  font-weight: 460;
+  font-style: italic;
+  letter-spacing: -0.012em;
+  color: #0c1e36;
+  white-space: nowrap;
+}
+.caret {
+  width: 2px;
+  height: 22px;
+  margin-left: 2px;
+  background: var(--s-accent);
+  animation: caretBlink 0.9s steps(1) infinite;
+}
+.rule {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 7px;
+  height: 1.5px;
+  background: rgb(12 30 54 / 0.42);
+}
+@keyframes caretBlink { 50% { opacity: 0.15; } }
+
+.stamp {
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  bottom: 4.5%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 14px;
+  background: #09111f;
+  color: #f1eee6;
+  box-shadow: 0 18px 36px -14px rgb(9 17 31 / 0.6);
+}
+.stampIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+}
+.stampIcon svg { width: 0.9rem; height: 0.9rem; }
+.stampBody { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; line-height: 1.25; }
+.stampBody strong { font-size: 0.85rem; font-weight: 700; }
+.stampBody span { font-size: 0.6rem; letter-spacing: 0.02em; color: #a3aec0; overflow-wrap: anywhere; }
+
+@media (max-width: 1023.98px) {
+  .phone { --phone-h: min(68svh, 34rem); }
+}
+@media (max-width: 639.98px) {
+  .phone { --phone-h: min(66svh, 30rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret { display: none; }
+}

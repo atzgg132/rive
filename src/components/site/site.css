@@ -1,0 +1,281 @@
+/* ═══════════════════════════════════════════════════════════════════
+   RIVE MARKETING SITE v2 — "One Flow"
+   Warm paper and ink, continuous with the app's Working Edition theme.
+   One accent (registry blue) for the Thread and the main button only.
+   Namespace: --s-* tokens, .s-* utilities, section styles in CSS Modules.
+   Everything is scoped to [data-site="v2"]; nothing here reaches the app.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Same file as the app's Archivo face, declared with its width axis so
+   `font-stretch` can select 62%–125%. Sharing the URL reuses the preload. */
+@font-face {
+  font-family: "Archivo Site";
+  src: url("/fonts/archivo-marketing.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+}
+
+[data-site="v2"] {
+  /* Colour */
+  --s-paper: #f3f0e8;
+  --s-paper-2: #e9e4d6;
+  --s-card: #fbfaf6;
+  --s-ink: #09111f;
+  --s-ink-2: #0d182a;
+  --s-ink-3: #16233a;
+  --s-text: #0c1e36;
+  --s-text-soft: #4f5c6e;
+  --s-on-ink: #f1eee6;
+  --s-on-ink-soft: #a3aec0;
+  --s-accent: #2563eb;
+  --s-accent-strong: #1847bd;
+  --s-accent-on-ink: #7aa3ff;
+  --s-hair: rgb(12 30 54 / 0.14);
+  --s-hair-strong: rgb(12 30 54 / 0.28);
+  --s-hair-ink: rgb(241 238 230 / 0.14);
+  --s-shadow-float: 0 40px 80px -30px rgb(9 17 31 / 0.35), 0 12px 24px -12px rgb(9 17 31 / 0.18);
+
+  /* Type */
+  --s-font: "Archivo Site", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --s-mono: "Martian Mono", "JetBrains Mono", ui-monospace, monospace;
+  --s-t-hero: clamp(3rem, 1.1rem + 7.6vw, 12.5rem);
+  --s-t-display: clamp(2.6rem, 1rem + 5.4vw, 8rem);
+  --s-t-h2: clamp(2.1rem, 1rem + 3.6vw, 5.25rem);
+  --s-t-h3: clamp(1.4rem, 1rem + 1.25vw, 2.4rem);
+  --s-t-lead: clamp(1.08rem, 0.95rem + 0.55vw, 1.55rem);
+  --s-t-body: clamp(1rem, 0.96rem + 0.18vw, 1.125rem);
+  --s-t-small: 0.875rem;
+  --s-t-mono: 0.72rem;
+
+  /* Space & grid */
+  --s-gutter: clamp(1.25rem, 4.2vw, 5rem);
+  --s-section: clamp(5.5rem, 11vw, 13rem);
+  --s-container: 92rem;
+  --s-container-wide: 120rem;
+  --s-radius-card: 14px;
+  --s-radius-lg: 24px;
+
+  /* Motion */
+  --s-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --s-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --s-dur-fast: 180ms;
+  --s-dur: 420ms;
+  --s-dur-slow: 900ms;
+
+  /* Layers */
+  --s-z-canvas: 0;
+  --s-z-content: 1;
+  --s-z-thread: 2;
+  --s-z-nav: 50;
+  --s-z-pill: 60;
+
+  background: var(--s-paper);
+  color: var(--s-text);
+  font-family: var(--s-font);
+  font-size: var(--s-t-body);
+  line-height: 1.55;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+[data-site="v2"] ::selection { background: var(--s-accent); color: #fff; }
+
+/* globals.css gives every h1–h6 and p the app's display/body faces. On the
+   site they inherit the site face instead — except inside real product UI,
+   which keeps the app's own type. Zero-specificity beyond the attribute, so
+   component classes still win. */
+[data-site="v2"] :where(h1, h2, h3, h4, h5, h6, p):not(:where(.app-window, .inst-specimen, [data-product-ui]) *) {
+  font-family: inherit;
+}
+[data-site="v2"] :where(h1, h2, h3):not(:where(.app-window, .inst-specimen, [data-product-ui]) *) {
+  word-spacing: 0.08em;
+}
+
+/* A section on ink re-points the text tokens, so components written for
+   paper read correctly inside it. */
+[data-site="v2"] [data-theme="ink"] {
+  --s-text: var(--s-on-ink);
+  --s-text-soft: var(--s-on-ink-soft);
+  --s-hair: var(--s-hair-ink);
+  --s-hair-strong: rgb(241 238 230 / 0.3);
+  --s-accent: var(--s-accent-on-ink);
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+}
+
+/* ── Focus ─────────────────────────────────────────────────────── */
+[data-site="v2"] :focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 3px;
+}
+
+/* ── Layout ────────────────────────────────────────────────────── */
+.s-container {
+  width: min(100% - 2 * var(--s-gutter), var(--s-container));
+  margin-inline: auto;
+}
+.s-container--wide { width: min(100% - 2 * var(--s-gutter), var(--s-container-wide)); }
+.s-section { position: relative; padding-block: var(--s-section); }
+
+/* ── Type ──────────────────────────────────────────────────────── */
+.s-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--s-text-soft);
+}
+.s-kicker::before {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 999px;
+  background: var(--s-accent);
+  flex: none;
+}
+.s-mono {
+  font-family: var(--s-mono);
+  font-variant-numeric: tabular-nums;
+}
+.s-display,
+.s-h2,
+.s-h3 {
+  font-family: var(--s-font);
+  font-weight: 760;
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  font-kerning: normal;
+  /* Tight tracking at display sizes closes word gaps; open them back up. */
+  word-spacing: 0.08em;
+}
+.s-display { font-size: var(--s-t-display); }
+.s-h2 { font-size: var(--s-t-h2); line-height: 1; }
+.s-h3 { font-size: var(--s-t-h3); line-height: 1.08; letter-spacing: -0.02em; font-weight: 700; }
+.s-lead {
+  font-size: var(--s-t-lead);
+  line-height: 1.45;
+  color: var(--s-text-soft);
+  text-wrap: pretty;
+  max-width: 44ch;
+}
+.s-accent { color: var(--s-accent); }
+.s-note {
+  font-size: var(--s-t-small);
+  color: var(--s-text-soft);
+  border-left: 2px solid var(--s-accent);
+  padding-left: 0.9rem;
+  max-width: 52ch;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.s-btn {
+  --s-btn-bg: var(--s-accent);
+  --s-btn-fg: #fff;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 48px;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  background: var(--s-btn-bg);
+  color: var(--s-btn-fg);
+  font-family: var(--s-font);
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  text-decoration: none;
+  white-space: nowrap;
+  isolation: isolate;
+  overflow: hidden;
+  transition: transform var(--s-dur-fast) var(--s-ease-out), background-color var(--s-dur) var(--s-ease-out), box-shadow var(--s-dur) var(--s-ease-out);
+  box-shadow: 0 10px 30px -12px rgb(37 99 235 / 0.65);
+}
+.s-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 700ms var(--s-ease-out);
+}
+.s-btn:hover { transform: translateY(-2px); background: var(--s-accent-strong); }
+.s-btn:hover::after { transform: translateX(120%); }
+.s-btn:active { transform: translateY(0); }
+[data-theme="ink"] .s-btn { --s-btn-bg: #2563eb; }
+[data-theme="ink"] .s-btn:hover { background: #3a74f5; }
+.s-btn--lg { min-height: 56px; padding: 0 1.9rem; font-size: 1.0625rem; }
+.s-btn--ghost {
+  --s-btn-bg: transparent;
+  --s-btn-fg: var(--s-text);
+  box-shadow: inset 0 0 0 1px var(--s-hair-strong);
+}
+.s-btn--ghost:hover { background: rgb(12 30 54 / 0.05); }
+[data-theme="ink"] .s-btn--ghost:hover { background: rgb(241 238 230 / 0.08); }
+.s-btn svg { width: 1.05em; height: 1.05em; flex: none; transition: transform var(--s-dur) var(--s-ease-out); }
+.s-btn:hover svg { transform: translateX(3px); }
+.s-assurance {
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  letter-spacing: 0.08em;
+  color: var(--s-text-soft);
+}
+
+.s-skip {
+  position: absolute;
+  left: 1rem;
+  top: -100px;
+  z-index: 200;
+  padding: 0.75rem 1rem;
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+  border-radius: 8px;
+}
+.s-skip:focus { top: 1rem; }
+
+.s-sample-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--s-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* Full text colour: these sit on soft product shadows, where the muted
+     tone drops under 4.5:1. */
+  color: var(--s-text);
+}
+
+/* ── Motion boot ───────────────────────────────────────────────── */
+/* Hidden only while GSAP is loading; see MOTION_BOOT_SCRIPT. */
+html.site-motion:not(.site-motion-ready) [data-site="v2"] [data-reveal] { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* globals.css gives every element a 0.01ms transition on `all`. GSAP reads
+     computed values when it (re)records a tween — on every ScrollTrigger
+     refresh — and would catch opacity mid-transition at 0, leaving content
+     hidden. The site's reduced-motion fades are GSAP's; CSS transitions are
+     switched off entirely here. */
+  [data-site="v2"] *,
+  [data-site="v2"] *::before,
+  [data-site="v2"] *::after {
+    scroll-behavior: auto !important;
+    transition-property: none !important;
+  }
+}
+
+/* The homepage finale ends on the wordmark (where the Thread ties in); the
+   footer's giant wordmark would repeat it immediately below. */
+[data-site="v2"]:has([data-finale-stage]) [data-footer-mark] { display: none; }

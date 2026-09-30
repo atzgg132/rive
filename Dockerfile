@@ -21,6 +21,10 @@ ENV CRON_SECRET=build-only-cron-secret
 # public origin or every share card points crawlers at localhost.
 ARG APP_URL=http://127.0.0.1:3000
 ENV APP_URL=$APP_URL
+# The v2 marketing site is chosen at build time (see next.config.ts `env`).
+# Off unless the deploy passes 1; only dev.rive.work does.
+ARG MARKETING_SITE_V2=0
+ENV MARKETING_SITE_V2=$MARKETING_SITE_V2
 COPY --from=build-dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

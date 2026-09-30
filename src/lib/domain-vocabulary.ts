@@ -36,6 +36,10 @@ export const EXPENSE_CATEGORIES = [
 // and `sendDueInvoiceReminders` (src/utils/invoiceReminders.ts) both validate
 // against this set so a stored step can never drift from what the sender understands.
 export const INVOICE_REMINDER_STEPS = ["due_minus_3", "due_plus_1", "due_plus_7", "due_plus_14"] as const;
+
+/** Where a marketing "Start free" button sits. Recorded with `marketing_cta_clicked`. */
+export const MARKETING_CTA_PLACEMENTS = ["nav", "nav_mobile", "hero", "pill", "stage", "chapter", "pricing", "finale", "footer", "product_page", "page"] as const;
+export type MarketingCtaPlacement = (typeof MARKETING_CTA_PLACEMENTS)[number];
 export const DEFAULT_INVOICE_REMINDER_SCHEDULE: string[] = [...INVOICE_REMINDER_STEPS];
 /** Calendar-day offset from the due date for each step; negative is before due. */
 export const INVOICE_REMINDER_STEP_OFFSET_DAYS: Record<(typeof INVOICE_REMINDER_STEPS)[number], number> = {
@@ -83,3 +87,4 @@ export const INVOICE_STATUS_SET: ReadonlySet<string> = new Set(INVOICE_STATUSES)
 export const CLIENT_STATUS_SET: ReadonlySet<string> = new Set(CLIENT_STATUSES);
 export const EXPENSE_CATEGORY_SET: ReadonlySet<string> = new Set(EXPENSE_CATEGORIES);
 export const INVOICE_REMINDER_STEP_SET: ReadonlySet<string> = new Set(INVOICE_REMINDER_STEPS);
+export const MARKETING_CTA_PLACEMENT_SET: ReadonlySet<string> = new Set(MARKETING_CTA_PLACEMENTS);

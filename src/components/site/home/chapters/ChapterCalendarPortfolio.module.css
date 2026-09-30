@@ -1,0 +1,177 @@
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(3rem, 8vw, 5rem);
+  align-items: center;
+}
+.calendarCol { min-width: 0; }
+.calendar { will-change: auto; }
+
+@media (min-width: 1024px) {
+  .intro { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(3rem, 5vw, 6rem); }
+  .intro > :first-child { order: 2; }
+}
+
+/* ── Gallery ───────────────────────────────────────────────────── */
+.gallery {
+  --pad: calc((100% - var(--slide-w)) / 2);
+  --gap: clamp(1rem, 3vw, 3.25rem);
+  --slide-w: min(46vw, 54rem, calc((100svh - 290px) * 1.45));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0.75rem, 2.2svh, 1.75rem);
+  min-height: calc(100svh - 72px);
+  margin-top: clamp(4rem, 9vw, 9rem);
+}
+.galleryHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  width: min(100% - 2 * var(--s-gutter), var(--s-container));
+  margin-inline: auto;
+}
+.galleryKicker { margin: 0; }
+.count {
+  margin: 0;
+  font-size: var(--s-t-mono);
+  letter-spacing: 0.14em;
+  color: var(--s-text-soft);
+}
+
+.viewport {
+  position: relative;
+  overflow: hidden;
+  perspective: 1700px;
+  perspective-origin: 50% 40%;
+  padding-block: 1.25rem;
+  margin-block: -1.25rem;
+}
+.corner {
+  position: absolute;
+  left: var(--pad);
+  top: 1.25rem;
+  width: 1px;
+  height: 1px;
+}
+.track {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap);
+  width: max-content;
+  margin: 0;
+  padding: 0 var(--pad);
+  list-style: none;
+  transform-style: preserve-3d;
+}
+.slide {
+  flex: none;
+  width: var(--slide-w);
+  transform-style: preserve-3d;
+}
+.figure { margin: 0; }
+
+.browser {
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--s-card);
+  box-shadow: 0 0 0 1px var(--s-hair-strong), var(--s-shadow-float);
+}
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 34px;
+  padding-inline: 0.85rem;
+  background: var(--s-paper-2);
+  border-bottom: 1px solid var(--s-hair);
+}
+.dots { display: inline-flex; gap: 5px; }
+.dots i { width: 8px; height: 8px; border-radius: 999px; background: rgb(12 30 54 / 0.2); }
+.url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  background: var(--s-card);
+  font-family: var(--s-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--s-text-soft);
+  text-align: center;
+}
+.swatch { width: 10px; height: 10px; border-radius: 999px; flex: none; }
+.body {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: var(--s-card);
+}
+.inner { will-change: auto; }
+.caption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 0.15rem 0;
+  max-width: 34rem;
+}
+.name {
+  font-size: var(--s-t-h3);
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: var(--s-text);
+}
+.desc {
+  font-size: var(--s-t-body);
+  line-height: 1.4;
+  color: var(--s-text-soft);
+  max-width: 40ch;
+}
+
+.progress {
+  width: min(100% - 2 * var(--s-gutter), var(--s-container));
+  height: 2px;
+  margin-inline: auto;
+  background: var(--s-hair);
+  overflow: hidden;
+}
+.bar {
+  display: block;
+  height: 100%;
+  background: var(--s-accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+@media (max-width: 1023.98px) {
+  .gallery { --slide-w: min(70vw, 40rem, calc((100svh - 300px) * 1.2)); }
+  .body { aspect-ratio: 4 / 3; }
+}
+@media (max-width: 639.98px) {
+  .gallery { --slide-w: min(84vw, calc((100svh - 330px) * 0.95)); --gap: 1rem; }
+  .body { aspect-ratio: 1 / 1.05; }
+  .caption { padding-top: 0.8rem; }
+  .desc { font-size: 0.9375rem; }
+  .name { font-size: 1.35rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery { min-height: 0; margin-bottom: 0; }
+  .viewport {
+    overflow-x: auto;
+    perspective: none;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 1.5rem;
+    scroll-padding-inline: var(--pad);
+  }
+  .viewport:focus-visible { outline-offset: -3px; }
+  .track { transform-style: flat; }
+  .slide { scroll-snap-align: start; transform-style: flat; }
+  .progress, .count { display: none; }
+}

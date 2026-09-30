@@ -1,0 +1,63 @@
+/* The Thread: one line drawn through the whole homepage. The SVG is stretched
+   over the page wrapper by ThreadLine.tsx; it never takes part in layout. */
+.thread {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: var(--s-z-thread);
+  contain: strict;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.line {
+  fill: none;
+  stroke: var(--s-accent);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.head {
+  opacity: 0;
+}
+
+.halo {
+  fill: url(#thread-halo);
+}
+
+.dot {
+  fill: var(--s-accent);
+}
+
+.haloStop {
+  stop-color: #2563eb;
+}
+
+@media (max-width: 639.98px) {
+  .line {
+    stroke-width: 1.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thread {
+    animation: fade 0.4s ease-out both;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

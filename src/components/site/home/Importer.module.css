@@ -1,0 +1,182 @@
+.section {
+  background: var(--s-paper);
+  padding-bottom: clamp(3rem, 7vw, 8rem);
+}
+
+.head {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: start;
+  margin-bottom: clamp(2.5rem, 5vw, 5rem);
+}
+.title { max-width: 16ch; }
+.body { margin: 0; }
+
+@media (min-width: 1024px) {
+  .head {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+    column-gap: clamp(2rem, 6vw, 8rem);
+    align-items: end;
+  }
+  .head > :first-child { grid-column: 1 / -1; }
+  .title { max-width: 14ch; }
+  .body { padding-bottom: 0.4rem; }
+}
+
+.pin {
+  position: relative;
+  width: 100%;
+  padding-block: 1rem;
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .stage {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    column-gap: clamp(3rem, 9vw, 11rem);
+  }
+}
+
+/* The CSV as a spreadsheet */
+.sheet {
+  position: relative;
+  border: 1px solid var(--s-hair-strong);
+  border-radius: var(--s-radius-card);
+  background: var(--s-card);
+  box-shadow: var(--s-shadow-float);
+  overflow: hidden;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--s-hair);
+  background: var(--s-paper-2);
+  color: var(--s-text-soft);
+}
+.file { font-size: 0.78rem; color: var(--s-text); letter-spacing: 0; }
+.sample { margin-left: auto; }
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.15fr) minmax(0, 0.95fr);
+  column-gap: 0.75rem;
+  align-items: center;
+  padding-inline: 1rem;
+}
+.grid > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cols {
+  min-height: 2.25rem;
+  border-bottom: 1px solid var(--s-hair);
+  font-family: var(--s-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--s-text-soft);
+}
+.sheetRows { padding-block: 0.35rem; display: grid; gap: 2px; padding-inline: 0.4rem; }
+.row {
+  min-height: 2.35rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  color: var(--s-text);
+  background: var(--s-card);
+  padding-inline: 0.6rem;
+}
+.row:nth-child(even) { background: color-mix(in srgb, var(--s-paper) 55%, var(--s-card)); }
+.cellStrong { font-weight: 650; }
+.row .s-mono { font-size: 0.78rem; text-align: right; }
+.cols > :last-child { text-align: right; }
+
+/* The tidy records */
+.records { display: grid; gap: 0.85rem; }
+.chipRow { min-height: 2rem; display: flex; align-items: center; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+  font-family: var(--s-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.chip i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--s-accent-on-ink);
+}
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 3.5rem;
+  padding: 0.55rem 1rem 0.55rem 0.6rem;
+  border: 1px solid var(--s-hair);
+  border-radius: var(--s-radius-card);
+  background: var(--s-card);
+  box-shadow: 0 18px 30px -22px rgb(9 17 31 / 0.5), 0 2px 4px -2px rgb(9 17 31 / 0.12);
+}
+.mark {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 10px;
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.who { display: grid; min-width: 0; line-height: 1.25; }
+.who strong { font-weight: 680; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who span { font-size: 0.8rem; color: var(--s-text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.amount { font-size: 0.82rem; font-weight: 500; color: var(--s-text); }
+
+@media (max-width: 899.98px) {
+  .row { min-height: 2rem; }
+  .records { gap: 0.5rem; }
+  .list { gap: 0.4rem; }
+  .card { min-height: 3rem; padding-block: 0.35rem; }
+  .mark { width: 2rem; height: 2rem; border-radius: 8px; font-size: 0.85rem; }
+  .chipRow { min-height: 1.75rem; }
+}
+@media (max-width: 420px) {
+  .grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; column-gap: 0.5rem; padding-inline: 0.7rem; }
+  .row { font-size: 0.75rem; padding-inline: 0.3rem; }
+  .cols { font-size: 0.58rem; letter-spacing: 0.08em; }
+  .row .s-mono { font-size: 0.68rem; }
+  .card { gap: 0.6rem; }
+  .who strong { font-size: 0.88rem; }
+}
+@media (max-height: 700px) and (min-width: 900px) {
+  .row { min-height: 2rem; }
+  .card { min-height: 3rem; }
+  .list { gap: 0.45rem; }
+}
+
+@media (max-height: 700px) and (max-width: 899.98px) {
+  .head { margin-bottom: 1.5rem; }
+  .bar { padding-block: 0.5rem; }
+  .cols { min-height: 1.85rem; }
+  .row { min-height: 1.7rem; }
+  .sheetRows { padding-block: 0.25rem; gap: 1px; }
+  .stage { gap: 0.75rem; }
+  .records { gap: 0.4rem; }
+  .chipRow { min-height: 1.5rem; }
+  .list { gap: 0.3rem; }
+  .card { min-height: 2.6rem; padding-block: 0.2rem; }
+  .mark { width: 1.6rem; height: 1.6rem; font-size: 0.75rem; }
+  .pin { padding-block: 0.5rem; }
+}

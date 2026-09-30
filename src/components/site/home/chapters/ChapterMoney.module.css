@@ -1,0 +1,109 @@
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(1.25rem, 2.4vw, 2rem);
+  margin-bottom: clamp(3rem, 6vw, 6rem);
+}
+.title { max-width: none; font-stretch: 108%; font-weight: 780; }
+.titleInner { display: block; }
+.sentence { display: block; }
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(3rem, 7vw, 5rem);
+  align-items: center;
+}
+.text { display: flex; flex-direction: column; align-items: flex-start; gap: clamp(1rem, 1.6vw, 1.5rem); min-width: 0; }
+
+.visuals {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.revenue {
+  align-self: flex-end;
+  width: 92%;
+}
+.invoiceWrap {
+  align-self: flex-start;
+  width: 68%;
+  margin-top: -22%;
+  perspective: 1400px;
+  position: relative;
+  z-index: 2;
+}
+.invoice { transform-style: preserve-3d; }
+.invoiceWindow {
+  border-radius: 10px;
+  background: var(--s-card);
+  box-shadow: 0 0 0 1px rgb(12 30 54 / 0.12), 0 60px 90px -30px rgb(0 0 0 / 0.75), 0 24px 40px -20px rgb(0 0 0 / 0.5);
+  -webkit-mask-image: linear-gradient(#000 82%, transparent);
+  mask-image: linear-gradient(#000 82%, transparent);
+}
+
+@media (min-width: 1024px) {
+  .grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(3rem, 5vw, 6rem); align-items: center; }
+  .revenue { width: 88%; }
+  .invoiceWrap { width: 50%; margin-top: -20%; }
+}
+
+/* ── Counters ──────────────────────────────────────────────────── */
+.figures {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.5rem, 3vw, 3rem);
+  margin-top: clamp(4.5rem, 9vw, 9rem);
+  padding-top: clamp(1.5rem, 3vw, 2.5rem);
+  border-top: 1px solid var(--s-hair-strong);
+  container-type: inline-size;
+}
+.anchor {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 1px;
+  height: 1px;
+}
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.figureValue {
+  font-family: var(--s-font);
+  /* Sized to the row, not the viewport: "₹2,84,500" must fit its column. */
+  font-size: clamp(2.6rem, 14cqi, 8.5rem);
+  font-weight: 760;
+  font-stretch: 100%;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--s-on-ink);
+  white-space: nowrap;
+}
+.figureLabel {
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--s-text-soft);
+}
+.figuresNote { margin: 0; }
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .figuresNote { grid-column: 1 / -1; }
+  .figureValue { font-size: clamp(2.2rem, 5.2cqi, 8rem); }
+}

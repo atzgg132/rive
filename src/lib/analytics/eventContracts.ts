@@ -50,6 +50,7 @@ export const PRODUCT_EVENTS = {
   weeklySummaryEnabled: "weekly_summary_enabled",
   weeklySummaryDisabled: "weekly_summary_disabled",
   weeklySummarySent: "weekly_summary_sent",
+  marketingCtaClicked: "marketing_cta_clicked",
 } as const;
 
 type CoreProductEventName = (typeof PRODUCT_EVENTS)[keyof typeof PRODUCT_EVENTS];
@@ -159,6 +160,7 @@ export const PRODUCT_EVENT_CONTRACTS: Record<ProductEventName, ProductEventContr
   weekly_summary_enabled: { version: 1, requirements: identityAndModule, description: "The weekly business summary email was turned on." },
   weekly_summary_disabled: { version: 1, requirements: identityAndModule, description: "The weekly business summary email was turned off." },
   weekly_summary_sent: { version: 1, requirements: identityAndModule, description: "A weekly business summary email was sent." },
+  marketing_cta_clicked: { version: 1, requirements: identityAndModule, description: "A marketing \"Start free\" button was clicked; `placement` says which one." },
   "activation.registered": { version: 1, requirements: identityAndModule, description: "The registered activation milestone was recorded." },
   "activation.onboarding_started": { version: 1, requirements: identityAndModule, description: "The onboarding activation milestone was recorded." },
   "activation.profile_substantially_completed": { version: 1, requirements: identityAndModule, description: "The profile activation milestone was recorded." },

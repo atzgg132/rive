@@ -1,0 +1,271 @@
+.page {
+  background: var(--s-paper);
+  color: var(--s-text);
+}
+
+.body {
+  padding-block: clamp(0.5rem, 2vw, 1.5rem) clamp(4.5rem, 10vw, 10rem);
+}
+.grid {
+  display: grid;
+  gap: clamp(1.25rem, 2.5vw, 2rem);
+  align-items: start;
+}
+@media (min-width: 960px) {
+  .grid {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4.5fr);
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+  }
+  .aside {
+    position: sticky;
+    top: 6.5rem;
+  }
+}
+
+/* ── Form card ─────────────────────────────────────────────────── */
+/* The form keeps its markup and behaviour; only its paint is re-pointed at
+   the v2 tokens. */
+.formCard {
+  --inst-ink: var(--s-text);
+  --inst-ink-soft: var(--s-text-soft);
+  --inst-ink-faint: var(--s-text-soft);
+  --inst-paper: var(--s-paper);
+  --inst-paper-2: var(--s-paper-2);
+  --inst-hairline: var(--s-hair-strong);
+  --inst-accent: var(--s-accent);
+  --inst-danger: #b42318;
+  --inst-font: var(--s-font);
+  position: relative;
+  padding: clamp(1.25rem, 3.4vw, 3rem);
+  border: 1px solid var(--s-hair-strong);
+  border-radius: var(--s-radius-lg);
+  background: var(--s-card);
+  box-shadow: var(--s-shadow-float);
+  font-family: var(--s-font);
+}
+
+.formCard form {
+  gap: clamp(1.1rem, 2vw, 1.5rem);
+}
+.formCard label {
+  gap: 0.55rem;
+  font-family: var(--s-font);
+  font-size: 0.875rem;
+  font-weight: 650;
+  letter-spacing: 0.005em;
+  color: var(--s-text);
+}
+
+.formCard input,
+.formCard select,
+.formCard textarea {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--s-hair-strong);
+  border-radius: 12px;
+  background-color: var(--s-paper);
+  color: var(--s-text);
+  font-family: var(--s-font);
+  font-size: 1rem;
+  font-weight: 450;
+  line-height: 1.4;
+  box-shadow: none;
+  transition:
+    border-color var(--s-dur-fast) var(--s-ease-out),
+    box-shadow var(--s-dur-fast) var(--s-ease-out),
+    background-color var(--s-dur-fast) var(--s-ease-out);
+}
+.formCard textarea {
+  min-height: 10rem;
+  padding-block: 0.95rem;
+  resize: vertical;
+}
+.formCard input::placeholder,
+.formCard textarea::placeholder {
+  color: var(--s-text-soft);
+  opacity: 0.8;
+}
+.formCard input:hover,
+.formCard select:hover,
+.formCard textarea:hover {
+  border-color: var(--s-text-soft);
+}
+.formCard input:focus,
+.formCard select:focus,
+.formCard textarea:focus {
+  border-color: var(--s-accent);
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgb(37 99 235 / 0.16);
+}
+.formCard input:focus-visible,
+.formCard select:focus-visible,
+.formCard textarea:focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 2px;
+}
+.formCard input:user-invalid,
+.formCard textarea:user-invalid {
+  border-color: #b42318;
+  box-shadow: 0 0 0 3px rgb(180 35 24 / 0.12);
+}
+.formCard select {
+  appearance: none;
+  padding-right: 2.75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%230c1e36' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  cursor: pointer;
+}
+.formCard option {
+  background: var(--s-card);
+  color: var(--s-text);
+}
+
+.formCard [role="alert"] {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid #b42318;
+  border-radius: 12px;
+  background: rgb(180 35 24 / 0.06);
+  color: #b42318;
+  font-size: 0.9375rem;
+  font-weight: 550;
+}
+
+.formCard button[type="submit"] {
+  justify-self: start;
+  min-height: 56px;
+  padding: 0 1.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--s-accent);
+  color: #fff;
+  font-family: var(--s-font);
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  box-shadow: 0 10px 30px -12px rgb(37 99 235 / 0.65);
+  cursor: pointer;
+  transition:
+    transform var(--s-dur-fast) var(--s-ease-out),
+    background-color var(--s-dur) var(--s-ease-out);
+}
+.formCard button[type="submit"]::before {
+  display: none;
+  animation: none;
+}
+.formCard button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px -12px rgb(37 99 235 / 0.7);
+  background: var(--s-accent-strong);
+}
+.formCard button[type="submit"]:active:not(:disabled) {
+  transform: translateY(0);
+  background: var(--s-accent-strong);
+}
+.formCard button[type="submit"]:hover svg {
+  color: #fff;
+  transform: translateX(3px);
+}
+.formCard button[type="submit"]:focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 3px;
+}
+.formCard button[type="submit"]:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+/* Sent state */
+.formCard > div {
+  min-height: 24rem;
+  border: 1px solid var(--s-hair);
+  border-radius: 16px;
+  background: var(--s-paper);
+}
+.formCard > div h2 {
+  font-family: var(--s-font);
+  font-size: clamp(1.75rem, 1.2rem + 1.8vw, 2.75rem);
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  color: var(--s-text);
+}
+.formCard > div p {
+  max-width: 34ch;
+  margin-inline: auto;
+  font-size: var(--s-t-body);
+  color: var(--s-text-soft);
+}
+
+/* ── Aside ─────────────────────────────────────────────────────── */
+.aside {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+  padding: clamp(1.5rem, 3.4vw, 3rem);
+  border-radius: var(--s-radius-lg);
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+  min-width: 0;
+}
+.mail {
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: 0.75rem;
+  color: var(--s-accent);
+}
+.asideTitle {
+  margin: 0;
+  font-size: clamp(1.75rem, 1.1rem + 1.9vw, 3rem);
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.email {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  max-width: 100%;
+  font-size: clamp(1.15rem, 1rem + 0.7vw, 1.6rem);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--s-on-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--s-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+  overflow-wrap: anywhere;
+  transition: text-decoration-color var(--s-dur) var(--s-ease-out);
+}
+.email:hover {
+  text-decoration-color: var(--s-on-ink);
+}
+.email svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  color: var(--s-accent);
+  transition: transform var(--s-dur) var(--s-ease-out);
+}
+.email:hover svg {
+  transform: translate(3px, -3px);
+}
+.asideBody {
+  margin: 0.75rem 0 0;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--s-accent);
+  max-width: 34ch;
+  font-size: var(--s-t-small);
+  color: var(--s-text-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .formCard input,
+  .formCard select,
+  .formCard textarea,
+  .formCard button[type="submit"] {
+    transition: none;
+  }
+}

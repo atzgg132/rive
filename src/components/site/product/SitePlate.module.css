@@ -1,0 +1,11 @@
+.plate { container-type: inline-size; }
+.narrow { display: none; }
+
+@container (max-width: 559.98px) {
+  .at560 .wide { display: none; }
+  .at560 .narrow { display: block; }
+}
+@container (max-width: 479.98px) {
+  .at480 .wide { display: none; }
+  .at480 .narrow { display: block; }
+}

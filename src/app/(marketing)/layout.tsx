@@ -28,10 +28,18 @@ const structuredData: { "@context": string; "@graph": JsonLdNode[] } = {
   ],
 };
 
-export default function MarketingLayout({ children }: { children: ReactNode }) {
+export default async function MarketingLayout({ children }: { children: ReactNode }) {
+  const jsonLd = <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />;
+
+  // Must stay an inline `process.env` comparison: see `env` in next.config.ts.
+  if (process.env.MARKETING_SITE_V2 === "1") {
+    const { SiteShell } = await import("@/components/site/shell/SiteShell");
+    return <SiteShell jsonLd={jsonLd}>{children}</SiteShell>;
+  }
+
   return (
     <div data-surface="marketing" className="marketing-root">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      {jsonLd}
       <a href="#main-content" className="marketing-focus inst-skip-link">Skip to content</a>
       <SiteHeader />
       <SmoothAnchors />
