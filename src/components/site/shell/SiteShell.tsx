@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "@/components/site/site.css";
+import "@/components/site/pages/legacy-skin.css";
 import { SiteNav } from "@/components/site/shell/SiteNav";
 import { SiteFooter } from "@/components/site/shell/SiteFooter";
 import { FloatingStartFree } from "@/components/site/shell/FloatingStartFree";

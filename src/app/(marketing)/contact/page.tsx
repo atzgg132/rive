@@ -5,7 +5,12 @@ import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata("Contact Rive", "Ask a product question, get help, or share feedback with the people building Rive.", "/contact");
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  // Must stay an inline `process.env` comparison: see `env` in next.config.ts.
+  if (process.env.MARKETING_SITE_V2 === "1") {
+    const { SiteContactPage } = await import("@/components/site/pages/SiteContactPage");
+    return <SiteContactPage />;
+  }
   return (
     <section className="inst-reading">
       <div className="inst-container">
