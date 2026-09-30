@@ -25,6 +25,7 @@ export function Hero() {
     const copy = scope.querySelector<HTMLElement>("[data-hero-copy]");
     const stage = scope.querySelector<HTMLElement>("[data-hero-stage]");
     const frame = scope.querySelector<HTMLElement>("[data-hero-frame]");
+    const sample = scope.querySelector<HTMLElement>("[data-hero-sample]");
     if (!copy || !stage || !frame) return;
 
     if (c.reduce) {
@@ -82,13 +83,22 @@ export function Hero() {
         transformPerspective: perspective,
         ease: "power1.inOut",
         force3D: true,
+        duration: 1,
       },
       0,
     );
-    tl.to(copy, { yPercent: -12, opacity: 0.35, force3D: true, ease: "power1.in" }, 0);
+    // The copy is gone (opacity 0) over the last 40% of the pin; the sample
+    // label clears out before the frame reaches the copy and returns once the
+    // copy has left.
+    tl.to(copy, { yPercent: -12, force3D: true, ease: "power1.in", duration: 1 }, 0);
+    tl.to(copy, { opacity: 0, ease: "power1.inOut", duration: 0.55 }, 0);
+    if (sample) {
+      tl.to(sample, { opacity: 0, ease: "none", duration: 0.07 }, 0);
+      tl.to(sample, { opacity: 1, ease: "none", duration: 0.18 }, 0.62);
+    }
     tl.to(
       proxy,
-      { p: 1, ease: "power1.inOut", onUpdate: () => ink?.setProgress(proxy.p) },
+      { p: 1, ease: "power1.inOut", duration: 1, onUpdate: () => ink?.setProgress(proxy.p) },
       0,
     );
 
@@ -175,7 +185,7 @@ export function Hero() {
 
       <div className={styles.stage} data-hero-stage>
         <div className={styles.frame} data-hero-frame>
-          <p className={`s-sample-label ${styles.sample}`}>{hero.sampleLabel}</p>
+          <p className={`s-sample-label ${styles.sample}`} data-hero-sample>{hero.sampleLabel}</p>
           <div className={styles.surface}>
             <ResponsiveWorkspacePreview view="dashboard" />
           </div>
