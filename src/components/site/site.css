@@ -90,6 +90,9 @@
 [data-site="v2"] :where(h1, h2, h3, h4, h5, h6, p):not(:where(.app-window, .inst-specimen, [data-product-ui]) *) {
   font-family: inherit;
 }
+[data-site="v2"] :where(h1, h2, h3):not(:where(.app-window, .inst-specimen, [data-product-ui]) *) {
+  word-spacing: 0.08em;
+}
 
 /* A section on ink re-points the text tokens, so components written for
    paper read correctly inside it. */
@@ -152,6 +155,8 @@
   text-wrap: balance;
   overflow-wrap: break-word;
   font-kerning: normal;
+  /* Tight tracking at display sizes closes word gaps; open them back up. */
+  word-spacing: 0.08em;
 }
 .s-display { font-size: var(--s-t-display); }
 .s-h2 { font-size: var(--s-t-h2); line-height: 1; }

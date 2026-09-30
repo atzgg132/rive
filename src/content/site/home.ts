@@ -38,6 +38,7 @@ export const fragments = {
       { label: "Next date", value: "Launch · Thu" },
     ],
     caption: "One record. Everything about the job, attached.",
+    sampleLabel: "Sample client",
   },
 } as const;
 
