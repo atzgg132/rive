@@ -1,0 +1,179 @@
+.footer {
+  position: relative;
+  padding-top: clamp(4.5rem, 9vw, 9rem);
+  overflow: hidden;
+}
+
+.wrap {
+  width: min(100% - 2 * var(--s-gutter), var(--s-container-wide));
+  margin-inline: auto;
+}
+
+.statement {
+  margin: 0;
+  max-width: 15ch;
+  font-size: clamp(2.2rem, 1rem + 5vw, 6.5rem);
+  font-weight: 740;
+  font-stretch: 94%;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  text-wrap: balance;
+  color: var(--s-on-ink);
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.25rem 1.5rem;
+  margin-top: clamp(3rem, 6vw, 6rem);
+  padding-top: 2rem;
+  border-top: 1px solid var(--s-hair);
+}
+.group { min-width: 0; }
+.groupTitle {
+  margin: 0 0 0.9rem;
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--s-text-soft);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+  color: var(--s-on-ink);
+  text-decoration: none;
+  border-radius: 6px;
+}
+.link > span {
+  padding-block: 2px;
+  background: linear-gradient(currentColor, currentColor) 100% 100% / 0 1px no-repeat;
+  transition: background-size 0.5s var(--s-ease-out);
+}
+.link:hover > span,
+.link:focus-visible > span {
+  background-position: 0 100%;
+  background-size: 100% 1px;
+}
+.signup { padding-top: 0.6rem; }
+
+.bar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem 1.5rem;
+  align-items: center;
+  margin-top: clamp(2.5rem, 5vw, 4.5rem);
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--s-hair);
+  font-size: 0.875rem;
+  color: var(--s-text-soft);
+}
+.bar p { margin: 0; }
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--s-accent);
+  box-shadow: 0 0 0 4px rgb(122 163 255 / 0.18);
+}
+
+.pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 0.9rem 0 0.7rem;
+  border: 1px solid var(--s-hair-strong);
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 560;
+  color: var(--s-on-ink);
+  cursor: pointer;
+  transition: background-color 0.3s var(--s-ease-out), border-color 0.3s var(--s-ease-out);
+}
+.pause:hover { background: rgb(241 238 230 / 0.07); }
+.pauseSwitch {
+  position: relative;
+  width: 26px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--s-hair-strong);
+  transition: background-color 0.3s var(--s-ease-out);
+}
+.pauseSwitch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--s-on-ink);
+  transition: transform 0.35s var(--s-ease-out);
+}
+.pause[aria-pressed="true"] { border-color: var(--s-accent); }
+.pause[aria-pressed="true"] .pauseSwitch { background: #2563eb; }
+.pause[aria-pressed="true"] .pauseSwitch::after { transform: translateX(12px); }
+
+/* The signature wordmark rises out of the bottom edge of the page. */
+.mark {
+  width: 100%;
+  overflow: hidden;
+  margin-top: clamp(0.5rem, 2vw, 2rem);
+  padding-inline: calc(50% - min(46vw, 900px));
+  line-height: 0;
+}
+.markInner {
+  width: 100%;
+  will-change: transform;
+}
+.mark .logo {
+  display: block;
+  width: 100%;
+}
+.logo svg {
+  width: 100%;
+  height: auto;
+}
+.logo svg g { fill: rgb(241 238 230 / 0.92); }
+.logo svg > path { fill: #2563eb; }
+
+@media (min-width: 640px) {
+  .groups { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem; }
+  .bar {
+    grid-template-columns: auto 1fr auto;
+    gap: 1.5rem;
+  }
+  .copy { text-align: center; }
+  .pause { justify-self: end; }
+}
+
+@media (max-width: 639.98px) {
+  .statement { max-width: 12ch; }
+}

@@ -83,6 +83,14 @@
 
 [data-site="v2"] ::selection { background: var(--s-accent); color: #fff; }
 
+/* globals.css gives every h1–h6 and p the app's display/body faces. On the
+   site they inherit the site face instead — except inside real product UI,
+   which keeps the app's own type. Zero-specificity beyond the attribute, so
+   component classes still win. */
+[data-site="v2"] :where(h1, h2, h3, h4, h5, h6, p):not(:where(.app-window, .inst-specimen, [data-product-ui]) *) {
+  font-family: inherit;
+}
+
 /* A section on ink re-points the text tokens, so components written for
    paper read correctly inside it. */
 [data-site="v2"] [data-theme="ink"] {
