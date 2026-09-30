@@ -1,0 +1,32 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(3rem, 8vw, 5rem);
+  align-items: center;
+}
+.visual { min-width: 0; }
+
+/* The front window holds the layout; the back one is absolutely placed at the
+   top-right and starts (in JS) exactly behind the front one. */
+.stack {
+  position: relative;
+  padding-top: 8%;
+}
+.front {
+  position: relative;
+  z-index: 2;
+  width: 88%;
+}
+.back {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: 88%;
+}
+
+@media (min-width: 1024px) {
+  .grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(3rem, 5vw, 6rem); }
+  .stack { padding-top: 9%; }
+  .front, .back { width: 86%; }
+}

@@ -33,10 +33,32 @@ export function loadGsap(): Promise<GsapKit> {
     gsap.defaults({ ease: "power3.out", duration: 0.9 });
     st.ScrollTrigger.config({ ignoreMobileResize: true });
     document.documentElement.classList.add("site-motion-ready");
+    watchLayout(st.ScrollTrigger);
     return { gsap, ScrollTrigger: st.ScrollTrigger, Flip: flip.Flip, SplitText: split.SplitText };
   });
   kitPromise.catch(() => document.documentElement.classList.remove("site-motion"));
   return kitPromise;
+}
+
+/** Product plates, specimens and web fonts settle after triggers are first
+ * measured, which leaves start/end positions stale. Re-measure once fonts
+ * are ready and whenever the page height really changes (debounced; a
+ * refresh that lands on the same height does not trigger another). */
+function watchLayout(ScrollTrigger: ScrollTriggerStatic) {
+  let measured = document.documentElement.scrollHeight;
+  let timer = 0;
+  const refresh = () => {
+    ScrollTrigger.refresh();
+    measured = document.documentElement.scrollHeight;
+  };
+  document.fonts?.ready.then(refresh).catch(() => undefined);
+  const observer = new ResizeObserver(() => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      if (Math.abs(document.documentElement.scrollHeight - measured) > 4) refresh();
+    }, 250);
+  });
+  observer.observe(document.body);
 }
 
 /** The one set of media conditions every section animates against. */
