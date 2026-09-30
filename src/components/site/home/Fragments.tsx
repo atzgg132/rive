@@ -213,7 +213,7 @@ export function Fragments() {
         return;
       }
 
-      scope.setAttribute("data-stage", "on");
+      scope.setAttribute("data-fragments-stage", "on");
       const layout: Layout = c.desktop ? "wide" : c.tablet ? "wide" : "narrow";
       const scatter = SCATTER[layout];
       const kinds = fragments.items.map((f) => f.kind);
@@ -392,7 +392,7 @@ export function Fragments() {
 
       return () => {
         split.revert();
-        scope.removeAttribute("data-stage");
+        scope.removeAttribute("data-fragments-stage");
       };
     },
     [],

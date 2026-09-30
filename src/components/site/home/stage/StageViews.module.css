@@ -1,0 +1,204 @@
+/* Real-product views inside the stage screen. The app renders in its own
+   light theme; on the ink chapter that contrast is the point. */
+
+.fill {
+  position: absolute;
+  inset: 0;
+}
+.fill :global(.app-window) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100% !important;
+  aspect-ratio: auto !important;
+}
+
+/* ── Invoice on a desk ────────────────────────────────────────── */
+.desk {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.paper {
+  height: 94%;
+  aspect-ratio: 780 / 900;
+  max-width: 78%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fbfaf6;
+  transform: rotate(-1.4deg);
+  box-shadow: 0 2px 0 rgb(255 255 255 / 0.5) inset, 0 40px 70px -24px rgb(0 0 0 / 0.75), 0 8px 18px -8px rgb(0 0 0 / 0.5);
+}
+.paper > :global(.app-window) {
+  width: 100%;
+}
+.amount {
+  position: absolute;
+  right: 5%;
+  bottom: 9%;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.85rem 1.1rem 0.75rem;
+  border-radius: 14px;
+  color: var(--s-on-ink);
+  background: rgb(9 17 31 / 0.82);
+  box-shadow: inset 0 0 0 1px rgb(241 238 230 / 0.18), 0 24px 40px -16px rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(6px);
+}
+.amountLabel,
+.amountNote {
+  font-family: var(--s-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--s-on-ink-soft);
+}
+.amountValue {
+  font-family: var(--s-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.35rem, 0.9rem + 1.3vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--s-on-ink);
+}
+@media (max-width: 639.98px) {
+  .paper {
+    max-width: 70%;
+  }
+  .amount {
+    right: 3%;
+    bottom: 5%;
+    padding: 0.55rem 0.75rem 0.5rem;
+    border-radius: 10px;
+  }
+  .amountNote {
+    display: none;
+  }
+}
+
+/* ── Portfolio in a browser ───────────────────────────────────── */
+.browser {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f4f2ec;
+}
+.chrome {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  height: 2.5rem;
+  padding-inline: 0.9rem;
+  background: #e7e3d8;
+  border-bottom: 1px solid rgb(12 30 54 / 0.12);
+}
+.chromeDots {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+.chromeDots i {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 999px;
+  background: rgb(12 30 54 / 0.22);
+}
+.chromeUrl {
+  flex: 1;
+  max-width: 22rem;
+  margin-inline: auto;
+  padding: 0.28rem 0.9rem;
+  border-radius: 999px;
+  background: rgb(251 250 246 / 0.9);
+  color: #4f5c6e;
+  font-family: var(--s-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+@media (max-width: 639.98px) {
+  .chrome {
+    height: 1.9rem;
+    padding-inline: 0.65rem;
+  }
+  .chromeUrl {
+    font-size: 0.55rem;
+    padding: 0.18rem 0.6rem;
+  }
+}
+
+/* ── Phone ────────────────────────────────────────────────────── */
+/* --pw is the phone's outer width, set by the stage from the screen's
+   height so the device is always the hero of its step. */
+.phone {
+  --bezel: calc(var(--pw) * 0.03);
+  --radius: clamp(26px, calc(var(--pw) * 0.148), 46px);
+  position: relative;
+  width: var(--pw);
+  flex: none;
+}
+.phone::before,
+.phone::after {
+  content: "";
+  position: absolute;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(#3a465d, #1a2336);
+}
+.phone::before {
+  left: -3px;
+  top: 17%;
+  height: 7%;
+  box-shadow: 0 calc(var(--pw) * 0.2) 0 #263149;
+}
+.phone::after {
+  right: -3px;
+  top: 24%;
+  height: 12%;
+}
+.phoneBody {
+  position: relative;
+  padding: var(--bezel);
+  border-radius: var(--radius);
+  background: linear-gradient(150deg, #34405a 0%, #0c1424 38%, #1b2740 100%);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.2) inset,
+    0 0 0 1.5px #04070d,
+    0 70px 90px -34px rgb(0 0 0 / 0.85),
+    0 0 90px -10px rgb(37 99 235 / 0.28);
+}
+.phoneScreen {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - var(--bezel));
+  background: #fff;
+}
+.phoneScreen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgb(255 255 255 / 0.2) 0%, rgb(255 255 255 / 0) 34%);
+}
+.island {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--bezel) + var(--pw) * 0.022);
+  left: 50%;
+  width: 27%;
+  height: calc(var(--pw) * 0.062);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #04070d;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06);
+}
