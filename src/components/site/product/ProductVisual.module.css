@@ -1,0 +1,153 @@
+.visual {
+  position: relative;
+  width: 100%;
+}
+.sample {
+  margin: 0.9rem 0 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.par { transform-origin: 50% 50%; }
+
+/* Workspace window */
+.window {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(14px, 1.6vw, 24px);
+  background: var(--s-card);
+  box-shadow: 0 0 0 1px var(--s-hair-strong), var(--s-shadow-float);
+  isolation: isolate;
+}
+
+/* Acceptance — hero: a window at wide widths, a phone below 640px */
+.acceptHero {
+  position: relative;
+  width: 100%;
+}
+.acceptHeroScreen {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(14px, 1.6vw, 24px);
+  background: var(--s-card);
+  box-shadow: 0 0 0 1px var(--s-hair-strong), var(--s-shadow-float);
+  isolation: isolate;
+}
+@media (max-width: 639.98px) {
+  .acceptHero {
+    width: min(100%, 17.5rem);
+    margin-inline: auto;
+    padding: 0.55rem;
+    border-radius: 2.6rem;
+    background: #0a1120;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12), inset 0 0 0 1px rgb(255 255 255 / 0.06), var(--s-shadow-float);
+  }
+  .acceptHeroScreen {
+    border-radius: 2.1rem;
+    box-shadow: none;
+  }
+}
+
+/* Acceptance — chapter: always a phone */
+.phone {
+  position: relative;
+  width: clamp(15.5rem, 26vw, 20rem);
+  margin-inline: auto;
+  padding: 0.6rem;
+  border-radius: 2.9rem;
+  background: #0a1120;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.14), inset 0 0 0 1px rgb(255 255 255 / 0.07), var(--s-shadow-float);
+}
+.screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2.35rem;
+  background: var(--s-card);
+  isolation: isolate;
+}
+.island {
+  position: absolute;
+  z-index: 3;
+  top: 0.55rem;
+  left: 50%;
+  width: 28%;
+  height: 0.95rem;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: #0a1120;
+}
+@media (max-width: 1023.98px) {
+  .phone { width: min(78%, 19rem); }
+}
+
+/* Invoice — a paper sheet with a slight tilt */
+.sheetWrap {
+  position: relative;
+  width: min(100%, 34rem);
+  margin-inline: auto;
+  padding: 0.5rem;
+}
+.sheetTilt {
+  position: relative;
+  transform: rotate(-1.6deg);
+}
+.sheetTilt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 8px;
+  background: #ece7d9;
+  transform: rotate(3.2deg) translate(3%, 1.5%);
+  box-shadow: 0 30px 50px -30px rgb(9 17 31 / 0.4);
+}
+.sheet {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(12 30 54 / 0.1), var(--s-shadow-float);
+}
+
+/* Portfolio — a browser */
+.browser {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(12px, 1.4vw, 20px);
+  background: #fbfaf6;
+  box-shadow: 0 0 0 1px var(--s-hair-strong), var(--s-shadow-float);
+}
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.3rem;
+  padding-inline: 0.9rem;
+  background: #e9e4d6;
+  border-bottom: 1px solid rgb(12 30 54 / 0.12);
+}
+.chrome i {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 999px;
+  background: rgb(12 30 54 / 0.22);
+}
+.addr {
+  flex: 1;
+  max-width: 22rem;
+  height: 1.3rem;
+  margin-left: 0.8rem;
+  border-radius: 999px;
+  background: rgb(251 250 246 / 0.9);
+  box-shadow: inset 0 0 0 1px rgb(12 30 54 / 0.1);
+}
+.viewport {
+  position: relative;
+  aspect-ratio: 16 / 10.6;
+  overflow: hidden;
+  background: #fff;
+}
+.scroll { will-change: auto; }
+@media (max-width: 639.98px) {
+  .viewport { aspect-ratio: 4 / 5; }
+}
