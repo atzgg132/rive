@@ -21,6 +21,8 @@ type Placed = {
   x1: number;
   p0: number;
   p1: number;
+  /** Left and right edge of the phone (or other device) around the anchor. */
+  phone?: [number, number];
 };
 type Tier = "desktop" | "tablet" | "mobile";
 type ST = InstanceType<ScrollTriggerStatic> & { spacer?: HTMLElement };
@@ -88,22 +90,27 @@ const SPECS: Record<string, Spec> = {
     side: "L",
     build: dock,
   },
-  /* The rule under the typed name: the Thread underlines it and returns. */
+  /* The rule under the typed name: in from the gutter at exactly the rule's
+     height, along the rule, and back out along the same line. The curves stay
+     in the space between the phone and the gutter. */
   agreements: {
     at: "end",
     build: (a, k) => {
-      const d = k.side === "R" ? -1 : 1;
-      const r = k.tier === "mobile" ? 14 : 22;
-      const near = d === 1 ? a.x0 : a.x1;
-      const far = d === 1 ? a.x1 : a.x0;
+      const dir = k.holdX > a.x0 ? -1 : 1;
+      const far = dir === -1 ? a.x0 : a.x1;
+      const near = dir === -1 ? Math.min(a.p1, a.x1) : Math.max(a.p0, a.x0);
+      const edge = a.phone ? (dir === -1 ? a.phone[1] : a.phone[0]) : near + dir * 40;
+      const gap = Math.abs(k.holdX - edge);
+      const arc = Math.min(130, Math.max(20, gap * 0.7));
+      const inX = k.holdX + dir * arc;
       const out: Node[] = [];
-      if (a.pinned && a.rest < a.y - k.reach - 1) out.push(node(k.holdX, a.rest));
+      if (a.pinned && a.rest < a.y - arc - 1) out.push(node(k.holdX, a.rest));
       out.push(
-        node(k.holdX, a.y - k.reach),
-        node(near - d * 6, a.y, [d, 0.3], [d, 0]),
-        node(far + d * r, a.y + r, DOWN, DOWN),
-        node(far, a.y + 2 * r, [-d, 0], [-d, 0.1]),
-        node(k.holdX, a.y + 2 * r + k.reach * 0.8),
+        node(k.holdX, a.y - arc),
+        node(inX, a.y, [dir, 0], [dir, 0]),
+        node(far, a.y, [dir, 0], [-dir, 0]),
+        node(inX, a.y, [-dir, 0], [-dir, 0]),
+        node(k.holdX, a.y + arc, DOWN, DOWN),
       );
       return out;
     },
@@ -178,7 +185,8 @@ export function ThreadLine() {
           const r = a.getBoundingClientRect();
           const pr = a.parentElement?.getBoundingClientRect() ?? r;
           const cy = r.top + r.height / 2;
-          const base = { x: (r.width > 24 ? r.left : r.left + r.width / 2) - box.left, x0: r.left - box.left, x1: r.right - box.left, p0: pr.left - box.left, p1: pr.right - box.left };
+          const dev = a.closest<HTMLElement>("[data-phone]")?.getBoundingClientRect();
+          const base = { phone: dev ? ([dev.left - box.left, dev.right - box.left] as [number, number]) : undefined, x: (r.width > 24 ? r.left : r.left + r.width / 2) - box.left, x0: r.left - box.left, x1: r.right - box.left, p0: pr.left - box.left, p1: pr.right - box.left };
           const st = sts.find((s) => s.pin && s.spacer && s.pin.contains(a));
           if (!st || !st.pin || !st.spacer) {
             const y = cy + scrollY - top0;
@@ -263,6 +271,15 @@ export function ThreadLine() {
           xs[i] = pt.x;
           ys[i] = pt.y;
           qs[i] = pt.y;
+        }
+        /* Flat runs would be drawn in one frame; they are spread over a short
+           stretch of scroll instead, and the offset fades out after them. */
+        let shift = 0;
+        for (let i = 1; i < n; i++) {
+          const dy = ys[i] - ys[i - 1];
+          const flat = dy < 0.4;
+          shift = Math.max(0, shift + (flat ? 0.3 * (lens[i] - lens[i - 1]) : 0) - 0.5 * Math.max(0, dy));
+          qs[i] = Math.max(qs[i - 1] + 0.01, ys[i] + shift);
         }
         if (!closing) return;
         let i0 = n - 1;
