@@ -166,9 +166,58 @@ jobs:
           path: test-results
           retention-days: 7
 
+  # The shards above build with MARKETING_SITE_V2 off, which is what
+  # production serves. This job builds the v2 marketing site that
+  # dev.rive.work serves and runs only its spec.
+  site-v2:
+    name: marketing site v2
+    needs: gate
+    if: needs.gate.outputs.verified != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: rive
+          POSTGRES_PASSWORD: rive
+          POSTGRES_DB: rive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rive -d rive_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MARKETING_SITE_V2: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Run the v2 marketing spec
+        env:
+          PLAYWRIGHT_SERVER: production
+          PLAYWRIGHT_WORKERS: 4
+        run: npx playwright test tests/e2e/site-v2.spec.ts
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-site-v2
+          path: test-results
+          retention-days: 7
+
   verified:
     name: verified
-    needs: [gate, checks, e2e]
+    needs: [gate, checks, e2e, site-v2]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -179,16 +228,17 @@ jobs:
           ALREADY_VERIFIED: ${{ needs.gate.outputs.verified }}
           CHECKS: ${{ needs.checks.result }}
           E2E: ${{ needs.e2e.result }}
+          SITE_V2: ${{ needs.site-v2.result }}
         run: |
           if [ "$GATE" = "success" ] && [ "$ALREADY_VERIFIED" = "true" ]; then
             echo "Tree already verified; the suite did not need to run again."
             exit 0
           fi
-          if [ "$GATE" = "success" ] && [ "$CHECKS" = "success" ] && [ "$E2E" = "success" ]; then
+          if [ "$GATE" = "success" ] && [ "$CHECKS" = "success" ] && [ "$E2E" = "success" ] && [ "$SITE_V2" = "success" ]; then
             echo "All verification jobs passed."
             exit 0
           fi
-          echo "::error::Verification failed (gate=$GATE checks=$CHECKS e2e=$E2E)."
+          echo "::error::Verification failed (gate=$GATE checks=$CHECKS e2e=$E2E site-v2=$SITE_V2)."
           exit 1
       - name: Record the verified tree
         env:
