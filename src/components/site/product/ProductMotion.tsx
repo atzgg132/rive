@@ -9,28 +9,26 @@ import { useSiteMotion } from "@/components/site/motion/useSiteMotion";
    and leaves with depth (y, scale, rotateY), its inner content drifts, and
    consecutive chapters hand over as one leaves while the next arrives. */
 
-const BLEED_POINTS = 56;
+const BLEED_POINTS = 64;
 
-const wave = (x: number) => Math.sin(x) * 0.5 + 0.5;
-
-/* Slow, low-frequency noise that drifts with scroll progress, so the seam
-   between two bands reads as ink pooling and creeping rather than a zig-zag. */
-function bleedFinger(i: number, progress: number, seed: number) {
-  const n =
-    wave(i * 0.15 + seed + progress * 2.4) * 0.56 +
-    wave(i * 0.36 + seed * 2.1 + 1.7 - progress * 3.2) * 0.3 +
-    wave(i * 0.8 + seed * 0.7 + progress * 4.4) * 0.14;
-  return Math.min(1, Math.max(0, (n - 0.12) / 0.7));
+/* Same summed-sine wave as the homepage chapters' wavy hem: 1.3, 2.9 and 5.3
+   cycles across the width, so the edge is a soft undulation, never a spike. */
+function hemWave(x: number, t: number, seed: number, density: number) {
+  const a = Math.sin(Math.PI * 2 * (1.3 * density * x + seed) + t * 1.4);
+  const b = Math.sin(Math.PI * 2 * (2.9 * density * x + seed * 2.3) - t * 2.1 + 1.7);
+  const c = Math.sin(Math.PI * 2 * (5.3 * density * x + seed * 0.7) + t * 2.9 + 0.4);
+  return 0.5 + 0.5 * (0.55 * a + 0.3 * b + 0.15 * c);
 }
 
-/* The layer overhangs the band by `overhang` px. At progress 0 its top edge is
-   straight along the seam; as progress grows, fingers reach up into the band
-   above. `total` is band height + overhang. */
-function bleedPolygon(progress: number, seed: number, overhang: number, total: number) {
+/* The layer overhangs the band above by `hem` px; its top edge is a low
+   wavy curve that drifts with scroll progress. `density` scales the cycles
+   across the width so the wavelength stays long relative to the hem height
+   on narrow screens. */
+function bleedPolygon(progress: number, seed: number, hem: number, density: number) {
   const pts: string[] = [];
   for (let i = 0; i <= BLEED_POINTS; i++) {
-    const y = (overhang * (1 - progress * bleedFinger(i, progress, seed))) / total;
-    pts.push(`${((i / BLEED_POINTS) * 100).toFixed(2)}% ${(y * 100).toFixed(3)}%`);
+    const x = i / BLEED_POINTS;
+    pts.push(`${(x * 100).toFixed(2)}% ${((1 - hemWave(x, progress * 2.4, seed, density)) * hem).toFixed(1)}px`);
   }
   return `polygon(${pts.join(", ")}, 100% 100%, 0% 100%)`;
 }
@@ -153,7 +151,9 @@ export function ProductMotion({ className, sectionIds, children }: { className?:
         if (scroll) {
           gsap.fromTo(par, { yPercent: 0 }, { yPercent: -(amount * 3.2), ease: "none", scrollTrigger });
         } else {
-          gsap.fromTo(par, { scale: 1 + amount / 100, yPercent: amount * 0.6 }, { scale: 1, yPercent: -amount * 0.6, ease: "none", scrollTrigger });
+          // Vertical only and tiny: the app window keeps its own padding on every side.
+          const drift = Math.min(1.4, amount * 0.2);
+          gsap.fromTo(par, { yPercent: drift }, { yPercent: -drift, ease: "none", scrollTrigger });
         }
       }
 
@@ -167,17 +167,17 @@ export function ProductMotion({ className, sectionIds, children }: { className?:
       /* ── Ink bleed between bands ── */
       bleeds.forEach((bleed, i) => {
         const band = bleed.parentElement as HTMLElement;
-        const seed = i * 3.7 + 1;
+        const seed = (i + 2) * 0.173;
         const state = { p: 0 };
-        let overhang = 0;
-        let total = 1;
+        let hem = 24;
+        let density = 1;
         const measure = () => {
-          overhang = Math.max(24, Math.min(c.mobile ? 64 : 120, paddingAbove(band) - 10));
-          total = band.offsetHeight + overhang;
-          bleed.style.top = `${-overhang}px`;
+          density = Math.min(1, Math.max(0.5, window.innerWidth / 1440));
+          hem = Math.max(12, Math.min(36, window.innerHeight * 0.035, paddingAbove(band) - 10)) * (density < 0.6 ? 0.7 : 1);
+          bleed.style.top = `${-hem}px`;
         };
         const apply = () => {
-          bleed.style.clipPath = bleedPolygon(state.p, seed, overhang, total);
+          bleed.style.clipPath = bleedPolygon(state.p, seed, hem, density);
         };
         measure();
         apply();

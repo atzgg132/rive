@@ -5,6 +5,7 @@ import { InvoiceDocument } from "@/components/marketing/InvoiceDocument";
 import { PortfolioSpecimen } from "@/components/marketing/PortfolioShowcase";
 import { SpecimenFrame } from "@/components/marketing/SpecimenFrame";
 import type { ProductVisual as ProductVisualCopy } from "@/content/site/products";
+import { DetailZoom } from "./DetailZoom";
 import { ImportSteps } from "./ImportSteps";
 import styles from "./ProductVisual.module.css";
 
@@ -35,9 +36,16 @@ function Sample() {
   );
 }
 
-function Body({ visual, variant, importFocus }: { visual: ProductVisualCopy; variant: VisualVariant; importFocus: "flow" | "upload" }) {
+function Body({ visual, variant, importFocus, detail }: { visual: ProductVisualCopy; variant: VisualVariant; importFocus: "flow" | "upload"; detail?: string }) {
   switch (visual.kind) {
     case "workspace":
+      if (detail) {
+        return (
+          <DetailZoom target={detail}>
+            <ResponsiveWorkspacePreview view={visual.view} />
+          </DetailZoom>
+        );
+      }
       return (
         <div className={styles.window}>
           <div data-par="drift" className={styles.par}>
@@ -118,14 +126,17 @@ export function ProductVisualView({
   visual,
   variant,
   importFocus = "flow",
+  detail,
 }: {
   visual: ProductVisualCopy;
   variant: VisualVariant;
   importFocus?: "flow" | "upload";
+  /** Text of the card to close in on; renders a zoomed detail of a workspace view. */
+  detail?: string;
 }) {
   return (
     <div className={styles.visual} data-kind={visual.kind}>
-      <Body visual={visual} variant={variant} importFocus={importFocus} />
+      <Body visual={visual} variant={variant} importFocus={importFocus} detail={detail} />
       <Sample />
     </div>
   );

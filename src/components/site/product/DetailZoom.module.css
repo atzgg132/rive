@@ -1,0 +1,26 @@
+.frame {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  border-radius: clamp(14px, 1.6vw, 24px);
+  background: var(--s-card);
+  box-shadow: 0 0 0 1px var(--s-hair-strong), var(--s-shadow-float);
+  isolation: isolate;
+}
+.inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform-origin: 0 0;
+}
+.ring {
+  position: absolute;
+  opacity: 0;
+  border-radius: 16px;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--s-accent-strong, #1847bd), 0 0 0 9999px rgb(9 17 31 / 0.26), 0 0 32px 4px rgb(37 99 235 / 0.35);
+}
+@media (max-width: 639.98px) {
+  .frame { aspect-ratio: 1 / 1; }
+}

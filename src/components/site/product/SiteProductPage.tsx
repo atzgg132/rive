@@ -88,6 +88,8 @@ function Chapter({
 }) {
   const reversed = index % 2 === 1;
   const importFocus = chapter.visual.kind === "import-steps" && index === 0 && sameVisual(chapter.visual, heroVisual) ? "upload" : "flow";
+  const repeatsHero = index === 0 && chapter.visual.kind === "workspace" && sameVisual(chapter.visual, heroVisual);
+  const detail = repeatsHero && chapter.visual.kind === "workspace" && chapter.visual.view === "clients" ? "Aster House" : undefined;
   return (
     <Band id={id} theme={theme} prev={prev} labelledBy={`${id}-title`} className={styles.chapter}>
       <div className={`s-container--wide s-container ${styles.chapterGrid} ${reversed ? styles.reversed : ""}`} data-chapter data-slug={slug}>
@@ -109,7 +111,7 @@ function Chapter({
           <div className={styles.visualGlow} aria-hidden="true" data-vis-glow />
           <div className={styles.visualStage} data-vis-stage>
             <div className={styles.visualFrame} data-vis-frame data-side={reversed ? "left" : "right"}>
-              <ProductVisualView visual={chapter.visual} variant="chapter" importFocus={importFocus} />
+              <ProductVisualView visual={chapter.visual} variant="chapter" importFocus={importFocus} detail={detail} />
             </div>
           </div>
         </div>
