@@ -11,9 +11,9 @@ import styles from "./Standing.module.css";
    the fold on narrow layouts), so targets are found in the DOM and the first
    one that is inside the frame wins. Words only: no new figures. */
 const CALLOUTS = [
-  { key: "due", label: "What's due", targets: ["Next 14 days", "New invoice", "Active projects"], side: (compact: boolean) => (compact ? "top" : "bottom") },
+  { key: "due", label: "What's due", targets: ["Overdue", "Next 14 days"], side: (compact: boolean) => (compact ? "top" : "bottom") },
   { key: "agreed", label: "What's agreed", targets: ["Active projects"], side: () => "top" },
-  { key: "outstanding", label: "What's outstanding", targets: ["Overdue", "Collection rate", "Cash collected"], side: () => "bottom" },
+  { key: "outstanding", label: "What's outstanding", targets: ["Cash collected"], side: () => "bottom" },
 ] as const;
 
 type Rect = { x: number; y: number; w: number; h: number };
@@ -87,6 +87,12 @@ export function Standing() {
             break;
           }
         }
+        /* A callout only points at a card that says what the label says; if
+           that card is below the fold of a compact layout, the callout sits out. */
+        const hide = rect ? "" : "hidden";
+        chips[i].style.visibility = hide;
+        dots[i].style.visibility = hide;
+        lines[i].style.visibility = hide;
         const anchor = rect ?? { x: W * 0.5, y: H * 0.4, w: 0, h: 0 };
         const upper = anchor.y + anchor.h / 2 < H * 0.42;
         const side = callout.key === "due" && upper ? "top" : callout.side(compact);

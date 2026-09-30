@@ -6,7 +6,7 @@ import { StartFree } from "@/components/site/StartFree";
 import { loadGsap } from "@/components/site/motion/gsap";
 import styles from "./FloatingStartFree.module.css";
 
-const SUPPRESS_SELECTOR = '[data-cta-placement="finale"], [data-cta-placement="pricing"], [data-site-footer]';
+const SUPPRESS_SELECTOR = '[data-cta-placement="finale"], [data-cta-placement="pricing"], [data-site-footer], [data-standing-overlay]';
 
 /* Long reading pages: a floating button over body text gets in the way. */
 const READING_PATHS = new Set(["/privacy", "/terms", "/cookies"]);

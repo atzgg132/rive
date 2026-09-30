@@ -8,21 +8,15 @@ import styles from "./Answers.module.css";
 
 const CHANGELOG_WORD = "changelog";
 
-/** Deterministic pseudo-noise, so the ink edge is organic but identical on
- * server, client and every resize. */
-function noise(i: number) {
-  const s = Math.sin(i * 127.1 + 311.7) * 43758.5453;
-  return s - Math.floor(s);
-}
-
-const POINTS = 48;
-/* Smooth, overlapping waves plus a little grain: the ink edge arrives as a
-   few slow tongues, not as a jagged line. */
+const POINTS = 64;
+/* Long, low swells: the ink edge rises as a soft wave. Higher frequencies or
+   a wider spread turn it into spikes on narrow screens. */
 const DELAYS = Array.from({ length: POINTS + 1 }, (_, i) => {
-  const wave = 0.5 + 0.28 * Math.sin(i * 0.3 + 1) + 0.16 * Math.sin(i * 0.8 + 2.4) + 0.06 * (noise(i + 3) - 0.5);
+  const x = i / POINTS;
+  const wave = 0.5 + 0.32 * Math.sin(x * Math.PI * 2 * 1.1 + 1) + 0.14 * Math.sin(x * Math.PI * 2 * 2.3 + 2.4);
   return Math.min(1, Math.max(0, wave));
 });
-const SPREAD = 0.24;
+const SPREAD = 0.1;
 
 function Tick() {
   return (
