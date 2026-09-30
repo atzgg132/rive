@@ -8,6 +8,9 @@ import styles from "./FloatingStartFree.module.css";
 
 const SUPPRESS_SELECTOR = '[data-cta-placement="finale"], [data-cta-placement="pricing"], [data-site-footer]';
 
+/* Long reading pages: a floating button over body text gets in the way. */
+const READING_PATHS = new Set(["/privacy", "/terms", "/cookies"]);
+
 function inView(el: Element) {
   const rect = el.getBoundingClientRect();
   return rect.height > 0 && rect.top < window.innerHeight && rect.bottom > 0;
@@ -29,7 +32,7 @@ export function FloatingStartFree() {
       const pastHero = hero ? hero.getBoundingClientRect().bottom < 0 : window.scrollY > window.innerHeight * 0.8;
       const crowded = Array.from(document.querySelectorAll(SUPPRESS_SELECTOR)).some(inView);
       const menuOpen = document.documentElement.hasAttribute("data-site-menu");
-      setVisible(pastHero && !crowded && !menuOpen);
+      setVisible(pastHero && !crowded && !menuOpen && !READING_PATHS.has(window.location.pathname));
     };
     const schedule = () => {
       if (!frame) frame = window.requestAnimationFrame(compute);
