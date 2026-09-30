@@ -1,0 +1,53 @@
+.section {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  display: grid;
+  align-items: center;
+  min-height: 100svh;
+  padding-block: clamp(5rem, 10vw, 11rem) clamp(3rem, 6vw, 6rem);
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+}
+.glow {
+  position: absolute;
+  left: 50%;
+  bottom: -6%;
+  z-index: -1;
+  width: min(140vw, 2200px);
+  aspect-ratio: 2 / 1;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, rgb(37 99 235 / 0.34), rgb(37 99 235 / 0.1) 55%, transparent 100%);
+  pointer-events: none;
+}
+.inner { display: grid; gap: clamp(2rem, 4vw, 3.5rem); }
+.title {
+  margin: 0;
+  max-width: 15ch;
+  font-size: clamp(2.7rem, 1rem + 7.2vw, 10.5rem);
+  font-weight: 780;
+  font-stretch: 100%;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.after { color: var(--s-accent); }
+.cta { display: grid; justify-items: start; gap: 0.9rem; }
+
+.logoWrap { padding-top: clamp(1rem, 4vw, 4rem); }
+.logo { position: relative; width: 100%; will-change: auto; }
+.logo > span { display: flex; width: 100%; }
+.logo svg { width: 100%; height: auto; overflow: visible; }
+.anchor {
+  position: absolute;
+  left: 0;
+  top: 98.5%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* SplitText fixes the line breaks at the settled width; the wide start of the
+   font-stretch entrance must not re-wrap them and shift the layout. */
+.title div { white-space: nowrap; }

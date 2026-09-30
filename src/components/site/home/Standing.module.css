@@ -1,0 +1,73 @@
+.section {
+  background: var(--s-paper);
+  padding-bottom: clamp(3.5rem, 7vw, 8rem);
+}
+.head { display: grid; gap: 1.25rem; justify-items: start; margin-bottom: clamp(1.5rem, 3vw, 3rem); }
+.title { max-width: 18ch; }
+.body { margin: 0; }
+
+/* Room above and below the frame for the chips that hang off its edges. */
+.pin { position: relative; width: 100%; padding-block: 3.25rem; }
+/* The preview picks its own aspect from its width (wide app, phone-width
+   compact, or tall phone), so each band caps the width so the whole pinned
+   frame, chips included, fits the viewport height. */
+.slot {
+  position: relative;
+  width: min(100% - 2 * var(--s-gutter), var(--s-container), max(768px, calc((100svh - 9rem) * 1.55)));
+  margin-inline: auto;
+}
+@media (max-width: 839.98px) {
+  .slot { width: min(100% - 2 * var(--s-gutter), max(560px, calc((100svh - 9rem) * 1.1))); }
+}
+@media (max-width: 611px) {
+  .slot { width: min(100% - 2 * var(--s-gutter), max(270px, calc((100svh - 9rem) * 0.5))); }
+}
+
+.frame {
+  position: relative;
+  border-radius: var(--s-radius-lg);
+  overflow: hidden;
+  background: var(--s-card);
+  box-shadow: var(--s-shadow-float);
+}
+
+.overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; visibility: hidden; }
+.overlay[data-placed] { visibility: visible; }
+.lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.line { stroke: var(--s-ink); stroke-width: 1.5; stroke-linecap: round; }
+
+.chip, .dot { position: absolute; left: 0; top: 0; translate: -50% -50%; }
+.dot {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 999px;
+  background: var(--s-accent);
+  box-shadow: 0 0 0 3px var(--s-card), 0 0 0 4px var(--s-ink);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0 1rem 0 0.8rem;
+  border-radius: 999px;
+  background: var(--s-ink);
+  color: var(--s-on-ink);
+  font-size: 0.9rem;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 16px 28px -14px rgb(9 17 31 / 0.55);
+}
+.chip::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--s-accent-on-ink);
+}
+@media (max-width: 599.98px) {
+  .chip { font-size: 0.8rem; min-height: 2rem; padding: 0 0.85rem 0 0.7rem; }
+  .dot { width: 0.65rem; height: 0.65rem; }
+}

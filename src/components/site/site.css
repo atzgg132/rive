@@ -273,3 +273,7 @@ html.site-motion:not(.site-motion-ready) [data-site="v2"] [data-reveal] { opacit
     transition-property: none !important;
   }
 }
+
+/* The homepage finale ends on the wordmark (where the Thread ties in); the
+   footer's giant wordmark would repeat it immediately below. */
+[data-site="v2"]:has([data-finale-stage]) [data-footer-mark] { display: none; }
