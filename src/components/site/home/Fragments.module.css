@@ -595,7 +595,10 @@
   height: 100svh;
   min-height: 30rem;
   padding-block: 0;
-  overflow: hidden;
+  /* Clip with clip-path, not overflow: an overflow-hidden element that
+     ScrollTrigger pins registers as a full-viewport layout shift in Chrome
+     (CLS ~1.0 at pin start and again at release). */
+  clip-path: inset(0);
   isolation: isolate;
 }
 
