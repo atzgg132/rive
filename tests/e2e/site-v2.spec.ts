@@ -71,7 +71,8 @@ test.describe("marketing site v2", () => {
   test("reduced motion shows every homepage section's content", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "load" });
-    const headings = page.locator("main h2");
+    // Headings inside the inert product previews are part of the pictured UI.
+    const headings = page.locator("main h2:not([aria-hidden='true'] h2):not([inert] h2)");
     const count = await headings.count();
     expect(count).toBeGreaterThanOrEqual(9);
     for (let index = 0; index < count; index++) {

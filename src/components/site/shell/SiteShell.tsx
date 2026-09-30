@@ -4,6 +4,7 @@ import "@/components/site/pages/legacy-skin.css";
 import { SiteNav } from "@/components/site/shell/SiteNav";
 import { SiteFooter } from "@/components/site/shell/SiteFooter";
 import { FloatingStartFree } from "@/components/site/shell/FloatingStartFree";
+import { CtaTracker } from "@/components/site/CtaTracker";
 import { SITE_BOOT_SCRIPT } from "@/components/site/motion/boot";
 
 /** The v2 marketing shell. `data-surface="marketing"` stays so pages that
@@ -18,6 +19,7 @@ export function SiteShell({ children, jsonLd }: { children: ReactNode; jsonLd: R
       <main id="main-content" className="s-main">{children}</main>
       <SiteFooter />
       <FloatingStartFree />
+      <CtaTracker />
     </div>
   );
 }

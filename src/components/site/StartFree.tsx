@@ -1,13 +1,10 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { trackCtaClick } from "@/components/site/analytics";
 import type { MarketingCtaPlacement } from "@/lib/domain-vocabulary";
 
 /** The site's one call to action. Every signup link on the v2 site is this
  * component: it reads "Start free", points at /register (the auth overlay
- * intercepts it) and records where it was clicked. */
+ * intercepts it) and carries its placement for CtaTracker. */
 export function StartFree({
   placement,
   size = "md",
@@ -26,7 +23,6 @@ export function StartFree({
       href={href}
       className={`s-btn ${size === "lg" ? "s-btn--lg" : ""} ${className}`}
       data-cta-placement={placement}
-      onClick={() => trackCtaClick(placement)}
     >
       <span>{label}</span>
       <ArrowRight aria-hidden="true" />
