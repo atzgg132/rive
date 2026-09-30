@@ -57,6 +57,12 @@ const sensitiveRouteHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   deploymentId: process.env.DEPLOYMENT_VERSION,
+  /* Inlined at build time so `process.env.MARKETING_SITE_V2 === "1"` is a
+     constant: webpack skips the dead branch, and a build with the switch off
+     never bundles the v2 marketing site. dev.rive.work builds it on. */
+  env: {
+    MARKETING_SITE_V2: process.env.MARKETING_SITE_V2 === "1" ? "1" : "0",
+  },
   // The local app is routinely opened through 127.0.0.1 while Next starts on
   // localhost. Allow the dev HMR endpoint from both local hostnames.
   allowedDevOrigins: ["localhost", "127.0.0.1"],

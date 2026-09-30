@@ -28,7 +28,7 @@ const eslintConfig = defineConfig([
   ]),
   {
     files: ["src/**/*.{js,jsx,ts,tsx}"],
-    ignores: ["src/components/marketing/**/*.{js,jsx,ts,tsx}"],
+    ignores: ["src/components/marketing/**/*.{js,jsx,ts,tsx}", "src/components/site/**/*.{js,jsx,ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -36,7 +36,7 @@ const eslintConfig = defineConfig([
           patterns: [
             {
               group: ["gsap", "gsap/*", "motion", "motion/*", "ogl", "ogl/*"],
-              message: "Animation libraries are isolated to src/components/marketing so they never enter the product bundle.",
+              message: "Animation libraries are isolated to src/components/marketing and src/components/site so they never enter the product bundle.",
             },
           ],
         },
