@@ -17,6 +17,7 @@ const NAV_CLEARANCE = { desktop: 84, tablet: 76, mobile: 68 } as const;
 
 export function Hero() {
   const heroRef = useRef<HTMLElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
   const inkRef = useRef<InkFieldHandle>(null);
   const paused = useMotionPaused();
 
@@ -66,6 +67,10 @@ export function Hero() {
         start: "top top",
         end: () => `+=${Math.round(window.innerHeight * SCRUB[tier])}`,
         pin: true,
+        // Pre-rendered spacer: without it ScrollTrigger wraps the hero in a
+        // new element, the DOM move restarts every CSS entrance animation,
+        // and the headline plays its reveal a second time.
+        pinSpacer: spacerRef.current ?? undefined,
         anticipatePin: 1,
         scrub: 0.8,
         invalidateOnRefresh: true,
@@ -121,87 +126,89 @@ export function Hero() {
   }, []);
 
   return (
-    <section ref={heroRef} data-hero aria-labelledby="hero-title" className={styles.hero}>
-      <InkField ref={inkRef} className={styles.ink} />
+    <div ref={spacerRef}>
+      <section ref={heroRef} data-hero aria-labelledby="hero-title" className={styles.hero}>
+        <InkField ref={inkRef} className={styles.ink} />
 
-      <div className={styles.content} data-hero-copy>
-        <div className={styles.inner}>
-          <p className={`s-kicker ${styles.kicker}`}>{hero.eyebrow}</p>
-          <div className={styles.grid}>
-            <h1 id="hero-title" className={styles.title} aria-label={hero.title}>
-              {hero.titleLines.map((line, index) => {
-                const last = index === hero.titleLines.length - 1;
-                const text = (
-                  <span className={styles.line} aria-hidden="true" style={{ "--i": index } as CSSProperties}>
-                    <span className={styles.lineInner}>{line}</span>
-                  </span>
-                );
-                return (
-                  <Fragment key={line}>
-                    {last ? (
-                      <span className={styles.lastLine}>
-                        {text}
-                        <svg
-                          className={styles.underline}
-                          viewBox="0 0 600 26"
-                          preserveAspectRatio="none"
-                          aria-hidden="true"
-                          focusable="false"
-                        >
-                          <path
-                            d="M3 17 C 84 7, 168 23, 258 14 S 424 6, 520 15 S 580 13, 597 7"
-                            pathLength={1}
-                            fill="none"
-                            stroke="var(--s-accent)"
-                            strokeLinecap="round"
-                            strokeWidth="1"
-                            vectorEffect="non-scaling-stroke"
-                          />
-                        </svg>
-                        <span className={styles.threadEnd} data-thread-anchor="hero" aria-hidden="true" />
-                      </span>
-                    ) : (
-                      text
-                    )}{" "}
-                  </Fragment>
-                );
-              })}
-            </h1>
+        <div className={styles.content} data-hero-copy>
+          <div className={styles.inner}>
+            <p className={`s-kicker ${styles.kicker}`}>{hero.eyebrow}</p>
+            <div className={styles.grid}>
+              <h1 id="hero-title" className={styles.title} aria-label={hero.title}>
+                {hero.titleLines.map((line, index) => {
+                  const last = index === hero.titleLines.length - 1;
+                  const text = (
+                    <span className={styles.line} aria-hidden="true" style={{ "--i": index } as CSSProperties}>
+                      <span className={styles.lineInner}>{line}</span>
+                    </span>
+                  );
+                  return (
+                    <Fragment key={line}>
+                      {last ? (
+                        <span className={styles.lastLine}>
+                          {text}
+                          <svg
+                            className={styles.underline}
+                            viewBox="0 0 600 26"
+                            preserveAspectRatio="none"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path
+                              d="M3 17 C 84 7, 168 23, 258 14 S 424 6, 520 15 S 580 13, 597 7"
+                              pathLength={1}
+                              fill="none"
+                              stroke="var(--s-accent)"
+                              strokeLinecap="round"
+                              strokeWidth="1"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          </svg>
+                          <span className={styles.threadEnd} data-thread-anchor="hero" aria-hidden="true" />
+                        </span>
+                      ) : (
+                        text
+                      )}{" "}
+                    </Fragment>
+                  );
+                })}
+              </h1>
 
-            <div className={styles.aside}>
-              <p className={`s-lead ${styles.lead}`}>{hero.body}</p>
-              <div className={styles.actions}>
-                <StartFree placement="hero" size="lg" />
-                <a href={hero.secondary.href} className="s-btn s-btn--ghost s-btn--lg">
-                  <span>{hero.secondary.label}</span>
-                  <ArrowDown aria-hidden="true" />
-                </a>
+              <div className={styles.aside}>
+                <p className={`s-lead ${styles.lead}`}>{hero.body}</p>
+                <div className={styles.actions}>
+                  <StartFree placement="hero" size="lg" />
+                  <a href={hero.secondary.href} className="s-btn s-btn--ghost s-btn--lg">
+                    <span>{hero.secondary.label}</span>
+                    <ArrowDown aria-hidden="true" />
+                  </a>
+                </div>
+                <p className={`s-assurance ${styles.assurance}`}>{ASSURANCE}</p>
               </div>
-              <p className={`s-assurance ${styles.assurance}`}>{ASSURANCE}</p>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className={styles.stage} data-hero-stage>
-        <div className={styles.frame} data-hero-frame>
-          <p className={`s-sample-label ${styles.sample}`} data-hero-sample>{hero.sampleLabel}</p>
-          <div className={styles.surface}>
-            <ResponsiveWorkspacePreview view="dashboard" />
+        <div className={styles.stage} data-hero-stage>
+          <div className={styles.frame} data-hero-frame>
+            <p className={`s-sample-label ${styles.sample}`} data-hero-sample>{hero.sampleLabel}</p>
+            <div className={styles.surface}>
+              <ResponsiveWorkspacePreview view="dashboard" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <button
-        type="button"
-        className={styles.pause}
-        aria-pressed={paused}
-        aria-label="Pause motion"
-        title={paused ? "Play motion" : "Pause motion"}
-        onClick={() => setMotionPaused(!paused)}
-      >
-        {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-      </button>
-    </section>
+        <button
+          type="button"
+          className={styles.pause}
+          aria-pressed={paused}
+          aria-label="Pause motion"
+          title={paused ? "Play motion" : "Pause motion"}
+          onClick={() => setMotionPaused(!paused)}
+        >
+          {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+        </button>
+      </section>
+    </div>
   );
 }
