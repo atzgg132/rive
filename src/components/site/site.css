@@ -261,9 +261,15 @@
 html.site-motion:not(.site-motion-ready) [data-site="v2"] [data-reveal] { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
+  /* globals.css gives every element a 0.01ms transition on `all`. GSAP reads
+     computed values when it (re)records a tween — on every ScrollTrigger
+     refresh — and would catch opacity mid-transition at 0, leaving content
+     hidden. The site's reduced-motion fades are GSAP's; CSS transitions are
+     switched off entirely here. */
   [data-site="v2"] *,
   [data-site="v2"] *::before,
   [data-site="v2"] *::after {
     scroll-behavior: auto !important;
+    transition-property: none !important;
   }
 }

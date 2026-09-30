@@ -1,1 +1,280 @@
-/* v2 skin for pages that still render the previous marketing markup (legal). */
+/* v2 skin for pages that still render the previous marketing markup (legal:
+   privacy, terms, cookies). Everything is scoped under [data-site="v2"], so the
+   production site (flag off) never sees it. The --inst-* variables are
+   re-pointed only inside `.inst-reading`, so the product previews elsewhere in
+   the v2 site keep their own paint. */
+
+[data-site="v2"] .inst-reading {
+  --inst-paper: var(--s-paper);
+  --inst-paper-2: var(--s-paper-2);
+  --inst-ink: var(--s-text);
+  --inst-ink-soft: var(--s-text-soft);
+  --inst-ink-faint: var(--s-text-soft);
+  --inst-hairline: var(--s-hair);
+  --inst-accent: var(--s-accent);
+  --inst-accent-ink: var(--s-accent-strong);
+  --inst-font: var(--s-font);
+  --inst-mono: var(--s-mono);
+  --inst-gutter: var(--s-gutter);
+  --inst-container: 84rem;
+  --font-body: var(--s-font);
+  --surface-glass: var(--s-card);
+  position: relative;
+  padding-top: calc(56px + clamp(3rem, 9vw, 8rem));
+  padding-bottom: clamp(4rem, 9vw, 9rem);
+  background:
+    radial-gradient(60rem 26rem at 90% -6%, rgb(37 99 235 / 0.06), transparent 70%),
+    var(--s-paper);
+  color: var(--s-text);
+  font-family: var(--s-font);
+}
+
+/* SplitText's line masks use `overflow: clip`, which would shave the
+   descenders off tight display lines. Give each mask room below and take it
+   back with a negative margin so line spacing is unchanged. */
+[data-site="v2"] .s-line-mask {
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+}
+
+/* ── Head ──────────────────────────────────────────────────────── */
+[data-site="v2"] .inst-reading__head {
+  max-width: 62rem;
+  padding-bottom: clamp(1.75rem, 4vw, 3.5rem);
+  border-bottom: 1px solid var(--s-hair-strong);
+  animation: s-legal-fade-up 800ms var(--s-ease-out) both;
+}
+[data-site="v2"] .inst-reading__head > .inst-mono:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--s-text-soft);
+}
+[data-site="v2"] .inst-reading__head > .inst-mono:first-child::before {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 999px;
+  background: var(--s-accent);
+  flex: none;
+}
+[data-site="v2"] .inst-reading__head h1,
+[data-site="v2"] .inst-reading__head .inst-display {
+  margin: 1.25rem 0 0;
+  font-family: var(--s-font);
+  font-size: clamp(2.6rem, 0.9rem + 6vw, 7.5rem);
+  font-weight: 780;
+  font-stretch: 100%;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  color: var(--s-text);
+}
+[data-site="v2"] .inst-reading__head p.inst-mono {
+  margin: 1.5rem 0 0;
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  letter-spacing: 0.08em;
+  color: var(--s-text-soft) !important;
+}
+[data-site="v2"] .inst-reading__head .inst-body {
+  max-width: 44ch;
+  font-size: var(--s-t-lead);
+  color: var(--s-text-soft);
+}
+
+/* ── Body: TOC + prose ─────────────────────────────────────────── */
+[data-site="v2"] .inst-reading__body {
+  margin-top: clamp(2rem, 5vw, 4rem);
+  animation: s-legal-fade-up 900ms var(--s-ease-out) 120ms both;
+}
+[data-site="v2"] .inst-reading__body h2 {
+  font-family: var(--s-font) !important;
+  font-size: clamp(1.35rem, 1.1rem + 0.9vw, 2rem);
+  font-weight: 720;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--s-text);
+  border-bottom-color: var(--s-hair-strong);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+[data-site="v2"] .inst-reading__body [class*="text-sm"][class*="leading-relaxed"] {
+  font-family: var(--s-font) !important;
+  font-size: var(--s-t-body);
+  line-height: 1.7;
+  color: var(--s-text-soft);
+}
+[data-site="v2"] .inst-reading__body [class*="text-sm"][class*="leading-relaxed"] strong {
+  color: var(--s-text);
+  font-weight: 650;
+}
+[data-site="v2"] .inst-reading__body ul li::marker {
+  color: var(--s-accent);
+}
+[data-site="v2"] .inst-reading__body a {
+  color: var(--s-accent-strong);
+  font-weight: 560;
+  text-decoration: underline;
+  text-decoration-color: rgb(37 99 235 / 0.35);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color var(--s-dur-fast) var(--s-ease-out);
+}
+[data-site="v2"] .inst-reading__body a:hover {
+  text-decoration-color: var(--s-accent);
+}
+[data-site="v2"] .inst-reading__body [class*="rounded-xl"] {
+  border-radius: var(--s-radius-card);
+  background: var(--s-card);
+  border-color: var(--s-hair);
+}
+[data-site="v2"] .inst-reading__body .text-primary,
+[data-site="v2"] .inst-reading__body [class*="text-primary"] {
+  color: var(--s-accent-strong);
+}
+[data-site="v2"] .inst-reading__body [class*="bg-primary"] {
+  background: rgb(37 99 235 / 0.1);
+}
+
+/* Reading column: a touch wider than the legacy 42rem. */
+@media (min-width: 768px) {
+  [data-site="v2"] .inst-reading__body > div > div:last-child {
+    max-width: 46rem;
+  }
+}
+
+/* ── Table of contents ─────────────────────────────────────────── */
+[data-site="v2"] .inst-toc {
+  flex: none;
+  width: 100%;
+  scroll-target-group: auto;
+}
+[data-site="v2"] .inst-toc > .inst-mono {
+  display: block;
+  margin: 0 0 0.75rem;
+  font-family: var(--s-mono);
+  font-size: var(--s-t-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--s-text-soft);
+}
+[data-site="v2"] .inst-toc nav {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 0.25rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent);
+}
+[data-site="v2"] .inst-toc nav::-webkit-scrollbar {
+  display: none;
+}
+[data-site="v2"] .inst-toc a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--s-hair-strong);
+  border-radius: 999px;
+  background: var(--s-card);
+  color: var(--s-text);
+  font-size: 0.875rem;
+  font-weight: 560;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  scroll-snap-align: start;
+  transition:
+    background-color var(--s-dur-fast) var(--s-ease-out),
+    border-color var(--s-dur-fast) var(--s-ease-out),
+    color var(--s-dur-fast) var(--s-ease-out);
+}
+[data-site="v2"] .inst-toc a:hover {
+  border-color: var(--s-text);
+}
+[data-site="v2"] .inst-toc a:focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 2px;
+}
+[data-site="v2"] .inst-toc a:target-current,
+[data-site="v2"] .inst-toc a[aria-current] {
+  background: var(--s-ink);
+  border-color: var(--s-ink);
+  color: var(--s-on-ink);
+}
+
+@media (min-width: 768px) {
+  [data-site="v2"] .inst-toc {
+    width: min(100%, 16rem);
+    position: sticky;
+    top: 5.5rem;
+    align-self: flex-start;
+    max-height: calc(100svh - 7rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--s-hair-strong) transparent;
+  }
+  [data-site="v2"] .inst-toc nav {
+    display: grid;
+    gap: 0;
+    overflow: visible;
+    padding-bottom: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+    border-left: 1px solid var(--s-hair-strong);
+  }
+  [data-site="v2"] .inst-toc a {
+    position: relative;
+    min-height: 44px;
+    margin-left: -1px;
+    padding: 0.5rem 0 0.5rem 1rem;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    color: var(--s-text-soft);
+    font-size: 0.875rem;
+    white-space: normal;
+  }
+  [data-site="v2"] .inst-toc a:hover {
+    color: var(--s-text);
+    border-left-color: var(--s-hair-strong);
+  }
+  [data-site="v2"] .inst-toc a:target-current,
+  [data-site="v2"] .inst-toc a[aria-current] {
+    background: none;
+    color: var(--s-text);
+    font-weight: 650;
+    border-left-color: var(--s-accent);
+  }
+}
+
+@keyframes s-legal-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-site="v2"] .inst-reading__head,
+  [data-site="v2"] .inst-reading__body {
+    animation: none;
+  }
+}

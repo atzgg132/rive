@@ -1,0 +1,138 @@
+.hero {
+  position: relative;
+  padding-top: calc(56px + clamp(3rem, 9vw, 9rem));
+  padding-bottom: clamp(2.5rem, 5vw, 5rem);
+  background:
+    radial-gradient(60rem 28rem at 88% -8%, rgb(37 99 235 / 0.07), transparent 70%),
+    var(--s-paper);
+}
+
+.inner {
+  position: relative;
+  display: grid;
+  gap: clamp(1.25rem, 2.6vw, 2.25rem);
+}
+
+.kicker {
+  margin: 0;
+  animation: fade-up 700ms var(--s-ease-out) 40ms both;
+}
+
+.title {
+  margin: 0;
+  max-width: 17em;
+  font-family: var(--s-font);
+  font-size: clamp(2.6rem, 0.9rem + 6.4vw, 9.25rem);
+  font-weight: 780;
+  font-stretch: 100%;
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+  font-kerning: normal;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  color: var(--s-text);
+}
+
+.word {
+  display: inline-block;
+  vertical-align: top;
+  max-width: 100%;
+  /* Mask: clips above and below the line box, never the sides. */
+  clip-path: inset(-0.06em -0.3em -0.18em -0.3em);
+}
+
+.wordInner {
+  display: inline-block;
+  max-width: 100%;
+  transform-origin: 0 100%;
+  animation: rise 1000ms var(--s-ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 80ms);
+}
+
+.foot {
+  display: grid;
+  gap: 1.5rem;
+  justify-items: start;
+}
+
+.lead {
+  margin: 0;
+  max-width: 40ch;
+  animation: fade-up 900ms var(--s-ease-out) 520ms both;
+}
+
+@media (min-width: 900px) {
+  .foot {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1rem, 2vw, 2rem);
+  }
+  .lead {
+    grid-column: 6 / -1;
+    max-width: 44ch;
+  }
+}
+
+.rule {
+  display: block;
+  height: 1px;
+  margin-top: clamp(1rem, 3vw, 2.5rem);
+  background: var(--s-hair-strong);
+  transform-origin: 0 50%;
+  animation: draw 1300ms var(--s-ease-out) 700ms both;
+}
+.rule::after {
+  content: "";
+  display: block;
+  width: clamp(3rem, 9vw, 8rem);
+  height: 3px;
+  margin-top: -1px;
+  background: var(--s-accent);
+  border-radius: 3px;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(125%);
+    font-stretch: 110%;
+  }
+  to {
+    transform: none;
+    font-stretch: 100%;
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kicker,
+  .lead,
+  .wordInner,
+  .rule {
+    animation: fade 400ms linear both;
+    animation-delay: 0ms;
+  }
+}
