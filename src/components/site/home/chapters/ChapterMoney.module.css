@@ -58,6 +58,7 @@
   margin-top: clamp(4.5rem, 9vw, 9rem);
   padding-top: clamp(1.5rem, 3vw, 2.5rem);
   border-top: 1px solid var(--s-hair-strong);
+  container-type: inline-size;
 }
 .anchor {
   position: absolute;
@@ -74,7 +75,8 @@
 }
 .figureValue {
   font-family: var(--s-font);
-  font-size: clamp(3rem, 9.6vw, 8.5rem);
+  /* Sized to the row, not the viewport: "₹2,84,500" must fit its column. */
+  font-size: clamp(2.6rem, 14cqi, 8.5rem);
   font-weight: 760;
   font-stretch: 100%;
   letter-spacing: -0.045em;
@@ -103,5 +105,5 @@
 @media (min-width: 768px) {
   .figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .figuresNote { grid-column: 1 / -1; }
-  .figureValue { font-size: clamp(2.6rem, 6.6vw, 8rem); }
+  .figureValue { font-size: clamp(2.2rem, 5.2cqi, 8rem); }
 }
