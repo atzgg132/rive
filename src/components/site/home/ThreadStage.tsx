@@ -166,7 +166,7 @@ export function ThreadStage() {
   const short = useMediaFlag(SHORT_QUERY);
   const stacked = reduced || short;
   const [active, setActive] = useState(0);
-  const [mounted, setMounted] = useState(0);
+  const [mounted, setMounted] = useState(1);
   const activeRef = useRef(0);
   const navRef = useRef<{ progress: number; until: number } | null>(null);
 
@@ -216,7 +216,7 @@ export function ThreadStage() {
         setMounted((m) => Math.max(m, 2));
         next();
       },
-      { rootMargin: "120% 0px" },
+      { rootMargin: "200% 0px" },
     );
     io.observe(el);
     return () => {
@@ -226,11 +226,12 @@ export function ThreadStage() {
     };
   }, [stacked]);
 
-  const mountedCount = Math.min(STEPS.length, Math.max(mounted, mounted ? active + 2 : 0));
+  const mountedCount = Math.min(STEPS.length, Math.max(mounted, active > 0 ? active + 2 : 1));
 
   useSiteMotion(
     rootRef,
     ({ gsap, ScrollTrigger, SplitText }, c, scope) => {
+      let bleedCleanup: (() => void) | undefined;
       const q = <T extends Element>(sel: string) => scope.querySelector<T>(sel);
       const qa = <T extends Element>(sel: string) => Array.from(scope.querySelectorAll<T>(sel));
 
@@ -245,8 +246,8 @@ export function ThreadStage() {
       }
 
       /* Intro: masked line reveal of the heading. */
-      if (kicker) gsap.from(kicker, { opacity: 0, y: 14, duration: 0.8, immediateRender: true, scrollTrigger: { trigger: kicker, start: "top 92%", once: true } });
-      if (lead) gsap.from(lead, { opacity: 0, y: 22, duration: 1, delay: 0.15, immediateRender: true, scrollTrigger: { trigger: lead, start: "top 92%", once: true } });
+      if (kicker) gsap.from(kicker, { opacity: 0, y: 14, duration: 0.8, immediateRender: true, scrollTrigger: { trigger: scope, start: "top 34%", once: true } });
+      if (lead) gsap.from(lead, { opacity: 0, y: 22, duration: 1, delay: 0.15, immediateRender: true, scrollTrigger: { trigger: scope, start: "top 34%", once: true } });
       if (title) {
         SplitText.create(title, {
           type: "lines",
@@ -259,35 +260,58 @@ export function ThreadStage() {
               stagger: 0.09,
               ease: "power4.out",
               immediateRender: true,
-              scrollTrigger: { trigger: title, start: "top 90%", once: true },
+              scrollTrigger: { trigger: scope, start: "top 34%", once: true },
             });
           },
         });
       }
 
-      /* The paper→ink transition: an ink curtain rises above the section
-         with an organic, per-column edge. */
+      /* The paper→ink transition, kept inside this section: a paper band at
+         its top that the ink floods up through along a soft wave. */
       const bleed = q<HTMLElement>("[data-bleed]");
-      if (bleed) {
-        const N = 44;
-        const lag = Array.from({ length: N + 1 }, (_, i) => 0.5 + 0.28 * Math.sin(i * 0.42 + 0.6) + 0.14 * Math.sin(i * 1.13 + 2.1) + 0.08 * Math.sin(i * 2.3));
+      const intro = q<HTMLElement>("[data-intro]");
+      if (bleed && intro) {
+        const SAMPLES = 72;
+        const seed = 0.37;
+        const wave = (x: number, t: number) => {
+          const a = Math.sin(Math.PI * 2 * (1.3 * x + seed) + t * 1.4);
+          const b = Math.sin(Math.PI * 2 * (2.9 * x + seed * 2.3) - t * 2.1 + 1.7);
+          const c2 = Math.sin(Math.PI * 2 * (5.3 * x + seed * 0.7) + t * 2.9 + 0.4);
+          return 0.5 + 0.5 * (0.55 * a + 0.3 * b + 0.15 * c2);
+        };
+        let band = 0;
+        let amp = 0;
+        const measure = () => {
+          amp = window.innerHeight * (c.mobile ? 0.022 : 0.035);
+          band = intro.offsetTop + intro.offsetHeight + amp;
+          bleed.style.height = `${band}px`;
+        };
         const proxy = { p: 0 };
         const draw = () => {
+          const p = proxy.p;
           const pts: string[] = [];
-          for (let i = 0; i <= N; i++) {
-            const q01 = Math.min(1, Math.max(0, (proxy.p * 1.7 - lag[i] * 0.7) / 1));
-            const eased = 1 - Math.pow(1 - q01, 2.4);
-            pts.push(`${((i / N) * 100).toFixed(2)}% ${((1 - eased) * 100).toFixed(2)}%`);
+          const swell = 0.7 + 0.3 * Math.sin(Math.PI * Math.min(1, p));
+          for (let i = 0; i <= SAMPLES; i++) {
+            const x = i / SAMPLES;
+            const y = (band + amp) * (1 - p) + amp * swell * (wave(x, p * 2.4) - 1);
+            pts.push(`${(x * 100).toFixed(2)}% ${y.toFixed(1)}px`);
           }
-          bleed.style.clipPath = `polygon(${pts.join(",")},100% 100%,0% 100%)`;
+          bleed.style.clipPath = `polygon(0% 0%,100% 0%,${pts.reverse().join(",")})`;
         };
+        measure();
         draw();
+        const onRefresh = () => {
+          measure();
+          draw();
+        };
+        ScrollTrigger.addEventListener("refreshInit", onRefresh);
         gsap.to(proxy, {
           p: 1,
           ease: "none",
           onUpdate: draw,
-          scrollTrigger: { trigger: bleed, start: "top bottom", end: "bottom bottom", scrub: 0.6 },
+          scrollTrigger: { trigger: scope, start: "top bottom", end: "top 35%", scrub: 0.6, invalidateOnRefresh: true },
         });
+        bleedCleanup = () => ScrollTrigger.removeEventListener("refreshInit", onRefresh);
       }
 
       if (scope.dataset.mode !== "pinned") return;
@@ -475,6 +499,7 @@ export function ThreadStage() {
       ScrollTrigger.addEventListener("refreshInit", onRefresh);
 
       return () => {
+        bleedCleanup?.();
         cta.removeEventListener("focusin", onCtaFocus);
         ScrollTrigger.removeEventListener("refreshInit", onRefresh);
         stRef.current = null;
@@ -497,7 +522,7 @@ export function ThreadStage() {
     >
       {reduced ? null : <div className={styles.bleed} data-bleed aria-hidden="true" />}
 
-      <div className={`s-container ${styles.intro}`}>
+      <div className={`s-container ${styles.intro}`} data-intro>
         <div>
           <p className="s-kicker" data-intro-kicker data-reveal>
             {stage.kicker}

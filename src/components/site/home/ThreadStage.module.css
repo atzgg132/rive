@@ -8,18 +8,21 @@
   padding-bottom: clamp(1rem, 3vh, 2.5rem);
 }
 
-/* The ink curtain that rises out of the paper above. GSAP scrubs its
-   clip-path; until then (and without GSAP) it draws nothing. */
+/* A paper band at the top of the section, clipped away by GSAP so the ink
+   floods up through a soft wave. It stays inside this section. Hidden until
+   GSAP is ready, so the intro is never covered without the script. */
 .bleed {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  bottom: calc(100% - 1px);
-  z-index: 1;
-  height: clamp(16rem, 48vh, 34rem);
-  background: var(--s-ink);
+  z-index: 2;
+  display: none;
+  background: var(--s-paper);
   pointer-events: none;
-  clip-path: inset(100% 0 0 0);
+}
+.stage[data-motion-ready] .bleed {
+  display: block;
 }
 
 /* ── Intro ─────────────────────────────────────────────────────── */
