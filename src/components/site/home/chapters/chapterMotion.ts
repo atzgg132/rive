@@ -58,11 +58,15 @@ export function bleedIn({ gsap }: GsapKit, scope: HTMLElement, c: MotionConditio
     p: 1,
     ease: "none",
     onUpdate: () => render(state.p),
+    /* The flood edge (reach × p) must stay below the viewport's bottom edge
+       (0.8vh × p scrolled) so the section's text never shows over the
+       outgoing colour: start as the section enters, finish at 20%, and keep
+       the scrub lag short. */
     scrollTrigger: {
       trigger: scope,
-      start: "top 55%",
-      end: "top -5%",
-      scrub: 0.8,
+      start: "top bottom",
+      end: "top 20%",
+      scrub: 0.25,
       invalidateOnRefresh: true,
     },
   });

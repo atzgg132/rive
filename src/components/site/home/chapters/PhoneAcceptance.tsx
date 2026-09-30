@@ -35,7 +35,7 @@ export function PhoneAcceptance() {
         <div className={css.viewport}>
           <div className={css.scaler} style={{ width: DOC_WIDTH }} data-scaler>
             <div className={css.scroll} data-doc-scroll>
-              <div className={css.doc}>
+              <div className={css.doc} inert>
                 <AcceptanceDocument />
               </div>
               <div className={css.typed} data-typed aria-hidden="true">

@@ -253,7 +253,9 @@
   font-size: 0.65rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--s-text-soft);
+  /* Full text colour: these sit on soft product shadows, where the muted
+     tone drops under 4.5:1. */
+  color: var(--s-text);
 }
 
 /* ── Motion boot ───────────────────────────────────────────────── */
