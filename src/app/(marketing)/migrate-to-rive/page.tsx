@@ -4,8 +4,14 @@ import { MarketingButton } from "@/components/marketing/primitives";
 import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
 import { migrationEngineAvailable } from "@/utils/migration/config";
 import { marketingMetadata } from "@/lib/marketingMetadata";
+import { siteRouteMetadata } from "@/content/site/metadata";
 
-export const metadata = marketingMetadata("Import business records into Rive", "Bring supported clients, projects, invoices, and expenses from CSV or XLSX with review before import.", "/migrate-to-rive");
+const v2 = siteRouteMetadata["/migrate-to-rive"];
+
+export const metadata =
+  process.env.MARKETING_SITE_V2 === "1"
+    ? marketingMetadata(v2.title, v2.description, "/migrate-to-rive")
+    : marketingMetadata("Import business records into Rive", "Bring supported clients, projects, invoices, and expenses from CSV or XLSX with review before import.", "/migrate-to-rive");
 
 const limits = ["Up to 10 files", "5 MB per file", "20 MB total", "20,000 rows total"];
 
@@ -18,6 +24,11 @@ const steps = [
 export default async function MigrateToRivePage() {
   await connection();
   const available = migrationEngineAvailable();
+  // Must stay an inline `process.env` comparison: see `env` in next.config.ts.
+  if (process.env.MARKETING_SITE_V2 === "1") {
+    const { SiteProductPage } = await import("@/components/site/product/SiteProductPage");
+    return <SiteProductPage slug="migrate" importAvailable={available} />;
+  }
   return (
     <>
       <ReadingHero

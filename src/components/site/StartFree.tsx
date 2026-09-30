@@ -13,15 +13,17 @@ export function StartFree({
   size = "md",
   className = "",
   label = "Start free",
+  href = "/register",
 }: {
   placement: MarketingCtaPlacement;
   size?: "md" | "lg";
   className?: string;
   label?: "Start free";
+  href?: "/register" | `/register?${string}`;
 }) {
   return (
     <Link
-      href="/register"
+      href={href}
       className={`s-btn ${size === "lg" ? "s-btn--lg" : ""} ${className}`}
       data-cta-placement={placement}
       onClick={() => trackCtaClick(placement)}
