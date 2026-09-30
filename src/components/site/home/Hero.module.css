@@ -117,7 +117,10 @@
   margin: 0;
   max-width: 38ch;
   font-size: clamp(1.02rem, 0.94rem + 0.42vw, 1.32rem);
-  animation: fade-up 800ms var(--s-ease-out) 480ms both;
+  /* The largest text on a phone, so it is the LCP element: it rises into
+     place but is painted from the first frame (an opacity-0 start delays
+     LCP until the fade runs, ~2.6s on a throttled phone). */
+  animation: lift 800ms var(--s-ease-out) 120ms both;
 }
 
 .actions {
@@ -240,6 +243,10 @@
 @keyframes rise {
   from { transform: translateY(118%); font-stretch: 125%; }
   to { transform: translateY(0); font-stretch: 100%; }
+}
+@keyframes lift {
+  from { transform: translateY(14px); }
+  to { transform: none; }
 }
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(14px); }

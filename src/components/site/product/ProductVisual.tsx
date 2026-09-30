@@ -1,5 +1,6 @@
 import { ResponsiveWorkspacePreview } from "@/components/marketing/ResponsiveWorkspacePreview";
-import { ResponsivePlate } from "@/components/marketing/ResponsivePlate";
+import { SitePlate } from "@/components/site/product/SitePlate";
+import { AppWindowFrame } from "@/components/marketing/AppWindowFrame";
 import { AcceptanceDocument } from "@/components/marketing/AcceptanceDocument";
 import { InvoiceDocument } from "@/components/marketing/InvoiceDocument";
 import { PortfolioSpecimen } from "@/components/marketing/PortfolioShowcase";
@@ -60,9 +61,9 @@ function Body({ visual, variant, importFocus, detail }: { visual: ProductVisualC
           <div className={styles.acceptHero}>
             <div className={styles.acceptHeroScreen}>
               <div data-par="drift" className={styles.par}>
-                <ResponsivePlate wide={{ w: 1024, h: 800 }} narrow={{ w: 460, h: 980 }}>
+                <SitePlate wide={{ w: 1024, h: 800 }} narrow={{ w: 460, h: 980 }}>
                   <AcceptanceDocument />
-                </ResponsivePlate>
+                </SitePlate>
               </div>
             </div>
           </div>
@@ -73,9 +74,9 @@ function Body({ visual, variant, importFocus, detail }: { visual: ProductVisualC
           <div className={styles.screen}>
             <span className={styles.island} aria-hidden="true" />
             <div data-par="drift" className={styles.par}>
-              <ResponsivePlate wide={{ w: 460, h: 980 }} narrow={{ w: 460, h: 980 }}>
+              <AppWindowFrame docWidth={460} docHeight={980}>
                 <AcceptanceDocument />
-              </ResponsivePlate>
+              </AppWindowFrame>
             </div>
           </div>
         </div>
@@ -87,9 +88,9 @@ function Body({ visual, variant, importFocus, detail }: { visual: ProductVisualC
           <div className={styles.sheetTilt}>
             <div className={styles.sheet}>
               <div data-par="drift" className={styles.par}>
-                <ResponsivePlate wide={{ w: 780, h: 900 }} narrow={{ w: 430, h: 1000 }} breakpoint={480}>
+                <SitePlate wide={{ w: 780, h: 900 }} narrow={{ w: 430, h: 1000 }} breakpoint={480}>
                   <InvoiceDocument />
-                </ResponsivePlate>
+                </SitePlate>
               </div>
             </div>
           </div>

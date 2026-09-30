@@ -58,7 +58,8 @@
 .lead {
   margin: 0;
   max-width: 40ch;
-  animation: fade-up 900ms var(--s-ease-out) 520ms both;
+  /* Often the LCP element: rise, but paint from the first frame. */
+  animation: lift 900ms var(--s-ease-out) 120ms both;
 }
 
 @media (min-width: 900px) {
@@ -99,6 +100,10 @@
     transform: none;
     font-stretch: 100%;
   }
+}
+@keyframes lift {
+  from { transform: translateY(14px); }
+  to { transform: none; }
 }
 @keyframes fade-up {
   from {
