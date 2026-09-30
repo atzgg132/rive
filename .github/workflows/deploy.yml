@@ -45,6 +45,9 @@ jobs:
           REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
           IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
           APP_URL: ${{ github.ref_name == 'main' && 'https://www.rive.work' || 'https://dev.rive.work' }}
+          # The v2 marketing site ships to dev.rive.work only. Production keeps
+          # the current site until the cutover PR removes the switch.
+          MARKETING_SITE_V2: ${{ github.ref_name == 'dev' && '1' || '0' }}
         run: |
           set -euo pipefail
           docker buildx build --platform linux/arm64 --target migrator --push \
@@ -54,6 +57,7 @@ jobs:
           docker buildx build --platform linux/arm64 --push \
             --build-arg "DEPLOYMENT_VERSION=$GITHUB_SHA" \
             --build-arg "APP_URL=$APP_URL" \
+            --build-arg "MARKETING_SITE_V2=$MARKETING_SITE_V2" \
             --tag "$REPOSITORY_URL:$IMAGE_TAG" . || app_status=$?
           migrator_status=0
           wait "$migrator" || migrator_status=$?
