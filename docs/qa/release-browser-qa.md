@@ -261,6 +261,63 @@ next pass can re-run it.
 - With seeded data present, Settings still loads quickly and currency defaults
   behave sensibly next to existing records.
 
+### 2026-10 — Marketing site v2, dev.rive.work only (#144)
+
+The v2 marketing site is built only when `MARKETING_SITE_V2=1`. The deploy sets
+it for `dev`; www.rive.work keeps the current site. Run these on dev.rive.work,
+signed out, then confirm www.rive.work still shows the old homepage.
+
+**First screen (/)**
+
+- Without scrolling, at 1440px, ~768px, 390px and 320px: the eyebrow "For
+  freelancers & small studios · Free during beta", the headline "From first
+  enquiry to final invoice.", the lead naming freelancers, Start free, "Free
+  during beta. No credit card required." and the top of the real dashboard
+  (labelled sample) are visible. The tab title contains "workspace for
+  freelancers".
+- The headline rises once and does not replay a second later.
+
+**Scroll story (/)**
+
+- Scrolling down plays, in order: the dashboard flattens out of its tilt; seven
+  tool cards collapse into the Aster House record; the ink curtain rises into
+  "Follow one job through Rive"; the pinned stage steps through all seven views
+  (rail clicks jump to a step); the four chapters (clients, agreements with the
+  typed name, money counters, calendar and the sideways template gallery); the
+  spreadsheet rows fly into records; the dashboard callouts; straight answers;
+  pricing and FAQ; the finale wordmark.
+- The blue Thread draws down the page and meets the hero underline, the record
+  card, the stage rail, the typed-name rule, the money row, the gallery and the
+  wordmark.
+- No text is ever unreadable mid-transition (dark text on ink or light on paper).
+- Same choreography on a real phone (iOS Safari and Android Chrome): pins hold
+  without jumping, nothing overflows sideways.
+
+**Calls to action**
+
+- Every signup button reads "Start free" and opens the signup overlay; closing it
+  returns to the same scroll position. The floating pill appears after the hero,
+  hides near the pricing and finale buttons and the footer, and never appears on
+  /privacy, /terms or /cookies.
+- "Remit" appears nowhere on the site.
+
+**Motion and access**
+
+- OS reduced motion on: no pinning or scrubbing, every section's content is
+  visible, fades only.
+- "Pause motion" (hero corner or footer) stops the ink animation and persists
+  after a reload.
+- Keyboard only, from the top: Tab reaches the footer without getting stuck in a
+  pinned section, focus is always visible, the Product menu and mobile menu open
+  with Enter and close with Escape.
+
+**Other pages**
+
+- `/product/clients-projects`, `/product/agreements-invoices`,
+  `/product/portfolio`, `/migrate-to-rive`, `/pricing`, `/about`, `/changelog`,
+  `/roadmap`, `/contact`, `/privacy`, `/terms`, `/cookies` all render the v2
+  nav and footer with their own content, and the contact form still validates.
+
 ## Report format
 
 Start with setup:
