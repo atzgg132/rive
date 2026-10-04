@@ -344,7 +344,7 @@ test.describe("institution marketing experience", () => {
     await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", "The client record for independent designers. Agree the scope. Send the invoice. Show the work.");
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "Rive — The client record for independent designers.");
     await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", "Rive — The client record for independent designers.");
-    await expect(page.locator("footer")).toContainText("The client record for independent designers. Agree the scope. Send the invoice. Show the work.");
+    await expect(page.getByRole("contentinfo")).toContainText("The client record for independent designers. Agree the scope. Send the invoice. Show the work.");
 
     await page.goto("/about", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveTitle("About Rive — The client record for independent designers.");
