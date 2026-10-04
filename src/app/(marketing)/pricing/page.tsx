@@ -3,7 +3,7 @@ import { MarketingButton } from "@/components/marketing/primitives";
 import { ClosingCta, ReadingHero } from "@/components/marketing/shells";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
-export const metadata = marketingMetadata("Rive pricing — Free during open beta", "Create a Rive account without a credit card and use one complete workspace free during open beta.", "/pricing");
+export const metadata = marketingMetadata("Rive pricing — Free during open beta", "The client record for independent designers. Free during open beta. No credit card required.", "/pricing");
 
 const included = ["Client and project management", "Tasks, milestones, and calendar", "Agreement review and recorded acceptance", "Invoices, payment records, and expenses", "Portfolio publishing and enquiries"];
 const questions = [
@@ -36,7 +36,7 @@ export default function PricingPage() {
             </div>
           </div>
           <div>
-            <h2 className="inst-display inst-display--sub">One workspace for the person running the business.</h2>
+            <h2 className="inst-display inst-display--sub">One record for the independent designer.</h2>
             <ul className="inst-admit__list">
               {included.map((item) => (
                 <li key={item}>

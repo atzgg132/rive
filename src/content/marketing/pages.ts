@@ -23,16 +23,16 @@ export type MarketingPageContent = {
 
 export const founders = [
   { initials: "AB", name: "Arnav Bhattacharya", role: "Founder · Product & Engineering", body: "Arnav builds the product and the systems underneath it, staying close to the operational details that make independent work dependable." },
-  { initials: "AC", name: "Agnik Chakravorty", role: "Cofounder · Markets, Operations & Community", body: "Agnik studies how independent businesses actually operate: the handoffs, decisions, and trust behind the visible work." },
+  { initials: "AC", name: "Agnik Chakravorty", role: "Cofounder · Markets, Operations & Community", body: "Agnik studies how independent designers actually operate: the handoffs, decisions, and trust behind the visible work." },
   { initials: "DB", name: "Druhin Basu", role: "Cofounder · Strategy & Growth", body: "Druhin works across strategy and growth, connecting what Rive builds to the practical reasons it should matter." },
 ] as const;
 
 export const aboutContent: MarketingPageContent = {
   eyebrow: "About Rive",
-  title: "Built for the business behind the client work.",
-  intro: "Rive is a small team building software for independent service businesses. We focus on the practical work of managing clients, delivering projects, keeping agreements, and tracking invoices and expenses.",
+  title: "The client record for independent designers.",
+  intro: "Rive is a small team building the client record for independent designers: agree the scope, send the invoice, show the work.",
   sections: [
-    { eyebrow: "Our focus", title: "Independent does not have to mean improvised.", body: "Independent businesses need more than a task list. Rive brings the operational parts of client work into one workspace, without asking you to become a large company to use it." },
+    { eyebrow: "Our focus", title: "Independent does not have to mean improvised.", body: "For a solo designer who already has clients — not a studio, not a small practice, and not every freelancer. Scope, invoice, and work on one record. One operator per account." },
     { eyebrow: "The team", title: "Three people, close to the details.", cards: founders.map((founder) => ({ title: founder.name, meta: founder.role, body: founder.body })) },
     { eyebrow: "Open beta", title: "See the work, not a promise deck.", body: "Rive is in open beta. You can inspect the current product, recent releases, and planned work before deciding whether it fits your business.", cards: [
       { title: "What is available", body: "Read a factual record of the capabilities currently in Rive.", href: "/changelog" },

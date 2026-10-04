@@ -18,7 +18,7 @@ test("mobile hero preserves message, line integrity, and CTA", async ({ page }) 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/", { waitUntil: "load" });
   const hero = page.getByTestId("marketing-hero");
-  await expect(hero.getByRole("heading", { name: /one record/i })).toBeVisible();
+  await expect(hero.getByRole("heading", { name: /show the work/i })).toBeVisible();
   await expect(hero.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
   const wrapped = await hero.locator(".inst-titlepage__line").evaluateAll((nodes) =>
     nodes.filter((n) => n.getBoundingClientRect().height > parseFloat(getComputedStyle(n).lineHeight) * 1.6).length,
@@ -108,7 +108,7 @@ test("hero headline is not clipped on a scaled 1080p laptop", async ({ page }) =
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/", { waitUntil: "load" });
   const hero = page.getByTestId("marketing-hero");
-  const heading = hero.getByRole("heading", { name: /one record/i });
+  const heading = hero.getByRole("heading", { name: /show the work/i });
   await expect(heading).toBeVisible();
   const box = await heading.boundingBox();
   expect(box?.y).toBeGreaterThanOrEqual(0);

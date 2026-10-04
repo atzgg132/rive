@@ -67,18 +67,18 @@ export const accountNav = {
 } as const;
 
 export const footerCopy = {
-  description: "Rive brings clients, projects, agreements, invoices, and expenses into one workspace for independent businesses.",
+  description: "The client record for independent designers. Agree the scope. Send the invoice. Show the work.",
   status: "Open beta · Free to start",
   copyright: "Rive. Your work stays yours.",
 } as const;
 
 export const marketingRouteMetadata = [
-  { path: "/", title: "Rive — Multiple clients. One clear picture.", description: "Manage clients, projects, agreements, invoices, and expenses in one workspace built for independent service businesses.", priority: 1 },
-  { path: "/product/clients-projects", title: "Client and project management for independent businesses | Rive", description: "Manage client details, projects, tasks, milestones, and deadlines in Rive.", priority: 0.85 },
+  { path: "/", title: "Rive — The client record for independent designers.", description: "The client record for independent designers. Agree the scope. Send the invoice. Show the work.", priority: 1 },
+  { path: "/product/clients-projects", title: "Client and project management for independent designers | Rive", description: "Manage client details, projects, tasks, milestones, and deadlines in Rive.", priority: 0.85 },
   { path: "/product/agreements-invoices", title: "Agreements and invoices for client work | Rive", description: "Prepare agreements, record acceptance, and manage invoices alongside the client work they belong to.", priority: 0.85 },
   { path: "/product/portfolio", title: "Publish your client work with Portfolio Studio | Rive", description: "Build a public portfolio, present your services, and receive enquiries with Rive.", priority: 0.8 },
-  { path: "/pricing", title: "Rive pricing — Free during open beta", description: "Create a Rive account without a credit card and use one complete workspace free during open beta.", priority: 0.85 },
-  { path: "/about", title: "About Rive — Built for the business behind client work", description: "Meet the small team building practical software for independent service businesses.", priority: 0.65 },
+  { path: "/pricing", title: "Rive pricing — Free during open beta", description: "The client record for independent designers. Free during open beta. No credit card required.", priority: 0.85 },
+  { path: "/about", title: "About Rive — The client record for independent designers.", description: "Meet the team building the client record for independent designers.", priority: 0.65 },
   { path: "/changelog", title: "Rive changelog — What is new", description: "Product updates, improvements, and fixes published when they become available.", priority: 0.6 },
   { path: "/contact", title: "Contact Rive", description: "Ask a product question, get help, or share feedback with the people building Rive.", priority: 0.55 },
   { path: "/migrate-to-rive", title: "Import business records into Rive", description: "Bring supported clients, projects, invoices, and expenses from CSV or XLSX with review before import.", priority: 0.75 },

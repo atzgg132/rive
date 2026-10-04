@@ -65,14 +65,14 @@ export type WorkspacePreviewView = "dashboard" | "clients" | "projects" | "agree
 type ViewProps = { compact?: boolean };
 
 /* ------------------------------------------------------------------ */
-/* Seeded workspace data — one fictional studio (Maya Rao), reshaped   */
+/* Seeded workspace data — one fictional record (Maya Rao), reshaped   */
 /* to match the payloads the real pages render. Numbers stay consistent */
 /* with the record journey: INV-024 · Aster House is out for payment.  */
 /* ------------------------------------------------------------------ */
 
 export const seededClients = [
-  { name: "Aster House", company: "asterhouse.co", email: "hello@asterhouse.co", color: "#2354d3", status: "active", tags: ["Retainer"], stats: "2 projects · ₹1,80,000 invoiced", paid: "₹1,80,000", owes: "₹90,000" },
-  { name: "Northline Studio", company: "northline.studio", email: "team@northline.studio", color: "#0f9a72", status: "active", tags: [], stats: "1 project · ₹96,000 invoiced", paid: "₹96,000" },
+  { name: "Aster House", company: "asterhouse.co", email: "hello@asterhouse.co", color: "#2354d3", status: "active", tags: [], stats: "2 projects · ₹1,80,000 invoiced", paid: "₹1,80,000", owes: "₹90,000" },
+  { name: "Northline", company: "northline.design", email: "team@northline.design", color: "#0f9a72", status: "active", tags: [], stats: "1 project · ₹96,000 invoiced", paid: "₹96,000" },
   { name: "Field Notes", company: "fieldnotes.co", email: "brief@fieldnotes.co", color: "#7c4dcc", status: "active", tags: ["Referral"], stats: "1 project · ₹72,000 invoiced", paid: "₹72,000" },
   { name: "Meridian Labs", company: "meridianlabs.io", email: "ops@meridianlabs.io", color: "#c2570b", status: "active", tags: [], stats: "1 project · ₹36,500 invoiced", paid: "₹36,500", owes: "₹36,500" },
   { name: "Solace Health", company: "solacehealth.in", email: "care@solacehealth.in", color: "#be4a8a", status: "active", tags: [], stats: "1 project · ₹58,000 invoiced", paid: "₹58,000" },
@@ -81,7 +81,7 @@ export const seededClients = [
 
 const dashboardSignals = [
   { tag: "Invoice", tone: "info", title: "INV-024 opened by Aster House", detail: "Sent Aug 21 · due Aug 28", at: "Aug 21, 10:24" },
-  { tag: "Payment", tone: "success", title: "₹48,000 recorded from Northline Studio", detail: "INV-019 · Brand system", at: "Aug 14, 16:02" },
+  { tag: "Payment", tone: "success", title: "₹48,000 recorded from Northline", detail: "INV-019 · Brand system", at: "Aug 14, 16:02" },
   { tag: "Agreement", tone: "violet", title: "Research engagement accepted", detail: "Field Notes · recorded Aug 12", at: "Aug 12, 11:40" },
   { tag: "Enquiry", tone: "warning", title: "New enquiry via portfolio", detail: "Product audit · came through rive.site", at: "Aug 11, 09:15" },
   { tag: "Client", tone: "info", title: "Meridian Labs added to the record", detail: "1 active project", at: "Aug 09, 14:31" },
@@ -95,7 +95,7 @@ const dashboardInsights: {
   tone?: "success" | "warning" | "primary";
   big?: boolean;
 }[] = [
-  { label: "Collection rate", value: "69%", sub: "All-time share of invoiced value collected" },
+  { label: "Recorded share", value: "69%", sub: "All-time share of invoiced value recorded" },
   { label: "Profit margin", value: "82%", sub: "All time, after logged expenses", tone: "success" },
   { label: "Overdue", value: "₹36,500", sub: "2 invoices need attention", Icon: AlertTriangle, tone: "warning" },
   { label: "Next 14 days", value: "Meridian brand system", sub: "3 upcoming projects", Icon: CalendarDays, tone: "primary", big: true },
@@ -112,7 +112,7 @@ const dashboardChart: FinancialChartInput[] = [
 
 const revenueSummary = [
   { label: "Total invoiced", value: "₹4,11,000", Icon: FileText },
-  { label: "Collected", value: "₹2,84,500", Icon: WalletCards },
+  { label: "Recorded", value: "₹2,84,500", Icon: WalletCards },
   { label: "Outstanding", value: "₹90,000", Icon: Clock3 },
   { label: "Overdue", value: "₹36,500", Icon: AlertTriangle },
   { label: "Draft pipeline", value: "₹72,000", Icon: FileText },
@@ -120,16 +120,16 @@ const revenueSummary = [
 
 const invoiceRows = [
   { number: "INV-024", issued: "Issued Aug 21", client: "Aster House", project: "Website launch", due: "Aug 28", amount: "₹90,000", status: "sent" },
-  { number: "INV-021", issued: "Issued Jul 22", client: "Meridian Labs", project: "Q3 design retainer", due: "Aug 05", amount: "₹36,500", status: "overdue" },
-  { number: "INV-019", issued: "Issued Aug 02", client: "Northline Studio", project: "Brand system", due: "Paid Aug 14", amount: "₹48,000", status: "paid" },
+  { number: "INV-021", issued: "Issued Jul 22", client: "Meridian Labs", project: "Website project", due: "Aug 05", amount: "₹36,500", status: "overdue" },
+  { number: "INV-019", issued: "Issued Aug 02", client: "Northline", project: "Brand system", due: "Paid Aug 14", amount: "₹48,000", status: "paid" },
   { number: "INV-017", issued: "Issued Aug 10", client: "Field Notes", project: "Research sprint", due: "No due date", amount: "₹72,000", status: "draft" },
 ] as const;
 
 const projectRows = [
   { title: "Website launch", client: "Aster House", note: "Marketing site redesign & CMS handoff", priority: "high", status: "active", rail: "bg-info", due: "Due Thursday", dueTone: "text-warning", pct: "66%", milestones: "4/6 milestones", budget: "₹90,000", contract: "Rive contract · in review", contractTone: "text-warning" },
-  { title: "Brand system", client: "Northline Studio", note: "Identity, guidelines & asset kit", priority: "medium", status: "active", rail: "bg-info", due: "Milestone Friday", dueTone: "text-warning", pct: "40%", milestones: "2/5 milestones", budget: "₹96,000", contract: "Rive contract · accepted", contractTone: "text-success" },
+  { title: "Brand system", client: "Northline", note: "Identity, guidelines & asset kit", priority: "medium", status: "active", rail: "bg-info", due: "Milestone Friday", dueTone: "text-warning", pct: "40%", milestones: "2/5 milestones", budget: "₹96,000", contract: "Rive contract · accepted", contractTone: "text-success" },
   { title: "Research sprint", client: "Field Notes", note: "Discovery interviews & synthesis", priority: "low", status: "active", rail: "bg-info", due: "Due Sep 04", dueTone: "text-muted-foreground", pct: "75%", milestones: "3/4 milestones", budget: "₹72,000", contract: "Contract undecided", contractTone: "text-warning" },
-  { title: "Q3 design retainer", client: "Meridian Labs", note: "Ongoing product design support", priority: "medium", status: "paused", rail: "bg-warning", due: "No deadline", dueTone: "text-muted-foreground", pct: null, milestones: "No milestones", budget: "₹36,500", contract: "Review draft", contractTone: "text-muted-foreground" },
+  { title: "Website project", client: "Meridian Labs", note: "Site design and handoff", priority: "medium", status: "paused", rail: "bg-warning", due: "No deadline", dueTone: "text-muted-foreground", pct: null, milestones: "No milestones", budget: "₹36,500", contract: "Review draft", contractTone: "text-muted-foreground" },
 ] as const;
 
 const agreementSummary = [
@@ -141,7 +141,7 @@ const agreementSummary = [
 
 const agreementCards = [
   { title: "Website launch agreement", client: "Aster House", project: "Website launch", status: "in_review", action: "Open the review workspace", hint: "Waiting for comments", metrics: "0/2 accepted · v3 Aug 20 · ₹90,000 · 2 triggers" },
-  { title: "Brand system terms", client: "Northline Studio", project: "Brand system", status: "signing", action: "Waiting for client", hint: "1 of 2 accepted", metrics: "1/2 accepted · v1 Aug 09 · ₹96,000 · 1 trigger" },
+  { title: "Brand system terms", client: "Northline", project: "Brand system", status: "signing", action: "Waiting for client", hint: "1 of 2 accepted", metrics: "1/2 accepted · v1 Aug 09 · ₹96,000 · 1 trigger" },
   { title: "Research engagement", client: "Field Notes", project: "Research sprint", status: "executed", action: "View agreement & invoices", hint: "Accepted Aug 12", metrics: "2/2 accepted · v2 Aug 12 · ₹72,000 · manual billing" },
 ] as const;
 
@@ -171,7 +171,7 @@ const studioSections = [
 
 const studioWork = [
   { title: "Website launch", meta: "Aster House · Product design", visibility: "Public", tone: "success" as BadgeVariant },
-  { title: "Brand system", meta: "Northline Studio · Brand identity", visibility: "Public", tone: "success" as BadgeVariant },
+  { title: "Brand system", meta: "Northline · Brand identity", visibility: "Public", tone: "success" as BadgeVariant },
   { title: "Research sprint", meta: "Field Notes · UX research", visibility: "Private", tone: "muted" as BadgeVariant },
 ] as const;
 
@@ -296,7 +296,7 @@ function DashboardView({ compact }: ViewProps) {
         }
       />
       <div className="wp-metrics--four mt-7 items-stretch">
-        <MetricCard label="Cash collected" value="₹2,84,500" sub="+12.4% vs last month to day 21 · ₹1,26,500 still owed" />
+        <MetricCard label="Payments recorded" value="₹2,84,500" sub="+12.4% vs last month to day 21 · ₹1,26,500 still owed" />
         <MetricCard label="Active projects" value="4" sub="Right now — unaffected by the period" />
         <MetricCard label="Expenses" value="₹38,240" sub="All-time logged" />
         <MetricCard label="Net" value="₹2,46,260" sub="Cash received minus expenses" />
@@ -566,7 +566,7 @@ function RevenueView({ compact }: ViewProps) {
         titleAs="div"
         className="wp-head"
         title="Revenue & invoices"
-        description="A reliable view of what has been invoiced, collected, and needs attention across every currency."
+        description="A reliable view of what has been invoiced, recorded, and needs attention across every currency."
         actions={<Button variant="default"><Plus className="h-4 w-4" />Create invoice</Button>}
       />
       <div className="wp-metrics--five mt-5">
@@ -585,9 +585,9 @@ function RevenueView({ compact }: ViewProps) {
           <section className="rounded-none border border-border bg-card p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <Kicker>Collection health</Kicker>
-                <h3 className="mt-1 text-xl font-semibold">69% collected</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Collected against issued invoice value.</p>
+                <Kicker>Recorded share</Kicker>
+                <h3 className="mt-1 text-xl font-semibold">69% recorded</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Recorded against issued invoice value.</p>
               </div>
               <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">Invoice settings<ArrowRight className="h-3.5 w-3.5" /></span>
             </div>
@@ -595,7 +595,7 @@ function RevenueView({ compact }: ViewProps) {
             <div className="mt-5 rounded-none border border-border/70 bg-background p-3">
               <div className="flex justify-between text-xs text-muted-foreground"><span>INR</span><span>4 invoices</span></div>
               <p className="mt-2 font-mono text-sm font-semibold tabular-nums">₹2,84,500</p>
-              <p className="mt-1 text-xs text-muted-foreground">69% collection rate</p>
+              <p className="mt-1 text-xs text-muted-foreground">69% recorded</p>
             </div>
           </section>
           <section className="rounded-none border border-border bg-card p-5">
@@ -799,8 +799,8 @@ function PortfolioView() {
 const enquiries = [
   { projectType: "Product audit", name: "Diya Menon", email: "diya@fieldnotes.co", message: "We're preparing a relaunch and need a two-week research sprint — is that something you take on?", status: "Unread", tone: "default" as BadgeVariant, when: "Aug 11" },
   { projectType: "Brand refresh", name: "Arjun Shah", email: "arjun@meridianlabs.in", message: "Saw the Northline work — could we talk about a similar system for us?", status: "Unread", tone: "default" as BadgeVariant, when: "Aug 10" },
-  { projectType: "E-commerce build", name: "Lena Okafor", email: "lena@studio-ok.com", message: "Shopfront redesign starting September. Budget in the ₹1.2–1.6L range.", status: "Replied", tone: "success" as BadgeVariant, when: "Aug 08" },
-  { projectType: "Wedding stationery site", name: "Priya Nair", email: "priya@nair.studio", message: "A small one-pager with a form — nothing fancy.", status: "Read", tone: "secondary" as BadgeVariant, when: "Aug 02" },
+  { projectType: "E-commerce build", name: "Lena Okafor", email: "lena@okafor.co", message: "Shopfront redesign starting September. Budget in the ₹1.2–1.6L range.", status: "Replied", tone: "success" as BadgeVariant, when: "Aug 08" },
+  { projectType: "Wedding stationery site", name: "Priya Nair", email: "priya@nair.co", message: "A small one-pager with a form — nothing fancy.", status: "Read", tone: "secondary" as BadgeVariant, when: "Aug 02" },
 ];
 
 const enquiryFilters = [

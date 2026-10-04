@@ -2,8 +2,8 @@ import { MarketingHome } from "@/components/marketing/MarketingHome";
 import { marketingMetadata } from "@/lib/marketingMetadata";
 
 export const metadata = marketingMetadata(
-  "Rive — Multiple clients. One clear picture.",
-  "Manage clients, projects, agreements, invoices, and expenses in one workspace built for independent service businesses.",
+  "Rive — The client record for independent designers.",
+  "The client record for independent designers. Agree the scope. Send the invoice. Show the work.",
   "/",
 );
 

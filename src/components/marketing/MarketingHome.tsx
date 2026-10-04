@@ -49,7 +49,7 @@ const DEPARTMENTS: readonly RegistryDepartment[] = [
 
 const FIGURES = [
   { view: "dashboard", caption: "Cash in, costs out, and the signals worth acting on — one morning read." },
-  { view: "revenue", caption: "What has been invoiced, collected, and needs attention across every currency." },
+  { view: "revenue", caption: "What has been invoiced, recorded, and needs attention across every currency." },
   { view: "calendar", caption: "Project dates, Google Calendar sync, and a private Apple Calendar feed." },
 ] as const;
 
@@ -152,24 +152,22 @@ export function MarketingHome() {
         </div>
         <div className="inst-container">
           <RevealOnScroll className="inst-reveal inst-titlepage__index" y={12}>
-            <span className="inst-mono">For freelancers &amp; small practices</span>
+            <span className="inst-mono">For independent designers</span>
             <span className="inst-mono">Clients · Projects · Agreements · Invoices · Calendar · Portfolio</span>
             <span className="inst-mono">Open beta — free, no card</span>
           </RevealOnScroll>
           <div className="inst-titlepage__body">
             <RevealOnScroll className="inst-reveal" delay={0.05}>
               <h1 className="inst-display inst-titlepage__statement">
-                <span className="inst-titlepage__line">Every client,</span>
-                <span className="inst-titlepage__line inst-titlepage__line--i2">every invoice,</span>
-                <span className="inst-titlepage__line inst-titlepage__line--i3">every deadline —</span>
-                <span className="inst-titlepage__line inst-titlepage__line--pay">one record.</span>
+                <span className="inst-titlepage__line">Agree the scope.</span>
+                <span className="inst-titlepage__line inst-titlepage__line--i2">Send the invoice.</span>
+                <span className="inst-titlepage__line inst-titlepage__line--i3 inst-titlepage__line--pay">Show the work.</span>
               </h1>
             </RevealOnScroll>
             <RevealOnScroll className="inst-reveal inst-titlepage__abstract" delay={0.12} y={14}>
               <p>
-                Rive keeps every client, project, agreement, invoice, and deadline on a single
-                record — the workspace for freelancers and independent businesses who manage
-                several clients at once.
+                The client record for independent designers who already have clients. Scope,
+                invoice, and work stay on one record.
               </p>
             </RevealOnScroll>
             <RevealOnScroll className="inst-reveal inst-titlepage__foot" delay={0.2} y={14}>
@@ -191,7 +189,7 @@ export function MarketingHome() {
       {/* — Dept. 02 · Figures ————————————————————————————————— */}
       <section className="inst-section inst-figures marketing-deferred-section" aria-label="Workspace figures">
         <div className="inst-container">
-          <DeptRule name="Figures" note="Plates from the real workspace · sample studio" />
+          <DeptRule name="Figures" note="Plates from the real workspace · sample record" />
           <h2 className="inst-display inst-display--section inst-section__head">The workspace, on record.</h2>
           <div className="inst-figures__grid">
             {FIGURES.map((figure, index) => (
@@ -216,8 +214,8 @@ export function MarketingHome() {
           <p className="inst-mono inst-manifesto__kicker">The office of one</p>
           <ManifestoLine text="The work is the record. The record is the business." />
           <p className="inst-manifesto__note">
-            An independent business is a long document — who you work for, what you promised,
-            what you charged, what you made. Rive keeps it in one hand.
+            Agree the scope. Send the invoice. Show the work. Rive keeps that on one record
+            for an independent designer.
           </p>
         </div>
       </section>
@@ -302,7 +300,7 @@ export function MarketingHome() {
                 <span className="inst-admit__fee-value">Free</span>
                 <span className="inst-admit__fee-sub">During open beta — no credit card required.</span>
                 <div className="inst-admit__fee-foot">
-                  <MarketingButton href="/register">Register the practice</MarketingButton>
+                  <MarketingButton href="/register">Start your record</MarketingButton>
                 </div>
               </div>
             </RevealOnScroll>

@@ -30,9 +30,9 @@ test.describe("institution marketing experience", () => {
     await page.goto("/", { waitUntil: "load" });
 
     const hero = page.getByTestId("marketing-hero");
-    await expect(hero.getByRole("heading", { name: /every client[\s\S]*one record/i })).toBeVisible();
-    await expect(hero).toContainText("freelancers and independent businesses");
-    await expect(hero).toContainText("client, project, agreement, invoice, and deadline");
+    await expect(hero.getByRole("heading", { name: /agree the scope[\s\S]*show the work/i })).toBeVisible();
+    await expect(hero).toContainText("For independent designers");
+    await expect(hero).toContainText("independent designers who already have clients");
     await expect(hero.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
     await expect(hero).toContainText("No credit card required");
     await expect(hero.locator(".inst-titlepage__bg")).toBeAttached();
@@ -85,7 +85,7 @@ test.describe("institution marketing experience", () => {
     const preview = figures.locator("[data-workspace-preview]:visible").first();
     await expect(preview).toBeVisible();
     await expect(preview.getByText("Search workspace...")).toBeVisible();
-    await expect(preview).toContainText("Cash collected");
+    await expect(preview).toContainText("Payments recorded");
     await expect(preview.getByText(/Aster House/).first()).toBeVisible();
   });
 
@@ -340,8 +340,21 @@ test.describe("institution marketing experience", () => {
 
   test("marketing metadata and organization schema describe Rive", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveTitle("Rive — Multiple clients. One clear picture.");
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Manage clients, projects, agreements, invoices, and expenses/);
+    await expect(page).toHaveTitle("Rive — The client record for independent designers.");
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", "The client record for independent designers. Agree the scope. Send the invoice. Show the work.");
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "Rive — The client record for independent designers.");
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", "Rive — The client record for independent designers.");
+    await expect(page.locator("footer")).toContainText("The client record for independent designers. Agree the scope. Send the invoice. Show the work.");
+
+    await page.goto("/about", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveTitle("About Rive — The client record for independent designers.");
+    await expect(page.locator("h1")).toHaveText("The client record for independent designers.");
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", "Meet the team building the client record for independent designers.");
+
+    await page.goto("/pricing", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveTitle("Rive pricing — Free during open beta");
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", "The client record for independent designers. Free during open beta. No credit card required.");
+    await expect(page.getByRole("heading", { name: "One record for the independent designer." })).toBeVisible();
     const schema = await page.locator('script[type="application/ld+json"]').textContent();
     expect(schema).toContain('"name":"Rive"');
     expect(schema).toContain("rive-wordmark.svg");

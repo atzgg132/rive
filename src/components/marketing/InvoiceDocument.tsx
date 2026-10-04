@@ -17,7 +17,7 @@ export function InvoiceDocument() {
         <div className="inverse-block p-8">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
-              <p className="mb-5 text-xl font-bold tracking-tight">Maya Rao Studio</p>
+              <p className="mb-5 text-xl font-bold tracking-tight">Maya Rao</p>
               <p className="text-sm opacity-80">maya@mayarao.design</p>
             </div>
             <div className="text-right">
@@ -60,7 +60,7 @@ export function InvoiceDocument() {
           <div><Kicker tone="muted">Notes</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">Thank you — final files release on payment.</p></div>
           <div><Kicker tone="muted">Payment information</Kicker><p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">Bank transfer or UPI to maya@upi · reference INV-024.</p></div>
         </div>
-        <div className="wp-px10 border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">This invoice was shared securely by Maya Rao Studio. Verify payment details with the sender before transferring funds. · <span className="text-primary">rive.</span></div>
+        <div className="wp-px10 border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">This invoice was shared securely by Maya Rao. Verify payment details with the sender before transferring funds. · <span className="text-primary">rive.</span></div>
       </Card>
     </div>
   );

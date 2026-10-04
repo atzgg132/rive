@@ -6,7 +6,7 @@ import { Check, FileSignature, ShieldCheck, XCircle } from "lucide-react";
    acceptance card — same structure, same primitives, seeded names. */
 
 const sections = [
-  { title: "Scope of work", body: "Complete brand identity for Northline Studio: logo suite, typography, color system, and a brand guidelines document. Two revision rounds included." },
+  { title: "Scope of work", body: "Complete brand identity for Northline: logo suite, typography, color system, and a brand guidelines document. Two revision rounds included." },
   { title: "Timeline", body: "Work begins within one week of acceptance. Final delivery within six weeks of the start date." },
 ];
 
@@ -26,7 +26,7 @@ export function AcceptanceDocument() {
       <section>
         <div className="flex flex-wrap items-center gap-2"><Kicker>Acceptance requested</Kicker><Badge variant="outline">Version 1</Badge></div>
         <p className="mt-2 text-3xl font-extrabold tracking-tight">Brand system terms</p>
-        <p className="mt-2 text-sm text-muted-foreground">You are recording acceptance as <strong className="text-foreground">client</strong>: Rhea Kapoor · rhea@northline.studio</p>
+        <p className="mt-2 text-sm text-muted-foreground">You are recording acceptance as <strong className="text-foreground">client</strong>: Rhea Kapoor · rhea@northline.design</p>
         <p className="mt-1 text-xs text-muted-foreground">Governing law: India</p>
       </section>
 
@@ -39,7 +39,7 @@ export function AcceptanceDocument() {
           <CardContent className="flex flex-col gap-5">
             <section className="rounded-none border border-primary/20 bg-primary/5 p-4">
               <p className="text-sm font-bold">Project brief snapshot</p>
-              <p className="mt-1 text-xs font-semibold text-primary">Brand system · Northline Studio</p>
+              <p className="mt-1 text-xs font-semibold text-primary">Brand system · Northline</p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">A full identity refresh ahead of the October relaunch — mark, type, color, and the guidelines to keep it consistent.</p>
             </section>
             {sections.map((section) => (
