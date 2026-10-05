@@ -67,7 +67,7 @@ const CONTRACT_ARTIFACT_KEY_PATTERN = /^contracts\/[0-9a-f-]{36}\/versions\/[0-9
 
 function artifactStorageConfig(): { bucket: string; region: string } | null {
   const bucket = process.env.ASSET_BUCKET;
-  const region = process.env.AWS_REGION;
+  const region = process.env.S3_REGION || process.env.AWS_REGION;
   return bucket && region ? { bucket, region } : null;
 }
 

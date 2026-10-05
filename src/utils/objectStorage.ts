@@ -7,7 +7,7 @@ export function objectStorageUsesR2(): boolean {
 }
 
 export function objectStorageClientConfig(): S3ClientConfig {
-  const region = process.env.AWS_REGION;
+  const region = objectStorageUsesR2() ? "auto" : process.env.AWS_REGION;
   if (!region) throw new Error("Object storage region is missing.");
   const config: S3ClientConfig = {
     region,
@@ -16,8 +16,8 @@ export function objectStorageClientConfig(): S3ClientConfig {
   };
   if (objectStorageUsesR2()) {
     const endpoint = process.env.S3_ENDPOINT;
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
     if (!endpoint || !accessKeyId || !secretAccessKey) {
       throw new Error("R2 endpoint and credentials are required.");
     }

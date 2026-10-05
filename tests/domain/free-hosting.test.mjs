@@ -25,7 +25,7 @@ async function withEnvironment(values, run) {
 }
 
 test("R2 cannot silently fall back to AWS or send credentials to another origin", async () => {
-  await withEnvironment({ ASSET_STORAGE_PROVIDER: "r2", AWS_REGION: "auto", AWS_ACCESS_KEY_ID: "test-id", AWS_SECRET_ACCESS_KEY: "test-secret", S3_ENDPOINT: undefined }, async () => {
+  await withEnvironment({ ASSET_STORAGE_PROVIDER: "r2", AWS_REGION: undefined, R2_ACCESS_KEY_ID: "test-id", R2_SECRET_ACCESS_KEY: "test-secret", S3_ENDPOINT: undefined }, async () => {
     assert.throws(objectStorageClientConfig, /endpoint and credentials/);
     process.env.S3_ENDPOINT = "https://example.com";
     assert.throws(objectStorageClientConfig, /Cloudflare HTTPS/);
@@ -39,7 +39,7 @@ test("R2 cannot silently fall back to AWS or send credentials to another origin"
 });
 
 test("R2 verification does not call unsupported object-tagging APIs", async () => {
-  await withEnvironment({ ASSET_STORAGE_PROVIDER: "r2", AWS_REGION: "auto", ASSET_BUCKET: "test-bucket" }, async () => {
+  await withEnvironment({ ASSET_STORAGE_PROVIDER: "r2", S3_REGION: "auto", AWS_REGION: undefined, ASSET_BUCKET: "test-bucket" }, async () => {
     await markMigrationObjectVerified("migration/test-object");
   });
 });

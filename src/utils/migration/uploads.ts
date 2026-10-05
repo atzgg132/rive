@@ -17,7 +17,7 @@ export type DurableUploadManifest = {
 
 function storageConfig(): { bucket: string; region: string } | null {
   const bucket = process.env.ASSET_BUCKET;
-  const region = process.env.AWS_REGION;
+  const region = process.env.S3_REGION || process.env.AWS_REGION;
   return bucket && region ? { bucket, region } : null;
 }
 

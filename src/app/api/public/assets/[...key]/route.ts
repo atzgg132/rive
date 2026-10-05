@@ -67,7 +67,7 @@ export async function GET(
   context: { params: Promise<{ key: string[] }> },
 ) {
   const bucket = process.env.ASSET_BUCKET;
-  const region = process.env.AWS_REGION;
+  const region = process.env.S3_REGION || process.env.AWS_REGION;
   if (!bucket || !region) {
     return NextResponse.json({ message: "Asset storage is unavailable." }, { status: 503 });
   }

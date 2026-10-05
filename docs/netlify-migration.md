@@ -16,10 +16,10 @@ and current feature flags. Never commit secrets or transfer AWS IAM credentials.
 | `DATABASE_SSL_CA_BASE64` | Base64-encoded official Supabase root CA PEM |
 | `DATABASE_SSL_REJECT_UNAUTHORIZED` | `true` |
 | `ASSET_STORAGE_PROVIDER` | `r2` |
-| `AWS_REGION` | `auto` (S3-compatible SDK region, not AWS hosting) |
+| `S3_REGION` | `auto` |
 | `S3_ENDPOINT` | Account-specific HTTPS R2 S3 endpoint |
 | `ASSET_BUCKET` | Private application bucket |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | R2 object credentials scoped only to the application bucket |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | R2 object credentials scoped only to the application bucket |
 | `MIGRATION_QUEUE_PROVIDER` | `netlify` |
 | `NETLIFY_SITE_URL` | This environment's canonical `https://*.netlify.app` origin |
 | `NETLIFY_SCHEDULES_ENABLED` | `false` until cutover; `true` only for live production |

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   }
 
   const bucket = process.env.ASSET_BUCKET;
-  const region = process.env.AWS_REGION;
+  const region = process.env.S3_REGION || process.env.AWS_REGION;
   if (!bucket || !region) {
     return NextResponse.json({ success: false, message: "Object storage is not configured." }, { status: 503 });
   }

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   const bucket = process.env.ASSET_BUCKET;
-  const region = process.env.AWS_REGION;
+  const region = process.env.S3_REGION || process.env.AWS_REGION;
   if (!bucket || !region) {
     return NextResponse.json({ message: "Object storage is not configured in this environment." }, { status: 503 });
   }
@@ -119,7 +119,7 @@ export async function DELETE(request: NextRequest) {
   if (count === 0) return NextResponse.json({ message: "That upload could not be released." }, { status: 404 });
 
   const bucket = process.env.ASSET_BUCKET;
-  const region = process.env.AWS_REGION;
+  const region = process.env.S3_REGION || process.env.AWS_REGION;
   if (bucket && region) {
     await getObjectStorageClient()
       .send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
