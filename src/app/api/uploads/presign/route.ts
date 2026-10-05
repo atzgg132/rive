@@ -1,5 +1,6 @@
 import crypto from "crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getObjectStorageClient } from "@/utils/objectStorage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function issueUpload({
-  bucket, region, userId, purpose, extension, contentType, size, kind,
+  bucket, userId, purpose, extension, contentType, size, kind,
 }: {
   bucket: string;
   region: string;
@@ -203,7 +204,7 @@ async function issueUpload({
   // the real body against the checksum of an empty one and rejects every
   // upload. Nothing local catches this — localhost short-circuits to the
   // inline fallback above, so it only ever fails in a deployed environment.
-  const client = new S3Client({ region, requestChecksumCalculation: "WHEN_REQUIRED" });
+  const client = getObjectStorageClient();
   // Signing ContentLength binds the declared size: storage rejects a body that
   // does not match, so the size checked above is the size that can be written.
   const uploadUrl = await getSignedUrl(

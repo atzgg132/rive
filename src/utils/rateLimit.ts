@@ -60,6 +60,12 @@ function normalizeIp(value: string): string | null {
  * value allocates a new bucket.
  */
 export function getRequestIpFromHeaders(headers: Headers): string {
+  if (process.env.HOSTING_PROVIDER === "netlify") {
+    // Netlify supplies the socket address; do not trust a caller's forwarded
+    // chain or fall back to spoofable headers when the platform header is absent.
+    const address = headers.get("x-nf-client-connection-ip");
+    return (address ? normalizeIp(address) : null) || "unknown";
+  }
   const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
     const hops = forwarded

@@ -1,0 +1,22 @@
+[build]
+  command = "npm run build:netlify"
+  publish = ".next"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@prisma/client", "@prisma/adapter-pg", "pg"]
+  included_files = ["node_modules/.prisma/client/**"]
+
+[functions.job-dispatch]
+  schedule = "* * * * *"
+
+[context.deploy-preview.environment]
+  NETLIFY_SCHEDULES_ENABLED = "false"
+
+[context.branch-deploy.environment]
+  NETLIFY_SCHEDULES_ENABLED = "false"

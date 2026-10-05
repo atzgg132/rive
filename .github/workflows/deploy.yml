@@ -1,4 +1,4 @@
-name: Deploy to AWS
+name: Release verification
 
 on:
   push:
@@ -10,70 +10,14 @@ on:
 permissions:
   contents: read
   actions: read
-  id-token: write
 
 concurrency:
   group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  # The same suite pull requests run. A squash commit whose tree its PR already
-  # verified (or a dev -> main promotion of a verified dev tree) passes through
-  # instantly; anything else runs in full before it can deploy.
+  # Netlify builds the connected branches. Promotion still requires reading
+  # the work-branch Quality run and checking the isolated dev deployment.
+  # There is deliberately no AWS deployment or credential assumption here.
   verify:
     uses: ./.github/workflows/verify.yml
-
-  deploy:
-    needs: verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ap-south-1
-      - uses: aws-actions/amazon-ecr-login@v2
-      - uses: docker/setup-buildx-action@v4
-      # Both images build concurrently on one builder: the migration image
-      # (~90 s alone) finishes while the application build (~150 s) is still
-      # running, instead of adding to it. No gha layer-cache export: mode=max
-      # spent ~2.5 min uploading layers and never hit.
-      - name: Build and push application and migration images
-        env:
-          REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
-          IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
-          APP_URL: ${{ github.ref_name == 'main' && 'https://www.rive.work' || 'https://dev.rive.work' }}
-        run: |
-          set -euo pipefail
-          docker buildx build --platform linux/arm64 --target migrator --push \
-            --tag "$REPOSITORY_URL:$IMAGE_TAG-migrate" . > migrator-build.log 2>&1 &
-          migrator=$!
-          app_status=0
-          docker buildx build --platform linux/arm64 --push \
-            --build-arg "DEPLOYMENT_VERSION=$GITHUB_SHA" \
-            --build-arg "APP_URL=$APP_URL" \
-            --tag "$REPOSITORY_URL:$IMAGE_TAG" . || app_status=$?
-          migrator_status=0
-          wait "$migrator" || migrator_status=$?
-          echo "::group::Migration image build log"
-          cat migrator-build.log
-          echo "::endgroup::"
-          if [ "$app_status" -ne 0 ] || [ "$migrator_status" -ne 0 ]; then
-            echo "::error::Image build failed (application=$app_status migration=$migrator_status)."
-            exit 1
-          fi
-      # The runner ships the repo's deploy script and canonical Caddyfile to the
-      # host so every deploy runs the reviewed versions, then the host-side
-      # script performs the candidate/cutover/rollback flow.
-      - name: Deploy immutable image through Systems Manager
-        env:
-          INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
-          ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
-          IMAGE_TAG: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}-${{ github.sha }}
-          REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
-        run: >-
-          bash scripts/deploy-to-host.sh
-          "$INSTANCE_ID" "$ENVIRONMENT" "$IMAGE_TAG"
-          "${AWS_REGION:-ap-south-1}" "$REPOSITORY_URL"

@@ -1,4 +1,5 @@
-import { DeleteObjectCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getObjectStorageClient } from "@/utils/objectStorage";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, assetUrl: assetUrlFor(key), kind: asset.kind });
   }
 
-  const client = new S3Client({ region });
+  const client = getObjectStorageClient();
   let header: Uint8Array;
   try {
     const result = await client.send(new GetObjectCommand({
@@ -120,7 +121,7 @@ export async function DELETE(request: NextRequest) {
   const bucket = process.env.ASSET_BUCKET;
   const region = process.env.AWS_REGION;
   if (bucket && region) {
-    await new S3Client({ region })
+    await getObjectStorageClient()
       .send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
       .catch(() => undefined);
   }

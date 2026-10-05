@@ -1,7 +1,8 @@
 import "server-only";
 
 import crypto from "node:crypto";
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getObjectStorageClient } from "@/utils/objectStorage";
 import { Prisma } from "@prisma/client";
 import {
   CONTRACT_CONSENT_TEXT,
@@ -78,7 +79,7 @@ async function putContractArtifactObject(objectKey: string, bytes: Uint8Array): 
   const config = artifactStorageConfig();
   if (!config) throw new Error("Contract artifact object storage is not configured.");
   try {
-    await new S3Client({ region: config.region, requestChecksumCalculation: "WHEN_REQUIRED" }).send(new PutObjectCommand({
+    await getObjectStorageClient().send(new PutObjectCommand({
       Bucket: config.bucket,
       Key: objectKey,
       Body: bytes,
@@ -100,7 +101,7 @@ async function getContractArtifactObject(objectKey: string): Promise<Uint8Array>
   const config = artifactStorageConfig();
   if (!config) throw new Error("Contract artifact object storage is not configured.");
   if (!CONTRACT_ARTIFACT_KEY_PATTERN.test(objectKey)) throw new Error("Contract artifact object key is invalid.");
-  const result = await new S3Client({ region: config.region }).send(new GetObjectCommand({
+  const result = await getObjectStorageClient().send(new GetObjectCommand({
     Bucket: config.bucket,
     Key: objectKey,
   }));

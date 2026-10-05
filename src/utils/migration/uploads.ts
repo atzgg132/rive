@@ -1,7 +1,8 @@
 import "server-only";
 
 import crypto, { createHash } from "node:crypto";
-import { GetObjectCommand, PutObjectCommand, PutObjectTaggingCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, PutObjectTaggingCommand } from "@aws-sdk/client-s3";
+import { getObjectStorageClient, objectStorageUsesR2 } from "@/utils/objectStorage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { migrationUploadHeaders } from "@/utils/migration/uploadContract";
 
@@ -32,13 +33,13 @@ export function migrationObjectKey(userId: string, migrationId: string, fileName
 export async function presignMigrationUpload(input: Omit<DurableUploadManifest, "id">): Promise<{ uploadUrl: string; headers: Record<string, string> }> {
   const config = storageConfig();
   if (!config) throw new Error("Migration object storage is not configured.");
-  const client = new S3Client({ region: config.region, requestChecksumCalculation: "WHEN_REQUIRED" });
+  const client = getObjectStorageClient();
   const command = new PutObjectCommand({
     Bucket: config.bucket,
     Key: input.objectKey,
     ContentType: input.mimeType,
     ContentLength: input.sizeBytes,
-    Tagging: "migration-state=incomplete",
+    ...(objectStorageUsesR2() ? {} : { Tagging: "migration-state=incomplete" }),
   });
   return {
     uploadUrl: await getSignedUrl(client, command, { expiresIn: 300 }),
@@ -49,7 +50,10 @@ export async function presignMigrationUpload(input: Omit<DurableUploadManifest, 
 export async function markMigrationObjectVerified(objectKey: string): Promise<void> {
   const config = storageConfig();
   if (!config) throw new Error("Migration object storage is not configured.");
-  await new S3Client({ region: config.region }).send(new PutObjectTaggingCommand({
+  // R2 has no object tags. ImportFile.uploadStatus remains authoritative and
+  // is only set to verified after the existing size and checksum checks.
+  if (objectStorageUsesR2()) return;
+  await getObjectStorageClient().send(new PutObjectTaggingCommand({
     Bucket: config.bucket,
     Key: objectKey,
     Tagging: { TagSet: [{ Key: "migration-state", Value: "verified" }] },
@@ -62,7 +66,7 @@ export async function readMigrationObject(objectKey: string): Promise<Uint8Array
   if (!/^migration\/[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+\.[a-z0-9]+$/i.test(objectKey)) {
     throw new Error("Migration object key is invalid.");
   }
-  const result = await new S3Client({ region: config.region }).send(new GetObjectCommand({
+  const result = await getObjectStorageClient().send(new GetObjectCommand({
     Bucket: config.bucket,
     Key: objectKey,
   }));

@@ -1,4 +1,5 @@
-import { DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { getObjectStorageClient } from "@/utils/objectStorage";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { MANAGED_ASSET_KEY } from "@/utils/portfolioMedia";
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const client = new S3Client({ region });
+    const client = getObjectStorageClient();
     // DeleteObjects caps at 1000 keys per call; BATCH keeps each pass under it.
     for (let index = 0; index < removable.length; index += 1000) {
       await client.send(new DeleteObjectsCommand({
