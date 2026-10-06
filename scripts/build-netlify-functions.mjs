@@ -1,12 +1,15 @@
 import { build } from "esbuild";
+import { rm } from "node:fs/promises";
+
+await rm("netlify/functions", { recursive: true, force: true });
 
 await build({
-  entryPoints: ["netlify/src/job-dispatch.ts", "netlify/src/jobs-background.ts", "netlify/src/migration-worker-background.ts"],
+  entryPoints: ["netlify/entrypoints/job-dispatch.mjs", "netlify/entrypoints/jobs-background.mjs", "netlify/entrypoints/migration-worker-background.mjs"],
   outdir: "netlify/functions",
-  outExtension: { ".js": ".cjs" },
+  outExtension: { ".js": ".mjs" },
   platform: "node",
   target: "node22",
-  format: "cjs",
+  format: "esm",
   bundle: true,
   packages: "external",
   tsconfig: "tsconfig.json",
