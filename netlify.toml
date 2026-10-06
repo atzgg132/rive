@@ -6,6 +6,8 @@
 [build.environment]
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
+  # Public configuration constants, not credentials. Keep real secret scanning on.
+  SECRETS_SCAN_OMIT_KEYS = "APP_ENV,MAX_UPLOAD_BYTES"
 
 [functions]
   node_bundler = "esbuild"
