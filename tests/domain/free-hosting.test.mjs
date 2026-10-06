@@ -7,6 +7,9 @@ import { scheduledPaths } from "../../netlify/src/jobs-background.ts";
 import { handler as handleJobs } from "../../netlify/src/jobs-background.ts";
 import { handler as handleImport } from "../../netlify/src/migration-worker-background.ts";
 import { getRequestIpFromHeaders } from "../../src/utils/rateLimit.ts";
+import nativeJobs, { config as jobsConfig } from "../../netlify/entrypoints/jobs-background.mjs";
+import nativeImport, { config as importConfig } from "../../netlify/entrypoints/migration-worker-background.mjs";
+import nativeDispatch from "../../netlify/entrypoints/job-dispatch.mjs";
 
 async function withEnvironment(values, run) {
   const previous = Object.fromEntries(Object.keys(values).map(key => [key, process.env[key]]));
@@ -93,5 +96,21 @@ test("Netlify IP rate-limit keys ignore caller-controlled forwarding headers", a
     assert.equal(getRequestIpFromHeaders(headers), "unknown");
     headers.set("x-nf-client-connection-ip", "999.0.0.1");
     assert.equal(getRequestIpFromHeaders(headers), "unknown");
+  });
+});
+
+test("modern Netlify entrypoints preserve worker authentication and background mode", async () => {
+  assert.equal(jobsConfig.background, true);
+  assert.equal(importConfig.background, true);
+  await withEnvironment({ CRON_SECRET: "test-secret", NETLIFY_SCHEDULES_ENABLED: "false" }, async () => {
+    for (const worker of [nativeJobs, nativeImport]) {
+      const response = await worker(new Request("https://rive-test.netlify.app/worker", { method: "POST", body: "{}" }));
+      assert.equal(response.status, 401);
+    }
+    const invalid = await nativeImport(new Request("https://rive-test.netlify.app/worker", {
+      method: "POST", headers: { Authorization: "Bearer test-secret" }, body: "invalid",
+    }));
+    assert.equal(invalid.status, 400);
+    assert.equal((await nativeDispatch()).status, 200);
   });
 });
