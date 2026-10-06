@@ -6,6 +6,12 @@ not replace it.
 
 ## When it applies
 
+For the free-hosting migration, also verify on isolated dev: authenticated reads,
+a signed R2 upload and asset read, agreement PDF serving, import-worker dispatch
+and an expired-lease retry. Confirm dev schedules are disabled and no requests
+require AWS. Record blocked checks explicitly; never substitute a production
+customer account for the standing QA accounts.
+
 - Every PR or promotion that changes something a user sees in the browser.
 - Run it on dev.rive.work **after** the change has deployed to `dev`, and
   **before** the `dev` → `main` promotion.
