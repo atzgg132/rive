@@ -36,6 +36,9 @@ if (globalForPrisma.prisma) {
 
   const sslDisabled = process.env.DATABASE_SSL === "disable";
   const sslServerName = process.env.DATABASE_SSL_SERVERNAME || "";
+  const certificateAuthority = process.env.DATABASE_SSL_CA_BASE64
+    ? Buffer.from(process.env.DATABASE_SSL_CA_BASE64, "base64").toString("utf8")
+    : undefined;
   const rejectUnauthorized =
     process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true" ||
     (process.env.NODE_ENV === "production" && process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false");
@@ -49,6 +52,7 @@ if (globalForPrisma.prisma) {
       ? false
       : {
           rejectUnauthorized,
+          ...(certificateAuthority ? { ca: certificateAuthority } : {}),
           ...(sslServerName
             ? {
                 checkServerIdentity: (_hostname: string, certificate: Parameters<typeof checkServerIdentity>[1]) =>

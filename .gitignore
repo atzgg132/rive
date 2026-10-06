@@ -17,6 +17,8 @@ node_modules/
 /build
 next-env.d.ts
 *.tsbuildinfo
+/.netlify/
+/netlify/functions/
 
 # env files (opt in explicitly)
 .env*

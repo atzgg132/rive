@@ -1,4 +1,5 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getObjectStorageClient } from "@/utils/objectStorage";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/utils/db";
 import { getSessionUser } from "@/utils/userAuth";
@@ -66,7 +67,7 @@ export async function GET(
   context: { params: Promise<{ key: string[] }> },
 ) {
   const bucket = process.env.ASSET_BUCKET;
-  const region = process.env.AWS_REGION;
+  const region = process.env.S3_REGION || process.env.AWS_REGION;
   if (!bucket || !region) {
     return NextResponse.json({ message: "Asset storage is unavailable." }, { status: 503 });
   }
@@ -114,7 +115,7 @@ export async function GET(
   const range = parseRangeHeader(request.headers.get("range"));
   if (range === false) return rangeNotSatisfiableResponse();
 
-  const client = new S3Client({ region });
+  const client = getObjectStorageClient();
 
   try {
     const result = await client.send(new GetObjectCommand({

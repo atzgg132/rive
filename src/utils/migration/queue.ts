@@ -14,7 +14,9 @@ export type MigrationWorkMessage = {
 };
 
 export function migrationQueueConfigured(): boolean {
-  return Boolean(process.env.MIGRATION_QUEUE_URL && process.env.AWS_REGION);
+  return process.env.MIGRATION_QUEUE_PROVIDER === "netlify"
+    ? Boolean(process.env.NETLIFY_SITE_URL && process.env.CRON_SECRET)
+    : Boolean(process.env.MIGRATION_QUEUE_URL && process.env.AWS_REGION);
 }
 
 /**
@@ -22,15 +24,32 @@ export function migrationQueueConfigured(): boolean {
  * source values, and other customer data are deliberately excluded.
  */
 export async function enqueueMigrationWork(message: Omit<MigrationWorkMessage, "version" | "environment">): Promise<boolean> {
-  const queueUrl = process.env.MIGRATION_QUEUE_URL;
-  const region = process.env.AWS_REGION;
-  if (!queueUrl || !region) return false;
-
   const payload: MigrationWorkMessage = {
     version: 1,
     environment: (process.env.APP_ENV || "local").toLowerCase(),
     ...message,
   };
+  if (process.env.MIGRATION_QUEUE_PROVIDER === "netlify") {
+    const baseUrl = process.env.NETLIFY_SITE_URL;
+    const secret = process.env.CRON_SECRET;
+    if (!baseUrl || !secret) throw new Error("Netlify migration worker is not configured.");
+    const url = new URL("/.netlify/functions/migration-worker-background", baseUrl);
+    if (url.protocol !== "https:" || !url.hostname.endsWith(".netlify.app")) {
+      throw new Error("Migration worker must use the private Netlify deployment origin.");
+    }
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (response.status !== 202) throw new Error("Netlify did not accept migration work.");
+    return true;
+  }
+  const queueUrl = process.env.MIGRATION_QUEUE_URL;
+  const region = process.env.AWS_REGION;
+  if (!queueUrl || !region) return false;
+
   await new SQSClient({ region }).send(new SendMessageCommand({
     QueueUrl: queueUrl,
     MessageBody: JSON.stringify(payload),
