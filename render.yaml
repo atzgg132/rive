@@ -1,0 +1,47 @@
+# Render free web service for Rive, used when Netlify's free credits are spent.
+# Build and runtime come from the existing Dockerfile (Next.js standalone).
+# Secrets are not declared here: paste the production environment exported
+# from Netlify into the service's Environment tab ("Add from .env"), then drop
+# the Netlify-only keys listed in docs/render-hosting.md.
+services:
+  - type: web
+    name: rive
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      # Also a Docker build arg: metadataBase is baked in at prerender.
+      - key: APP_URL
+        value: https://www.rive.work
+      - key: DATABASE_POOL_MAX
+        value: "2"
+      - key: DATABASE_SSL_REJECT_UNAUTHORIZED
+        value: "true"
+      - key: ASSET_STORAGE_PROVIDER
+        value: r2
+      - key: S3_REGION
+        value: auto
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL_CA_BASE64
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: CALENDAR_ENCRYPTION_KEY
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: ASSET_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false

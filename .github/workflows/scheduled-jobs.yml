@@ -1,0 +1,47 @@
+# Scheduled jobs for hosts without a scheduler (Render free). Replaces the
+# Netlify job-dispatch cadence at a coarser interval and keeps the free web
+# service from spinning down. Idle until the RIVE_JOBS_URL variable and
+# CRON_SECRET secret are set, so it never runs against Netlify by accident.
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: scheduled-jobs
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_URL: ${{ vars.RIVE_JOBS_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      SCHEDULE: ${{ github.event.schedule }}
+    steps:
+      - name: Run due jobs
+        run: |
+          if [ -z "$BASE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::notice::RIVE_JOBS_URL or CRON_SECRET not set; skipping."
+            exit 0
+          fi
+          paths="/api/cron/email-outbox /api/calendar/sync-outbox /api/contracts/maintenance /api/cron/funnel-quality"
+          if [ "$SCHEDULE" = "7 * * * *" ] || [ -z "$SCHEDULE" ]; then
+            paths="/api/cron/portfolio-assets /api/cron/weekly-summary"
+            if [ $(( $(date -u +%H) % 6 )) -eq 0 ]; then paths="$paths /api/calendar/maintenance"; fi
+          fi
+          failed=0
+          for path in $paths; do
+            # The first call may wake a spun-down free instance (about a minute).
+            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 120 --retry 2 --retry-delay 20 \
+              -X POST -H "Authorization: Bearer $CRON_SECRET" -H "Content-Type: application/json" -d "{}" "$BASE_URL$path" || echo 000)
+            echo "$path -> $status"
+            case "$status" in 2*) ;; *) failed=1 ;; esac
+          done
+          exit $failed
