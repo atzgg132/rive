@@ -10,6 +10,7 @@ import { PreferencesSection } from "@/components/settings/PreferencesSection";
 import { NotificationsSection } from "@/components/settings/NotificationsSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
 import { SecuritySection } from "@/components/settings/SecuritySection";
+import { ReferralsSection } from "@/components/settings/ReferralsSection";
 
 
 type SettingsPayload = {
@@ -100,6 +101,7 @@ export default function SettingsPage() {
           <PreferencesSection />
           <NotificationsSection loginAlertsEnabled={data.user.loginAlertsEnabled} />
           <IntegrationsSection zohoBooksAvailable={data.connectorAvailability.zohoBooks} />
+          <ReferralsSection />
           <SecuritySection isGoogleOnlyAccount={data.user.isGoogleOnlyAccount} />
         </div>
       </div>

@@ -9,6 +9,7 @@ import { decideGoogleLogin } from "@/utils/googleLogin";
 import { buildLoginSuccessEmail, getEmailProvider } from "@/utils/email";
 import { enqueueEmail, processEmailOutbox } from "@/utils/emailOutbox";
 import { attributionFromRequest, saveUserAttribution } from "@/utils/attribution";
+import { recordReferralAtSignup } from "@/utils/referrals";
 import { PRODUCT_EVENTS, recordProductEvent } from "@/utils/productEvents";
 import { ACTIVATION_EVENTS, recordActivationEvent } from "@/utils/activation";
 import { getRequestIp } from "@/utils/rateLimit";
@@ -111,6 +112,7 @@ export async function GET(req: NextRequest) {
           select: { id: true, email: true, plan: true, sessionVersion: true, onboardingStatus: true, twoFactorEnabledAt: true, loginAlertsEnabled: true },
         });
         await saveUserAttribution(created.id, attribution, tx);
+        await recordReferralAtSignup(tx, { userId: created.id, referralSource: rawAttribution.referralSource });
         await recordProductEvent({
           userId: created.id,
           anonymousId,

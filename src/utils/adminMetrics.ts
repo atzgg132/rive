@@ -4,6 +4,7 @@ import { PRODUCT_EVENT_NAMES, PRODUCT_EVENT_SCHEMA_VERSION, REAL_DATA_EVENT_NAME
 import { evaluateFunnelQuality, type FunnelQualityAlert } from "@/lib/analytics/funnelQuality";
 import { createSharedLoader, hoursToFirstEngagement } from "@/lib/analytics/adminMetricsMath";
 import { prisma } from "@/utils/db";
+import { summarizeReferralProgram, type ReferralProgramTotals } from "@/lib/referrals";
 import { GetQueueAttributesCommand, SQSClient } from "@aws-sdk/client-sqs";
 import {
   acquisitionSource,
@@ -223,6 +224,7 @@ export type AdminMetrics = {
     activationWindowDays: number;
     deepActivationWindowDays: number;
   };
+  referrals: ReferralProgramTotals;
   dropOff: {
     unqualified: number;
     qualifiedNotActivated: number;
@@ -419,6 +421,7 @@ async function computeAdminSnapshot(): Promise<AdminSnapshot> {
   let migrationCount = 0;
   let portfolioCount = 0;
   let activated = 0;
+  const activatedUserIds = new Set<string>();
   let deep = 0;
   let twoActiveDays = 0;
   let connected = 0;
@@ -508,6 +511,7 @@ async function computeAdminSnapshot(): Promise<AdminSnapshot> {
     const isActivated = activation.activated;
     if (isActivated) {
       activated += 1;
+      activatedUserIds.add(user.id);
       if (activation.native) { nativeCount += 1; addToMap(activationPath, "native"); }
       if (activation.migration) { migrationCount += 1; addToMap(activationPath, "migration"); }
       if (activation.portfolio) { portfolioCount += 1; addToMap(activationPath, "portfolio"); }
@@ -524,6 +528,12 @@ async function computeAdminSnapshot(): Promise<AdminSnapshot> {
       if (deepResult.deeplyActivated) deep += 1;
     }
   }
+
+  const referralRows = await prisma.referral.findMany({
+    where: { referredUserId: { in: customerIds } },
+    select: { referrerId: true, referredUserId: true, activatedAt: true },
+  });
+  const referrals = summarizeReferralProgram(referralRows, activatedUserIds);
 
   const sourceBreakdown = Array.from(new Set([...sourceSignup.keys(), ...sourceQualified.keys()]))
     .map((source) => ({ source, signups: sourceSignup.get(source) || 0, qualified: sourceQualified.get(source) || 0 }))
@@ -680,6 +690,7 @@ async function computeAdminSnapshot(): Promise<AdminSnapshot> {
       activationWindowDays: ACTIVATION_WINDOW_DAYS,
       deepActivationWindowDays: 14,
     },
+    referrals,
     dropOff: {
       unqualified,
       qualifiedNotActivated,

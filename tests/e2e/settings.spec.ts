@@ -152,6 +152,64 @@ test.describe("settings", () => {
     }
   });
 
+  test("referrals credit both sides once the referred account activates", async ({ request, page, context, baseURL }) => {
+    const referrer = await createUser("referrer");
+    const token = sessionToken(referrer);
+    const referredEmail = `settings-referred-${randomUUID()}@rive.test`;
+    const strayEmail = `settings-stray-${randomUUID()}@rive.test`;
+    const register = (email: string, referralSource: string) => request.post("/api/auth/register", {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Forwarded-For": `14.${process.pid % 200}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+        Cookie: `rive_attribution=${encodeURIComponent(JSON.stringify({ referralSource }))}`,
+      },
+      data: { name: "Referred Person", email, password: PASSWORD, startedAt: Date.now() - 8_000 },
+    });
+    try {
+      expect((await request.get("/api/settings/referrals")).status()).toBe(401);
+      const first = (await json(await request.get("/api/settings/referrals", { headers: auth(token) }))).referrals as JsonObject;
+      expect(first).toMatchObject({ joined: 0, activated: 0, monthsEarned: 0, monthsCap: 5, referredBy: null });
+      const code = String(first.code);
+      expect(code).toMatch(/^[a-z2-9]{8}$/);
+      const again = (await json(await request.get("/api/settings/referrals", { headers: auth(token) }))).referrals as JsonObject;
+      expect(again.code).toBe(code);
+
+      const signup = await register(referredEmail, code.toUpperCase());
+      expect(signup.status(), await signup.text()).toBe(201);
+      const stray = await register(strayEmail, "notacode");
+      expect(stray.status(), await stray.text()).toBe(201);
+      const referred = await prisma.user.findUniqueOrThrow({ where: { email: referredEmail }, select: { id: true, email: true, plan: true, sessionVersion: true } });
+      const strayUser = await prisma.user.findUniqueOrThrow({ where: { email: strayEmail }, select: { id: true } });
+      expect(await prisma.referral.count({ where: { referredUserId: strayUser.id } })).toBe(0);
+
+      const joined = (await json(await request.get("/api/settings/referrals", { headers: auth(token) }))).referrals as JsonObject;
+      expect(joined).toMatchObject({ joined: 1, activated: 0, monthsEarned: 0 });
+
+      // Qualify and activate the referred account: verified, onboarded, and a
+      // client with a dated project in its first week.
+      await prisma.user.update({
+        where: { id: referred.id },
+        data: { emailVerifiedAt: new Date(), onboardingStatus: "complete", businessType: "freelancer", profession: "Designer", onboardingData: { goal: "organize", startingPath: "blank" } },
+      });
+      const client = await prisma.client.create({ data: { userId: referred.id, name: "Referral Client", dataOrigin: "user" }, select: { id: true } });
+      await prisma.project.create({ data: { userId: referred.id, clientId: client.id, title: "Referral Project", dueDate: new Date(Date.now() + 86_400_000), dataOrigin: "user" } });
+
+      const activated = (await json(await request.get("/api/settings/referrals", { headers: auth(token) }))).referrals as JsonObject;
+      expect(activated).toMatchObject({ joined: 1, activated: 1, monthsEarned: 1 });
+      const referredView = (await json(await request.get("/api/settings/referrals", { headers: auth(sessionToken(referred)) }))).referrals as JsonObject;
+      expect(referredView.referredBy).toEqual({ activated: true, months: 1 });
+
+      await authenticateBrowser(context, baseURL!, token);
+      await page.goto("/settings#referrals", { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { name: "Referrals" })).toBeVisible();
+      await expect(page.getByLabel("Your referral link")).toHaveValue(new RegExp(`/register\\?ref=${code}$`));
+      await expect(page.getByTestId("referrals-months")).toHaveText("1 of 5");
+    } finally {
+      await prisma.user.deleteMany({ where: { email: { in: [referredEmail, strayEmail] } } }).catch(() => undefined);
+      await prisma.user.delete({ where: { id: referrer.id } }).catch(() => undefined);
+    }
+  });
+
   test("changing the password and signing out everywhere end other sessions but keep this one", async ({ request }) => {
     const user = await createUser("security");
     const original = sessionToken(user);
