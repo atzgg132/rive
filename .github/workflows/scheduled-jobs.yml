@@ -31,11 +31,15 @@ jobs:
             echo "::notice::RIVE_JOBS_URL or CRON_SECRET not set; skipping."
             exit 0
           fi
-          paths="/api/cron/email-outbox /api/calendar/sync-outbox /api/contracts/maintenance /api/cron/funnel-quality"
-          if [ "$SCHEDULE" = "7 * * * *" ] || [ -z "$SCHEDULE" ]; then
-            paths="/api/cron/portfolio-assets /api/cron/weekly-summary"
-            if [ $(( $(date -u +%H) % 6 )) -eq 0 ]; then paths="$paths /api/calendar/maintenance"; fi
-          fi
+          frequent="/api/cron/email-outbox /api/calendar/sync-outbox /api/contracts/maintenance /api/cron/funnel-quality"
+          hourly="/api/cron/portfolio-assets /api/cron/weekly-summary"
+          if [ $(( $(date -u +%H) % 6 )) -eq 0 ]; then hourly="$hourly /api/calendar/maintenance"; fi
+          case "$SCHEDULE" in
+            "7 * * * *") paths="$hourly" ;;
+            # A manual run is the operator's "run everything now", outbox included.
+            "") paths="$frequent $hourly" ;;
+            *) paths="$frequent" ;;
+          esac
           failed=0
           for path in $paths; do
             # The first call may wake a spun-down free instance (about a minute).
